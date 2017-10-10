@@ -2,7 +2,7 @@ package sdk
 
 
 import (
-	"./pb"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 
 	"crypto/md5"
 	"io"
@@ -121,17 +121,17 @@ func (d *Device) Data() map[string]string {
 }
 
 //
-func (d *Device) ToMetainfoResponse() *pb.MetainfoResponse {
+func (d *Device) ToMetainfoResponse() *synse.MetainfoResponse {
 
 	location := d.Location()
 
-	var output []*pb.MetaOutput
+	var output []*synse.MetaOutput
 	for _, out := range d.Output() {
 		mo := out.ToMetaOutput()
 		output = append(output, mo)
 	}
 
-	return &pb.MetainfoResponse{
+	return &synse.MetainfoResponse{
 		Timestamp: time.Now().String(),
 		Uid: d.Uid(),
 		Type: d.Type(),

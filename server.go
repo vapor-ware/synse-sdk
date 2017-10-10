@@ -1,7 +1,7 @@
 package sdk
 
 import (
-	"./pb"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 
 	"fmt"
 	"os"
@@ -52,7 +52,7 @@ func (ps *PluginServer) getReadings(uid string) []Reading {
 
 
 // GRPC READ HANDLER
-func (ps *PluginServer) Read(in *pb.ReadRequest, stream pb.InternalApi_ReadServer) error {
+func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
 	fmt.Printf("[grpc] READ\n")
 
 	uid := in.GetUid()
@@ -65,7 +65,7 @@ func (ps *PluginServer) Read(in *pb.ReadRequest, stream pb.InternalApi_ReadServe
 	readings := ps.getReadings(uid)
 
 	for _, r := range readings {
-		resp := &pb.ReadResponse{
+		resp := &synse.ReadResponse{
 			Timestamp: r.Timestamp,
 			Value: r.Value,
 		}
@@ -77,7 +77,7 @@ func (ps *PluginServer) Read(in *pb.ReadRequest, stream pb.InternalApi_ReadServe
 }
 
 // GRPC WRITE HANDLER
-func (ps *PluginServer) Write(ctx context.Context, in *pb.WriteRequest) (*pb.TransactionId, error) {
+func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.TransactionId, error) {
 	fmt.Printf("[grpc] WRITE\n")
 
 	// TODO -- implement
@@ -86,7 +86,7 @@ func (ps *PluginServer) Write(ctx context.Context, in *pb.WriteRequest) (*pb.Tra
 
 
 // GRPC METAINFO HANDLER
-func (ps *PluginServer) Metainfo(in *pb.MetainfoRequest, stream pb.InternalApi_MetainfoServer) error {
+func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.InternalApi_MetainfoServer) error {
 	fmt.Printf("[grpc] METAINFO\n")
 
 	for _, device := range ps.pluginDevices {
@@ -99,7 +99,7 @@ func (ps *PluginServer) Metainfo(in *pb.MetainfoRequest, stream pb.InternalApi_M
 
 
 // GRPC TRANSACTION CHECK HANDLER
-func (ps *PluginServer) TransactionCheck(ctx context.Context, in *pb.TransactionId) (*pb.WriteResponse, error) {
+func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
 	fmt.Printf("[grpc] TRANSACTION CHECK\n")
 
 	// TODO -- implement.
@@ -143,7 +143,7 @@ func (ps *PluginServer) Run() error {
 	// create the GRPC server and register our plugin server to it
 	svr := grpc.NewServer()
 	log.Printf("[grpc] creating new grpc server\n")
-	pb.RegisterInternalApiServer(svr, ps)
+	synse.RegisterInternalApiServer(svr, ps)
 	log.Printf("[grpc] registering handlers\n")
 
 	// start the server

@@ -1,7 +1,7 @@
 package sdk
 
 import (
-	"./pb"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Every plugin that is written using this SDK must fulfil this interface. These
@@ -13,7 +13,7 @@ import (
 // for each plugin, so those commands are provided by this SDK.
 type PluginHandler interface {
 	Read(in Device) (ReadResource, error)
-	Write(in Device, data []string) (*pb.TransactionId, error)
+	Write(in Device, data []string) (*synse.TransactionId, error)
 }
 
 

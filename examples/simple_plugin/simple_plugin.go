@@ -10,11 +10,12 @@ package main
 
 import (
 	"../.."
-	"../../pb"
 
 	"math/rand"
 	"strconv"
 	"time"
+
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 
@@ -40,7 +41,7 @@ func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	}, nil
 }
 
-func (ph *SimplePluginHandler) Write(in sdk.Device, data []string) (*pb.TransactionId, error) {
+func (ph *SimplePluginHandler) Write(in sdk.Device, data []string) (*synse.TransactionId, error) {
 	return nil, nil
 }
 

@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"gopkg.in/yaml.v2"
 
-	"./pb"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // version: 1.0
@@ -42,7 +42,7 @@ type DeviceOutput struct {
 	Range      *OutputRange  `yaml:"range"`
 }
 
-func (o *DeviceOutput) ToMetaOutput() *pb.MetaOutput {
+func (o *DeviceOutput) ToMetaOutput() *synse.MetaOutput {
 
 	unit := &OutputUnit{}
 	if o.Unit != nil {
@@ -54,7 +54,7 @@ func (o *DeviceOutput) ToMetaOutput() *pb.MetaOutput {
 		rang = o.Range
 	}
 
-	return &pb.MetaOutput{
+	return &synse.MetaOutput{
 		Type: o.Type,
 		Precision: o.Precision,
 		Unit: unit.ToMetaOutputUnit(),
@@ -67,8 +67,8 @@ type OutputUnit struct {
 	Symbol  string  `yaml:"symbol"`
 }
 
-func (u *OutputUnit) ToMetaOutputUnit() *pb.MetaOutputUnit {
-	return &pb.MetaOutputUnit{
+func (u *OutputUnit) ToMetaOutputUnit() *synse.MetaOutputUnit {
+	return &synse.MetaOutputUnit{
 		Name: u.Name,
 		Symbol: u.Symbol,
 	}
@@ -79,8 +79,8 @@ type OutputRange struct {
 	Max  int32  `yaml:"max"`
 }
 
-func (r *OutputRange) ToMetaOutputRange() *pb.MetaOutputRange {
-	return &pb.MetaOutputRange{
+func (r *OutputRange) ToMetaOutputRange() *synse.MetaOutputRange {
+	return &synse.MetaOutputRange{
 		Min: r.Min,
 		Max: r.Max,
 	}
@@ -162,8 +162,8 @@ type DeviceLocation struct {
 	Board string `yaml:"board"`
 }
 
-func (l *DeviceLocation) ToMetalLocation() *pb.MetaLocation {
-	return &pb.MetaLocation{
+func (l *DeviceLocation) ToMetalLocation() *synse.MetaLocation {
+	return &synse.MetaLocation{
 		Rack: l.Rack,
 		Board: l.Board,
 	}
