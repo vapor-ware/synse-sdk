@@ -9,8 +9,8 @@ package main
 //   3.  the main method   - this is where the plugin is initialized and run.
 
 import (
-	"../../src"
-	"../../src/pb"
+	"../.."
+	"../../pb"
 
 	"math/rand"
 	"strconv"
