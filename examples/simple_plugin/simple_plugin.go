@@ -16,6 +16,7 @@ import (
 	"time"
 
 	synse "github.com/vapor-ware/synse-server-grpc/go"
+	"fmt"
 )
 
 
@@ -33,6 +34,7 @@ type SimplePluginHandler struct {}
 
 func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 
+	fmt.Printf("[simple plugin handler]: READ\n")
 	val := rand.Int()
 	str_val := strconv.Itoa(val)
 	return sdk.ReadResource{
@@ -42,6 +44,8 @@ func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 }
 
 func (ph *SimplePluginHandler) Write(in sdk.Device, data []string) (*synse.TransactionId, error) {
+
+	fmt.Printf("[simple plugin handler]: WRITE\n")
 	return nil, nil
 }
 

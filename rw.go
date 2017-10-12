@@ -12,7 +12,7 @@ type RWLoop struct {
 	readingManager ReadingManager
 	writingManager WritingManager
 
-	devices []Device
+	devices map[string]Device
 }
 
 
@@ -33,20 +33,24 @@ type RWLoop struct {
 // number of write transactions that can be fulfilled per loop.
 func (rwl *RWLoop) Run() {
 
-	// TODO: figure out the write logic. can we use a buffered channel
-	// as the write queue?
-
 	go func() {
 		for {
 			// ~~ Write portion of the loop ~~
-			// (TODO)
 			// Get the next 5 values off of the write queue (TODO - can configure)
 			for i := 0; i < 5; i++ {
 				select {
 				case w := <- rwl.writingManager.channel:
-					fmt.Printf("Write for: %v", w)
+
+					fmt.Printf("Write for: %v\n", w)
+					tid, err := rwl.handler.Write(rwl.devices[w.device], w.data)
+					if err != nil {
+						fmt.Errorf("Error when writing device: %v\n")
+					}
+					fmt.Printf("-- tid: %v\n", tid)
+
 				default:
-					//fmt.Printf("nothing in the write queue.")
+					// if there is nothing in the write queue, there is nothing
+					// to do here, so we just move on.
 				}
 			}
 

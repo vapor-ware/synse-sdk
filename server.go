@@ -28,8 +28,8 @@ type PluginServer struct {
 	readingManager ReadingManager
 	writingManager WritingManager
 
-	pluginDevices []Device
-	rwLoop RWLoop
+	pluginDevices  map[string]Device
+	rwLoop         RWLoop
 
 }
 
@@ -37,7 +37,12 @@ type PluginServer struct {
 // plugin server creation via 'NewPlugin'. It will look in the default
 // directory for configurations.
 func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) {
-	ps.pluginDevices = DevicesFromConfig(CONFIG_DIR, deviceHandler)
+	devices := DevicesFromConfig(CONFIG_DIR, deviceHandler)
+
+	ps.pluginDevices = make(map[string]Device)
+	for _, device := range devices {
+		ps.pluginDevices[device.Uid()] = device
+	}
 	ps.rwLoop.devices = ps.pluginDevices
 }
 
