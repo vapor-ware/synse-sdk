@@ -1,14 +1,41 @@
-### Synse Backgound Process SDK
+# Synse Plugin SDK for Go
+An SDK in the Go programming language for creating plugins for Vapor IO's 
+[Synse Server][synse-server].
+
+This SDK handles most of the common functionality needed for Synse Server plugins,
+such as configuration parsing, background reading, asynchronous writing, generation
+and tracking of transaction ids, handling metainfo, etc.
+
+In most cases, a plugin author will only need to write the plugin-specific read and 
+write functionality.
 
 
-This is a simple SDK to aid in writing plugins for Synse. It handles a lot
-of common functionality and requires that the plugin only write handlers for
-plugin-specific actions, such as read and write. 
+## Installing
+todo - instructions on install
 
-See the `example` directory for examples on how to use the SDK.
+## Reference
+
+- link to examples
+- link to docs
+
+## Overview of SDK Components
+
+- config.go
+- interface.go
+- managers.go
+- models.go
+- rw.go
+- sdk.go
+- server.go
+- utils.go
 
 
-TODO:
+## License
+This SDK is licensed under the ____. See LICENSE.txt and NOTICE.txt for more information.
+
+
+
+## TODO
  - proper organization
  - figure out how writes will work
     - starting from the grpc command
@@ -28,3 +55,6 @@ TODO:
    git submodules? may not be too bad this time around since there isn't tons of nesting and
    we can pin it to a release version? or just in its own repo and it can be imported that way?
  - figure out: is there a way to give devices a clearer human-readable name?
+ 
+ 
+[synse-server]: https://github.com/vapor-ware/synse-server
