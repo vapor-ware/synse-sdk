@@ -80,8 +80,10 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.TransactionId, error) {
 	fmt.Printf("[grpc] WRITE\n")
 
+	ps.writingManager.channel <- WriteResource{in.Uid, in.Data}
+
 	// TODO -- implement
-	return nil, nil
+	return &synse.TransactionId{}, nil
 }
 
 

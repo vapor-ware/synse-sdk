@@ -40,6 +40,16 @@ func (rwl *RWLoop) Run() {
 		for {
 			// ~~ Write portion of the loop ~~
 			// (TODO)
+			// Get the next 5 values off of the write queue (TODO - can configure)
+			for i := 0; i < 5; i++ {
+				select {
+				case w := <- rwl.writingManager.channel:
+					fmt.Printf("Write for: %v", w)
+				default:
+					//fmt.Printf("nothing in the write queue.")
+				}
+			}
+
 
 			// ~~ Read portion of the loop ~~
 			for _, d := range rwl.devices {
