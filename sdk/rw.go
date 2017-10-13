@@ -42,11 +42,16 @@ func (rwl *RWLoop) Run() {
 				case w := <- rwl.writingManager.channel:
 
 					fmt.Printf("Write for: %v\n", w)
-					tid, err := rwl.handler.Write(rwl.devices[w.device], w.data)
+
+					UpdateTransactionStatus(w.transaction.id, WRITING)
+
+					err := rwl.handler.Write(rwl.devices[w.device], w.data)
 					if err != nil {
-						fmt.Errorf("Error when writing device: %v\n")
+						UpdateTransactionState(w.transaction.id, ERROR)
+						fmt.Errorf("Error when writing device: %v\n", err)
 					}
-					fmt.Printf("-- tid: %v\n", tid)
+					UpdateTransactionStatus(w.transaction.id, DONE)
+					fmt.Printf("-- tid: %v\n", w.transaction.id)
 
 				default:
 					// if there is nothing in the write queue, there is nothing

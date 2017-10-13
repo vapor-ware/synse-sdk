@@ -32,8 +32,9 @@ type ReadResource struct {
 
 //
 type WriteResource struct {
-	device  string
-	data    []string
+	transaction *TransactionState
+	device      string
+	data        []string
 }
 
 

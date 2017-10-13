@@ -1,8 +1,5 @@
 package sdk
 
-import (
-	synse "github.com/vapor-ware/synse-server-grpc/go"
-)
 
 // Every plugin that is written using this SDK must fulfil this interface. These
 // functions are what the Read-Write loop will end up calling when the corresponding
@@ -13,7 +10,7 @@ import (
 // for each plugin, so those commands are provided by this SDK.
 type PluginHandler interface {
 	Read(in Device) (ReadResource, error)
-	Write(in Device, data []string) (*synse.TransactionId, error)
+	Write(in Device, data []string) (error)
 }
 
 

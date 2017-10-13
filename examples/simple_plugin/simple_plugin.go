@@ -9,13 +9,12 @@ package main
 //   3.  the main method   - this is where the plugin is initialized and run.
 
 import (
-	"../.."
+	"../../sdk"
 
 	"math/rand"
 	"strconv"
 	"time"
 
-	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"fmt"
 )
 
@@ -34,7 +33,6 @@ type SimplePluginHandler struct {}
 
 func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 
-	fmt.Printf("[simple plugin handler]: READ\n")
 	val := rand.Int()
 	str_val := strconv.Itoa(val)
 	return sdk.ReadResource{
@@ -43,10 +41,10 @@ func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	}, nil
 }
 
-func (ph *SimplePluginHandler) Write(in sdk.Device, data []string) (*synse.TransactionId, error) {
+func (ph *SimplePluginHandler) Write(in sdk.Device, data []string) (error) {
 
 	fmt.Printf("[simple plugin handler]: WRITE\n")
-	return nil, nil
+	return nil
 }
 
 
@@ -59,15 +57,15 @@ func (ph *SimplePluginHandler) Write(in sdk.Device, data []string) (*synse.Trans
 //   data should be used when generating the device ID. For this simple plugin,
 //   the device configuration contains:
 //
-//      devices:
-//        - id: 1
-//          location: unknown
-//          comment: first emulated temperature device
-//          info: CEC temp 1
-//        - id: 2
-//          location: unknown
-//          comment: second emulated temperature device
-//          info: CEC temp 2
+//     devices:
+//       - id: 1
+//         location: unknown
+//         comment: first emulated temperature device
+//         info: CEC temp 1
+//       - id: 2
+//         location: unknown
+//         comment: second emulated temperature device
+//         info: CEC temp 2
 //
 //   The contents of the objects in the devices list are arbitrary and protocol-
 //   specific. As such, we need the plugin to define which bits of information

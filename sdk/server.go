@@ -85,10 +85,14 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.TransactionId, error) {
 	fmt.Printf("[grpc] WRITE\n")
 
-	ps.writingManager.channel <- WriteResource{in.Uid, in.Data}
+	transaction := NewTransactionId()
+	UpdateTransactionStatus(transaction.id, PENDING)
 
-	// TODO -- implement
-	return &synse.TransactionId{}, nil
+	ps.writingManager.channel <- WriteResource{transaction, in.Uid, in.Data}
+
+	return &synse.TransactionId{
+		Id: transaction.id,
+	}, nil
 }
 
 
@@ -109,8 +113,13 @@ func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.Interna
 func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
 	fmt.Printf("[grpc] TRANSACTION CHECK\n")
 
-	// TODO -- implement.
-	return nil, nil
+	transaction := GetTransaction(in.Id)
+
+	return &synse.WriteResponse{
+		Timestamp: transaction.timestamp,
+		Status: transaction.status,
+		State: transaction.state,
+	}, nil
 }
 
 
