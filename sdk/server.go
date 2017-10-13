@@ -115,8 +115,9 @@ func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.Transact
 
 	transaction := GetTransaction(in.Id)
 
+	// FIXME - need to update GRPC so write response has a 'created' time and 'updated' time
 	return &synse.WriteResponse{
-		Timestamp: transaction.timestamp,
+		Timestamp: transaction.created,
 		Status: transaction.status,
 		State: transaction.state,
 	}, nil

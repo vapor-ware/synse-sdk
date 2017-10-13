@@ -10,6 +10,70 @@ import (
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
+// PluginConfig specifies the configuration options for the plugin itself.
+type PluginConfig struct {
+
+	// The name of the plugin.
+	Name string `yaml:"name"`
+
+	// The plugin version.
+	Version string `yaml:"version"`
+
+	// Log at DEBUG level.
+	Debug bool `yaml:"debug"`
+
+	// The size of the writes buffer. Since writes are processed
+	// asynchronously, when a write request is received it is put
+	// into a queue. Writes are processed at the beginning of every
+	// iteration of the background read-write loop, but only a few
+	// write transactions are processed at a time (see the
+	// `WritesPerLoop` configuration option, below). This option
+	// defines the size of the buffer which writes are queued in.
+	//
+	// Typically, the read-write loop will iterate quickly, so
+	// the buffer will decumulate quickly. If writes are expected to
+	// take a long time, or many writes are expected for the plugin,
+	// this buffer size may need to be increased.
+	WriteBufferSize int `yaml:"write_buffer_size"`
+
+	// To prevent numerous writes requests from blocking the read block
+	// of the read-write loop, we will only process a portion of the
+	// queued writes at a time. This option defines the number of
+	// write transactions to process per iteration of the read-write
+	// loop.
+	//
+	// If write operations are expected to take a while for the plugin,
+	// this number should be decreased so the read block can execute
+	// more frequently.
+	WritesPerLoop int `yaml:"writes_per_loop"`
+
+	// A delay, in milliseconds, to wait at the end of the read-write
+	// loop. This may not be needed and can be omitted (defaulting to
+	// the value of 0), but it is surfaced as an option which can help
+	// limit CPU/memory usage. For instance, if a plugin is written to
+	// support a device which will only update its reading every 0.25
+	// seconds, then it may not make sense to run the read-write loop
+	// continuously. Instead `250` (milliseconds) could be specified here
+	// so the loop polls the device at the same rate it updates.
+	LoopDelay int `yaml:"loop_delay"`
+
+	// When devices are read, those readings are put into a channel which
+	// the ReadingManager continuously reads from to update its state.
+	// ReadBufferSize defines the size of the read channel buffer.
+	// Because it is being read continuously, it generally should not
+	// be an issue, but if many devices are expected to be configured
+	// off of a plugin (e.g. many reads occurring), increasing the read
+	// buffer might become necessary.
+	ReadBufferSize int `yaml:"read_buffer_size"`
+}
+
+
+func (c *PluginConfig) FromFile(path string) (*PluginConfig, error) {
+
+	return &PluginConfig{}, nil
+}
+
+
 // version: 1.0
 // type: emulated-temperature
 // model: emul8-temp

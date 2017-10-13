@@ -9,6 +9,15 @@ package sdk
 // here. The transaction check and metainfo commands are fulfilled the same way
 // for each plugin, so those commands are provided by this SDK.
 type PluginHandler interface {
+
+	// within the sdk, read and write are called synchronously. this is done in
+	// order to support serial devices (e.g. devices that communicate over a serial
+	// bus). not all protocols are serial bound, but here we must cater to the lowest
+	// common denominator.
+
+	// TODO (etd) - possibly add in a configuration option that would process reads
+	// in parallel and writes in parallel?
+
 	Read(in Device) (ReadResource, error)
 	Write(in Device, data []string) (error)
 }

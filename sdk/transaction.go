@@ -20,12 +20,12 @@ const (
 	ERROR = synse.WriteResponse_ERROR
 )
 
-//FIXME: should we have a 'created' time and 'last updated' time?
 type TransactionState struct {
 	id        string
 	status    synse.WriteResponse_WriteStatus
 	state     synse.WriteResponse_WriteState
-	timestamp string
+	created   string
+	updated   string
 }
 
 
@@ -36,7 +36,9 @@ var transactionMap = make(map[string]*TransactionState)
 //
 func NewTransactionId() *TransactionState {
 	id := xid.New().String()
-	ts := &TransactionState{id, UNKNOWN, OK, time.Now().String()}
+	now := time.Now().String()
+
+	ts := &TransactionState{id, UNKNOWN, OK, now, now}
 	transactionMap[id] = ts
 	return ts
 }
