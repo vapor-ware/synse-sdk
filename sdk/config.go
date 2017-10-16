@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"gopkg.in/yaml.v2"
+	"errors"
 
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	//synse "github.com/vapor-ware/synse-server-grpc/go"
+	synse "./synse"
 )
 
 // PluginConfig specifies the configuration options for the plugin itself.
@@ -68,10 +70,84 @@ type PluginConfig struct {
 }
 
 
+// FromFile
 func (c *PluginConfig) FromFile(path string) (*PluginConfig, error) {
 
 	return &PluginConfig{}, nil
 }
+
+
+// Merge
+func (c *PluginConfig) Merge(config PluginConfig) error {
+
+	// Since Go structs will default to the zero value for a struct field
+	// that is unspecified on initialization, we need to perform some checks
+	// here to see whether we should use the default configuration or not.
+	// For some fields, the zero value is allowed, so we cannot differentiate
+	// a configured 0 from the int zero value. In those cases, we will just
+	// have the configuration default also be zero.
+	// (we could technically be able to do these checks reliably by having
+	// all fields be pointers. any field that isn't configured would be a
+	// nil pointer. while that works for parsing, its a bit cumbersome for
+	// usage.)
+
+	// These are required fields. If they do not exist, fail.
+	if config.Name == "" || config.Version == "" {
+		return errors.New("Bad plugin configuration. Requires both a Name and Version.")
+	}
+
+	c.Name = config.Name
+	c.Version = config.Version
+
+	// The read buffer cannot be 0 (otherwise we would be unable to buffer
+	// reads), so take a zero value here to mean "default".
+	if config.ReadBufferSize != 0 {
+		c.ReadBufferSize = config.ReadBufferSize
+	}
+
+	// The write buffer cannot be 0 (otherwise we would be unable to buffer
+	// writes), so take a zero value here to mean "default".
+	if config.WriteBufferSize != 0 {
+		c.WriteBufferSize = config.WriteBufferSize
+	}
+
+	// We cannot have 0 writes per loop, otherwise no writes would ever be
+	// fulfilled. Take a zero value here to mean "default".
+	if config.WritesPerLoop != 0 {
+		c.WritesPerLoop = config.WritesPerLoop
+	}
+
+	// LoopDelay can be 0 (the default), so no check is needed.
+	c.LoopDelay = config.LoopDelay
+
+	// Debug can be false (the default), so no check is needed.
+	c.Debug = config.Debug
+
+	return nil
+}
+
+
+func GetDefaultConfig() *PluginConfig {
+	return &PluginConfig{
+		Debug: false,
+		ReadBufferSize: 100,
+		WriteBufferSize: 100,
+		WritesPerLoop: 5,
+		LoopDelay: 0,
+	}
+}
+
+
+// global configuration to be set via the plugin server Configure function.
+var Config = GetDefaultConfig()
+
+// FIXME - make private here and add a public call in sdk.go?
+func ConfigurePlugin(config PluginConfig) error {
+	Config.Merge(config)
+	return nil
+}
+
+
 
 
 // version: 1.0

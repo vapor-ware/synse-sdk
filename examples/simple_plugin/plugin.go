@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"time"
 	"fmt"
+	"log"
 )
 
 
@@ -40,7 +41,7 @@ func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	}, nil
 }
 
-func (ph *SimplePluginHandler) Write(in sdk.Device, data []string) (error) {
+func (ph *SimplePluginHandler) Write(in sdk.Device, data [][]byte) (error) {
 
 	fmt.Printf("[simple plugin handler]: WRITE\n")
 	return nil
@@ -86,11 +87,21 @@ func (dh *SimpleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 //   the devices from config, start the read-write loop, and start the GRPC
 //   server.
 func main() {
-	p := sdk.NewPlugin(
-		"simple-plugin",
+
+	config := sdk.PluginConfig{
+		Name: "simple-plugin",
+		Version: "1.0.0",
+	}
+
+	p, err := sdk.NewPlugin(
+		config,
 		&SimplePluginHandler{},
 		&SimpleDeviceHandler{},
 	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	p.Run()
 }

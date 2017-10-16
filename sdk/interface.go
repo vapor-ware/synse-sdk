@@ -19,7 +19,7 @@ type PluginHandler interface {
 	// in parallel and writes in parallel?
 
 	Read(in Device) (ReadResource, error)
-	Write(in Device, data []string) (error)
+	Write(in Device, data [][]byte) (error)
 }
 
 

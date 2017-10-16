@@ -34,10 +34,13 @@ type RWLoop struct {
 func (rwl *RWLoop) Run() {
 
 	go func() {
+		loopDelay := Config.LoopDelay
+		writesPerLoop := Config.WritesPerLoop
+
 		for {
 			// ~~ Write portion of the loop ~~
-			// Get the next 5 values off of the write queue (TODO - can configure)
-			for i := 0; i < 5; i++ {
+			// Get the next values off of the write queue
+			for i := 0; i < writesPerLoop; i++ {
 				select {
 				case w := <- rwl.writingManager.channel:
 
@@ -73,10 +76,13 @@ func (rwl *RWLoop) Run() {
 				rwl.readingManager.channel <- resp
 			}
 
-			// FIXME: this should probably be configurable. maybe not needed, but just
-			// here to keep things from going insane
-			time.Sleep(5 * time.Millisecond)
+			// sleep for some configured amount of time. this isn't necessarily
+			// needed, but it could be helpful to reduce resource usage and
+			// keep things sane.
+			if loopDelay != 0 {
+				time.Sleep(time.Duration(loopDelay) * time.Millisecond)
+			}
 		}
 	}()
-	fmt.Printf("[rwloop] running\n")
+	logger.Info("[rwloop] running")
 }

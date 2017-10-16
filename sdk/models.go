@@ -2,7 +2,8 @@ package sdk
 
 
 import (
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	//synse "github.com/vapor-ware/synse-server-grpc/go"
+	synse "./synse"
 
 	"crypto/md5"
 	"io"
@@ -34,7 +35,7 @@ type ReadResource struct {
 type WriteResource struct {
 	transaction *TransactionState
 	device      string
-	data        []string
+	data        [][]byte
 }
 
 

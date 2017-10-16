@@ -1,12 +1,12 @@
 package sdk
 
 import (
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	//synse "github.com/vapor-ware/synse-server-grpc/go"
+	synse "./synse"
 
 	"fmt"
 	"os"
 	"net"
-	"log"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -30,7 +30,6 @@ type PluginServer struct {
 
 	pluginDevices  map[string]Device
 	rwLoop         RWLoop
-
 }
 
 // private method to configure devices. this will always be called on
@@ -58,14 +57,14 @@ func (ps *PluginServer) getReadings(uid string) []Reading {
 
 // GRPC READ HANDLER
 func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
-	fmt.Printf("[grpc] READ\n")
+	logger.Debug("[grpc] READ")
 
 	uid := in.GetUid()
 	if uid == "" {
-		fmt.Printf("ERROR: No UID supplied.\n")
+		logger.Debug("No UID supplied.")
 	}
 
-	fmt.Printf("uid: %v\n", uid)
+	logger.Debugf("uid: %v\n", uid)
 
 	readings := ps.getReadings(uid)
 
@@ -83,7 +82,7 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 
 // GRPC WRITE HANDLER
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.TransactionId, error) {
-	fmt.Printf("[grpc] WRITE\n")
+	logger.Debug("[grpc] WRITE")
 
 	transaction := NewTransactionId()
 	UpdateTransactionStatus(transaction.id, PENDING)
@@ -98,7 +97,7 @@ func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*syn
 
 // GRPC METAINFO HANDLER
 func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.InternalApi_MetainfoServer) error {
-	fmt.Printf("[grpc] METAINFO\n")
+	logger.Debug("[grpc] METAINFO")
 
 	for _, device := range ps.pluginDevices {
 		if err := stream.Send(device.ToMetainfoResponse()); err != nil {
@@ -111,7 +110,7 @@ func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.Interna
 
 // GRPC TRANSACTION CHECK HANDLER
 func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
-	fmt.Printf("[grpc] TRANSACTION CHECK\n")
+	logger.Debug("[grpc] TRANSACTION CHECK")
 
 	transaction := GetTransaction(in.Id)
 
@@ -133,7 +132,7 @@ func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.Transact
 // with the plugin.
 func (ps *PluginServer) Run() error {
 
-	fmt.Printf("[plugin server] running\n")
+	logger.Info("[plugin server] running")
 
 	// Start the read and write managers
 	ps.readingManager.Start()
@@ -150,23 +149,23 @@ func (ps *PluginServer) Run() error {
 		os.Remove(socket)
 	}
 
-	fmt.Printf("[grpc] listening on socket %v\n", socket)
+	logger.Infof("[grpc] listening on socket %v", socket)
 	lis, err := net.Listen("unix", socket)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v\n", err)
+		logger.Fatalf("Failed to listen: %v", err)
 		return err
 	}
 
 	// create the GRPC server and register our plugin server to it
 	svr := grpc.NewServer()
-	log.Printf("[grpc] creating new grpc server\n")
+	logger.Debugf("[grpc] creating new grpc server")
 	synse.RegisterInternalApiServer(svr, ps)
-	log.Printf("[grpc] registering handlers\n")
+	logger.Debugf("[grpc] registering handlers")
 
 	// start the server
-	log.Printf("[grpc] serving\n")
+	logger.Infof("[grpc] serving")
 	if err := svr.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v\n", err)
+		logger.Fatalf("Failed to serve: %v", err)
 		return err
 	}
 

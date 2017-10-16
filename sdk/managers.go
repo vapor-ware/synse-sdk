@@ -1,7 +1,6 @@
 package sdk
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -27,7 +26,7 @@ func (r *ReadingManager) Start() {
 			r.lock.Unlock()
 		}
 	}()
-	fmt.Printf("[reading manager] started\n")
+	logger.Info("[reading manager] started")
 }
 
 //
@@ -49,5 +48,5 @@ type WritingManager struct {
 //
 func (w *WritingManager) Start() {
 	// TODO figure out what happens here.
-	fmt.Printf("[writing manager] started\n")
+	logger.Info("[writing manager] started")
 }

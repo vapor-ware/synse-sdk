@@ -4,7 +4,8 @@ import (
 	"time"
 
 	"github.com/rs/xid"
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	//synse "github.com/vapor-ware/synse-server-grpc/go"
+	synse "./synse"
 )
 
 
@@ -28,6 +29,9 @@ type TransactionState struct {
 	updated   string
 }
 
+
+// FIXME - transaction expiration
+// FIXME - on update, etc. add checks for if id not in transaction map
 
 //
 var transactionMap = make(map[string]*TransactionState)
