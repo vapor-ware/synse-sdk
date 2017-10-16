@@ -45,7 +45,7 @@ This SDK is licensed under the ____. See LICENSE.txt and NOTICE.txt for more inf
  - ~~figure out how transaction checks will work~~
     - ~~this is largely tied to the work above for write~~
  - proper logging
- - plugin configuration (not prototype/device config) - e.g. debug mode, buffer size, etc?
+ - ~~plugin configuration (not prototype/device config) - e.g. debug mode, buffer size, etc?~~
  - packaging
  - documentation
  - testing

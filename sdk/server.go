@@ -132,7 +132,7 @@ func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.Transact
 // with the plugin.
 func (ps *PluginServer) Run() error {
 
-	logger.Info("[plugin server] running")
+	logger.Infof("[plugin server] Running server with SDK version %v", Version)
 
 	// Start the read and write managers
 	ps.readingManager.Start()

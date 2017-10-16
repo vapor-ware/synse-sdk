@@ -91,6 +91,7 @@ func main() {
 	config := sdk.PluginConfig{
 		Name: "simple-plugin",
 		Version: "1.0.0",
+		Debug: true,
 	}
 
 	p, err := sdk.NewPlugin(
