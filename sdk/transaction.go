@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/rs/xid"
-	//synse "github.com/vapor-ware/synse-server-grpc/go"
-	synse "./synse"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
+	"fmt"
 )
 
 
@@ -27,6 +27,7 @@ type TransactionState struct {
 	state     synse.WriteResponse_WriteState
 	created   string
 	updated   string
+	message   string
 }
 
 
@@ -42,7 +43,7 @@ func NewTransactionId() *TransactionState {
 	id := xid.New().String()
 	now := time.Now().String()
 
-	ts := &TransactionState{id, UNKNOWN, OK, now, now}
+	ts := &TransactionState{id, UNKNOWN, OK, now, now, ""}
 	transactionMap[id] = ts
 	return ts
 }
@@ -50,7 +51,19 @@ func NewTransactionId() *TransactionState {
 
 //
 func GetTransaction(id string) *TransactionState {
-	return transactionMap[id]
+	transaction := transactionMap[id]
+	if transaction == nil {
+		now := time.Now().String()
+		return &TransactionState{
+			id,
+			UNKNOWN,
+			ERROR,
+			now,
+			now,
+			fmt.Sprintf("Transaction %v not found.", id),
+		}
+	}
+	return transaction
 }
 
 

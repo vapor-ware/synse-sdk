@@ -48,7 +48,8 @@ func (rwl *RWLoop) Run() {
 
 					UpdateTransactionStatus(w.transaction.id, WRITING)
 
-					err := rwl.handler.Write(rwl.devices[w.device], w.data)
+					data := WriteDataFromGRPC(w.data)
+					err := rwl.handler.Write(rwl.devices[w.device], data)
 					if err != nil {
 						UpdateTransactionState(w.transaction.id, ERROR)
 						fmt.Errorf("Error when writing device: %v\n", err)

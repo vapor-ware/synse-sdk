@@ -41,9 +41,12 @@ func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	}, nil
 }
 
-func (ph *SimplePluginHandler) Write(in sdk.Device, data [][]byte) (error) {
+func (ph *SimplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) (error) {
 
 	fmt.Printf("[simple plugin handler]: WRITE\n")
+
+	fmt.Printf("Data -> %v\n", data.Raw)
+	fmt.Printf("Action -> %v\n", data.Action)
 	return nil
 }
 

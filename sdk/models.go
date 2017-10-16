@@ -2,8 +2,7 @@ package sdk
 
 
 import (
-	//synse "github.com/vapor-ware/synse-server-grpc/go"
-	synse "./synse"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 
 	"crypto/md5"
 	"io"
@@ -35,10 +34,29 @@ type ReadResource struct {
 type WriteResource struct {
 	transaction *TransactionState
 	device      string
-	data        [][]byte
+	data        *synse.WriteData
 }
 
 
+//
+type WriteData synse.WriteData
+
+
+//
+func WriteDataFromGRPC(data *synse.WriteData) *WriteData {
+	return &WriteData{
+		Raw: data.Raw,
+		Action: data.Action,
+	}
+}
+
+//
+func (w *WriteData) ToGRPC() *synse.WriteData {
+	return &synse.WriteData{
+		Raw: w.Raw,
+		Action: w.Action,
+	}
+}
 
 
 // TODO - figure out how to generate a deterministic device id here.

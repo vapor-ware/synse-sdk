@@ -1,15 +1,15 @@
 package sdk
 
 import (
-	"path/filepath"
-	"os"
-	"fmt"
-	"io/ioutil"
-	"gopkg.in/yaml.v2"
 	"errors"
+	"fmt"
+	"os"
+	"io/ioutil"
+	"path/filepath"
 
-	//synse "github.com/vapor-ware/synse-server-grpc/go"
-	synse "./synse"
+	"gopkg.in/yaml.v2"
+
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // PluginConfig specifies the configuration options for the plugin itself.
@@ -67,6 +67,10 @@ type PluginConfig struct {
 	// off of a plugin (e.g. many reads occurring), increasing the read
 	// buffer might become necessary.
 	ReadBufferSize int `yaml:"read_buffer_size"`
+
+	// The time (in seconds) that transaction data should be tracked for
+	// after it has completed.
+	TransactionTTL int `yaml:"transaction_ttl"`
 }
 
 
@@ -117,6 +121,14 @@ func (c *PluginConfig) Merge(config PluginConfig) error {
 		c.WritesPerLoop = config.WritesPerLoop
 	}
 
+	// We don't want the transaction TTL to be 0, otherwise it will be removed
+	// almost immediately after completion, leaving no time for any subsequent
+	// transaction check to finish successfully. Take a zero value here to
+	// mean "default"
+	if config.TransactionTTL != 0 {
+		c.TransactionTTL = config.TransactionTTL
+	}
+
 	// LoopDelay can be 0 (the default), so no check is needed.
 	c.LoopDelay = config.LoopDelay
 
@@ -134,6 +146,7 @@ func GetDefaultConfig() *PluginConfig {
 		WriteBufferSize: 100,
 		WritesPerLoop: 5,
 		LoopDelay: 0,
+		TransactionTTL: 60 * 5,  // five minutes
 	}
 }
 

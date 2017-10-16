@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"sync"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 
@@ -45,8 +46,23 @@ type WritingManager struct {
 	values map[string]string
 }
 
+
 //
-func (w *WritingManager) Start() {
-	// TODO figure out what happens here.
-	logger.Info("[writing manager] started")
+func (w *WritingManager) Write(in *synse.WriteRequest) map[string]*synse.WriteData {
+
+	var response = make(map[string]*synse.WriteData)
+
+	for _, data := range in.Data {
+		transaction := NewTransactionId()
+		UpdateTransactionStatus(transaction.id, PENDING)
+		response[transaction.id] = data
+
+		w.channel <- WriteResource{
+			transaction,
+			in.Uid,
+			data,
+		}
+	}
+	logger.Debugf("Write response data: %+v", response)
+	return response
 }

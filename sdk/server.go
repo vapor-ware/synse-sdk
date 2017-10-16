@@ -1,8 +1,7 @@
 package sdk
 
 import (
-	//synse "github.com/vapor-ware/synse-server-grpc/go"
-	synse "./synse"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 
 	"fmt"
 	"os"
@@ -81,16 +80,12 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 }
 
 // GRPC WRITE HANDLER
-func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.TransactionId, error) {
+func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.Transactions, error) {
 	logger.Debug("[grpc] WRITE")
 
-	transaction := NewTransactionId()
-	UpdateTransactionStatus(transaction.id, PENDING)
-
-	ps.writingManager.channel <- WriteResource{transaction, in.Uid, in.Data}
-
-	return &synse.TransactionId{
-		Id: transaction.id,
+	transactions := ps.writingManager.Write(in)
+	return &synse.Transactions{
+		Transactions: transactions,
 	}, nil
 }
 
@@ -113,12 +108,12 @@ func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.Transact
 	logger.Debug("[grpc] TRANSACTION CHECK")
 
 	transaction := GetTransaction(in.Id)
-
-	// FIXME - need to update GRPC so write response has a 'created' time and 'updated' time
 	return &synse.WriteResponse{
-		Timestamp: transaction.created,
+		Created: transaction.created,
+		Updated: transaction.updated,
 		Status: transaction.status,
 		State: transaction.state,
+		Message: transaction.message,
 	}, nil
 }
 
@@ -134,9 +129,8 @@ func (ps *PluginServer) Run() error {
 
 	logger.Infof("[plugin server] Running server with SDK version %v", Version)
 
-	// Start the read and write managers
+	// Start the reading manager
 	ps.readingManager.Start()
-	ps.writingManager.Start()
 
 	// start the RW loop
 	ps.rwLoop.Run()

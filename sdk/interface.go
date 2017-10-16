@@ -18,8 +18,8 @@ type PluginHandler interface {
 	// TODO (etd) - possibly add in a configuration option that would process reads
 	// in parallel and writes in parallel?
 
-	Read(in Device) (ReadResource, error)
-	Write(in Device, data [][]byte) (error)
+	Read(Device) (ReadResource, error)
+	Write(Device, *WriteData) (error)
 }
 
 
@@ -29,5 +29,5 @@ type DeviceHandler interface {
 	// Get the protocol-specific pieces of information that make a device instance
 	// unique. This value (or joined values) will be used as a component when creating
 	// the device UID.
-	GetProtocolIdentifiers(data map[string]string) (string)
+	GetProtocolIdentifiers(map[string]string) (string)
 }
