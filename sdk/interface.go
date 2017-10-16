@@ -1,33 +1,34 @@
 package sdk
 
-
-// Every plugin that is written using this SDK must fulfil this interface. These
-// functions are what the Read-Write loop will end up calling when the corresponding
-// internal API calls are made.
+// PluginHandler defines the interface that a plugin implementation needs to
+// fulfil in order to handle reads and writes.
 //
-// The plugin only needs to specify the behavior for the read and write commands
-// here. The transaction check and metainfo commands are fulfilled the same way
-// for each plugin, so those commands are provided by this SDK.
+// Within the SDK, Read and Write are are called synchronously. First, writes
+// are processed, and then all of the reads are processed. This is done in
+// order to support serial device. Not all protocols are serial bound, but
+// we must cater to the lowest common denominator.
+//
+// FUTURE: A configuration option could be added to modify the read-write
+// behavior to allow for parallel reads and writes.
 type PluginHandler interface {
 
-	// within the sdk, read and write are called synchronously. this is done in
-	// order to support serial devices (e.g. devices that communicate over a serial
-	// bus). not all protocols are serial bound, but here we must cater to the lowest
-	// common denominator.
-
-	// TODO (etd) - possibly add in a configuration option that would process reads
-	// in parallel and writes in parallel?
-
+	// Read the device specified by the `ReadResource`.
 	Read(Device) (ReadResource, error)
+
+	// Write data to the specified device.
 	Write(Device, *WriteData) (error)
 }
 
 
 // The DeviceHandler interface describes methods needed to properly parse
 // protocol-specific device information.
+
+// DeviceHandler defines the interface which a plugin implementation should
+// fulfil for plugin-specific device parsing and handling.
 type DeviceHandler interface {
-	// Get the protocol-specific pieces of information that make a device instance
-	// unique. This value (or joined values) will be used as a component when creating
-	// the device UID.
+
+	// GetProtocoldentifiers gets the protocol-specific pieces of information
+	// that make a device instance unique. This value (or joined set of values)
+	// will be used as a component when creating the device UID.
 	GetProtocolIdentifiers(map[string]string) (string)
 }

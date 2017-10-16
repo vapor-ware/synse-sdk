@@ -4,17 +4,23 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-var logger = logrus.New()
+// Logger is the logger that the SDK uses and that should be used by plugins
+// written using the SDK.
+var Logger = logrus.New()
 
 
+// SetLogLevel sets the level of `Logger` to either debug or info based on
+// the debug boolean flag passed to it.
+//
+// While more levels could be supported, we really only care about logging
+// for development environments and logging for production. Production
+// logging happens at the info level as opposed to error, since there are
+// informational messages that can be helpful to surface in production,
+// not just error or warning messages.
 func SetLogLevel(debug bool) {
 	if debug {
-		logger.Level = logrus.DebugLevel
+		Logger.Level = logrus.DebugLevel
 	} else {
-		// The highest level we set for the SDK is INFO. This is because there
-		// should only be a few instances of INFO logging which could be useful
-		// to expose in production. All other production logging should be error
-		// logging, which would be captured in this output as well.
-		logger.Level = logrus.InfoLevel
+		Logger.Level = logrus.InfoLevel
 	}
 }

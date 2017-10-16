@@ -56,14 +56,14 @@ func (ps *PluginServer) getReadings(uid string) []Reading {
 
 // GRPC READ HANDLER
 func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
-	logger.Debug("[grpc] READ")
+	Logger.Debug("[grpc] READ")
 
 	uid := in.GetUid()
 	if uid == "" {
-		logger.Debug("No UID supplied.")
+		Logger.Debug("No UID supplied.")
 	}
 
-	logger.Debugf("uid: %v\n", uid)
+	Logger.Debugf("uid: %v\n", uid)
 
 	readings := ps.getReadings(uid)
 
@@ -81,7 +81,7 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 
 // GRPC WRITE HANDLER
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.Transactions, error) {
-	logger.Debug("[grpc] WRITE")
+	Logger.Debug("[grpc] WRITE")
 
 	transactions := ps.writingManager.Write(in)
 	return &synse.Transactions{
@@ -92,7 +92,7 @@ func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*syn
 
 // GRPC METAINFO HANDLER
 func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.InternalApi_MetainfoServer) error {
-	logger.Debug("[grpc] METAINFO")
+	Logger.Debug("[grpc] METAINFO")
 
 	for _, device := range ps.pluginDevices {
 		if err := stream.Send(device.ToMetainfoResponse()); err != nil {
@@ -105,7 +105,7 @@ func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.Interna
 
 // GRPC TRANSACTION CHECK HANDLER
 func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
-	logger.Debug("[grpc] TRANSACTION CHECK")
+	Logger.Debug("[grpc] TRANSACTION CHECK")
 
 	transaction := GetTransaction(in.Id)
 	return &synse.WriteResponse{
@@ -127,7 +127,7 @@ func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.Transact
 // with the plugin.
 func (ps *PluginServer) Run() error {
 
-	logger.Infof("[plugin server] Running server with SDK version %v", Version)
+	Logger.Infof("[plugin server] Running server with SDK version %v", Version)
 
 	// Start the reading manager
 	ps.readingManager.Start()
@@ -143,23 +143,23 @@ func (ps *PluginServer) Run() error {
 		os.Remove(socket)
 	}
 
-	logger.Infof("[grpc] listening on socket %v", socket)
+	Logger.Infof("[grpc] listening on socket %v", socket)
 	lis, err := net.Listen("unix", socket)
 	if err != nil {
-		logger.Fatalf("Failed to listen: %v", err)
+		Logger.Fatalf("Failed to listen: %v", err)
 		return err
 	}
 
 	// create the GRPC server and register our plugin server to it
 	svr := grpc.NewServer()
-	logger.Debugf("[grpc] creating new grpc server")
+	Logger.Debugf("[grpc] creating new grpc server")
 	synse.RegisterInternalApiServer(svr, ps)
-	logger.Debugf("[grpc] registering handlers")
+	Logger.Debugf("[grpc] registering handlers")
 
 	// start the server
-	logger.Infof("[grpc] serving")
+	Logger.Infof("[grpc] serving")
 	if err := svr.Serve(lis); err != nil {
-		logger.Fatalf("Failed to serve: %v", err)
+		Logger.Fatalf("Failed to serve: %v", err)
 		return err
 	}
 

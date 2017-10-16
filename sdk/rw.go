@@ -85,5 +85,5 @@ func (rwl *RWLoop) Run() {
 			}
 		}
 	}()
-	logger.Info("[rwloop] running")
+	Logger.Info("[rwloop] running")
 }

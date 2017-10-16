@@ -74,14 +74,16 @@ type PluginConfig struct {
 }
 
 
-// FromFile
+// FromFile reads in a YAML file and parses it into a PluginConfig struct.
 func (c *PluginConfig) FromFile(path string) (*PluginConfig, error) {
 
 	return &PluginConfig{}, nil
 }
 
 
-// Merge
+// Merge updates the fields of the PluginConfig struct with those of
+// another PluginConfig. This is used primarily to combine user configurations
+// with default configurations.
 func (c *PluginConfig) Merge(config PluginConfig) error {
 
 	// Since Go structs will default to the zero value for a struct field
@@ -138,7 +140,9 @@ func (c *PluginConfig) Merge(config PluginConfig) error {
 	return nil
 }
 
-
+// GetDefaultConfig returns a PluginConfig instance that holds the default
+// values for the plugin configuration. Name and Version do not have default
+// values because they are required to be specified by the plugin itself.
 func GetDefaultConfig() *PluginConfig {
 	return &PluginConfig{
 		Debug: false,
@@ -155,6 +159,8 @@ func GetDefaultConfig() *PluginConfig {
 var Config = GetDefaultConfig()
 
 // FIXME - make private here and add a public call in sdk.go?
+// ConfigurePlugin takes a plugin-specified configuration and sets it as
+// the configuration that is used by the SDK.
 func ConfigurePlugin(config PluginConfig) error {
 	Config.Merge(config)
 	return nil
@@ -179,6 +185,7 @@ func ConfigurePlugin(config PluginConfig) error {
 //       max: 100
 
 
+// PrototypeConfig
 type PrototypeConfig struct {
 	Version       string          `yaml:"version"`
 	Type          string          `yaml:"type"`
@@ -188,6 +195,7 @@ type PrototypeConfig struct {
 	Output        []DeviceOutput  `yaml:"output"`
 }
 
+// DeviceOutput
 type DeviceOutput struct {
 	Type       string       `yaml:"type"`
 	Unit       *OutputUnit   `yaml:"unit"`

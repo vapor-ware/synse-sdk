@@ -27,7 +27,6 @@ func NewPlugin(config PluginConfig, pluginHandler PluginHandler, deviceHandler D
 
 	writeManager := WritingManager{
 		channel: writeChan,
-		values: make(map[string]string),
 	}
 
 	rwloop := RWLoop{
@@ -36,7 +35,7 @@ func NewPlugin(config PluginConfig, pluginHandler PluginHandler, deviceHandler D
 		writingManager: writeManager,
 	}
 
-	logger.Debugf("Config: %+v", Config)
+	Logger.Debugf("Config: %+v", Config)
 
 	s := &PluginServer{
 		name: Config.Name,
@@ -45,12 +44,12 @@ func NewPlugin(config PluginConfig, pluginHandler PluginHandler, deviceHandler D
 		writingManager: writeManager,
 	}
 
-	logger.Info("[plugin] new plugin instance created")
+	Logger.Info("[plugin] new plugin instance created")
 
 	// read in the device prototype and instance configurations from the plugin's
 	// config files and generate devices for each configured device.
 	s.configureDevices(deviceHandler)
-	logger.Infof("[plugin] registered %v devices", len(s.pluginDevices))
+	Logger.Infof("[plugin] registered %v devices", len(s.pluginDevices))
 
 	return s, nil
 }
