@@ -74,7 +74,7 @@ type PluginConfig struct {
 
 // FromFile reads in a YAML file and parses it into a PluginConfig struct.
 func (c *PluginConfig) FromFile(path string) (*PluginConfig, error) {
-
+	// TODO
 	return &PluginConfig{}, nil
 }
 
