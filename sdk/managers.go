@@ -1,7 +1,11 @@
 package sdk
 
 import (
+	"fmt"
 	"sync"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -31,9 +35,37 @@ func (r *ReadingManager) Start() {
 	Logger.Info("[reading manager] started")
 }
 
-// GetReading gets the reading(s) for the the specified device from the
+// Read is used to get all readings associated with the specified device. If
+// the specified device is not found in the reading manager's state, no
+// readings will be returned.
+func (r *ReadingManager) Read(in *synse.ReadRequest) ([]*synse.ReadResponse, error) {
+	uid := in.GetUid()
+	if uid == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "No UID supplied to Read.")
+	}
+	Logger.Debugf("Reading uid: %v", uid)
+
+
+	readings := r.getReadings(uid)
+	if readings == nil {
+		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("No readings found for device %v", uid))
+	}
+
+	var response []*synse.ReadResponse
+	for _, r := range readings {
+		reading := &synse.ReadResponse{
+			Timestamp: r.Timestamp,
+			Type: r.Type,
+			Value: r.Value,
+		}
+		response = append(response, reading)
+	}
+	return response, nil
+}
+
+// getReadings gets the reading(s) for the the specified device from the
 // values map.
-func (r *ReadingManager) GetReading(key string) []Reading {
+func (r *ReadingManager) getReadings(key string) []Reading {
 	var reading []Reading
 	r.lock.Lock()
 	reading = r.values[key]

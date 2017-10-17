@@ -3,13 +3,14 @@ package sdk
 import (
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
-	"fmt"
 )
 
 
 const (
+
 	// statuses
 	UNKNOWN = synse.WriteResponse_UNKNOWN
 	PENDING = synse.WriteResponse_PENDING
@@ -21,6 +22,10 @@ const (
 	ERROR = synse.WriteResponse_ERROR
 )
 
+// TransactionState is used to represent a Write transaction as it is
+// processed. It holds the ID of the transaction, as well as the processing
+// status and overall state. This model is used to look up transaction ids
+// and return the asynchronous write responses.
 type TransactionState struct {
 	id        string
 	status    synse.WriteResponse_WriteStatus
@@ -30,52 +35,83 @@ type TransactionState struct {
 	message   string
 }
 
+// toGRPC is a convenience method which translates the SDK's TransactionState
+// model to the GRPC WriteResponse model.
+func (t *TransactionState) toGRPC() *synse.WriteResponse {
+	return &synse.WriteResponse{
+		Status: t.status,
+		State: t.state,
+		Created: t.created,
+		Updated: t.updated,
+		Message: t.message,
+	}
+}
 
-// FIXME - transaction expiration
-// FIXME - on update, etc. add checks for if id not in transaction map
 
-//
-var transactionMap = make(map[string]*TransactionState)
+// transactionCache is a cache with a configurable default expiration time that
+// is used to track the asynchronous write transactions as they are processed.
+var transactionCache = cache.New(
+	time.Duration(Config.TransactionTTL)*time.Second,
+	time.Duration(Config.TransactionTTL)*2*time.Second,
+)
 
 
-//
+// NewTransactionId creates a new `TransactionState` instance and gives it a
+// new id. The newly created `TransactionState` is then added to the
+// transactionCache.
 func NewTransactionId() *TransactionState {
 	id := xid.New().String()
 	now := time.Now().String()
 
 	ts := &TransactionState{id, UNKNOWN, OK, now, now, ""}
-	transactionMap[id] = ts
+	transactionCache.Set(id, ts, cache.DefaultExpiration)
 	return ts
 }
 
 
-//
+// GetTransaction takes a transaction id and returns the corresponding
+// `TransactionState`, if it exists. If no transaction is found, nil
+// is returned.
 func GetTransaction(id string) *TransactionState {
-	transaction := transactionMap[id]
-	if transaction == nil {
-		now := time.Now().String()
-		return &TransactionState{
-			id,
-			UNKNOWN,
-			ERROR,
-			now,
-			now,
-			fmt.Sprintf("Transaction %v not found.", id),
-		}
+	transaction, found := transactionCache.Get(id)
+	if found {
+		return transaction.(*TransactionState)
 	}
-	return transaction
+	return nil
 }
 
 
-//
+// UpdateTransactionState updates the state field for a transaction's corresponding
+// TransactionState. If the given id does not correspond to a known transaction,
+// no action is taken.
 func UpdateTransactionState(id string, state synse.WriteResponse_WriteState) {
-	transaction := transactionMap[id]
-	transaction.state = state
+	transaction, found := transactionCache.Get(id)
+	if !found {
+		Logger.Debugf("Did not find transaction %v when updating state.", id)
+		return
+	}
+
+	t := transaction.(*TransactionState)
+	now := time.Now().String()
+
+	t.state = state
+	t.updated = now
 }
 
 
-//
+// UpdateTransactionStatus updates the status field for a transaction's corresponding
+// TransactionState. If the given id does not correspond to a known transaction,
+// no action is taken.
 func UpdateTransactionStatus(id string, status synse.WriteResponse_WriteStatus) {
-	transaction := transactionMap[id]
-	transaction.status = status
+	transaction, found := transactionCache.Get(id)
+	if !found {
+		Logger.Debugf("Did not find transaction %v when updating status.", id)
+		return
+	}
+
+	t := transaction.(*TransactionState)
+	now := time.Now().String()
+
+	t.status = status
+	t.updated = now
 }

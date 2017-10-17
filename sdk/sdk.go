@@ -1,15 +1,13 @@
 package sdk
 
-
-
 const (
 	CONFIG_DIR = "config"
 )
 
-
-// create a new SDK Plugin instance. This is the preferred way of creating a
-// new PluginServer object. When called, this will read in configurations
-// present in the plugin config directory for prototype and instance configs.
+// NewPlugin creates a new SDK PluginServer instance. This is the preferred way
+// of creating a new PluginServer. When called, this will read in configuration
+// files present in the plugin config directory and use those configurations to
+// set up a new instance of the PluginServer.
 func NewPlugin(config PluginConfig, pluginHandler PluginHandler, deviceHandler DeviceHandler) (*PluginServer, error) {
 
 	err := ConfigurePlugin(config); if err != nil {
@@ -48,9 +46,12 @@ func NewPlugin(config PluginConfig, pluginHandler PluginHandler, deviceHandler D
 
 	// read in the device prototype and instance configurations from the plugin's
 	// config files and generate devices for each configured device.
-	s.configureDevices(deviceHandler)
-	Logger.Infof("[plugin] registered %v devices", len(s.pluginDevices))
+	err = s.configureDevices(deviceHandler)
+	if err != nil {
+		return nil, err
+	}
 
+	Logger.Infof("[plugin] registered %v devices", len(s.pluginDevices))
 	return s, nil
 }
 

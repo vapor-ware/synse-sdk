@@ -2,24 +2,25 @@ package sdk
 
 
 import (
-	synse "github.com/vapor-ware/synse-server-grpc/go"
-
 	"crypto/md5"
-	"io"
 	"fmt"
+	"io"
 	"time"
+
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
-
-// SDK model for a reading off of a device. The timestamp corresponds to the
-// time which the reading was taken. The value represents the reading itself.
+// Reading describes a single device reading with a timestamp.
 type Reading struct {
 	Timestamp string
+	Type      string
 	Value     string
 }
 
-// A ReadResource is an SDK-internal model which is used to associate a set
-// of Readings with a known device. The device is specified by its UID string.
+
+// ReadResource is used to associate a set of Readings with a known device,
+// which is specified by its uid string.
+//
 // Since a single device can provide more than one reading (e.g. a humidity
 // device could provide humidity and temperature data, or an LED could provide
 // on/off state, color, etc.) a ReadResource will allow multiple readings to
@@ -30,27 +31,19 @@ type ReadResource struct {
 	Reading []Reading
 }
 
-//
+// WriteResource describes a single write transaction.
 type WriteResource struct {
 	transaction *TransactionState
 	device      string
 	data        *synse.WriteData
 }
 
-
-//
+// WriteData is an SDK alias for the Synse gRPC WriteData. This is done to
+// make writing new plugins easier.
 type WriteData synse.WriteData
 
 
-//
-func WriteDataFromGRPC(data *synse.WriteData) *WriteData {
-	return &WriteData{
-		Raw: data.Raw,
-		Action: data.Action,
-	}
-}
-
-//
+// ToGRPC converts the SDK WriteData to the Synse gRPC WriteData.
 func (w *WriteData) ToGRPC() *synse.WriteData {
 	return &synse.WriteData{
 		Raw: w.Raw,
@@ -59,25 +52,24 @@ func (w *WriteData) ToGRPC() *synse.WriteData {
 }
 
 
-// TODO - figure out how to generate a deterministic device id here.
-//     should the device id be globally unique? (e.g. include the rack
-//     and board) or unique within the scope of boards?
-//     perhaps within the SDK it should be globally unique (lookups easier)
-//     OR we could have UID (for device within board scope) and GID (for
-//     device within global scope) which would include the rack/board
+// WrateDataFromGRPC takes the Synse gRPC WriteData and converts it to the
+// SDK WriteData.
+func WriteDataFromGRPC(data *synse.WriteData) *WriteData {
+	return &WriteData{
+		Raw: data.Raw,
+		Action: data.Action,
+	}
+}
 
 
-// Deterministic device IDs allow the specification of devices to become the
-// identity of devices. That is to say, if you have two devices of type T on
-// board B of rack R, they would be differentiated by their configuration. if
-// device-1 operated on channel C1 and device-2 operated on channel C2, then
-// compounding all of this information should yield a unique identifier for
-// the device which does not need to be persisted. Because the identifying bits
-// come from configuration, as long as the same configuration is provided, the
-// physical devices should always map to the same virtual ids.
+// NewUID creates a new unique identifier for a device. The device id is
+// deterministic because it is created as a hash of various components that
+// make up the device's configuration. By definition, each device will have
+// a (slightly) different configuration (otherwise they would just be the same
+// devices).
 //
-// devices themselves may not have a globally unique id, but all devices should
-// be unique on a given board.
+// These device IDs are not guaranteed to be globally unique, but they should
+// be unique to the board they reside on.
 func NewUID(protocol, deviceType, model, protoComp string) string {
 	h := md5.New()
 	io.WriteString(h, protocol)
@@ -89,58 +81,58 @@ func NewUID(protocol, deviceType, model, protoComp string) string {
 }
 
 
-
-
-//
+// Device describes a single configured device for the plugin.
 type Device struct {
 	Prototype PrototypeConfig
-	Instance DeviceConfig
-
-	Handler DeviceHandler
+	Instance  DeviceConfig
+	Handler   DeviceHandler
 }
 
-//
+// Type gets the configured type of the Device.
 func (d *Device) Type() string {
 	return d.Prototype.Type
 }
 
-//
+// Model gets the configured model of the Device.
 func (d *Device) Model() string {
 	return d.Prototype.Model
 }
 
-//
+// Manufacturer gets the configured manufacturer of the Device.
 func (d *Device) Manufacturer() string {
 	return d.Prototype.Manufacturer
 }
 
-//
+// Protocol gets the configured protocol of the Device.
 func (d *Device) Protocol() string {
 	return d.Prototype.Protocol
 }
 
-//
+// Uid gets the id for the Device.
 func (d *Device) Uid() string {
 	protocolComp := d.Handler.GetProtocolIdentifiers(d.Data())
 	return NewUID(d.Protocol(), d.Type(), d.Model(), protocolComp)
 }
 
-//
+// Output gets the list of configured reading outputs for the Device.
 func (d *Device) Output() []DeviceOutput {
 	return d.Prototype.Output
 }
 
-//
+// Location gets the configured location of the Device.
 func (d *Device) Location() DeviceLocation {
 	return d.Instance.Location
 }
 
-//
+// Data gets the plugin-specific data for the device. This is left as a map
+// of string to string (how it is read from the config YAML) and is left to
+// the plugin itself to parse further.
 func (d *Device) Data() map[string]string {
 	return d.Instance.Data
 }
 
-//
+// ToMetainfoResponse converts the Device into its corresponding
+// MetainfoResponse representation.
 func (d *Device) ToMetainfoResponse() *synse.MetainfoResponse {
 
 	location := d.Location()

@@ -1,85 +1,65 @@
 package sdk
 
 import (
-	synse "github.com/vapor-ware/synse-server-grpc/go"
-
 	"fmt"
-	"os"
 	"net"
+	"os"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// The PluginServer fulfills the interface needed by the GRPC server. It maps the
-// user-defined PluginHandler to the interface for the GRPC server. While they are
-// already similar, the PluginServer provides a layer of abstraction.
-//
-//
-//   TODO: update example here
-//	 a plugin should get an instance of a PluginServer via:
-//		server := sdk.NewPlugin(name, handler)
-//		server.Run()
-//
+// PluginServer is the server that is used to run the plugin's read-write loop,
+// to track device metainfo, and to server gRPC requests.
 type PluginServer struct {
-	name string
-
+	name           string
 	readingManager ReadingManager
 	writingManager WritingManager
-
 	pluginDevices  map[string]Device
 	rwLoop         RWLoop
 }
 
-// private method to configure devices. this will always be called on
-// plugin server creation via 'NewPlugin'. It will look in the default
-// directory for configurations.
-func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) {
-	devices := DevicesFromConfig(CONFIG_DIR, deviceHandler)
+
+// configureDevices is a convenience function to parse all of the plugin
+// configuration files, generate Device instances for each of the configured
+// devices, and then populate the pluginDevices map which is used to store
+// and access these device models.
+func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
+	devices, err := DevicesFromConfig(CONFIG_DIR, deviceHandler)
+	if err != nil {
+		return err
+	}
 
 	ps.pluginDevices = make(map[string]Device)
 	for _, device := range devices {
 		ps.pluginDevices[device.Uid()] = device
 	}
 	ps.rwLoop.devices = ps.pluginDevices
+	return nil
 }
 
 
-//
-func (ps *PluginServer) getReadings(uid string) []Reading {
-
-	// TODO - need some checking in here for if the UID doesn't exist.
-	return ps.readingManager.GetReading(uid)
-}
-
-
-
-// GRPC READ HANDLER
+// Read is the gRPC handler for read requests.
 func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
 	Logger.Debug("[grpc] READ")
 
-	uid := in.GetUid()
-	if uid == "" {
-		Logger.Debug("No UID supplied.")
+	responses, err := ps.readingManager.Read(in)
+	if err != nil {
+		return err
 	}
 
-	Logger.Debugf("uid: %v\n", uid)
-
-	readings := ps.getReadings(uid)
-
-	for _, r := range readings {
-		resp := &synse.ReadResponse{
-			Timestamp: r.Timestamp,
-			Value: r.Value,
-		}
-		if err := stream.Send(resp); err != nil {
+	for _, response := range responses {
+		if err := stream.Send(response); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// GRPC WRITE HANDLER
+// Write is the gRPC handler for write requests.
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.Transactions, error) {
 	Logger.Debug("[grpc] WRITE")
 
@@ -90,7 +70,7 @@ func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*syn
 }
 
 
-// GRPC METAINFO HANDLER
+// Metainfo is the gRPC handler for metainfo requests.
 func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.InternalApi_MetainfoServer) error {
 	Logger.Debug("[grpc] METAINFO")
 
@@ -103,28 +83,23 @@ func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.Interna
 }
 
 
-// GRPC TRANSACTION CHECK HANDLER
+// TransactionCheck is the gRPC handler for transaction check requests.
 func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
 	Logger.Debug("[grpc] TRANSACTION CHECK")
 
 	transaction := GetTransaction(in.Id)
-	return &synse.WriteResponse{
-		Created: transaction.created,
-		Updated: transaction.updated,
-		Status: transaction.status,
-		State: transaction.state,
-		Message: transaction.message,
-	}, nil
+	if transaction == nil {
+		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Transaction %v not found.", in.Id))
+	}
+	return transaction.toGRPC(), nil
 }
 
 
-
-// Run the PluginServer.
-// This will first start the read-write loop and then will configure
-// and serve the GRPC server and listen for incoming requests. It will be
-// configured to listen on a UNIX socket which has the same name as the
-// plugin. This socket will be used by Synse to discover and communicate
-// with the plugin.
+// Run starts the PluginServer instance. It starts the background reads,
+// the read-write loop, and the gRPC server. The gRPC server is configured
+// to communicate over a UNIX socket that is created in a well-known location
+// and has the same name as the plugin. Synse server will discover and
+// communicate with the plugin using the UNIX socket.
 func (ps *PluginServer) Run() error {
 
 	Logger.Infof("[plugin server] Running server with SDK version %v", Version)

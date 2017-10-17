@@ -2,13 +2,11 @@ package sdk
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"io/ioutil"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
-
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -155,12 +153,15 @@ func GetDefaultConfig() *PluginConfig {
 }
 
 
-// global configuration to be set via the plugin server Configure function.
+// Config is the global plugin configuration. It contains the default
+// configuration values to start and can be updated via the `ConfigurePlugin`
+// function.
 var Config = GetDefaultConfig()
 
-// FIXME - make private here and add a public call in sdk.go?
+
 // ConfigurePlugin takes a plugin-specified configuration and sets it as
-// the configuration that is used by the SDK.
+// the configuration that is used by the SDK. The given configuration is
+// merged with the existing configuration.
 func ConfigurePlugin(config PluginConfig) error {
 	Config.Merge(config)
 	return nil
@@ -168,24 +169,7 @@ func ConfigurePlugin(config PluginConfig) error {
 
 
 
-
-// version: 1.0
-// type: emulated-temperature
-// model: emul8-temp
-// manufacturer: vaporio
-// protocol: emulator
-// output:
-//   - type: temperature
-//     unit:
-//       name: celsius
-//       symbol: C
-//     precision: 2
-//     range:
-//       min: 0
-//       max: 100
-
-
-// PrototypeConfig
+// PrototypeConfig represents the configuration for a device prototype.
 type PrototypeConfig struct {
 	Version       string          `yaml:"version"`
 	Type          string          `yaml:"type"`
@@ -195,7 +179,7 @@ type PrototypeConfig struct {
 	Output        []DeviceOutput  `yaml:"output"`
 }
 
-// DeviceOutput
+// DeviceOutput represents the reading output for a configured device.
 type DeviceOutput struct {
 	Type       string       `yaml:"type"`
 	Unit       *OutputUnit   `yaml:"unit"`
@@ -203,6 +187,7 @@ type DeviceOutput struct {
 	Range      *OutputRange  `yaml:"range"`
 }
 
+// ToMetaOutput converts the DeviceOutput to the gRPC MetaOutput model.
 func (o *DeviceOutput) ToMetaOutput() *synse.MetaOutput {
 
 	unit := &OutputUnit{}
@@ -223,11 +208,13 @@ func (o *DeviceOutput) ToMetaOutput() *synse.MetaOutput {
 	}
 }
 
+// OutputUnit describes the unit of measure for a device output.
 type OutputUnit struct {
 	Name    string  `yaml:"name"`
 	Symbol  string  `yaml:"symbol"`
 }
 
+// ToMetaOutputUnit converts the OutputUnit to the gRPC MetaOutputUnit model.
 func (u *OutputUnit) ToMetaOutputUnit() *synse.MetaOutputUnit {
 	return &synse.MetaOutputUnit{
 		Name: u.Name,
@@ -235,11 +222,13 @@ func (u *OutputUnit) ToMetaOutputUnit() *synse.MetaOutputUnit {
 	}
 }
 
+// OutputRange describes the min and max valid numerical values for a reading.
 type OutputRange struct {
 	Min  int32  `yaml:"min"`
 	Max  int32  `yaml:"max"`
 }
 
+// ToMetaOutputRange converts the OutputRange to the gRPC MetaOutputRange model.
 func (r *OutputRange) ToMetaOutputRange() *synse.MetaOutputRange {
 	return &synse.MetaOutputRange{
 		Min: r.Min,
@@ -247,7 +236,9 @@ func (r *OutputRange) ToMetaOutputRange() *synse.MetaOutputRange {
 	}
 }
 
-
+// ParsePrototypeConfig searches the configuration directory for device
+// prototype configuration files. If it finds any, it reads them and populates
+// PrototypeConfig structs for each of the device prototypes.
 func ParsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 
 	var protos []PrototypeConfig
@@ -255,13 +246,13 @@ func ParsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 
 	_, err := os.Stat(protoPath)
 	if err != nil {
-		fmt.Printf("Error: Unable to find prototype config directory.\n")
+		Logger.Error("Unable to find prototype config directory.")
 		return protos, err
 	}
 
 	files, err := ioutil.ReadDir(protoPath)
 	if err != nil {
-		fmt.Printf("Error: Unable to read files in prototype config directory.\n")
+		Logger.Error("Unable to read files in prototype config directory.")
 		return protos, err
 	}
 
@@ -270,13 +261,13 @@ func ParsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 
 		yamlFile, err := ioutil.ReadFile(filepath.Join(protoPath, f.Name()))
 		if err != nil {
-			fmt.Printf("Error: Could not read file %v\n", f.Name())
+			Logger.Errorf("Could not read config file %v.", f.Name())
 			return protos, err
 		}
 
 		err = yaml.Unmarshal(yamlFile, &protoCfg)
 		if err != nil {
-			fmt.Printf("Error: Failed to parse yaml from %v\n", f.Name())
+			Logger.Errorf("Failed to parse YAML from %v.", f.Name())
 			return protos, err
 		}
 
@@ -287,42 +278,22 @@ func ParsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 
 
 
-// version: 1.0
-// type: emulated-temperature
-// model: emul8-temp
-//
-// locations:
-//   unknown:
-//     rack: unknown
-//     board: unknown
-//
-// devices:
-//   - id: 1
-//     location: unknown
-//     comment: first emulated temperature device
-//     info: CEC temp 1
-//   - id: 2
-//     location: unknown
-//     comment: second emulated temperature device
-//     info: CEC temp 2
-//   - id: 3
-//     location: unknown
-//     comment: third emulated temperature device
-//     info: CEC temp 3
-
+// InstanceConfig represents the configuration for a device instance.
 type InstanceConfig struct {
-	Version string `yaml:"version"`
-	Type string `yaml:"type"`
-	Model string `yaml:"model"`
+	Version   string `yaml:"version"`
+	Type      string `yaml:"type"`
+	Model     string `yaml:"model"`
 	Locations map[string]DeviceLocation `yaml:"locations"`
-	Devices []map[string]string `yaml:"devices"`
+	Devices   []map[string]string `yaml:"devices"`
 }
 
+// DeviceLocation represents the location of a device instance.
 type DeviceLocation struct {
-	Rack string `yaml:"rack"`
+	Rack  string `yaml:"rack"`
 	Board string `yaml:"board"`
 }
 
+// ToMetaLocation converts the DeviceLocation to the gRPC MetaLocation model.
 func (l *DeviceLocation) ToMetalLocation() *synse.MetaLocation {
 	return &synse.MetaLocation{
 		Rack: l.Rack,
@@ -330,16 +301,20 @@ func (l *DeviceLocation) ToMetalLocation() *synse.MetaLocation {
 	}
 }
 
-
+// DeviceConfig represents a single device instance. It is essentially the
+// same as the InstanceConfig except that it represents a single element from
+// its Devices field and has its location resolved.
 type DeviceConfig struct {
-	Version string
-	Type string
-	Model string
+	Version  string
+	Type     string
+	Model    string
 	Location DeviceLocation
-	Data map[string]string
+	Data     map[string]string
 }
 
-
+// ParseDeviceConfig searches the configuration directory for device
+// instance configuration files. If it finds any, it reads them and populates
+// DeviceConfig structs for each of the device instances.
 func ParseDeviceConfig(dir string) ([]DeviceConfig, error) {
 
 	var devices []DeviceConfig
@@ -347,13 +322,13 @@ func ParseDeviceConfig(dir string) ([]DeviceConfig, error) {
 
 	_, err := os.Stat(devicePath)
 	if err != nil {
-		fmt.Printf("Error: Unable to find device config directory.\n")
+		Logger.Error("Unable to find device config directory.")
 		return devices, err
 	}
 
 	files, err := ioutil.ReadDir(devicePath)
 	if err != nil {
-		fmt.Printf("Error: Unable to read files in device config directory.\n")
+		Logger.Error("Unable to read files in device config directory.")
 		return devices, err
 	}
 
@@ -362,21 +337,21 @@ func ParseDeviceConfig(dir string) ([]DeviceConfig, error) {
 
 		yamlFile, err := ioutil.ReadFile(filepath.Join(devicePath, f.Name()))
 		if err != nil {
-			fmt.Printf("Error: Could not read file %v\n", f.Name())
+			Logger.Errorf("Could not read config file %v.", f.Name())
 			return devices, err
 		}
 
 		err = yaml.Unmarshal(yamlFile, &instanceCfg)
 		if err != nil {
-			fmt.Printf("Error: Failed to parse yaml from %v\n", f.Name())
+			Logger.Errorf("Failed to parse YAML from %v.", f.Name())
 			return devices, err
 		}
 
 		for _, data := range instanceCfg.Devices {
 			loc := data["location"]
 			if loc == "" {
-				// FIXME: figure out what to do here. error out?
-				fmt.Printf("Error: No location defined for device.\n")
+				Logger.Errorf("No location defined for device in %v.", f.Name())
+				return devices, errors.New("No location defined for device.")
 			}
 			location := instanceCfg.Locations[loc]
 

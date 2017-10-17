@@ -37,7 +37,7 @@ func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	str_val := strconv.Itoa(val)
 	return sdk.ReadResource{
 		Device:  in.Uid(),
-		Reading: []sdk.Reading{{time.Now().String(), str_val}},
+		Reading: []sdk.Reading{{time.Now().String(), in.Type(),str_val}},
 	}, nil
 }
 

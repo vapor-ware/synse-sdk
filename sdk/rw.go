@@ -1,23 +1,20 @@
 package sdk
 
 import (
-	"fmt"
 	"time"
 )
 
-//
+// RWLoop is the read-write loop used by the PluginServer to perform device
+// reads and writes in the background.
 type RWLoop struct {
-	handler PluginHandler
-
+	handler        PluginHandler
 	readingManager ReadingManager
 	writingManager WritingManager
-
-	devices map[string]Device
+	devices        map[string]Device
 }
 
 
-// This is the Read-Write loop. It is where the plugin will perform its
-// background device reads and writes.
+// Run the read-write loop.
 //
 // Device reads are pushed through the 'read' channel, where the ReadingManager
 // should be listening on that channel and ready to receive. Once the
@@ -43,19 +40,16 @@ func (rwl *RWLoop) Run() {
 			for i := 0; i < writesPerLoop; i++ {
 				select {
 				case w := <- rwl.writingManager.channel:
-
-					fmt.Printf("Write for: %v\n", w)
-
+					Logger.Debugf("Writing for %v (transaction: %v)", w.device, w.transaction.id)
 					UpdateTransactionStatus(w.transaction.id, WRITING)
 
 					data := WriteDataFromGRPC(w.data)
 					err := rwl.handler.Write(rwl.devices[w.device], data)
 					if err != nil {
 						UpdateTransactionState(w.transaction.id, ERROR)
-						fmt.Errorf("Error when writing device: %v\n", err)
+						Logger.Errorf("Failed to write to device %v: %v", w.device, err)
 					}
 					UpdateTransactionStatus(w.transaction.id, DONE)
-					fmt.Printf("-- tid: %v\n", w.transaction.id)
 
 				default:
 					// if there is nothing in the write queue, there is nothing
@@ -68,12 +62,9 @@ func (rwl *RWLoop) Run() {
 			for _, d := range rwl.devices {
 				resp, err := rwl.handler.Read(d)
 				if err != nil {
-					// if there is an error reading, we will just log it and move on for now
-					// TODO - determine what the desired behavior is. this might be correct,
-					// but need to think through the logging/alerting/etc scenarios.
-					fmt.Errorf("Error when reading device: %v\n", err)
+					// if there is an error reading, we will just log it and move on
+					Logger.Errorf("Failed to read from device %v: %v", d.Uid(), err)
 				}
-
 				rwl.readingManager.channel <- resp
 			}
 
@@ -85,5 +76,5 @@ func (rwl *RWLoop) Run() {
 			}
 		}
 	}()
-	Logger.Info("[rwloop] running")
+	Logger.Info("[rwloop] Running")
 }
