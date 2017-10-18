@@ -18,7 +18,7 @@ jobs:
       - run:
           name: "Get Dependencies"
           command: |
-            go get -v -t -d ./...
+            go get -v -t -d ./sdk
 
       - run:
           name: "Test"
