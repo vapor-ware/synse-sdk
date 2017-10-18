@@ -47,6 +47,8 @@ func (h *ExamplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) (error)
 // some of the plugin-specific configurations.
 type ExampleDeviceHandler struct {}
 
+// GetProtocolIdentifiers gets the unique identifiers out of the plugin-specific
+// configuration to be used in UID generation.
 func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) string {
 	return data["id"]
 }

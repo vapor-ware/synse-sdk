@@ -6,7 +6,7 @@ import (
 
 
 func TestNewTransactionId(t *testing.T) {
-	ts := NewTransactionId()
+	ts := NewTransactionID()
 
 	if ts.status != UNKNOWN {
 		t.Error("New transaction should have status UNKNOWN.")
@@ -28,7 +28,7 @@ func TestNewTransactionId(t *testing.T) {
 
 func TestGetTransaction(t *testing.T) {
 	// first create a new transaction
-	t1 := NewTransactionId()
+	t1 := NewTransactionID()
 
 	// now, get the transaction.
 	t2 := GetTransaction(t1.id)
@@ -49,7 +49,7 @@ func TestGetTransaction2(t *testing.T) {
 
 func TestUpdateTransactionState(t *testing.T) {
 	// first create a new transaction
-	t1 := NewTransactionId()
+	t1 := NewTransactionID()
 
 	if t1.state != OK {
 		t.Error("New transaction should be in the OK state.")
@@ -71,7 +71,7 @@ func TestUpdateTransactionState2(t *testing.T) {
 
 func TestUpdateTransactionStatus(t *testing.T) {
 	// first create a new transaction
-	t1 := NewTransactionId()
+	t1 := NewTransactionID()
 
 	if t1.status != UNKNOWN {
 		t.Error("New transaction should have status UNKNOWN")

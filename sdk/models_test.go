@@ -174,14 +174,14 @@ func TestDevice_Protocol(t *testing.T) {
 }
 
 
-func TestDevice_Uid(t *testing.T) {
+func TestDevice_UID(t *testing.T) {
 	d := Device{
 		Prototype: pConfig,
 		Instance: dConfig,
 		Handler: &TestHandler{},
 	}
 
-	if d.Uid() != "664f6cfa51c9bef163682bd2a766613b" {
+	if d.UID() != "664f6cfa51c9bef163682bd2a766613b" {
 		t.Error("Device Uid does not generated uid.")
 	}
 }
@@ -247,7 +247,7 @@ func TestDevice_ToMetainfoResponse(t *testing.T) {
 
 	meta := d.ToMetainfoResponse()
 
-	if meta.Uid != d.Uid() {
+	if meta.Uid != d.UID() {
 		t.Error("MetainfoResponse Uid incorrect.")
 	}
 

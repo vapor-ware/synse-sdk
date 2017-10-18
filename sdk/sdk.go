@@ -1,7 +1,9 @@
 package sdk
 
 const (
-	CONFIG_DIR = "config"
+
+	// ConfigDir is the directory which contains the device configurations.
+	ConfigDir = "config"
 )
 
 // NewPlugin creates a new SDK PluginServer instance. This is the preferred way

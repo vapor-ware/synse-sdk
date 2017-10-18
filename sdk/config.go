@@ -109,7 +109,7 @@ func (c *PluginConfig) Merge(config PluginConfig) error {
 
 	// These are required fields. If they do not exist, fail.
 	if config.Name == "" || config.Version == "" {
-		return errors.New("Bad plugin configuration. Requires both a Name and Version.")
+		return errors.New("bad plugin configuration - requires both a Name and Version")
 	}
 
 	c.Name = config.Name
@@ -306,7 +306,7 @@ type DeviceLocation struct {
 }
 
 // ToMetaLocation converts the DeviceLocation to the gRPC MetaLocation model.
-func (l *DeviceLocation) ToMetalLocation() *synse.MetaLocation {
+func (l *DeviceLocation) ToMetaLocation() *synse.MetaLocation {
 	return &synse.MetaLocation{
 		Rack: l.Rack,
 		Board: l.Board,
@@ -363,7 +363,7 @@ func ParseDeviceConfig(dir string) ([]DeviceConfig, error) {
 			loc := data["location"]
 			if loc == "" {
 				Logger.Errorf("No location defined for device in %v.", f.Name())
-				return devices, errors.New("No location defined for device.")
+				return devices, errors.New("no location defined for device")
 			}
 			location := instanceCfg.Locations[loc]
 

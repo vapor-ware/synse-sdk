@@ -52,7 +52,7 @@ func (w *WriteData) ToGRPC() *synse.WriteData {
 }
 
 
-// WrateDataFromGRPC takes the Synse gRPC WriteData and converts it to the
+// WriteDataFromGRPC takes the Synse gRPC WriteData and converts it to the
 // SDK WriteData.
 func WriteDataFromGRPC(data *synse.WriteData) *WriteData {
 	return &WriteData{
@@ -108,8 +108,8 @@ func (d *Device) Protocol() string {
 	return d.Prototype.Protocol
 }
 
-// Uid gets the id for the Device.
-func (d *Device) Uid() string {
+// UID gets the id for the Device.
+func (d *Device) UID() string {
 	protocolComp := d.Handler.GetProtocolIdentifiers(d.Data())
 	return NewUID(d.Protocol(), d.Type(), d.Model(), protocolComp)
 }
@@ -145,14 +145,14 @@ func (d *Device) ToMetainfoResponse() *synse.MetainfoResponse {
 
 	return &synse.MetainfoResponse{
 		Timestamp: time.Now().String(),
-		Uid: d.Uid(),
+		Uid: d.UID(),
 		Type: d.Type(),
 		Model: d.Model(),
 		Manufacturer: d.Manufacturer(),
 		Protocol: d.Protocol(),
 		Info: d.Data()["info"],
 		Comment: d.Data()["comment"],
-		Location: location.ToMetalLocation(),
+		Location: location.ToMetaLocation(),
 		Output: output,
 	}
 }

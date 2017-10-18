@@ -17,9 +17,9 @@ func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	id, err := strconv.Atoi(in.Data()["id"]); if err != nil {
 		log.Fatalf("Invalid device ID - should be an integer in configuration.")
 	}
-	value := CRead(id, in.Model())
+	value := cRead(id, in.Model())
 	return sdk.ReadResource{
-		Device: in.Uid(),
+		Device: in.UID(),
 		Reading: []sdk.Reading{{time.Now().String(), in.Type(), value}},
 	}, nil
 }
@@ -34,6 +34,8 @@ func (h *ExamplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) error {
 // some of the plugin-specific configurations.
 type ExampleDeviceHandler struct {}
 
+// GetProtocolIdentifiers gets the unique identifiers out of the plugin-specific
+// configuration to be used in UID generation.
 func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) string {
 	return data["id"]
 }

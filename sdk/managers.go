@@ -74,7 +74,7 @@ func (r *ReadingManager) getReadings(key string) []Reading {
 }
 
 
-// WriteManager is used to manage the writing of data to devices. It has a
+// WritingManager is used to manage the writing of data to devices. It has a
 // channel that is used to push pending writes to. This channel acts as a job
 // queue which is worked on at the top of the read-write loop.
 type WritingManager struct {
@@ -94,7 +94,7 @@ func (w *WritingManager) Write(in *synse.WriteRequest) map[string]*synse.WriteDa
 	var response = make(map[string]*synse.WriteData)
 
 	for _, data := range in.Data {
-		transaction := NewTransactionId()
+		transaction := NewTransactionID()
 		UpdateTransactionStatus(transaction.id, PENDING)
 		response[transaction.id] = data
 

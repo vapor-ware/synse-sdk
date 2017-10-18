@@ -7,11 +7,12 @@ import (
 )
 
 
+// Volt1103 is the handler for the example "volt1103" device model.
 type Volt1103 struct {}
 
 func (d *Volt1103) Read(in sdk.Device) (sdk.ReadResource, error) {
 	return sdk.ReadResource{
-		Device: in.Uid(),
+		Device: in.UID(),
 		Reading: []sdk.Reading{{time.Now().String(), in.Type(), "1"}},
 	}, nil
 }

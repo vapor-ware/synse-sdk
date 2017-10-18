@@ -19,25 +19,24 @@ import (
 )
 
 
-// Simple Plugin Handler
-//   This plugin handler fulfils the SDK's PluginHandler interface. It requires a
-//   Read and Write function to be defined, which specify how the plugin will read
-//   and write to the configured devices.
+// SimplePluginHandler fulfils the SDK's PluginHandler interface. It requires a
+// Read and Write function to be defined, which specify how the plugin will read
+// and write to the configured devices.
 //
-//   Both the read and write functions operate on a single device at a time, which
-//   is given as a parameter. These functions will be called against all configured
-//   devices for the plugin, so while this example handles all reads the same, a
-//   more complex plugin could need to further dispatch read/write operations depending
-//   on the device type, model, etc.
+// Both the read and write functions operate on a single device at a time, which
+// is given as a parameter. These functions will be called against all configured
+// devices for the plugin, so while this example handles all reads the same, a
+// more complex plugin could need to further dispatch read/write operations depending
+// on the device type, model, etc.
 type SimplePluginHandler struct {}
 
 func (ph *SimplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 
 	val := rand.Int()
-	str_val := strconv.Itoa(val)
+	strVal := strconv.Itoa(val)
 	return sdk.ReadResource{
-		Device:  in.Uid(),
-		Reading: []sdk.Reading{{time.Now().String(), in.Type(),str_val}},
+		Device:  in.UID(),
+		Reading: []sdk.Reading{{time.Now().String(), in.Type(),strVal}},
 	}, nil
 }
 
@@ -51,14 +50,14 @@ func (ph *SimplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) (error)
 }
 
 
-// Simple Device Handler
-//   Each device that is generated from the configurations will be able to
-//   access this handler. This makes it convenient for storing helpers which
-//   relate to the devices themselves. For example, on of the required functions
-//   off of the SDK DeviceHandler interface is `GetProtocolIdentifiers`. What
-//   this does is allow the plugin to device which bits of protocol-specific
-//   data should be used when generating the device ID. For this simple plugin,
-//   the device configuration contains:
+// SimpleDeviceHandler fulfils the SDK's DeviceHandler interface.
+// Each device that is generated from the configurations will be able to
+// access this handler. This makes it convenient for storing helpers which
+// relate to the devices themselves. For example, on of the required functions
+// off of the SDK DeviceHandler interface is `GetProtocolIdentifiers`. What
+// this does is allow the plugin to device which bits of protocol-specific
+// data should be used when generating the device ID. For this simple plugin,
+// the device configuration contains:
 //
 //     devices:
 //       - id: 1
@@ -70,12 +69,14 @@ func (ph *SimplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) (error)
 //         comment: second emulated temperature device
 //         info: CEC temp 2
 //
-//   The contents of the objects in the devices list are arbitrary and protocol-
-//   specific. As such, we need the plugin to define which bits of information
-//   here are to be used when generating the ID. In this case, we use the "id"
-//   field, but a concatenation of any number of fields is permissible.
+// The contents of the objects in the devices list are arbitrary and protocol-
+// specific. As such, we need the plugin to define which bits of information
+// here are to be used when generating the ID. In this case, we use the "id"
+// field, but a concatenation of any number of fields is permissible.
 type SimpleDeviceHandler struct {}
 
+// GetProtocolIdentifiers gets the unique identifiers out of the plugin-specific
+// configuration to be used in UID generation.
 func (dh *SimpleDeviceHandler) GetProtocolIdentifiers(data map[string]string) string {
 	return data["id"]
 }

@@ -26,7 +26,7 @@ var (
 
 var conn *grpc.ClientConn
 var c synse.InternalApiClient
-var Socket string
+var socketName string
 
 
 var readCmd = &cobra.Command{
@@ -66,7 +66,7 @@ var transactionCmd = &cobra.Command{
 
 
 func read(cmd *cobra.Command, args []string) {
-	makeApiClient()
+	makeAPIClient()
 
 	stream, err := c.Read(context.Background(), &synse.ReadRequest{
 		Uid: args[0],
@@ -87,7 +87,7 @@ func read(cmd *cobra.Command, args []string) {
 }
 
 func write(cmd *cobra.Command, args []string) {
-	makeApiClient()
+	makeAPIClient()
 
 	wd := &synse.WriteData{Action: args[1]}
 
@@ -105,7 +105,7 @@ func write(cmd *cobra.Command, args []string) {
 }
 
 func metainfo(cmd *cobra.Command, args []string) {
-	makeApiClient()
+	makeAPIClient()
 
 	stream, err := c.Metainfo(context.Background(), &synse.MetainfoRequest{})
 	if err != nil {
@@ -125,7 +125,7 @@ func metainfo(cmd *cobra.Command, args []string) {
 }
 
 func transaction(cmd *cobra.Command, args []string) {
-	makeApiClient()
+	makeAPIClient()
 
 	status, err := c.TransactionCheck(context.Background(), &synse.TransactionId{
 		Id: args[0],
@@ -137,13 +137,13 @@ func transaction(cmd *cobra.Command, args []string) {
 }
 
 
-func makeApiClient() {
-	if Socket == "" {
+func makeAPIClient() {
+	if socketName == "" {
 		fmt.Println("Plugin name not specified. Need to specify via the --name flag.")
 		os.Exit(1)
 	}
 
-	socket := fmt.Sprintf("/synse/procs/%s.sock", Socket)
+	socket := fmt.Sprintf("/synse/procs/%s.sock", socketName)
 	var err error
 
 	conn, err = grpc.Dial(
@@ -178,7 +178,7 @@ func main() {
 		transactionCmd,
 	)
 
-	rootCmd.PersistentFlags().StringVarP(&Socket, "name", "n", "", "Name of the plugin (e.g. socket name)")
+	rootCmd.PersistentFlags().StringVarP(&socketName, "name", "n", "", "Name of the plugin (e.g. socket name)")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

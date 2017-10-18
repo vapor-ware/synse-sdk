@@ -63,7 +63,7 @@ func (rwl *RWLoop) Run() {
 				resp, err := rwl.handler.Read(d)
 				if err != nil {
 					// if there is an error reading, we will just log it and move on
-					Logger.Errorf("Failed to read from device %v: %v", d.Uid(), err)
+					Logger.Errorf("Failed to read from device %v: %v", d.UID(), err)
 				}
 				rwl.readingManager.channel <- resp
 			}

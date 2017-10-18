@@ -12,13 +12,25 @@ import (
 const (
 
 	// statuses
+
+	// UNKNOWN is the unknown status, as defined by the gRPC API
 	UNKNOWN = synse.WriteResponse_UNKNOWN
+
+	// PENDING is the pending status, as defined by the gRPC API
 	PENDING = synse.WriteResponse_PENDING
+
+	// WRITING is the writing status, as defined by the gRPC API
 	WRITING = synse.WriteResponse_WRITING
+
+	// DONE is the done status, as defined by the gRPC API
 	DONE = synse.WriteResponse_DONE
 
 	// states
+
+	// OK is the ok state, as defined by the gRPC API
 	OK = synse.WriteResponse_OK
+
+	// ERROR is the error state, as defined by the gRPC API
 	ERROR = synse.WriteResponse_ERROR
 )
 
@@ -56,10 +68,10 @@ var transactionCache = cache.New(
 )
 
 
-// NewTransactionId creates a new `TransactionState` instance and gives it a
+// NewTransactionID creates a new `TransactionState` instance and gives it a
 // new id. The newly created `TransactionState` is then added to the
 // transactionCache.
-func NewTransactionId() *TransactionState {
+func NewTransactionID() *TransactionState {
 	id := xid.New().String()
 	now := time.Now().String()
 

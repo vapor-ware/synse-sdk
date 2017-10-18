@@ -28,14 +28,14 @@ type PluginServer struct {
 // devices, and then populate the pluginDevices map which is used to store
 // and access these device models.
 func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
-	devices, err := DevicesFromConfig(CONFIG_DIR, deviceHandler)
+	devices, err := DevicesFromConfig(ConfigDir, deviceHandler)
 	if err != nil {
 		return err
 	}
 
 	ps.pluginDevices = make(map[string]Device)
 	for _, device := range devices {
-		ps.pluginDevices[device.Uid()] = device
+		ps.pluginDevices[device.UID()] = device
 	}
 	ps.rwLoop.devices = ps.pluginDevices
 	return nil
