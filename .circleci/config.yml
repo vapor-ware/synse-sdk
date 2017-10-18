@@ -13,7 +13,8 @@ jobs:
       - run:
           name: "Lint"
           command: |
-            make lint
+            go get -u github.com/golang/lint/golint
+            golint -set_exit_status sdk/... client/... examples/...
 
       - run:
           name: "Get Dependencies"
