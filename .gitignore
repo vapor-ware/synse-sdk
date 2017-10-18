@@ -15,3 +15,8 @@
 
 # IDE files
 .idea
+
+# Dep vendor packages
+vendor
+
+.DS_Store
