@@ -1,0 +1,14 @@
+version: 1.0
+type: airflow
+model: air8884
+manufacturer: vaporio
+protocol: emulator
+output:
+  - type: airflow
+    unit:
+      name: cubic feet per minute
+      symbol: CFM
+    precision: 2
+    range:
+      min: 0
+      max: 1000

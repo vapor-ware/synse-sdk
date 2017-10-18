@@ -1,0 +1,14 @@
+version: 1.0
+type: voltage
+model: volt1103
+manufacturer: vaporio
+protocol: emulator
+output:
+  - type: voltage
+    unit:
+      name: volts
+      symbol: V
+    precision: 5
+    range:
+      min: -10
+      max: 10

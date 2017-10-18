@@ -22,7 +22,7 @@ can be run with
 These correspond to the four gRPC API commands that are supported by Synse Server and
 the Plugin SDK.
 
-```bash
+```
 $ ./pcli --help
 Simple CLI client for Synse Server gRPC testing.
 

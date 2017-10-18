@@ -1,0 +1,25 @@
+version: 1.0
+type: temperature
+model: temp2010
+
+locations:
+  r1b1:
+    rack: rack-1
+    board: board-1
+  r1b2:
+    rack: rack-1
+    board: board-2
+  r2b1:
+    rack: rack-2
+    board: board-1
+
+devices:
+  - id: 1
+    location: r1b1
+    comment: first emulated temperature device
+  - id: 2
+    location: r1b2
+    comment: second emulated temperature device
+  - id: 3
+    location: r2b1
+    comment: third emulated temperature device

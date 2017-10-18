@@ -73,9 +73,21 @@ type PluginConfig struct {
 
 
 // FromFile reads in a YAML file and parses it into a PluginConfig struct.
-func (c *PluginConfig) FromFile(path string) (*PluginConfig, error) {
-	// TODO
-	return &PluginConfig{}, nil
+func (c *PluginConfig) FromFile(path string) error {
+
+	yamlFile, err := ioutil.ReadFile(path)
+	if err != nil {
+		Logger.Errorf("Could not read plugin config file %v.", path)
+		return err
+	}
+
+	err = yaml.Unmarshal(yamlFile, c)
+	if err != nil {
+		Logger.Errorf("Failed to parse YAML from %v.", path)
+		return err
+	}
+
+	return nil
 }
 
 

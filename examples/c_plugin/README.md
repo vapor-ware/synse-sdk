@@ -1,9 +1,13 @@
 ### Multi Device Plugin
 
+**TODO** - this is incomplete. need to spend more time figuring out how this all works.
+
 This directory contains an example of a somewhat simple plugin which uses 
 functions defined in C as the plugin's read and write functions. This is 
 mainly to demonstrate how to integrate C into plugins, so the actual read
 and write functionality here is simple.
+
+#### Usage
 
 To build the simple plugin, simply
 ```bash

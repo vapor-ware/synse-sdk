@@ -6,6 +6,8 @@ write handlers specified here return random values and do nothing, respectively.
 The source code has extensive comments describing all of the components and how 
 they come together. 
 
+#### Usage
+
 To build the simple plugin, simply
 ```bash
 make build
