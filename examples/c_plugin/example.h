@@ -1,1 +1,1 @@
-extern int Read(int *char);
+int Read(int, char *);

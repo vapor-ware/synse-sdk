@@ -1,6 +1,6 @@
 #include <stdlib.h>
+#include <time.h>
 #include "example.h"
-#include "_cgo_export.h"
 
 
 // Example of a simple read - this just gets and returns a random
@@ -8,7 +8,8 @@
 // example, but could become more complicated depending on the needs
 // of the actual protocol.
 int
-Read(int device, *char model)
+Read(int device, char* model)
 {
+    srand(time(NULL));
     return rand();
 }

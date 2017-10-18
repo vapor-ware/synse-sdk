@@ -2,9 +2,9 @@ package main
 
 // #include "example.h"
 import "C"
+import "strconv"
 
-
-func Read(device int, model string) string {
+func CRead(device int, model string) string {
 	reading := C.Read(C.int(device), C.CString(model))
-	return reading
+	return strconv.Itoa(int(reading))
 }
