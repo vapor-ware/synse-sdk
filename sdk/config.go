@@ -271,7 +271,8 @@ func ParsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 	for _, f := range files {
 		var protoCfg PrototypeConfig
 
-		yamlFile, err := ioutil.ReadFile(filepath.Join(protoPath, f.Name()))
+		path := filepath.Join(protoPath, f.Name())
+		yamlFile, err := ioutil.ReadFile(path)
 		if err != nil {
 			Logger.Errorf("Could not read config file %v.", f.Name())
 			return protos, err
@@ -279,7 +280,7 @@ func ParsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 
 		err = yaml.Unmarshal(yamlFile, &protoCfg)
 		if err != nil {
-			Logger.Errorf("Failed to parse YAML from %v.", f.Name())
+			Logger.Errorf("Failed to parse YAML from %v.", path)
 			return protos, err
 		}
 
@@ -347,7 +348,8 @@ func ParseDeviceConfig(dir string) ([]DeviceConfig, error) {
 	for _, f := range files {
 		var instanceCfg InstanceConfig
 
-		yamlFile, err := ioutil.ReadFile(filepath.Join(devicePath, f.Name()))
+		path := filepath.Join(devicePath, f.Name())
+		yamlFile, err := ioutil.ReadFile(path)
 		if err != nil {
 			Logger.Errorf("Could not read config file %v.", f.Name())
 			return devices, err
@@ -355,7 +357,7 @@ func ParseDeviceConfig(dir string) ([]DeviceConfig, error) {
 
 		err = yaml.Unmarshal(yamlFile, &instanceCfg)
 		if err != nil {
-			Logger.Errorf("Failed to parse YAML from %v.", f.Name())
+			Logger.Errorf("Failed to parse YAML from %v.", path)
 			return devices, err
 		}
 
