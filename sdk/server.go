@@ -110,12 +110,19 @@ func (ps *PluginServer) Run() error {
 	// start the RW loop
 	ps.rwLoop.Run()
 
-	// start the GRPC server
-	socket := fmt.Sprintf("/synse/procs/%s.sock", ps.name)
+	// create the socket used to communicate with the gRPC server
+	path := "/synse/procs"
+	socket := fmt.Sprintf("/%s/%s.sock", path, ps.name)
 
-	var _, err = os.Stat(socket)
-	if err == nil {
-		os.Remove(socket)
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			os.MkdirAll(path, os.ModePerm)
+		} else {
+			return err
+		}
+	} else {
+		_ = os.Remove(socket)
 	}
 
 	Logger.Infof("[grpc] listening on socket %v", socket)
@@ -131,12 +138,11 @@ func (ps *PluginServer) Run() error {
 	synse.RegisterInternalApiServer(svr, ps)
 	Logger.Debugf("[grpc] registering handlers")
 
-	// start the server
+	// start gRPC the server
 	Logger.Infof("[grpc] serving")
 	if err := svr.Serve(lis); err != nil {
 		Logger.Fatalf("Failed to serve: %v", err)
 		return err
 	}
-
 	return nil
 }

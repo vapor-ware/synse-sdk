@@ -20,19 +20,19 @@ go get -u github.com/vapor-ware/synse-sdk/sdk
 
 ## Reference
 
-#### Examples
+### Examples
 
 Before getting started with the SDK, check out the [examples][examples] directory.
 It contains various example plugins written using the SDK ranging in complexity.
 These examples should give you a good idea on how to start writing your own plugin(s).
 
-#### Documentation
+### Documentation
 
 TODO: link to documentation
 
 ## Development
 
-#### Testing
+### Testing
 Tests for the Synse Plugin SDK are run in CI, the status of which is shown by the 
 badge at the top of this README. Tests can be run locally with:
 
@@ -46,7 +46,7 @@ for convenience, this can also be done via make.
 make test
 ```
 
-#### Linting
+### Linting
 Linting is performed as a step in CI. A failure to lint should cause a CI build failure.
 The SDK source can also be linted locally using `golint`. To get `golint`, 
 ```
