@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"./devices"
-	"../../sdk"
+
+	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
 // lookup is a simple lookup table that maps the known device models

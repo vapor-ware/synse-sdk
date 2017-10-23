@@ -9,7 +9,7 @@ package main
 //   3.  the main method   - this is where the plugin is initialized and run.
 
 import (
-	"../../sdk"
+	"github.com/vapor-ware/synse-sdk/sdk"
 
 	"math/rand"
 	"strconv"
