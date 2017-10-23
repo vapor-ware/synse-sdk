@@ -1,7 +1,7 @@
 package main
 
 import (
-	"../../sdk"
+	"github.com/vapor-ware/synse-sdk/sdk"
 
 	"log"
 	"strconv"
