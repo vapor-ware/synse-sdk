@@ -8,9 +8,6 @@ jobs:
 
     working_directory: /go/src/github.com/vapor-ware/synse-sdk
 
-    environment:
-      TEST_DIRECTORY: "gotest"
-
     steps:
       - checkout
 
@@ -22,7 +19,7 @@ jobs:
       - run:
           name: "Setup"
           command: |
-            mkdir -p /tmp/$TEST_DIRECTORY
+            mkdir -p /tmp/gotest
 
       - run:
           name: "Lint"
@@ -45,7 +42,7 @@ jobs:
       - run:
           name: "Test"
           command: |
-            go test -v ./sdk 2>&1 | go-junit-report > /tmp/$TEST_DIRECTORY/report.xml
+            go test -v ./sdk 2>&1 | go-junit-report > /tmp/gotest/report.xml
 
       - save_cache:
           when: on_success
@@ -54,4 +51,4 @@ jobs:
             - vendor/
 
       - store_test_results:
-          path: /tmp/$TEST_DIRECTORY
+          path: /tmp/gotest
