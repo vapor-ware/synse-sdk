@@ -18,5 +18,5 @@ func (d *Air8884) Read(in sdk.Device) (sdk.ReadResource, error) {
 }
 
 func (d *Air8884) Write(in sdk.Device, data *sdk.WriteData) (error) {
-	return nil
+	return &sdk.UnsupportedCommandError{}
 }
