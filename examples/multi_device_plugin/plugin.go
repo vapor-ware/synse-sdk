@@ -4,8 +4,7 @@ package main
 import (
 	"log"
 
-	"./devices"
-
+	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 

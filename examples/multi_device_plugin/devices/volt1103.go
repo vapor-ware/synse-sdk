@@ -3,7 +3,7 @@ package devices
 import (
 	"time"
 
-	"../../../sdk"
+	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
 

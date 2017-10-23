@@ -14,7 +14,7 @@ type RWLoop struct {
 }
 
 
-// Run the read-write loop.
+// run the read-write loop.
 //
 // Device reads are pushed through the 'read' channel, where the ReadingManager
 // should be listening on that channel and ready to receive. Once the
@@ -28,7 +28,7 @@ type RWLoop struct {
 // read. To ensure that writes do not prevent reads from happening (e.g. if
 // there are many many writes queued up), we will set a limit on the maximum
 // number of write transactions that can be fulfilled per loop.
-func (rwl *RWLoop) Run() {
+func (rwl *RWLoop) run() {
 
 	go func() {
 		loopDelay := Config.LoopDelay
@@ -43,7 +43,7 @@ func (rwl *RWLoop) Run() {
 					Logger.Debugf("Writing for %v (transaction: %v)", w.device, w.transaction.id)
 					UpdateTransactionStatus(w.transaction.id, WRITING)
 
-					data := WriteDataFromGRPC(w.data)
+					data := writeDataFromGRPC(w.data)
 					err := rwl.handler.Write(rwl.devices[w.device], data)
 					if err != nil {
 						UpdateTransactionState(w.transaction.id, ERROR)

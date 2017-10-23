@@ -3,7 +3,7 @@ package sdk
 const (
 
 	// ConfigDir is the directory which contains the device configurations.
-	ConfigDir = "config"
+	configDir = "config"
 )
 
 // NewPlugin creates a new SDK PluginServer instance. This is the preferred way
@@ -12,7 +12,7 @@ const (
 // set up a new instance of the PluginServer.
 func NewPlugin(config PluginConfig, pluginHandler PluginHandler, deviceHandler DeviceHandler) (*PluginServer, error) {
 
-	err := ConfigurePlugin(config); if err != nil {
+	err := configurePlugin(config); if err != nil {
 		return nil, err
 	}
 	SetLogLevel(Config.Debug)
