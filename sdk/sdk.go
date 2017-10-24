@@ -17,8 +17,8 @@ func NewPlugin(config PluginConfig, pluginHandler PluginHandler, deviceHandler D
 	}
 	SetLogLevel(Config.Debug)
 
-	readChan := make(chan ReadResource, Config.ReadBufferSize)
-	writeChan := make(chan WriteResource, Config.WriteBufferSize)
+	readChan := make(chan ReadResource, Config.Settings.Read.BufferSize)
+	writeChan := make(chan WriteResource, Config.Settings.Write.BufferSize)
 
 	readManager := ReadingManager{
 		channel: readChan,
