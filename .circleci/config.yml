@@ -25,3 +25,10 @@ jobs:
           name: "Test"
           command: |
             go test -v ./sdk
+
+      - run:
+          name: "Build Examples"
+          command: |
+            cd examples/simple_plugin ; go build -v ; cd ../..
+            cd examples/multi_device_plugin ; go build -v ; cd ../..
+            cd examples/c_plugin ; go build -v ; cd ../..
