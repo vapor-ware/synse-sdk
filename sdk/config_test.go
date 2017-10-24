@@ -9,6 +9,7 @@ import (
 )
 
 
+// the config path does not exist, FromFile should fail.
 func TestPluginConfig_FromFile(t *testing.T) {
 	c := PluginConfig{}
 	err := c.FromFile("path/does/not/exist")
@@ -19,13 +20,15 @@ func TestPluginConfig_FromFile(t *testing.T) {
 
 }
 
-
+// the config file contains invalid YAML
 func TestPluginConfig_FromFile2(t *testing.T) {
 	os.MkdirAll("tmp", os.ModePerm)
 	defer func() {
 		os.RemoveAll("tmp")
 	}()
 
+	// this string represents invalid YAML - it should cause failure when
+	// we try to unmarshall.
 	cfgFile := `--~+::\n:-`
 	err := ioutil.WriteFile("tmp/test_config.yaml", []byte(cfgFile), 0644)
 	if err != nil {
@@ -40,7 +43,7 @@ func TestPluginConfig_FromFile2(t *testing.T) {
 	}
 }
 
-
+// positive test - the config should load from file with no errors.
 func TestPluginConfig_FromFile3(t *testing.T) {
 	os.MkdirAll("tmp", os.ModePerm)
 	defer func() {
