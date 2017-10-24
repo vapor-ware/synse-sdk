@@ -81,6 +81,13 @@ func (dh *SimpleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 	return data["id"]
 }
 
+// EnumerateDevices is used to auto-enumerate device configurations for plugins
+// that support it. This example plugin does not support it, so we just return
+// the appropriate error.
+func (dh *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]sdk.DeviceConfig, error) {
+	return nil, &sdk.EnumerationNotSupported{}
+}
+
 
 // The Main Function
 //   This is the entry point for the plugin. With both handlers defined,

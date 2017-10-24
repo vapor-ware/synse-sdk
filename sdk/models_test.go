@@ -43,6 +43,10 @@ func (h *TestHandler) GetProtocolIdentifiers(in map[string]string) string {
 	return ""
 }
 
+func (h *TestHandler) EnumerateDevices(map[string]interface{}) ([]DeviceConfig, error) {
+	return []DeviceConfig{}, nil
+}
+
 
 func TestWriteData_ToGRPC(t *testing.T) {
 	expected := &synse.WriteData{

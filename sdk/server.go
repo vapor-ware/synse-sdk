@@ -26,12 +26,37 @@ type PluginServer struct {
 // configureDevices is a convenience function to parse all of the plugin
 // configuration files, generate Device instances for each of the configured
 // devices, and then populate the pluginDevices map which is used to store
-// and access these device models.
+// and access these device models. Additionally, if the plugin is set to
+// auto-enumerate its devices, this kicks that off.
 func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
-	devices, err := devicesFromConfig(configDir, deviceHandler)
+
+	var instanceCfg []DeviceConfig
+
+	// get any instance configurations from plugin-defined enumeration function
+	for _, enumCfg := range Config.AutoEnumerate {
+		deviceEnum, err := deviceHandler.EnumerateDevices(enumCfg)
+		if err != nil {
+			Logger.Errorf("Error enumerating devices with %+v: %v", enumCfg, err)
+		} else {
+			instanceCfg = append(instanceCfg, deviceEnum...)
+		}
+	}
+
+	// get any instance configurations from YAML
+	deviceCfg, err := parseDeviceConfig(configDir)
 	if err != nil {
 		return err
 	}
+	instanceCfg = append(instanceCfg, deviceCfg...)
+
+	// get the prototype configurations from YAML
+	protoCfg, err := parsePrototypeConfig(configDir)
+	if err != nil {
+		return err
+	}
+
+	// make the composite device records
+	devices := makeDevices(instanceCfg, protoCfg, deviceHandler)
 
 	ps.pluginDevices = make(map[string]Device)
 	for _, device := range devices {
@@ -112,7 +137,7 @@ func (ps *PluginServer) Run() error {
 
 	// create the socket used to communicate with the gRPC server
 	path := "/synse/procs"
-	socket := fmt.Sprintf("/%s/%s.sock", path, ps.name)
+	socket := fmt.Sprintf("%s/%s.sock", path, ps.name)
 
 	_, err := os.Stat(path)
 	if err != nil {
