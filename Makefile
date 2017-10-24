@@ -10,7 +10,7 @@ endif
 
 
 test:  ## Run the SDK tests
-	go test -v ./sdk
+	go test -cover -v ./sdk
 
 
 help:  ## Print usage information

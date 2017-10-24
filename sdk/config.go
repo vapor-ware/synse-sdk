@@ -192,6 +192,11 @@ func (c *PluginConfig) Merge(config PluginConfig) error {
 	// Debug can be false (the default), so no check is needed.
 	c.Debug = config.Debug
 
+	// There are no default values for auto-enumerate or context, so
+	// just use whatever might be configured by the plugin.
+	c.AutoEnumerate = config.AutoEnumerate
+	c.Context = config.Context
+
 	return nil
 }
 

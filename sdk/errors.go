@@ -10,3 +10,13 @@ type UnsupportedCommandError struct {}
 func (e *UnsupportedCommandError) Error() string {
 	return "Command not supported for given device."
 }
+
+
+// EnumerationNotSupported is an error that should be returned when defining a
+// plugin's DeviceHandler interface and it does not support the EnumerateDevices
+// function.
+type EnumerationNotSupported struct {}
+
+func (e *EnumerationNotSupported) Error() string {
+	return "This plugin does not support device auto-enumeration."
+}
