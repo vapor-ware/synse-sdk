@@ -8,7 +8,7 @@ import (
 
 
 func TestDevicesFromConfig(t *testing.T) {
-	devices, err := DevicesFromConfig("some/nonexistant/dir", &TestHandler{})
+	devices, err := devicesFromConfig("some/nonexistant/dir", &TestHandler{})
 
 	if devices != nil {
 		t.Error("Expecting error - devices should be nil.")
@@ -25,7 +25,7 @@ func TestDevicesFromConfig2(t *testing.T) {
 		os.RemoveAll("tmp")
 	}()
 
-	devices, err := DevicesFromConfig("tmp", &TestHandler{})
+	devices, err := devicesFromConfig("tmp", &TestHandler{})
 
 	if devices != nil {
 		t.Error("Expecting error - devices should be nil.")
@@ -43,7 +43,7 @@ func TestDevicesFromConfig3(t *testing.T) {
 		os.RemoveAll("tmp")
 	}()
 
-	devices, err := DevicesFromConfig("tmp", &TestHandler{})
+	devices, err := devicesFromConfig("tmp", &TestHandler{})
 	if err != nil {
 		t.Error("Failed to create devices from empty config.")
 	}
@@ -107,7 +107,7 @@ devices:
 		t.Error("Failed to write test data to file.")
 	}
 
-	devices, err := DevicesFromConfig("tmp", &TestHandler{})
+	devices, err := devicesFromConfig("tmp", &TestHandler{})
 	if err != nil {
 		t.Error("Failed to create devices from config.")
 	}

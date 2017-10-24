@@ -1,17 +1,17 @@
 package sdk
 
-// DevicesFromConfig takes the configuration directory and the plugin-defined
+// devicesFromConfig takes the configuration directory and the plugin-defined
 // DeviceHandler and generates a collection of Devices that represent all of
 // the devices that are known to the plugin. These are the devices that will
 // be read from, written to, and where metadata will come from.
-func DevicesFromConfig(dir string, deviceHandler DeviceHandler) ([]Device, error) {
+func devicesFromConfig(dir string, deviceHandler DeviceHandler) ([]Device, error) {
 
-	protoCfg, err := ParsePrototypeConfig(dir)
+	protoCfg, err := parsePrototypeConfig(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	deviceCfg, err := ParseDeviceConfig(dir)
+	deviceCfg, err := parseDeviceConfig(dir)
 	if err != nil {
 		return nil, err
 	}

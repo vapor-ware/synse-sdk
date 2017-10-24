@@ -28,7 +28,7 @@ type PluginServer struct {
 // devices, and then populate the pluginDevices map which is used to store
 // and access these device models.
 func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
-	devices, err := DevicesFromConfig(ConfigDir, deviceHandler)
+	devices, err := devicesFromConfig(configDir, deviceHandler)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
 func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
 	Logger.Debug("[grpc] READ")
 
-	responses, err := ps.readingManager.Read(in)
+	responses, err := ps.readingManager.read(in)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.Transactions, error) {
 	Logger.Debug("[grpc] WRITE")
 
-	transactions := ps.writingManager.Write(in)
+	transactions := ps.writingManager.write(in)
 	return &synse.Transactions{
 		Transactions: transactions,
 	}, nil
@@ -75,7 +75,7 @@ func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.Interna
 	Logger.Debug("[grpc] METAINFO")
 
 	for _, device := range ps.pluginDevices {
-		if err := stream.Send(device.ToMetainfoResponse()); err != nil {
+		if err := stream.Send(device.toMetainfoResponse()); err != nil {
 			return err
 		}
 	}
@@ -105,10 +105,10 @@ func (ps *PluginServer) Run() error {
 	Logger.Infof("[plugin server] Running server with SDK version %v", Version)
 
 	// Start the reading manager
-	ps.readingManager.Start()
+	ps.readingManager.start()
 
 	// start the RW loop
-	ps.rwLoop.Run()
+	ps.rwLoop.run()
 
 	// create the socket used to communicate with the gRPC server
 	path := "/synse/procs"

@@ -4,8 +4,7 @@ package main
 import (
 	"log"
 
-	"./devices"
-
+	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
@@ -29,7 +28,7 @@ type ExamplePluginHandler struct {}
 func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	handler := lookup[in.Model()]
 	if handler == nil {
-		log.Fatalf("Unsupported device model: %v", in.Model())
+		log.Fatalf("Unsupported device model: %+v", in)
 	}
 	return handler.Read(in)
 }
@@ -37,7 +36,7 @@ func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 func (h *ExamplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) (error) {
 	handler := lookup[in.Model()]
 	if handler == nil {
-		log.Fatalf("Unsupported device model: %v", in.Model())
+		log.Fatalf("Unsupported device model: %+v", in)
 	}
 	return handler.Write(in, data)
 }

@@ -171,10 +171,10 @@ func GetDefaultConfig() *PluginConfig {
 var Config = GetDefaultConfig()
 
 
-// ConfigurePlugin takes a plugin-specified configuration and sets it as
+// configurePlugin takes a plugin-specified configuration and sets it as
 // the configuration that is used by the SDK. The given configuration is
 // merged with the existing configuration.
-func ConfigurePlugin(config PluginConfig) error {
+func configurePlugin(config PluginConfig) error {
 	Config.Merge(config)
 	return nil
 }
@@ -199,8 +199,8 @@ type DeviceOutput struct {
 	Range      *OutputRange  `yaml:"range"`
 }
 
-// ToMetaOutput converts the DeviceOutput to the gRPC MetaOutput model.
-func (o *DeviceOutput) ToMetaOutput() *synse.MetaOutput {
+// toMetaOutput converts the DeviceOutput to the gRPC MetaOutput model.
+func (o *DeviceOutput) toMetaOutput() *synse.MetaOutput {
 
 	unit := &OutputUnit{}
 	if o.Unit != nil {
@@ -215,8 +215,8 @@ func (o *DeviceOutput) ToMetaOutput() *synse.MetaOutput {
 	return &synse.MetaOutput{
 		Type: o.Type,
 		Precision: o.Precision,
-		Unit: unit.ToMetaOutputUnit(),
-		Range: rang.ToMetaOutputRange(),
+		Unit: unit.toMetaOutputUnit(),
+		Range: rang.toMetaOutputRange(),
 	}
 }
 
@@ -226,8 +226,8 @@ type OutputUnit struct {
 	Symbol  string  `yaml:"symbol"`
 }
 
-// ToMetaOutputUnit converts the OutputUnit to the gRPC MetaOutputUnit model.
-func (u *OutputUnit) ToMetaOutputUnit() *synse.MetaOutputUnit {
+// toMetaOutputUnit converts the OutputUnit to the gRPC MetaOutputUnit model.
+func (u *OutputUnit) toMetaOutputUnit() *synse.MetaOutputUnit {
 	return &synse.MetaOutputUnit{
 		Name: u.Name,
 		Symbol: u.Symbol,
@@ -240,18 +240,18 @@ type OutputRange struct {
 	Max  int32  `yaml:"max"`
 }
 
-// ToMetaOutputRange converts the OutputRange to the gRPC MetaOutputRange model.
-func (r *OutputRange) ToMetaOutputRange() *synse.MetaOutputRange {
+// toMetaOutputRange converts the OutputRange to the gRPC MetaOutputRange model.
+func (r *OutputRange) toMetaOutputRange() *synse.MetaOutputRange {
 	return &synse.MetaOutputRange{
 		Min: r.Min,
 		Max: r.Max,
 	}
 }
 
-// ParsePrototypeConfig searches the configuration directory for device
+// parsePrototypeConfig searches the configuration directory for device
 // prototype configuration files. If it finds any, it reads them and populates
 // PrototypeConfig structs for each of the device prototypes.
-func ParsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
+func parsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 
 	var protos []PrototypeConfig
 	protoPath := filepath.Join(dir, "proto")
@@ -306,8 +306,8 @@ type DeviceLocation struct {
 	Board string `yaml:"board"`
 }
 
-// ToMetaLocation converts the DeviceLocation to the gRPC MetaLocation model.
-func (l *DeviceLocation) ToMetaLocation() *synse.MetaLocation {
+// toMetaLocation converts the DeviceLocation to the gRPC MetaLocation model.
+func (l *DeviceLocation) toMetaLocation() *synse.MetaLocation {
 	return &synse.MetaLocation{
 		Rack: l.Rack,
 		Board: l.Board,
@@ -325,10 +325,10 @@ type DeviceConfig struct {
 	Data     map[string]string
 }
 
-// ParseDeviceConfig searches the configuration directory for device
+// parseDeviceConfig searches the configuration directory for device
 // instance configuration files. If it finds any, it reads them and populates
 // DeviceConfig structs for each of the device instances.
-func ParseDeviceConfig(dir string) ([]DeviceConfig, error) {
+func parseDeviceConfig(dir string) ([]DeviceConfig, error) {
 
 	var devices []DeviceConfig
 	devicePath := filepath.Join(dir, "device")

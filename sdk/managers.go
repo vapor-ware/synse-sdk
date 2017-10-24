@@ -18,9 +18,9 @@ type ReadingManager struct {
 	lock    *sync.Mutex
 }
 
-// Start runs a goroutine that reads from the ReadResource channel and
+// start runs a goroutine that reads from the ReadResource channel and
 // updates the values map with the readings it gets from the channel.
-func (r *ReadingManager) Start() {
+func (r *ReadingManager) start() {
 
 	r.lock = &sync.Mutex{}
 
@@ -35,10 +35,10 @@ func (r *ReadingManager) Start() {
 	Logger.Info("[reading manager] started")
 }
 
-// Read is used to get all readings associated with the specified device. If
+// read is used to get all readings associated with the specified device. If
 // the specified device is not found in the reading manager's state, no
 // readings will be returned.
-func (r *ReadingManager) Read(in *synse.ReadRequest) ([]*synse.ReadResponse, error) {
+func (r *ReadingManager) read(in *synse.ReadRequest) ([]*synse.ReadResponse, error) {
 	uid := in.GetUid()
 	if uid == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "No UID supplied to Read.")
@@ -82,14 +82,14 @@ type WritingManager struct {
 }
 
 
-// Write is used to put new data from WriteRequests onto the write queue.
+// write is used to put new data from WriteRequests onto the write queue.
 // Each WriteRequest contains a slice of WriteData. Each of these WriteData
 // are put on the queue as their own jobs and are given individual transaction
 // ids. The transaction ids are mapped back to the WriteData which is returned.
 // The WriteData is returned with the transaction ids to help provide context
 // for differentiating transaction ids in the event that a WriteRequest has
 // more than one WriteData.
-func (w *WritingManager) Write(in *synse.WriteRequest) map[string]*synse.WriteData {
+func (w *WritingManager) write(in *synse.WriteRequest) map[string]*synse.WriteData {
 
 	var response = make(map[string]*synse.WriteData)
 
