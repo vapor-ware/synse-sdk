@@ -1,117 +1,98 @@
 package sdk
 
 import (
-	"os"
 	"testing"
-	"io/ioutil"
 )
 
 
-func TestDevicesFromConfig(t *testing.T) {
-	devices, err := DevicesFromConfig("some/nonexistant/dir", &TestHandler{})
+var testInst1 = DeviceConfig{
+	Version: "1.0",
+	Type: "test-device",
+	Model: "td-1",
+	Location: DeviceLocation{
+		Rack: "rack-1",
+		Board: "board-1",
+	},
+}
 
-	if devices != nil {
-		t.Error("Expecting error - devices should be nil.")
-	}
+var testInst2 = DeviceConfig{
+	Version: "1.0",
+	Type: "test-device",
+	Model: "td-1",
+	Location: DeviceLocation{
+		Rack: "rack-1",
+		Board: "board-2",
+	},
+}
 
-	if _, ok := err.(*os.PathError); !ok {
-		t.Error("Expected path error.")
+var testProto1 = PrototypeConfig{
+	Version: "1.0",
+	Type: "test-device",
+	Model: "td-1",
+	Manufacturer: "vaporio",
+	Protocol: "test",
+}
+
+var testProto2 = PrototypeConfig{
+	Version: "1.0",
+	Type: "test-device",
+	Model: "td-3",
+	Manufacturer: "vaporio",
+	Protocol: "test",
+}
+
+
+func TestMakeDevices(t *testing.T) {
+	inst := []DeviceConfig{testInst1, testInst2}
+	proto := []PrototypeConfig{testProto1}
+
+	devices := makeDevices(inst, proto, &TestHandler{})
+
+	if len(devices) != 2 {
+		t.Error("Expected two instances to match the prototype.")
 	}
 }
 
-func TestDevicesFromConfig2(t *testing.T) {
-	os.MkdirAll("tmp/proto", os.ModePerm)
-	defer func () {
-		os.RemoveAll("tmp")
-	}()
+func TestMakeDevices2(t *testing.T) {
+	inst := []DeviceConfig{testInst1, testInst2}
+	proto := []PrototypeConfig{testProto2}
 
-	devices, err := DevicesFromConfig("tmp", &TestHandler{})
+	devices := makeDevices(inst, proto, &TestHandler{})
 
-	if devices != nil {
-		t.Error("Expecting error - devices should be nil.")
-	}
-
-	if _, ok := err.(*os.PathError); !ok {
-		t.Error("Expected path error.")
-	}
-}
-
-func TestDevicesFromConfig3(t *testing.T) {
-	os.MkdirAll("tmp/proto", os.ModePerm)
-	os.MkdirAll("tmp/device", os.ModePerm)
-	defer func () {
-		os.RemoveAll("tmp")
-	}()
-
-	devices, err := DevicesFromConfig("tmp", &TestHandler{})
-	if err != nil {
-		t.Error("Failed to create devices from empty config.")
-	}
 	if len(devices) != 0 {
-		t.Error("Created devices from no configuration.")
+		t.Error("Expected no instances to match the prototype.")
 	}
 }
 
-func TestDevicesFromConfig4(t *testing.T) {
-	os.MkdirAll("tmp/proto", os.ModePerm)
-	os.MkdirAll("tmp/device", os.ModePerm)
-	defer func () {
-		os.RemoveAll("tmp")
-	}()
+func TestMakeDevices3(t *testing.T) {
+	inst := []DeviceConfig{testInst1}
+	proto := []PrototypeConfig{testProto1, testProto2}
 
-	protoCfg := `version: 1.0
-type: emulated-temperature
-model: emul8-temp
-manufacturer: vaporio
-protocol: emulator
-output:
-  - type: temperature
-    unit:
-      name: celsius
-      symbol: C
-    precision: 2
-    range:
-      min: 0
-      max: 100`
+	devices := makeDevices(inst, proto, &TestHandler{})
 
-	err := ioutil.WriteFile("tmp/proto/test.yaml", []byte(protoCfg), 0644)
-	if err != nil {
-		t.Error("Failed to write test data to file.")
+	if len(devices) != 1 {
+		t.Error("Expected one instance to match the prototypes.")
 	}
+}
 
-	deviceCfg := `version: 1.0
-type: emulated-temperature
-model: emul8-temp
+func TestMakeDevices4(t *testing.T) {
+	inst := []DeviceConfig{testInst1, testInst2}
+	proto := []PrototypeConfig{}
 
-locations:
-  unknown:
-    rack: unknown
-    board: unknown
+	devices := makeDevices(inst, proto, &TestHandler{})
 
-devices:
-  - id: 1
-    location: unknown
-    comment: first emulated temperature device
-    info: CEC temp 1
-  - id: 2
-    location: unknown
-    comment: second emulated temperature device
-    info: CEC temp 2
-  - id: 3
-    location: unknown
-    comment: third emulated temperature device
-    info: CEC temp 3`
-
-	err = ioutil.WriteFile("tmp/device/test.yaml", []byte(deviceCfg), 0644)
-	if err != nil {
-		t.Error("Failed to write test data to file.")
+	if len(devices) != 0 {
+		t.Error("Expected no matches - no prototypes defined.")
 	}
+}
 
-	devices, err := DevicesFromConfig("tmp", &TestHandler{})
-	if err != nil {
-		t.Error("Failed to create devices from config.")
-	}
-	if len(devices) != 3 {
-		t.Error("Created incorrect number of devices.")
+func TestMakeDevices5(t *testing.T) {
+	inst := []DeviceConfig{}
+	proto := []PrototypeConfig{testProto1, testProto2}
+
+	devices := makeDevices(inst, proto, &TestHandler{})
+
+	if len(devices) != 0 {
+		t.Error("Expected no matches - no instances defined.")
 	}
 }

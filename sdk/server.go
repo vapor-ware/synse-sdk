@@ -26,12 +26,37 @@ type PluginServer struct {
 // configureDevices is a convenience function to parse all of the plugin
 // configuration files, generate Device instances for each of the configured
 // devices, and then populate the pluginDevices map which is used to store
-// and access these device models.
+// and access these device models. Additionally, if the plugin is set to
+// auto-enumerate its devices, this kicks that off.
 func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
-	devices, err := DevicesFromConfig(ConfigDir, deviceHandler)
+
+	var instanceCfg []DeviceConfig
+
+	// get any instance configurations from plugin-defined enumeration function
+	for _, enumCfg := range Config.AutoEnumerate {
+		deviceEnum, err := deviceHandler.EnumerateDevices(enumCfg)
+		if err != nil {
+			Logger.Errorf("Error enumerating devices with %+v: %v", enumCfg, err)
+		} else {
+			instanceCfg = append(instanceCfg, deviceEnum...)
+		}
+	}
+
+	// get any instance configurations from YAML
+	deviceCfg, err := parseDeviceConfig(configDir)
 	if err != nil {
 		return err
 	}
+	instanceCfg = append(instanceCfg, deviceCfg...)
+
+	// get the prototype configurations from YAML
+	protoCfg, err := parsePrototypeConfig(configDir)
+	if err != nil {
+		return err
+	}
+
+	// make the composite device records
+	devices := makeDevices(instanceCfg, protoCfg, deviceHandler)
 
 	ps.pluginDevices = make(map[string]Device)
 	for _, device := range devices {
@@ -46,7 +71,7 @@ func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
 func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
 	Logger.Debug("[grpc] READ")
 
-	responses, err := ps.readingManager.Read(in)
+	responses, err := ps.readingManager.read(in)
 	if err != nil {
 		return err
 	}
@@ -63,7 +88,7 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.Transactions, error) {
 	Logger.Debug("[grpc] WRITE")
 
-	transactions := ps.writingManager.Write(in)
+	transactions := ps.writingManager.write(in)
 	return &synse.Transactions{
 		Transactions: transactions,
 	}, nil
@@ -75,7 +100,7 @@ func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.Interna
 	Logger.Debug("[grpc] METAINFO")
 
 	for _, device := range ps.pluginDevices {
-		if err := stream.Send(device.ToMetainfoResponse()); err != nil {
+		if err := stream.Send(device.toMetainfoResponse()); err != nil {
 			return err
 		}
 	}
@@ -105,14 +130,14 @@ func (ps *PluginServer) Run() error {
 	Logger.Infof("[plugin server] Running server with SDK version %v", Version)
 
 	// Start the reading manager
-	ps.readingManager.Start()
+	ps.readingManager.start()
 
 	// start the RW loop
-	ps.rwLoop.Run()
+	ps.rwLoop.run()
 
 	// create the socket used to communicate with the gRPC server
 	path := "/synse/procs"
-	socket := fmt.Sprintf("/%s/%s.sock", path, ps.name)
+	socket := fmt.Sprintf("%s/%s.sock", path, ps.name)
 
 	_, err := os.Stat(path)
 	if err != nil {

@@ -44,6 +44,13 @@ jobs:
           command: |
             go test -v ./sdk 2>&1 | go-junit-report > /tmp/gotest/report.xml
 
+      - run:
+          name: "Build Examples"
+          command: |
+            cd examples/simple_plugin ; go build -v ; cd ../..
+            cd examples/multi_device_plugin ; go build -v ; cd ../..
+            cd examples/c_plugin ; go build -v ; cd ../..
+
       - save_cache:
           when: on_success
           key: vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}

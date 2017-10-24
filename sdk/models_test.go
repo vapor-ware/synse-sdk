@@ -43,6 +43,10 @@ func (h *TestHandler) GetProtocolIdentifiers(in map[string]string) string {
 	return ""
 }
 
+func (h *TestHandler) EnumerateDevices(map[string]interface{}) ([]DeviceConfig, error) {
+	return []DeviceConfig{}, nil
+}
+
 
 func TestWriteData_ToGRPC(t *testing.T) {
 	expected := &synse.WriteData{
@@ -55,7 +59,7 @@ func TestWriteData_ToGRPC(t *testing.T) {
 		Action: "test",
 	}
 
-	actual := wd.ToGRPC()
+	actual := wd.toGRPC()
 
 	if len(actual.Raw) != len(expected.Raw) {
 		t.Error("WriteData Raw length mismatch.")
@@ -85,7 +89,7 @@ func TestWriteDataFromGRPC(t *testing.T) {
 		Action: "test",
 	}
 
-	actual := WriteDataFromGRPC(wd)
+	actual := writeDataFromGRPC(wd)
 
 	if len(actual.Raw) != len(expected.Raw) {
 		t.Error("WriteData Raw length mismatch.")
@@ -106,10 +110,10 @@ func TestWriteDataFromGRPC(t *testing.T) {
 
 
 func TestNewUID(t *testing.T) {
-	hash1 := NewUID("", "", "", "")
-	hash2 := NewUID("", "", "", "")
-	hash3 := NewUID("a", "b", "c", "d")
-	hash4 := NewUID("a", "b", "c", "d")
+	hash1 := newUID("", "", "", "")
+	hash2 := newUID("", "", "", "")
+	hash3 := newUID("a", "b", "c", "d")
+	hash4 := newUID("a", "b", "c", "d")
 
 	if hash1 != hash2 {
 		t.Errorf("Empty value hashes do not match: %v %v", hash1, hash2)
@@ -245,7 +249,7 @@ func TestDevice_ToMetainfoResponse(t *testing.T) {
 		Handler: &TestHandler{},
 	}
 
-	meta := d.ToMetainfoResponse()
+	meta := d.toMetainfoResponse()
 
 	if meta.Uid != d.UID() {
 		t.Error("MetainfoResponse Uid incorrect.")

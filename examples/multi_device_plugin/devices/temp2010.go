@@ -3,7 +3,7 @@ package devices
 import (
 	"time"
 
-	"../../../sdk"
+	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
 
@@ -18,5 +18,5 @@ func (d *Temp2010) Read(in sdk.Device) (sdk.ReadResource, error) {
 }
 
 func (d *Temp2010) Write(in sdk.Device, data *sdk.WriteData) (error) {
-	return nil
+	return &sdk.UnsupportedCommandError{}
 }

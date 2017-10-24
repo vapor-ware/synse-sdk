@@ -43,8 +43,8 @@ type WriteResource struct {
 type WriteData synse.WriteData
 
 
-// ToGRPC converts the SDK WriteData to the Synse gRPC WriteData.
-func (w *WriteData) ToGRPC() *synse.WriteData {
+// toGRPC converts the SDK WriteData to the Synse gRPC WriteData.
+func (w *WriteData) toGRPC() *synse.WriteData {
 	return &synse.WriteData{
 		Raw: w.Raw,
 		Action: w.Action,
@@ -52,9 +52,9 @@ func (w *WriteData) ToGRPC() *synse.WriteData {
 }
 
 
-// WriteDataFromGRPC takes the Synse gRPC WriteData and converts it to the
+// writeDataFromGRPC takes the Synse gRPC WriteData and converts it to the
 // SDK WriteData.
-func WriteDataFromGRPC(data *synse.WriteData) *WriteData {
+func writeDataFromGRPC(data *synse.WriteData) *WriteData {
 	return &WriteData{
 		Raw: data.Raw,
 		Action: data.Action,
@@ -62,7 +62,7 @@ func WriteDataFromGRPC(data *synse.WriteData) *WriteData {
 }
 
 
-// NewUID creates a new unique identifier for a device. The device id is
+// newUID creates a new unique identifier for a device. The device id is
 // deterministic because it is created as a hash of various components that
 // make up the device's configuration. By definition, each device will have
 // a (slightly) different configuration (otherwise they would just be the same
@@ -70,7 +70,7 @@ func WriteDataFromGRPC(data *synse.WriteData) *WriteData {
 //
 // These device IDs are not guaranteed to be globally unique, but they should
 // be unique to the board they reside on.
-func NewUID(protocol, deviceType, model, protoComp string) string {
+func newUID(protocol, deviceType, model, protoComp string) string {
 	h := md5.New()
 	io.WriteString(h, protocol)
 	io.WriteString(h, deviceType)
@@ -111,7 +111,7 @@ func (d *Device) Protocol() string {
 // UID gets the id for the Device.
 func (d *Device) UID() string {
 	protocolComp := d.Handler.GetProtocolIdentifiers(d.Data())
-	return NewUID(d.Protocol(), d.Type(), d.Model(), protocolComp)
+	return newUID(d.Protocol(), d.Type(), d.Model(), protocolComp)
 }
 
 // Output gets the list of configured reading outputs for the Device.
@@ -131,15 +131,15 @@ func (d *Device) Data() map[string]string {
 	return d.Instance.Data
 }
 
-// ToMetainfoResponse converts the Device into its corresponding
+// toMetainfoResponse converts the Device into its corresponding
 // MetainfoResponse representation.
-func (d *Device) ToMetainfoResponse() *synse.MetainfoResponse {
+func (d *Device) toMetainfoResponse() *synse.MetainfoResponse {
 
 	location := d.Location()
 
 	var output []*synse.MetaOutput
 	for _, out := range d.Output() {
-		mo := out.ToMetaOutput()
+		mo := out.toMetaOutput()
 		output = append(output, mo)
 	}
 
@@ -152,7 +152,7 @@ func (d *Device) ToMetainfoResponse() *synse.MetainfoResponse {
 		Protocol: d.Protocol(),
 		Info: d.Data()["info"],
 		Comment: d.Data()["comment"],
-		Location: location.ToMetaLocation(),
+		Location: location.toMetaLocation(),
 		Output: output,
 	}
 }

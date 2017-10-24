@@ -22,6 +22,63 @@ type PluginConfig struct {
 	// Log at DEBUG level.
 	Debug bool `yaml:"debug"`
 
+	// Settings for how the plugin runs.
+	Settings PluginConfigSettings `yaml:"settings"`
+
+	// Configuration for auto-enumeration of devices. The contents of this
+	// field are left fairly generic, since the requirements for what may
+	// need to be specified for auto-enumeration will change per plugin.
+	AutoEnumerate []map[string]interface{} `yaml:"auto_enumerate"`
+
+	// Any global context that the plugin might need.
+	Context map[string]interface{} `yaml:"context"`
+
+}
+
+// PluginConfigSettings specifies the group of configuration options
+// that govern the plugin settings.
+type PluginConfigSettings struct {
+
+	// A delay, in milliseconds, to wait at the end of the read-write
+	// loop. This may not be needed and can be omitted (defaulting to
+	// the value of 0), but it is surfaced as an option which can help
+	// limit CPU/memory usage. For instance, if a plugin is written to
+	// support a device which will only update its reading every 0.25
+	// seconds, then it may not make sense to run the read-write loop
+	// continuously. Instead `250` (milliseconds) could be specified here
+	// so the loop polls the device at the same rate it updates.
+	LoopDelay int `yaml:"loop_delay"`
+
+	// The settings for device reads.
+	Read PluginConfigSettingsRead `yaml:"read"`
+
+	// The settings for device writes.
+	Write PluginConfigSettingsWrite `yaml:"write"`
+
+	// The settings for write transactions.
+	Transaction PluginConfigSettingsTransaction `yaml:"transaction"`
+
+}
+
+// PluginConfigSettingsRead specifies the configuration options for read
+// operations.
+type PluginConfigSettingsRead struct {
+
+	// When devices are read, those readings are put into a channel which
+	// the ReadingManager continuously reads from to update its state.
+	// ReadBufferSize defines the size of the read channel buffer.
+	// Because it is being read continuously, it generally should not
+	// be an issue, but if many devices are expected to be configured
+	// off of a plugin (e.g. many reads occurring), increasing the read
+	// buffer might become necessary.
+	BufferSize int `yaml:"buffer_size"`
+
+}
+
+// PluginConfigSettingsWrite specifies the configuration options for write
+// operations.
+type PluginConfigSettingsWrite struct {
+
 	// The size of the writes buffer. Since writes are processed
 	// asynchronously, when a write request is received it is put
 	// into a queue. Writes are processed at the beginning of every
@@ -34,7 +91,7 @@ type PluginConfig struct {
 	// the buffer will decumulate quickly. If writes are expected to
 	// take a long time, or many writes are expected for the plugin,
 	// this buffer size may need to be increased.
-	WriteBufferSize int `yaml:"write_buffer_size"`
+	BufferSize int `yaml:"buffer_size"`
 
 	// To prevent numerous writes requests from blocking the read block
 	// of the read-write loop, we will only process a portion of the
@@ -45,30 +102,18 @@ type PluginConfig struct {
 	// If write operations are expected to take a while for the plugin,
 	// this number should be decreased so the read block can execute
 	// more frequently.
-	WritesPerLoop int `yaml:"writes_per_loop"`
+	PerLoop int `yaml:"per_loop"`
 
-	// A delay, in milliseconds, to wait at the end of the read-write
-	// loop. This may not be needed and can be omitted (defaulting to
-	// the value of 0), but it is surfaced as an option which can help
-	// limit CPU/memory usage. For instance, if a plugin is written to
-	// support a device which will only update its reading every 0.25
-	// seconds, then it may not make sense to run the read-write loop
-	// continuously. Instead `250` (milliseconds) could be specified here
-	// so the loop polls the device at the same rate it updates.
-	LoopDelay int `yaml:"loop_delay"`
+}
 
-	// When devices are read, those readings are put into a channel which
-	// the ReadingManager continuously reads from to update its state.
-	// ReadBufferSize defines the size of the read channel buffer.
-	// Because it is being read continuously, it generally should not
-	// be an issue, but if many devices are expected to be configured
-	// off of a plugin (e.g. many reads occurring), increasing the read
-	// buffer might become necessary.
-	ReadBufferSize int `yaml:"read_buffer_size"`
+// PluginConfigSettingsTransaction specifies the configuration options for
+// transaction operations.
+type PluginConfigSettingsTransaction struct {
 
 	// The time (in seconds) that transaction data should be tracked for
 	// after it has completed.
-	TransactionTTL int `yaml:"transaction_ttl"`
+	TTL int `yaml:"ttl"`
+
 }
 
 
@@ -117,35 +162,40 @@ func (c *PluginConfig) Merge(config PluginConfig) error {
 
 	// The read buffer cannot be 0 (otherwise we would be unable to buffer
 	// reads), so take a zero value here to mean "default".
-	if config.ReadBufferSize != 0 {
-		c.ReadBufferSize = config.ReadBufferSize
+	if config.Settings.Read.BufferSize != 0 {
+		c.Settings.Read.BufferSize = config.Settings.Read.BufferSize
 	}
 
 	// The write buffer cannot be 0 (otherwise we would be unable to buffer
 	// writes), so take a zero value here to mean "default".
-	if config.WriteBufferSize != 0 {
-		c.WriteBufferSize = config.WriteBufferSize
+	if config.Settings.Write.BufferSize != 0 {
+		c.Settings.Write.BufferSize = config.Settings.Write.BufferSize
 	}
 
 	// We cannot have 0 writes per loop, otherwise no writes would ever be
 	// fulfilled. Take a zero value here to mean "default".
-	if config.WritesPerLoop != 0 {
-		c.WritesPerLoop = config.WritesPerLoop
+	if config.Settings.Write.PerLoop != 0 {
+		c.Settings.Write.PerLoop = config.Settings.Write.PerLoop
 	}
 
 	// We don't want the transaction TTL to be 0, otherwise it will be removed
 	// almost immediately after completion, leaving no time for any subsequent
 	// transaction check to finish successfully. Take a zero value here to
 	// mean "default"
-	if config.TransactionTTL != 0 {
-		c.TransactionTTL = config.TransactionTTL
+	if config.Settings.Transaction.TTL != 0 {
+		c.Settings.Transaction.TTL = config.Settings.Transaction.TTL
 	}
 
 	// LoopDelay can be 0 (the default), so no check is needed.
-	c.LoopDelay = config.LoopDelay
+	c.Settings.LoopDelay = config.Settings.LoopDelay
 
 	// Debug can be false (the default), so no check is needed.
 	c.Debug = config.Debug
+
+	// There are no default values for auto-enumerate or context, so
+	// just use whatever might be configured by the plugin.
+	c.AutoEnumerate = config.AutoEnumerate
+	c.Context = config.Context
 
 	return nil
 }
@@ -156,11 +206,20 @@ func (c *PluginConfig) Merge(config PluginConfig) error {
 func GetDefaultConfig() *PluginConfig {
 	return &PluginConfig{
 		Debug: false,
-		ReadBufferSize: 100,
-		WriteBufferSize: 100,
-		WritesPerLoop: 5,
-		LoopDelay: 0,
-		TransactionTTL: 60 * 5,  // five minutes
+		Settings: PluginConfigSettings{
+			LoopDelay: 0,
+
+			Read: PluginConfigSettingsRead{
+				BufferSize: 100,
+			},
+			Write: PluginConfigSettingsWrite{
+				BufferSize: 100,
+				PerLoop: 5,
+			},
+			Transaction: PluginConfigSettingsTransaction{
+				TTL: 60 * 5,  // five minutes
+			},
+		},
 	}
 }
 
@@ -171,10 +230,10 @@ func GetDefaultConfig() *PluginConfig {
 var Config = GetDefaultConfig()
 
 
-// ConfigurePlugin takes a plugin-specified configuration and sets it as
+// configurePlugin takes a plugin-specified configuration and sets it as
 // the configuration that is used by the SDK. The given configuration is
 // merged with the existing configuration.
-func ConfigurePlugin(config PluginConfig) error {
+func configurePlugin(config PluginConfig) error {
 	Config.Merge(config)
 	return nil
 }
@@ -199,8 +258,8 @@ type DeviceOutput struct {
 	Range      *OutputRange  `yaml:"range"`
 }
 
-// ToMetaOutput converts the DeviceOutput to the gRPC MetaOutput model.
-func (o *DeviceOutput) ToMetaOutput() *synse.MetaOutput {
+// toMetaOutput converts the DeviceOutput to the gRPC MetaOutput model.
+func (o *DeviceOutput) toMetaOutput() *synse.MetaOutput {
 
 	unit := &OutputUnit{}
 	if o.Unit != nil {
@@ -215,8 +274,8 @@ func (o *DeviceOutput) ToMetaOutput() *synse.MetaOutput {
 	return &synse.MetaOutput{
 		Type: o.Type,
 		Precision: o.Precision,
-		Unit: unit.ToMetaOutputUnit(),
-		Range: rang.ToMetaOutputRange(),
+		Unit: unit.toMetaOutputUnit(),
+		Range: rang.toMetaOutputRange(),
 	}
 }
 
@@ -226,8 +285,8 @@ type OutputUnit struct {
 	Symbol  string  `yaml:"symbol"`
 }
 
-// ToMetaOutputUnit converts the OutputUnit to the gRPC MetaOutputUnit model.
-func (u *OutputUnit) ToMetaOutputUnit() *synse.MetaOutputUnit {
+// toMetaOutputUnit converts the OutputUnit to the gRPC MetaOutputUnit model.
+func (u *OutputUnit) toMetaOutputUnit() *synse.MetaOutputUnit {
 	return &synse.MetaOutputUnit{
 		Name: u.Name,
 		Symbol: u.Symbol,
@@ -240,18 +299,18 @@ type OutputRange struct {
 	Max  int32  `yaml:"max"`
 }
 
-// ToMetaOutputRange converts the OutputRange to the gRPC MetaOutputRange model.
-func (r *OutputRange) ToMetaOutputRange() *synse.MetaOutputRange {
+// toMetaOutputRange converts the OutputRange to the gRPC MetaOutputRange model.
+func (r *OutputRange) toMetaOutputRange() *synse.MetaOutputRange {
 	return &synse.MetaOutputRange{
 		Min: r.Min,
 		Max: r.Max,
 	}
 }
 
-// ParsePrototypeConfig searches the configuration directory for device
+// parsePrototypeConfig searches the configuration directory for device
 // prototype configuration files. If it finds any, it reads them and populates
 // PrototypeConfig structs for each of the device prototypes.
-func ParsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
+func parsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 
 	var protos []PrototypeConfig
 	protoPath := filepath.Join(dir, "proto")
@@ -306,8 +365,8 @@ type DeviceLocation struct {
 	Board string `yaml:"board"`
 }
 
-// ToMetaLocation converts the DeviceLocation to the gRPC MetaLocation model.
-func (l *DeviceLocation) ToMetaLocation() *synse.MetaLocation {
+// toMetaLocation converts the DeviceLocation to the gRPC MetaLocation model.
+func (l *DeviceLocation) toMetaLocation() *synse.MetaLocation {
 	return &synse.MetaLocation{
 		Rack: l.Rack,
 		Board: l.Board,
@@ -325,10 +384,10 @@ type DeviceConfig struct {
 	Data     map[string]string
 }
 
-// ParseDeviceConfig searches the configuration directory for device
+// parseDeviceConfig searches the configuration directory for device
 // instance configuration files. If it finds any, it reads them and populates
 // DeviceConfig structs for each of the device instances.
-func ParseDeviceConfig(dir string) ([]DeviceConfig, error) {
+func parseDeviceConfig(dir string) ([]DeviceConfig, error) {
 
 	var devices []DeviceConfig
 	devicePath := filepath.Join(dir, "device")

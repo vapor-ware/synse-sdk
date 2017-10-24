@@ -1,7 +1,7 @@
 package devices
 
 import (
-	"../../../sdk"
+	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
 

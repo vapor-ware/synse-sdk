@@ -4,8 +4,7 @@ package main
 import (
 	"log"
 
-	"./devices"
-
+	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
@@ -29,7 +28,7 @@ type ExamplePluginHandler struct {}
 func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	handler := lookup[in.Model()]
 	if handler == nil {
-		log.Fatalf("Unsupported device model: %v", in.Model())
+		log.Fatalf("Unsupported device model: %+v", in)
 	}
 	return handler.Read(in)
 }
@@ -37,7 +36,7 @@ func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 func (h *ExamplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) (error) {
 	handler := lookup[in.Model()]
 	if handler == nil {
-		log.Fatalf("Unsupported device model: %v", in.Model())
+		log.Fatalf("Unsupported device model: %+v", in)
 	}
 	return handler.Write(in, data)
 }
@@ -54,12 +53,22 @@ func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 	return data["id"]
 }
 
+// EnumerateDevices is used to auto-enumerate device configurations for plugins
+// that support it. This example plugin does not support it, so we just return
+// the appropriate error.
+func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]sdk.DeviceConfig, error) {
+	return nil, &sdk.EnumerationNotSupported{}
+}
+
 
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
 	config := sdk.PluginConfig{}
-	config.FromFile("plugin.yml")
+	err := config.FromFile("plugin.yml")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	p, err := sdk.NewPlugin(
 		config,
