@@ -1,8 +1,12 @@
 name: example-plugin
 version: 1.0.0
 debug: true
-write_buffer_size: 150
-read_buffer_size: 150
-writes_per_loop: 4
-loop_delay: 100
-transaction_ttl: 600
+settings:
+  loop_delay: 100
+  read:
+    buffer_size: 150
+  write:
+    buffer_size: 150
+    per_loop: 4
+  transaction:
+    ttl: 600

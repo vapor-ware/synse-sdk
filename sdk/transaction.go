@@ -63,8 +63,8 @@ func (t *TransactionState) toGRPC() *synse.WriteResponse {
 // transactionCache is a cache with a configurable default expiration time that
 // is used to track the asynchronous write transactions as they are processed.
 var transactionCache = cache.New(
-	time.Duration(Config.TransactionTTL)*time.Second,
-	time.Duration(Config.TransactionTTL)*2*time.Second,
+	time.Duration(Config.Settings.Transaction.TTL)*time.Second,
+	time.Duration(Config.Settings.Transaction.TTL)*2*time.Second,
 )
 
 
