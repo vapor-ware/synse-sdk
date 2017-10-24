@@ -164,6 +164,8 @@ func TestParsePrototypeConfig3(t *testing.T) {
 		os.RemoveAll("tmp")
 	}()
 
+	// this string represents invalid YAML - it should cause failure when
+	// we try to unmarshall.
 	cfgFile := `--~+::\n:-`
 
 	err := ioutil.WriteFile("tmp/proto/test_config.yaml", []byte(cfgFile), 0333)
@@ -189,6 +191,8 @@ func TestParsePrototypeConfig4(t *testing.T) {
 		os.RemoveAll("tmp")
 	}()
 
+	// this string represents invalid YAML - it should cause failure when
+	// we try to unmarshall.
 	cfgFile := `--~+::\n:-`
 
 	err := ioutil.WriteFile("tmp/proto/test_config.yaml", []byte(cfgFile), 0644)
@@ -284,6 +288,8 @@ func TestParseDeviceConfig3(t *testing.T) {
 		os.RemoveAll("tmp")
 	}()
 
+	// this string represents invalid YAML - it should cause failure when
+	// we try to unmarshall.
 	cfgFile := `--~+::\n:-`
 
 	err := ioutil.WriteFile("tmp/device/test_config.yaml", []byte(cfgFile), 0333)
@@ -309,6 +315,8 @@ func TestParseDeviceConfig4(t *testing.T) {
 		os.RemoveAll("tmp")
 	}()
 
+	// this string represents invalid YAML - it should cause failure when
+	// we try to unmarshall.
 	cfgFile := `--~+::\n:-`
 
 	err := ioutil.WriteFile("tmp/device/test_config.yaml", []byte(cfgFile), 0644)
