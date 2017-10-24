@@ -29,6 +29,6 @@ jobs:
       - run:
           name: "Build Examples"
           command: |
-            cd examples/simple_plugin ; go build ; cd ../..
-            cd examples/multi_device_plugin ; go build ; cd ../..
-            cd examples/c_plugin ; go build ; cd ../..
+            cd examples/simple_plugin ; go build -v ; cd ../..
+            cd examples/multi_device_plugin ; go build -v ; cd ../..
+            cd examples/c_plugin ; go build -v ; cd ../..
