@@ -47,6 +47,7 @@ func (rwl *RWLoop) run() {
 					err := rwl.handler.Write(rwl.devices[w.device], data)
 					if err != nil {
 						UpdateTransactionState(w.transaction.id, ERROR)
+						w.transaction.message = err.Error()
 						Logger.Errorf("Failed to write to device %v: %v", w.device, err)
 					}
 					UpdateTransactionStatus(w.transaction.id, DONE)

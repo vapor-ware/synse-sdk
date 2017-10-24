@@ -18,5 +18,5 @@ func (d *Volt1103) Read(in sdk.Device) (sdk.ReadResource, error) {
 }
 
 func (d *Volt1103) Write(in sdk.Device, data *sdk.WriteData) (error) {
-	return nil
+	return &sdk.UnsupportedCommandError{}
 }
