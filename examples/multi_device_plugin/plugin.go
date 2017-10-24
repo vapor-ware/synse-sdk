@@ -58,7 +58,10 @@ func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 // the plugin.
 func main() {
 	config := sdk.PluginConfig{}
-	config.FromFile("plugin.yml")
+	err := config.FromFile("plugin.yml")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	p, err := sdk.NewPlugin(
 		config,

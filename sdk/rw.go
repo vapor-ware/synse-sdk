@@ -31,8 +31,8 @@ type RWLoop struct {
 func (rwl *RWLoop) run() {
 
 	go func() {
-		loopDelay := Config.LoopDelay
-		writesPerLoop := Config.WritesPerLoop
+		loopDelay := Config.Settings.LoopDelay
+		writesPerLoop := Config.Settings.Write.PerLoop
 
 		for {
 			// ~~ Write portion of the loop ~~
