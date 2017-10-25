@@ -7,8 +7,19 @@ jobs:
           DEBUG: true
 
     working_directory: /go/src/github.com/vapor-ware/synse-sdk
+
     steps:
       - checkout
+
+      - restore_cache:
+          keys:
+            - vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
+            - vendor-{{ checksum "Gopkg.toml" }}
+
+      - run:
+          name: "Setup"
+          command: |
+            mkdir -p /tmp/gotest
 
       - run:
           name: "Setup"
@@ -23,14 +34,21 @@ jobs:
             golint -set_exit_status sdk/... client/... examples/...
 
       - run:
-          name: "Get Dependencies"
+          name: "Install Vendored Dependencies"
           command: |
-            go get -v -t -d ./sdk
+            go get -v github.com/golang/dep/cmd/dep
+            go install github.com/golang/dep/cmd/dep
+            dep ensure -v
+
+      - run:
+          name: "Get Test JUnit Parser"
+          command: |
+            go get -v -u github.com/jstemmer/go-junit-report
 
       - run:
           name: "Test"
           command: |
-            go test -v ./sdk
+            go test -v ./sdk 2>&1 | go-junit-report > /tmp/gotest/report.xml
 
       - run:
           name: "Build Examples"
@@ -38,3 +56,12 @@ jobs:
             cd examples/simple_plugin ; go build -v ; cd ../..
             cd examples/multi_device_plugin ; go build -v ; cd ../..
             cd examples/c_plugin ; go build -v ; cd ../..
+
+      - save_cache:
+          when: on_success
+          key: vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
+          paths:
+            - vendor/
+
+      - store_test_results:
+          path: /tmp/gotest
