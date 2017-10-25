@@ -20,10 +20,6 @@ jobs:
           name: "Setup"
           command: |
             mkdir -p /tmp/gotest
-
-      - run:
-          name: "Setup"
-          command: |
             sudo mkdir /synse
             sudo chown -R $(whoami) /synse
 
