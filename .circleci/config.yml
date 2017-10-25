@@ -13,7 +13,8 @@ jobs:
       - run:
           name: "Setup"
           command: |
-            mkdir /synse
+            sudo mkdir /synse
+            sudo chown -R $(whoami) /synse
 
       - run:
           name: "Lint"
