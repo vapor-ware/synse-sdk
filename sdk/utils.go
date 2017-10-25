@@ -54,7 +54,9 @@ func setupSocket(name string) (string, error) {
 	_, err := os.Stat(sockPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			os.MkdirAll(sockPath, os.ModePerm)
+			if err = os.MkdirAll(sockPath, os.ModePerm); err != nil {
+				return "", err
+			}
 		} else {
 			return "", err
 		}
