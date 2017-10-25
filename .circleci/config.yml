@@ -20,6 +20,8 @@ jobs:
           name: "Setup"
           command: |
             mkdir -p /tmp/gotest
+            sudo mkdir /synse
+            sudo chown -R $(whoami) /synse
 
       - run:
           name: "Lint"

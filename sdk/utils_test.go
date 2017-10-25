@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"testing"
+	"os"
 )
 
 
@@ -94,5 +95,62 @@ func TestMakeDevices5(t *testing.T) {
 
 	if len(devices) != 0 {
 		t.Error("Expected no matches - no instances defined.")
+	}
+}
+
+
+// setup the socket when the socket path does not exist.
+func TestSetupSocket(t *testing.T) {
+	_ = os.RemoveAll(sockPath)
+
+	_, err := os.Stat(sockPath)
+	if !os.IsNotExist(err) {
+		t.Errorf("Expected path to not exist, got error: %v", err)
+	}
+
+	sock, err := setupSocket("test")
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if sock != "/synse/procs/test.sock" {
+		t.Errorf("Unexpected socket path returned: %v", sock)
+	}
+
+	_, err = os.Stat(sockPath)
+	if err != nil {
+		t.Errorf("Error when checking socket path: %v", err)
+	}
+}
+
+// setup the socket when the path and socket already exist.
+func TestSetupSocket2(t *testing.T) {
+	_ = os.MkdirAll("/synse/procs", os.ModePerm)
+
+	filename := "/synse/procs/test.sock"
+	_, err := os.Create(filename)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = os.Stat(filename)
+	if err != nil {
+		t.Errorf("Expected file to exist, but does not.")
+	}
+
+	sock, err := setupSocket("test")
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if sock != filename {
+		t.Errorf("Unexpected socket path returned: %v", sock)
+	}
+
+	_, err = os.Stat(filename)
+	if !os.IsNotExist(err) {
+		t.Error("Socket should no longer exist, but still does.")
 	}
 }

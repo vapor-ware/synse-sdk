@@ -3,7 +3,6 @@ package sdk
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -136,18 +135,9 @@ func (ps *PluginServer) Run() error {
 	ps.rwLoop.run()
 
 	// create the socket used to communicate with the gRPC server
-	path := "/synse/procs"
-	socket := fmt.Sprintf("%s/%s.sock", path, ps.name)
-
-	_, err := os.Stat(path)
+	socket, err := setupSocket(ps.name)
 	if err != nil {
-		if os.IsNotExist(err) {
-			os.MkdirAll(path, os.ModePerm)
-		} else {
-			return err
-		}
-	} else {
-		_ = os.Remove(socket)
+		return err
 	}
 
 	Logger.Infof("[grpc] listening on socket %v", socket)
