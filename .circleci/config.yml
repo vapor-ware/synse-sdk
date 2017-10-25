@@ -11,6 +11,11 @@ jobs:
       - checkout
 
       - run:
+          name: "Setup"
+          command: |
+            mkdir /synse
+
+      - run:
           name: "Lint"
           command: |
             go get -u github.com/golang/lint/golint
