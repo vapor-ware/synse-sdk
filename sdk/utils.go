@@ -1,5 +1,14 @@
 package sdk
 
+import (
+	"fmt"
+	"os"
+)
+
+const (
+	sockPath = "/synse/procs"
+)
+
 
 // makeDevices takes the prototype and device instance configurations, parsed
 // into their corresponding structs, and generates Device instances with that
@@ -34,4 +43,25 @@ func makeDevices(deviceConfigs []DeviceConfig, protoConfigs []PrototypeConfig, d
 		devices = append(devices, d)
 	}
 	return devices
+}
+
+
+// setupSocket is used to make sure the unix socket used for gRPC communication
+// is set up and accessible locally.
+func setupSocket(name string) (string, error) {
+	socket := fmt.Sprintf("%s/%s.sock", sockPath, name)
+
+	_, err := os.Stat(sockPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(sockPath, os.ModePerm); err != nil {
+				return "", err
+			}
+		} else {
+			return "", err
+		}
+	} else {
+		_ = os.Remove(socket)
+	}
+	return socket, nil
 }
