@@ -1,0 +1,27 @@
+name: auto-enum-plugin
+version: 1.0.0
+debug: true
+settings:
+  loop_delay: 500
+  read:
+    buffer_size: 150
+  write:
+    buffer_size: 150
+    per_loop: 4
+  transaction:
+    ttl: 600
+
+# the configuration option for setting auto-enumeration. the presence
+# of this option will enable auto-enumeration processing on device
+# registration. if this is set but no auto-enumeration handler is
+# defined (rather, if the handler returns an unsupported error or the
+# like), auto-enumeration will fail.
+#
+# the values under the auto_enumerate key are a list of maps - there
+# is no scheme which these could conform to. whatever is required by
+# the plugin should be stored here. for example, for IPMI, each entry
+# in the list could be the configuration needed to connect to each
+# BMC that will provide the device information.
+auto_enumerate:
+  - base: 10
+  - base: 13

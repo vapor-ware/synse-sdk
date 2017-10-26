@@ -52,6 +52,7 @@ jobs:
             cd examples/simple_plugin ; go build -v ; cd ../..
             cd examples/multi_device_plugin ; go build -v ; cd ../..
             cd examples/c_plugin ; go build -v ; cd ../..
+            cd examples/auto_enumerate ; go build -v ; cd ../..
 
       - save_cache:
           when: on_success

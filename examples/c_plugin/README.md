@@ -1,6 +1,4 @@
-### Multi Device Plugin
-
-**TODO** - this is incomplete. need to spend more time figuring out how this all works.
+### C Integrated Plugin
 
 This directory contains an example of a somewhat simple plugin which uses 
 functions defined in C as the plugin's read and write functions. This is 
