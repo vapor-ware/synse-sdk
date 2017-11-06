@@ -297,7 +297,7 @@ func makeAPIClient() {
 		}),
 	)
 	if err != nil {
-		cliError(fmt.Errorf("unable to connect: %v\n", err))
+		cliError(fmt.Errorf("unable to connect: %v", err))
 	}
 	c = synse.NewInternalApiClient(conn)
 }
