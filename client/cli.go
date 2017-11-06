@@ -29,13 +29,17 @@ var (
 )
 
 const (
-	transactionTemplate = `{{ printf "%-20s" .id }}{{ printf "%-10s" .status }}{{ printf "%-10s" .state }}{{ printf "%-20s" .created }}{{ printf "%-20s" .updated }}`
+	transactionTemplate = `{{ printf "%-25s" .id }}{{ printf "%-10s" .status }}{{ printf "%-10s" .state }}{{ printf "%-20s" .created }}{{ printf "%-20s" .updated }}
+`
 
-	readTemplate = `{{ printf "%-20s" .device }}{{ printf "%-10s" .type }}{{ printf "%-10s" .reading }}`
+	readTemplate = `{{ printf "%-40s" .device }}{{ printf "%-10s" .type }}{{ printf "%-10s" .reading }}
+`
 
-	writeTemplate = `{{ printf "%-20s" .id }}{{ printf "%-20s" .action }}{{ printf "%-20s" .raw }}`
+	writeTemplate = `{{ printf "%-25s" .id }}{{ printf "%-20s" .action }}{{ printf "%-20s" .raw }}
+`
 
-	metainfoTemplate = `{{ printf "%-20s" .id }}{{ printf "%-15s" .type }}{{ printf "%-15s" .model }}{{ printf "%-10s" .protocol }}{{ printf "%-30s" .info }}`
+	metainfoTemplate = `{{ printf "%-40s" .id }}{{ printf "%-15s" .type }}{{ printf "%-15s" .model }}{{ printf "%-10s" .protocol }}{{ printf "%-30s" .info }}
+`
 )
 
 
