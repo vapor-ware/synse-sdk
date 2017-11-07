@@ -6,15 +6,15 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // ReadingManager is used to manage the reading of devices in an asynchronous
 // manner. It contains a channel used to get the readings from the read-write
 // loop and update internal state to reflect those reading values.
 type ReadingManager struct {
-	channel chan ReadResource
-	values  map[string][]Reading
+	channel chan *ReadResource
+	values  map[string][]*Reading
 	lock    *sync.Mutex
 }
 
@@ -65,8 +65,8 @@ func (r *ReadingManager) read(in *synse.ReadRequest) ([]*synse.ReadResponse, err
 
 // getReadings gets the reading(s) for the the specified device from the
 // values map.
-func (r *ReadingManager) getReadings(key string) []Reading {
-	var reading []Reading
+func (r *ReadingManager) getReadings(key string) []*Reading {
+	var reading []*Reading
 	r.lock.Lock()
 	reading = r.values[key]
 	r.lock.Unlock()
@@ -78,7 +78,7 @@ func (r *ReadingManager) getReadings(key string) []Reading {
 // channel that is used to push pending writes to. This channel acts as a job
 // queue which is worked on at the top of the read-write loop.
 type WritingManager struct {
-	channel chan WriteResource
+	channel chan *WriteResource
 }
 
 
@@ -98,7 +98,7 @@ func (w *WritingManager) write(in *synse.WriteRequest) map[string]*synse.WriteDa
 		UpdateTransactionStatus(transaction.id, PENDING)
 		response[transaction.id] = data
 
-		w.channel <- WriteResource{
+		w.channel <- &WriteResource{
 			transaction,
 			in.Uid,
 			data,

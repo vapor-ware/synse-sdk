@@ -5,7 +5,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 

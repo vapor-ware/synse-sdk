@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Reading describes a single device reading with a timestamp.
@@ -28,7 +28,7 @@ type Reading struct {
 // single pass of the read loop.
 type ReadResource struct {
 	Device  string
-	Reading []Reading
+	Reading []*Reading
 }
 
 // WriteResource describes a single write transaction.
@@ -83,8 +83,8 @@ func newUID(protocol, deviceType, model, protoComp string) string {
 
 // Device describes a single configured device for the plugin.
 type Device struct {
-	Prototype PrototypeConfig
-	Instance  DeviceConfig
+	Prototype *PrototypeConfig
+	Instance  *DeviceConfig
 	Handler   DeviceHandler
 }
 

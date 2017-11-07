@@ -13,19 +13,19 @@ import (
 // SDK. It defines the plugin's read and write functionality.
 type ExamplePluginHandler struct {}
 
-func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
+func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
 	id, err := strconv.Atoi(in.Data()["id"]); if err != nil {
 		log.Fatalf("Invalid device ID - should be an integer in configuration.")
 	}
 	value := cRead(id, in.Model())
-	return sdk.ReadResource{
+	return &sdk.ReadResource{
 		Device: in.UID(),
-		Reading: []sdk.Reading{{time.Now().String(), in.Type(), value}},
+		Reading: []*sdk.Reading{{time.Now().String(), in.Type(), value}},
 	}, nil
 }
 
-func (h *ExamplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) error {
-	return nil
+func (h *ExamplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error {
+	return &sdk.UnsupportedCommandError{}
 }
 
 
@@ -43,7 +43,7 @@ func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 // EnumerateDevices is used to auto-enumerate device configurations for plugins
 // that support it. This example plugin does not support it, so we just return
 // the appropriate error.
-func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]sdk.DeviceConfig, error) {
+func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.DeviceConfig, error) {
 	return nil, &sdk.EnumerationNotSupported{}
 }
 
@@ -58,7 +58,7 @@ func main() {
 	}
 
 	p, err := sdk.NewPlugin(
-		config,
+		&config,
 		&ExamplePluginHandler{},
 		&ExampleDeviceHandler{},
 	)

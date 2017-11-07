@@ -43,8 +43,8 @@ func (h *TestHandler) GetProtocolIdentifiers(in map[string]string) string {
 	return ""
 }
 
-func (h *TestHandler) EnumerateDevices(map[string]interface{}) ([]DeviceConfig, error) {
-	return []DeviceConfig{}, nil
+func (h *TestHandler) EnumerateDevices(map[string]interface{}) ([]*DeviceConfig, error) {
+	return nil, nil
 }
 
 
@@ -128,8 +128,8 @@ func TestNewUID(t *testing.T) {
 
 func TestDevice_Type(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
@@ -141,8 +141,8 @@ func TestDevice_Type(t *testing.T) {
 
 func TestDevice_Model(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
@@ -154,8 +154,8 @@ func TestDevice_Model(t *testing.T) {
 
 func TestDevice_Manufacturer(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
@@ -167,8 +167,8 @@ func TestDevice_Manufacturer(t *testing.T) {
 
 func TestDevice_Protocol(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
@@ -180,8 +180,8 @@ func TestDevice_Protocol(t *testing.T) {
 
 func TestDevice_UID(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
@@ -193,8 +193,8 @@ func TestDevice_UID(t *testing.T) {
 
 func TestDevice_Output(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
@@ -212,8 +212,8 @@ func TestDevice_Output(t *testing.T) {
 
 func TestDevice_Location(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
@@ -225,8 +225,8 @@ func TestDevice_Location(t *testing.T) {
 
 func TestDevice_Data(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
@@ -244,8 +244,8 @@ func TestDevice_Data(t *testing.T) {
 
 func TestDevice_ToMetainfoResponse(t *testing.T) {
 	d := Device{
-		Prototype: pConfig,
-		Instance: dConfig,
+		Prototype: &pConfig,
+		Instance: &dConfig,
 		Handler: &TestHandler{},
 	}
 
