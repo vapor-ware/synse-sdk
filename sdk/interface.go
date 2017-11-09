@@ -20,14 +20,11 @@ type PluginHandler interface {
 }
 
 
-// The DeviceHandler interface describes methods needed to properly parse
-// protocol-specific device information.
-
 // DeviceHandler defines the interface which a plugin implementation should
 // fulfil for plugin-specific device parsing and handling.
 type DeviceHandler interface {
 
-	// GetProtocoldentifiers gets the protocol-specific pieces of information
+	// GetProtocolIdentifiers gets the protocol-specific pieces of information
 	// that make a device instance unique. This value (or joined set of values)
 	// will be used as a component when creating the device UID.
 	GetProtocolIdentifiers(map[string]string) (string)

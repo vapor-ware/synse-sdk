@@ -28,14 +28,33 @@ type Reading struct {
 // single pass of the read loop.
 type ReadResource struct {
 	Device  string
+	Board   string
+	Rack    string
 	Reading []*Reading
 }
+
+// IDString returns a compound string that can identify the resource by its
+// rack, board, and device. This ID should be globally unique. It simply follows
+// the pattern {rack}-{board}-{device}.
+func (r *ReadResource) IDString() string {
+	return makeIDString(r.Rack, r.Board, r.Device)
+}
+
 
 // WriteResource describes a single write transaction.
 type WriteResource struct {
 	transaction *TransactionState
 	device      string
+	board       string
+	rack        string
 	data        *synse.WriteData
+}
+
+// IDString returns a compound string that can identify the resource by its
+// rack, board, and device. This ID should be globally unique. It simply follows
+// the pattern {rack}-{board}-{device}.
+func (r *WriteResource) IDString() string {
+	return makeIDString(r.rack, r.board, r.device)
 }
 
 // WriteData is an SDK alias for the Synse gRPC WriteData. This is done to
@@ -112,6 +131,12 @@ func (d *Device) Protocol() string {
 func (d *Device) UID() string {
 	protocolComp := d.Handler.GetProtocolIdentifiers(d.Data())
 	return newUID(d.Protocol(), d.Type(), d.Model(), protocolComp)
+}
+
+// IDString generates a globally unique ID string by creating a composite
+// string from the rack, board, and device UID.
+func (d *Device) IDString() string {
+	return makeIDString(d.Location().Rack, d.Location().Board, d.UID())
 }
 
 // Output gets the list of configured reading outputs for the Device.

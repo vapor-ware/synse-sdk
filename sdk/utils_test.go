@@ -154,3 +154,20 @@ func TestSetupSocket2(t *testing.T) {
 		t.Error("Socket should no longer exist, but still does.")
 	}
 }
+
+func TestMakeIdString(t *testing.T) {
+	matrix := map[string][]string{
+		"rack-board-device": {"rack", "board", "device"},
+		"123-456-789": {"123", "456", "789"},
+		"abc-def-ghi": {"abc", "def", "ghi"},
+		"1234567890abcdefghi-1-2": {"1234567890abcdefghi", "1", "2"},
+		"------_____-+=+=&8^": {"-----", "_____", "+=+=&8^"},
+	}
+
+	for expected, test := range matrix {
+		actual := makeIDString(test[0], test[1], test[2])
+		if expected != actual {
+			t.Errorf("Failed to make expected id string (%v): %v", expected, actual)
+		}
+	}
+}

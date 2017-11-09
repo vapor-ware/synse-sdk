@@ -91,7 +91,7 @@ context:
 		t.Error("Unexpected value in the Version field.")
 	}
 
-	if c.Debug != false {
+	if c.Debug {
 		t.Error("Unexpected value in the Debug field.")
 	}
 
@@ -228,6 +228,7 @@ manufacturer: vaporio
 protocol: emulator
 output:
   - type: temperature
+    data_type: float
     unit:
       name: celsius
       symbol: C
