@@ -13,10 +13,10 @@ package sdk
 type PluginHandler interface {
 
 	// Read the device specified by the `ReadResource`.
-	Read(Device) (ReadResource, error)
+	Read(*Device) (*ReadResource, error)
 
 	// Write data to the specified device.
-	Write(Device, *WriteData) (error)
+	Write(*Device, *WriteData) (error)
 }
 
 
@@ -48,5 +48,5 @@ type DeviceHandler interface {
 	// configurations. The device prototype configurations should still be
 	// defined ahead of time and packaged with the plugin - not created or
 	// configured at runtime.
-	EnumerateDevices(map[string]interface{}) ([]DeviceConfig, error)
+	EnumerateDevices(map[string]interface{}) ([]*DeviceConfig, error)
 }

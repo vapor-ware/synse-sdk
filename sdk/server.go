@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // PluginServer is the server that is used to run the plugin's read-write loop,
@@ -17,7 +17,7 @@ type PluginServer struct {
 	name           string
 	readingManager ReadingManager
 	writingManager WritingManager
-	pluginDevices  map[string]Device
+	pluginDevices  map[string]*Device
 	rwLoop         RWLoop
 }
 
@@ -29,7 +29,7 @@ type PluginServer struct {
 // auto-enumerate its devices, this kicks that off.
 func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
 
-	var instanceCfg []DeviceConfig
+	var instanceCfg []*DeviceConfig
 
 	// get any instance configurations from plugin-defined enumeration function
 	for _, enumCfg := range Config.AutoEnumerate {
@@ -57,7 +57,7 @@ func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
 	// make the composite device records
 	devices := makeDevices(instanceCfg, protoCfg, deviceHandler)
 
-	ps.pluginDevices = make(map[string]Device)
+	ps.pluginDevices = make(map[string]*Device)
 	for _, device := range devices {
 		ps.pluginDevices[device.UID()] = device
 	}

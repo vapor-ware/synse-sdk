@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
-	synse "github.com/vapor-ware/synse-server-grpc/go"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // PluginConfig specifies the configuration options for the plugin itself.
@@ -139,7 +139,7 @@ func (c *PluginConfig) FromFile(path string) error {
 // Merge updates the fields of the PluginConfig struct with those of
 // another PluginConfig. This is used primarily to combine user configurations
 // with default configurations.
-func (c *PluginConfig) Merge(config PluginConfig) error {
+func (c *PluginConfig) Merge(config *PluginConfig) error {
 
 	// Since Go structs will default to the zero value for a struct field
 	// that is unspecified on initialization, we need to perform some checks
@@ -233,7 +233,7 @@ var Config = GetDefaultConfig()
 // configurePlugin takes a plugin-specified configuration and sets it as
 // the configuration that is used by the SDK. The given configuration is
 // merged with the existing configuration.
-func configurePlugin(config PluginConfig) error {
+func configurePlugin(config *PluginConfig) error {
 	Config.Merge(config)
 	return nil
 }
@@ -310,9 +310,9 @@ func (r *OutputRange) toMetaOutputRange() *synse.MetaOutputRange {
 // parsePrototypeConfig searches the configuration directory for device
 // prototype configuration files. If it finds any, it reads them and populates
 // PrototypeConfig structs for each of the device prototypes.
-func parsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
+func parsePrototypeConfig(dir string) ([]*PrototypeConfig, error) {
 
-	var protos []PrototypeConfig
+	var protos []*PrototypeConfig
 	protoPath := filepath.Join(dir, "proto")
 
 	_, err := os.Stat(protoPath)
@@ -343,7 +343,7 @@ func parsePrototypeConfig(dir string) ([]PrototypeConfig, error) {
 			return protos, err
 		}
 
-		protos = append(protos, protoCfg)
+		protos = append(protos, &protoCfg)
 	}
 	return protos, nil
 }
@@ -387,9 +387,9 @@ type DeviceConfig struct {
 // parseDeviceConfig searches the configuration directory for device
 // instance configuration files. If it finds any, it reads them and populates
 // DeviceConfig structs for each of the device instances.
-func parseDeviceConfig(dir string) ([]DeviceConfig, error) {
+func parseDeviceConfig(dir string) ([]*DeviceConfig, error) {
 
-	var devices []DeviceConfig
+	var devices []*DeviceConfig
 	devicePath := filepath.Join(dir, "device")
 
 	_, err := os.Stat(devicePath)
@@ -436,7 +436,7 @@ func parseDeviceConfig(dir string) ([]DeviceConfig, error) {
 				Data: data,
 			}
 
-			devices = append(devices, deviceCfg)
+			devices = append(devices, &deviceCfg)
 
 		}
 	}

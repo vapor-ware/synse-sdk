@@ -44,8 +44,8 @@ var testProto2 = PrototypeConfig{
 
 
 func TestMakeDevices(t *testing.T) {
-	inst := []DeviceConfig{testInst1, testInst2}
-	proto := []PrototypeConfig{testProto1}
+	inst := []*DeviceConfig{&testInst1, &testInst2}
+	proto := []*PrototypeConfig{&testProto1}
 
 	devices := makeDevices(inst, proto, &TestHandler{})
 
@@ -55,8 +55,8 @@ func TestMakeDevices(t *testing.T) {
 }
 
 func TestMakeDevices2(t *testing.T) {
-	inst := []DeviceConfig{testInst1, testInst2}
-	proto := []PrototypeConfig{testProto2}
+	inst := []*DeviceConfig{&testInst1, &testInst2}
+	proto := []*PrototypeConfig{&testProto2}
 
 	devices := makeDevices(inst, proto, &TestHandler{})
 
@@ -66,8 +66,8 @@ func TestMakeDevices2(t *testing.T) {
 }
 
 func TestMakeDevices3(t *testing.T) {
-	inst := []DeviceConfig{testInst1}
-	proto := []PrototypeConfig{testProto1, testProto2}
+	inst := []*DeviceConfig{&testInst1}
+	proto := []*PrototypeConfig{&testProto1, &testProto2}
 
 	devices := makeDevices(inst, proto, &TestHandler{})
 
@@ -77,8 +77,8 @@ func TestMakeDevices3(t *testing.T) {
 }
 
 func TestMakeDevices4(t *testing.T) {
-	inst := []DeviceConfig{testInst1, testInst2}
-	proto := []PrototypeConfig{}
+	inst := []*DeviceConfig{&testInst1, &testInst2}
+	proto := []*PrototypeConfig{}
 
 	devices := makeDevices(inst, proto, &TestHandler{})
 
@@ -88,8 +88,8 @@ func TestMakeDevices4(t *testing.T) {
 }
 
 func TestMakeDevices5(t *testing.T) {
-	inst := []DeviceConfig{}
-	proto := []PrototypeConfig{testProto1, testProto2}
+	inst := []*DeviceConfig{}
+	proto := []*PrototypeConfig{&testProto1, &testProto2}
 
 	devices := makeDevices(inst, proto, &TestHandler{})
 

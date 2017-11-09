@@ -13,11 +13,11 @@ const (
 // makeDevices takes the prototype and device instance configurations, parsed
 // into their corresponding structs, and generates Device instances with that
 // information.
-func makeDevices(deviceConfigs []DeviceConfig, protoConfigs []PrototypeConfig, deviceHandler DeviceHandler) []Device {
-	var devices []Device
+func makeDevices(deviceConfigs []*DeviceConfig, protoConfigs []*PrototypeConfig, deviceHandler DeviceHandler) []*Device {
+	var devices []*Device
 
 	for _, dev := range deviceConfigs {
-		var protoconfig PrototypeConfig
+		var protoconfig *PrototypeConfig
 		found := false
 
 		for _, proto := range protoConfigs {
@@ -40,7 +40,7 @@ func makeDevices(deviceConfigs []DeviceConfig, protoConfigs []PrototypeConfig, d
 		}
 
 		Logger.Debugf("New Device: %v", d.UID())
-		devices = append(devices, d)
+		devices = append(devices, &d)
 	}
 	return devices
 }

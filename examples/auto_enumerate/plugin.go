@@ -15,18 +15,18 @@ import (
 // SDK. It defines the plugin's read and write functionality.
 type ExamplePluginHandler struct {}
 
-func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
+func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
 
 	val := rand.Int()
 	strVal := strconv.Itoa(val)
-	return sdk.ReadResource{
+	return &sdk.ReadResource{
 		Device:  in.UID(),
-		Reading: []sdk.Reading{{time.Now().String(), in.Type(),strVal}},
+		Reading: []*sdk.Reading{{time.Now().String(), in.Type(),strVal}},
 	}, nil
 }
 
-func (h *ExamplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) error {
-	return nil
+func (h *ExamplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error {
+	return &sdk.UnsupportedCommandError{}
 }
 
 
@@ -52,9 +52,9 @@ func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 // "auto-enumeration" by definition, but it is a valid usage. A more appropriate
 // example could be taking an IP from the configuration, and using that to hit some
 // endpoint which would give back all the information on the devices it manages.
-func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) ([]sdk.DeviceConfig, error) {
+func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) ([]*sdk.DeviceConfig, error) {
 
-	var res []sdk.DeviceConfig
+	var res []*sdk.DeviceConfig
 
 	baseAddr := config["base"]
 	for i := 0; i < 3; i++ {
@@ -81,7 +81,7 @@ func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) (
 				"id": devAddr,
 			},
 		}
-		res = append(res, d)
+		res = append(res, &d)
 	}
 
 	return res, nil
@@ -98,7 +98,7 @@ func main() {
 	}
 
 	p, err := sdk.NewPlugin(
-		config,
+		&config,
 		&ExamplePluginHandler{},
 		&ExampleDeviceHandler{},
 	)

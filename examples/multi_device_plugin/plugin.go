@@ -25,7 +25,7 @@ var lookup = map[string]devices.DeviceInterface{
 // SDK. It defines the plugin's read and write functionality.
 type ExamplePluginHandler struct {}
 
-func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
+func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
 	handler := lookup[in.Model()]
 	if handler == nil {
 		log.Fatalf("Unsupported device model: %+v", in)
@@ -33,7 +33,7 @@ func (h *ExamplePluginHandler) Read(in sdk.Device) (sdk.ReadResource, error) {
 	return handler.Read(in)
 }
 
-func (h *ExamplePluginHandler) Write(in sdk.Device, data *sdk.WriteData) (error) {
+func (h *ExamplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) (error) {
 	handler := lookup[in.Model()]
 	if handler == nil {
 		log.Fatalf("Unsupported device model: %+v", in)
@@ -56,7 +56,7 @@ func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 // EnumerateDevices is used to auto-enumerate device configurations for plugins
 // that support it. This example plugin does not support it, so we just return
 // the appropriate error.
-func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]sdk.DeviceConfig, error) {
+func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.DeviceConfig, error) {
 	return nil, &sdk.EnumerationNotSupported{}
 }
 
@@ -71,7 +71,7 @@ func main() {
 	}
 
 	p, err := sdk.NewPlugin(
-		config,
+		&config,
 		&ExamplePluginHandler{},
 		&ExampleDeviceHandler{},
 	)

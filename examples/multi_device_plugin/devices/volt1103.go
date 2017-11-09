@@ -10,13 +10,13 @@ import (
 // Volt1103 is the handler for the example "volt1103" device model.
 type Volt1103 struct {}
 
-func (d *Volt1103) Read(in sdk.Device) (sdk.ReadResource, error) {
-	return sdk.ReadResource{
+func (d *Volt1103) Read(in *sdk.Device) (*sdk.ReadResource, error) {
+	return &sdk.ReadResource{
 		Device: in.UID(),
-		Reading: []sdk.Reading{{time.Now().String(), in.Type(), "1"}},
+		Reading: []*sdk.Reading{{time.Now().String(), in.Type(), "1"}},
 	}, nil
 }
 
-func (d *Volt1103) Write(in sdk.Device, data *sdk.WriteData) (error) {
+func (d *Volt1103) Write(in *sdk.Device, data *sdk.WriteData) (error) {
 	return &sdk.UnsupportedCommandError{}
 }

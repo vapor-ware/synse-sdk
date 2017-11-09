@@ -10,7 +10,7 @@ type RWLoop struct {
 	handler        PluginHandler
 	readingManager ReadingManager
 	writingManager WritingManager
-	devices        map[string]Device
+	devices        map[string]*Device
 }
 
 
