@@ -287,3 +287,31 @@ func TestDevice_ToMetainfoResponse(t *testing.T) {
 		t.Error("MetainfoResponse Location Board incorrect.")
 	}
 }
+
+func TestReadResource_IdString(t *testing.T) {
+	r := ReadResource{
+		Device: "123",
+		Board: "456",
+		Rack: "789",
+	}
+
+	id := r.IDString()
+	if id != "789-456-123" {
+		t.Error("Unexpected IDString generated for ReadResource.")
+	}
+}
+
+func TestWriteResource_IdString(t *testing.T) {
+	r := WriteResource{
+		nil,
+		"abc",
+		"def",
+		"ghi",
+		nil,
+	}
+
+	id := r.IDString()
+	if id != "ghi-def-abc" {
+		t.Error("Unexpected IDString generated for WriteResource.")
+	}
+}

@@ -28,7 +28,7 @@ func (r *ReadingManager) start() {
 		for {
 			reading := <- r.channel
 			r.lock.Lock()
-			r.values[reading.Device] = reading.Reading
+			r.values[reading.IDString()] = reading.Reading
 			r.lock.Unlock()
 		}
 	}()
@@ -39,16 +39,15 @@ func (r *ReadingManager) start() {
 // the specified device is not found in the reading manager's state, no
 // readings will be returned.
 func (r *ReadingManager) read(in *synse.ReadRequest) ([]*synse.ReadResponse, error) {
-	uid := in.GetUid()
-	if uid == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "No UID supplied to Read.")
+
+	err := validateReadRequest(in); if err != nil {
+		return nil, err
 	}
-	Logger.Debugf("Reading uid: %v", uid)
 
-
-	readings := r.getReadings(uid)
+	idString := makeIDString(in.Rack, in.Board, in.Device)
+	readings := r.getReadings(idString)
 	if readings == nil {
-		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("No readings found for device %v", uid))
+		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("No readings found for device %v", in.Device))
 	}
 
 	var response []*synse.ReadResponse
@@ -89,7 +88,11 @@ type WritingManager struct {
 // The WriteData is returned with the transaction ids to help provide context
 // for differentiating transaction ids in the event that a WriteRequest has
 // more than one WriteData.
-func (w *WritingManager) write(in *synse.WriteRequest) map[string]*synse.WriteData {
+func (w *WritingManager) write(in *synse.WriteRequest) (map[string]*synse.WriteData, error) {
+
+	err := validateWriteRequest(in); if err != nil {
+		return nil, err
+	}
 
 	var response = make(map[string]*synse.WriteData)
 
@@ -100,10 +103,12 @@ func (w *WritingManager) write(in *synse.WriteRequest) map[string]*synse.WriteDa
 
 		w.channel <- &WriteResource{
 			transaction,
-			in.Uid,
+			in.Device,
+			in.Board,
+			in.Rack,
 			data,
 		}
 	}
-	Logger.Debugf("Write response data: %+v", response)
-	return response
+	Logger.Debugf("Write response data: %#v", response)
+	return response, nil
 }

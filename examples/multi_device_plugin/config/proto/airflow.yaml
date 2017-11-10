@@ -5,6 +5,7 @@ manufacturer: vaporio
 protocol: emulator
 output:
   - type: airflow
+    data_type: float
     unit:
       name: cubic feet per minute
       symbol: CFM

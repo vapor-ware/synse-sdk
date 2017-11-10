@@ -59,7 +59,7 @@ func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
 
 	ps.pluginDevices = make(map[string]*Device)
 	for _, device := range devices {
-		ps.pluginDevices[device.UID()] = device
+		ps.pluginDevices[device.IDString()] = device
 	}
 	ps.rwLoop.devices = ps.pluginDevices
 	return nil
@@ -87,7 +87,10 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.Transactions, error) {
 	Logger.Debug("[grpc] WRITE")
 
-	transactions := ps.writingManager.write(in)
+	transactions, err := ps.writingManager.write(in); if err != nil {
+		return nil, err
+	}
+
 	return &synse.Transactions{
 		Transactions: transactions,
 	}, nil

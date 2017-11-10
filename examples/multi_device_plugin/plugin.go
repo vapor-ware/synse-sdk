@@ -79,6 +79,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	p.Run()
-
+	err = p.Run(); if err != nil {
+		log.Fatal(err)
+	}
 }

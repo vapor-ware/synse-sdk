@@ -43,6 +43,15 @@ const (
 )
 
 
+// check checks if an error exists. If it does, it will log out the
+// error and terminate.
+func check(err error) {
+	if err != nil {
+		cliError(err)
+	}
+}
+
+
 // readCmd is the CLI command for the "read" command.
 var readCmd = &cobra.Command{
 	Use: "read",
@@ -88,7 +97,7 @@ func read(cmd *cobra.Command, args []string) {
 	makeAPIClient()
 
 	stream, err := c.Read(context.Background(), &synse.ReadRequest{
-		Uid: args[0],
+		Device: args[0],
 	})
 	if err != nil {
 		cliError(err)
@@ -115,7 +124,7 @@ func outputReadHeader() {
 		"type": "TYPE",
 		"reading": "READING",
 	}
-	t.Execute(os.Stdout, output)
+	check(t.Execute(os.Stdout, output))
 }
 
 
@@ -127,7 +136,7 @@ func outputRead(id string, response *synse.ReadResponse) {
 		"type": response.Type,
 		"reading": response.Value,
 	}
-	t.Execute(os.Stdout, output)
+	check(t.Execute(os.Stdout, output))
 }
 
 
@@ -146,7 +155,7 @@ func write(cmd *cobra.Command, args []string) {
 
 
 	transactions, err := c.Write(context.Background(), &synse.WriteRequest{
-		Uid: args[0],
+		Device: args[0],
 		Data: []*synse.WriteData{wd},
 	})
 	if err != nil {
@@ -167,7 +176,7 @@ func outputWriteHeader() {
 		"action": "ACTION",
 		"raw": "RAW",
 	}
-	t.Execute(os.Stdout, output)
+	check(t.Execute(os.Stdout, output))
 }
 
 func outputWrite(id string, response *synse.WriteData) {
@@ -185,7 +194,7 @@ func outputWrite(id string, response *synse.WriteData) {
 		"action": response.Action,
 		"raw": raw,
 	}
-	t.Execute(os.Stdout, output)
+	check(t.Execute(os.Stdout, output))
 }
 
 
@@ -220,7 +229,7 @@ func outputMetainfoHeader() {
 		"protocol": "PROTOCOL",
 		"info": "INFO",
 	}
-	t.Execute(os.Stdout, output)
+	check(t.Execute(os.Stdout, output))
 }
 
 
@@ -234,7 +243,7 @@ func outputMetainfo(response *synse.MetainfoResponse) {
 		"protocol": response.Protocol,
 		"info": response.Info,
 	}
-	t.Execute(os.Stdout, output)
+	check(t.Execute(os.Stdout, output))
 }
 
 
@@ -263,7 +272,7 @@ func outputTransactionHeader() {
 		"created": "CREATED",
 		"updated": "UPDATED",
 	}
-	t.Execute(os.Stdout, output)
+	check(t.Execute(os.Stdout, output))
 }
 
 func outputTransaction(id string, response *synse.WriteResponse) {
@@ -276,7 +285,7 @@ func outputTransaction(id string, response *synse.WriteResponse) {
 		"created": response.Created,
 		"updated": response.Updated,
 	}
-	t.Execute(os.Stdout, output)
+	check(t.Execute(os.Stdout, output))
 }
 
 
@@ -306,7 +315,9 @@ func makeAPIClient() {
 func cliError(err error) {
 	fmt.Printf("error: %v\n", err)
 	if conn != nil {
-		conn.Close()
+		e := conn.Close(); if e != nil {
+			fmt.Printf("failed to close gRPC connection: %v", e)
+		}
 	}
 	os.Exit(1)
 }

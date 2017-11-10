@@ -5,6 +5,7 @@ manufacturer: vaporio
 protocol: emulator
 output:
   - type: voltage
+    data_type: float
     unit:
       name: volts
       symbol: V

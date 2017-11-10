@@ -234,8 +234,7 @@ var Config = GetDefaultConfig()
 // the configuration that is used by the SDK. The given configuration is
 // merged with the existing configuration.
 func configurePlugin(config *PluginConfig) error {
-	Config.Merge(config)
-	return nil
+	return Config.Merge(config)
 }
 
 
@@ -253,9 +252,10 @@ type PrototypeConfig struct {
 // DeviceOutput represents the reading output for a configured device.
 type DeviceOutput struct {
 	Type       string       `yaml:"type"`
-	Unit       *OutputUnit   `yaml:"unit"`
+	DataType   string       `yaml:"data_type"`
+	Unit       *OutputUnit  `yaml:"unit"`
 	Precision  int32        `yaml:"precision"`
-	Range      *OutputRange  `yaml:"range"`
+	Range      *OutputRange `yaml:"range"`
 }
 
 // toMetaOutput converts the DeviceOutput to the gRPC MetaOutput model.
@@ -273,6 +273,7 @@ func (o *DeviceOutput) toMetaOutput() *synse.MetaOutput {
 
 	return &synse.MetaOutput{
 		Type: o.Type,
+		DataType: o.DataType,
 		Precision: o.Precision,
 		Unit: unit.toMetaOutputUnit(),
 		Range: rang.toMetaOutputRange(),

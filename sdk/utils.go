@@ -3,11 +3,21 @@ package sdk
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 const (
 	sockPath = "/synse/procs"
 )
+
+
+// makeIDString makes a compound string out of the given rack, board, and
+// device identifier strings. This string should be a globally unique identifer
+// for a given device.
+func makeIDString(rack, board, device string) string {
+	s := []string{rack, board, device}
+	return strings.Join(s, "-")
+}
 
 
 // makeDevices takes the prototype and device instance configurations, parsed
