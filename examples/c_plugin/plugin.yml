@@ -1,2 +1,5 @@
 name: c-plugin
 version: 1.0.0
+socket:
+  network: unix
+  address: c-plugin.sock

@@ -25,6 +25,15 @@ dep:  ## Ensure and prune dependencies
 	dep ensure -v
 	dep prune
 
+.PHONY: examples
+examples:  ## Build the examples
+	@for d in examples/*/ ; do \
+		echo "\n\033[32m$$d\033[0m" ; \
+		cd $$d ; \
+		go build -v -o plugin ; \
+		cd ../.. ; \
+	done
+
 .PHONY: fmt
 fmt:  ## Run goimports on all go files
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do goimports -w "$$file"; done

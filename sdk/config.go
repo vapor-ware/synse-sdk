@@ -25,6 +25,11 @@ type PluginConfig struct {
 	// Settings for how the plugin runs.
 	Settings PluginConfigSettings `yaml:"settings"`
 
+	// Socket settings for how the plugin's gRPC server should listen,
+	// which consequently determines how an upstream client would communicate
+	// with it.
+	Socket PluginConfigSocket `yaml:"socket"`
+
 	// Configuration for auto-enumeration of devices. The contents of this
 	// field are left fairly generic, since the requirements for what may
 	// need to be specified for auto-enumeration will change per plugin.
@@ -56,6 +61,18 @@ type PluginConfigSettings struct {
 
 	// The settings for write transactions.
 	Transaction PluginConfigSettingsTransaction `yaml:"transaction"`
+}
+
+// PluginConfigSocket specifies the group of configuration options that
+// determine the listen behavior of the plugin gRPC server.
+type PluginConfigSocket struct {
+
+	// The network (e.g. "unix", "tcp")
+	Network string `yaml:"network"`
+
+	// The address to listen on. The address format depends on the
+	// Network type.
+	Address string `yaml:"address"`
 }
 
 // PluginConfigSettingsRead specifies the configuration options for read
@@ -150,8 +167,15 @@ func (c *PluginConfig) Merge(config *PluginConfig) error {
 		return errors.New("bad plugin configuration - requires both a Name and Version")
 	}
 
+	// These are required fields. If they do not exist, fail.
+	if config.Socket.Network == "" || config.Socket.Address == "" {
+		return errors.New("bad plugin configuration - requires the Socket settings to be specified")
+	}
+
 	c.Name = config.Name
 	c.Version = config.Version
+	c.Socket.Network = config.Socket.Network
+	c.Socket.Address = config.Socket.Address
 
 	// The read buffer cannot be 0 (otherwise we would be unable to buffer
 	// reads), so take a zero value here to mean "default".

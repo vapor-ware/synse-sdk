@@ -105,7 +105,7 @@ func TestSetupSocket(t *testing.T) {
 		t.Errorf("Expected path to not exist, got error: %v", err)
 	}
 
-	sock, err := setupSocket("test")
+	sock, err := setupSocket("test.sock")
 
 	if err != nil {
 		t.Error(err)
@@ -136,7 +136,7 @@ func TestSetupSocket2(t *testing.T) {
 		t.Errorf("Expected file to exist, but does not.")
 	}
 
-	sock, err := setupSocket("test")
+	sock, err := setupSocket("test.sock")
 
 	if err != nil {
 		t.Error(err)
