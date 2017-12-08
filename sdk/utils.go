@@ -10,7 +10,6 @@ const (
 	sockPath = "/synse/procs"
 )
 
-
 // makeIDString makes a compound string out of the given rack, board, and
 // device identifier strings. This string should be a globally unique identifer
 // for a given device.
@@ -18,7 +17,6 @@ func makeIDString(rack, board, device string) string {
 	s := []string{rack, board, device}
 	return strings.Join(s, "-")
 }
-
 
 // makeDevices takes the prototype and device instance configurations, parsed
 // into their corresponding structs, and generates Device instances with that
@@ -45,8 +43,8 @@ func makeDevices(deviceConfigs []*DeviceConfig, protoConfigs []*PrototypeConfig,
 
 		d := Device{
 			Prototype: protoconfig,
-			Instance: dev,
-			Handler: deviceHandler,
+			Instance:  dev,
+			Handler:   deviceHandler,
 		}
 
 		Logger.Debugf("New Device: %v", d.UID())
@@ -54,7 +52,6 @@ func makeDevices(deviceConfigs []*DeviceConfig, protoConfigs []*PrototypeConfig,
 	}
 	return devices
 }
-
 
 // setupSocket is used to make sure the unix socket used for gRPC communication
 // is set up and accessible locally.

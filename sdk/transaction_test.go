@@ -4,7 +4,6 @@ import (
 	"testing"
 )
 
-
 func TestNewTransactionId(t *testing.T) {
 	ts := NewTransactionID()
 
@@ -25,7 +24,6 @@ func TestNewTransactionId(t *testing.T) {
 	}
 }
 
-
 func TestGetTransaction(t *testing.T) {
 	// first create a new transaction
 	t1 := NewTransactionID()
@@ -38,14 +36,12 @@ func TestGetTransaction(t *testing.T) {
 	}
 }
 
-
 func TestGetTransaction2(t *testing.T) {
 	ts := GetTransaction("123")
 	if ts != nil {
 		t.Error("Transaction with id 123 should not exist.")
 	}
 }
-
 
 func TestUpdateTransactionState(t *testing.T) {
 	// first create a new transaction
@@ -62,12 +58,10 @@ func TestUpdateTransactionState(t *testing.T) {
 	}
 }
 
-
 func TestUpdateTransactionState2(t *testing.T) {
 	// nothing should happen for update of invalid id
 	UpdateTransactionState("123", ERROR)
 }
-
 
 func TestUpdateTransactionStatus(t *testing.T) {
 	// first create a new transaction
@@ -83,7 +77,6 @@ func TestUpdateTransactionStatus(t *testing.T) {
 		t.Error("Failed to update transaction status to DONE")
 	}
 }
-
 
 func TestUpdateTransactionStatus2(t *testing.T) {
 	// nothing should happen for update of invalid id

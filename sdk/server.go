@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // PluginServer is the server that is used to run the plugin's read-write loop,
@@ -20,7 +20,6 @@ type PluginServer struct {
 	pluginDevices  map[string]*Device
 	rwLoop         RWLoop
 }
-
 
 // configureDevices is a convenience function to parse all of the plugin
 // configuration files, generate Device instances for each of the configured
@@ -65,7 +64,6 @@ func (ps *PluginServer) configureDevices(deviceHandler DeviceHandler) error {
 	return nil
 }
 
-
 // Read is the gRPC handler for read requests.
 func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
 	Logger.Debug("[grpc] READ")
@@ -87,7 +85,8 @@ func (ps *PluginServer) Read(in *synse.ReadRequest, stream synse.InternalApi_Rea
 func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*synse.Transactions, error) {
 	Logger.Debug("[grpc] WRITE")
 
-	transactions, err := ps.writingManager.write(in); if err != nil {
+	transactions, err := ps.writingManager.write(in)
+	if err != nil {
 		return nil, err
 	}
 
@@ -95,7 +94,6 @@ func (ps *PluginServer) Write(ctx context.Context, in *synse.WriteRequest) (*syn
 		Transactions: transactions,
 	}, nil
 }
-
 
 // Metainfo is the gRPC handler for metainfo requests.
 func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.InternalApi_MetainfoServer) error {
@@ -109,7 +107,6 @@ func (ps *PluginServer) Metainfo(in *synse.MetainfoRequest, stream synse.Interna
 	return nil
 }
 
-
 // TransactionCheck is the gRPC handler for transaction check requests.
 func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
 	Logger.Debug("[grpc] TRANSACTION CHECK")
@@ -120,7 +117,6 @@ func (ps *PluginServer) TransactionCheck(ctx context.Context, in *synse.Transact
 	}
 	return transaction.toGRPC(), nil
 }
-
 
 // Run starts the PluginServer instance. It starts the background reads,
 // the read-write loop, and the gRPC server. The gRPC server is configured

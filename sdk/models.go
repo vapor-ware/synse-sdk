@@ -1,6 +1,5 @@
 package sdk
 
-
 import (
 	"crypto/md5"
 	"fmt"
@@ -16,7 +15,6 @@ type Reading struct {
 	Type      string
 	Value     string
 }
-
 
 // ReadResource is used to associate a set of Readings with a known device,
 // which is specified by its uid string.
@@ -40,7 +38,6 @@ func (r *ReadResource) IDString() string {
 	return makeIDString(r.Rack, r.Board, r.Device)
 }
 
-
 // WriteResource describes a single write transaction.
 type WriteResource struct {
 	transaction *TransactionState
@@ -61,25 +58,22 @@ func (r *WriteResource) IDString() string {
 // make writing new plugins easier.
 type WriteData synse.WriteData
 
-
 // toGRPC converts the SDK WriteData to the Synse gRPC WriteData.
 func (w *WriteData) toGRPC() *synse.WriteData {
 	return &synse.WriteData{
-		Raw: w.Raw,
+		Raw:    w.Raw,
 		Action: w.Action,
 	}
 }
-
 
 // writeDataFromGRPC takes the Synse gRPC WriteData and converts it to the
 // SDK WriteData.
 func writeDataFromGRPC(data *synse.WriteData) *WriteData {
 	return &WriteData{
-		Raw: data.Raw,
+		Raw:    data.Raw,
 		Action: data.Action,
 	}
 }
-
 
 // newUID creates a new unique identifier for a device. The device id is
 // deterministic because it is created as a hash of various components that
@@ -98,7 +92,6 @@ func newUID(protocol, deviceType, model, protoComp string) string {
 
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
-
 
 // Device describes a single configured device for the plugin.
 type Device struct {
@@ -169,15 +162,15 @@ func (d *Device) toMetainfoResponse() *synse.MetainfoResponse {
 	}
 
 	return &synse.MetainfoResponse{
-		Timestamp: time.Now().String(),
-		Uid: d.UID(),
-		Type: d.Type(),
-		Model: d.Model(),
+		Timestamp:    time.Now().String(),
+		Uid:          d.UID(),
+		Type:         d.Type(),
+		Model:        d.Model(),
 		Manufacturer: d.Manufacturer(),
-		Protocol: d.Protocol(),
-		Info: d.Data()["info"],
-		Comment: d.Data()["comment"],
-		Location: location.toMetaLocation(),
-		Output: output,
+		Protocol:     d.Protocol(),
+		Info:         d.Data()["info"],
+		Comment:      d.Data()["comment"],
+		Location:     location.toMetaLocation(),
+		Output:       output,
 	}
 }

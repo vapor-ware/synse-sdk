@@ -1,47 +1,45 @@
 package sdk
 
 import (
-	"testing"
 	"os"
+	"testing"
 )
-
 
 var testInst1 = DeviceConfig{
 	Version: "1.0",
-	Type: "test-device",
-	Model: "td-1",
+	Type:    "test-device",
+	Model:   "td-1",
 	Location: DeviceLocation{
-		Rack: "rack-1",
+		Rack:  "rack-1",
 		Board: "board-1",
 	},
 }
 
 var testInst2 = DeviceConfig{
 	Version: "1.0",
-	Type: "test-device",
-	Model: "td-1",
+	Type:    "test-device",
+	Model:   "td-1",
 	Location: DeviceLocation{
-		Rack: "rack-1",
+		Rack:  "rack-1",
 		Board: "board-2",
 	},
 }
 
 var testProto1 = PrototypeConfig{
-	Version: "1.0",
-	Type: "test-device",
-	Model: "td-1",
+	Version:      "1.0",
+	Type:         "test-device",
+	Model:        "td-1",
 	Manufacturer: "vaporio",
-	Protocol: "test",
+	Protocol:     "test",
 }
 
 var testProto2 = PrototypeConfig{
-	Version: "1.0",
-	Type: "test-device",
-	Model: "td-3",
+	Version:      "1.0",
+	Type:         "test-device",
+	Model:        "td-3",
 	Manufacturer: "vaporio",
-	Protocol: "test",
+	Protocol:     "test",
 }
-
 
 func TestMakeDevices(t *testing.T) {
 	inst := []*DeviceConfig{&testInst1, &testInst2}
@@ -97,7 +95,6 @@ func TestMakeDevices5(t *testing.T) {
 		t.Error("Expected no matches - no instances defined.")
 	}
 }
-
 
 // setup the socket when the socket path does not exist.
 func TestSetupSocket(t *testing.T) {
@@ -157,11 +154,11 @@ func TestSetupSocket2(t *testing.T) {
 
 func TestMakeIdString(t *testing.T) {
 	matrix := map[string][]string{
-		"rack-board-device": {"rack", "board", "device"},
-		"123-456-789": {"123", "456", "789"},
-		"abc-def-ghi": {"abc", "def", "ghi"},
+		"rack-board-device":       {"rack", "board", "device"},
+		"123-456-789":             {"123", "456", "789"},
+		"abc-def-ghi":             {"abc", "def", "ghi"},
 		"1234567890abcdefghi-1-2": {"1234567890abcdefghi", "1", "2"},
-		"------_____-+=+=&8^": {"-----", "_____", "+=+=&8^"},
+		"------_____-+=+=&8^":     {"-----", "_____", "+=+=&8^"},
 	}
 
 	for expected, test := range matrix {

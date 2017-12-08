@@ -2,12 +2,12 @@ package sdk
 
 import (
 	"errors"
-	"os"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v2"
 	"github.com/vapor-ware/synse-server-grpc/go"
+	"gopkg.in/yaml.v2"
 )
 
 // PluginConfig specifies the configuration options for the plugin itself.
@@ -32,7 +32,6 @@ type PluginConfig struct {
 
 	// Any global context that the plugin might need.
 	Context map[string]interface{} `yaml:"context"`
-
 }
 
 // PluginConfigSettings specifies the group of configuration options
@@ -57,7 +56,6 @@ type PluginConfigSettings struct {
 
 	// The settings for write transactions.
 	Transaction PluginConfigSettingsTransaction `yaml:"transaction"`
-
 }
 
 // PluginConfigSettingsRead specifies the configuration options for read
@@ -72,7 +70,6 @@ type PluginConfigSettingsRead struct {
 	// off of a plugin (e.g. many reads occurring), increasing the read
 	// buffer might become necessary.
 	BufferSize int `yaml:"buffer_size"`
-
 }
 
 // PluginConfigSettingsWrite specifies the configuration options for write
@@ -103,7 +100,6 @@ type PluginConfigSettingsWrite struct {
 	// this number should be decreased so the read block can execute
 	// more frequently.
 	PerLoop int `yaml:"per_loop"`
-
 }
 
 // PluginConfigSettingsTransaction specifies the configuration options for
@@ -113,9 +109,7 @@ type PluginConfigSettingsTransaction struct {
 	// The time (in seconds) that transaction data should be tracked for
 	// after it has completed.
 	TTL int `yaml:"ttl"`
-
 }
-
 
 // FromFile reads in a YAML file and parses it into a PluginConfig struct.
 func (c *PluginConfig) FromFile(path string) error {
@@ -134,7 +128,6 @@ func (c *PluginConfig) FromFile(path string) error {
 
 	return nil
 }
-
 
 // Merge updates the fields of the PluginConfig struct with those of
 // another PluginConfig. This is used primarily to combine user configurations
@@ -214,21 +207,19 @@ func GetDefaultConfig() *PluginConfig {
 			},
 			Write: PluginConfigSettingsWrite{
 				BufferSize: 100,
-				PerLoop: 5,
+				PerLoop:    5,
 			},
 			Transaction: PluginConfigSettingsTransaction{
-				TTL: 60 * 5,  // five minutes
+				TTL: 60 * 5, // five minutes
 			},
 		},
 	}
 }
 
-
 // Config is the global plugin configuration. It contains the default
 // configuration values to start and can be updated via the `ConfigurePlugin`
 // function.
 var Config = GetDefaultConfig()
-
 
 // configurePlugin takes a plugin-specified configuration and sets it as
 // the configuration that is used by the SDK. The given configuration is
@@ -237,25 +228,23 @@ func configurePlugin(config *PluginConfig) error {
 	return Config.Merge(config)
 }
 
-
-
 // PrototypeConfig represents the configuration for a device prototype.
 type PrototypeConfig struct {
-	Version       string          `yaml:"version"`
-	Type          string          `yaml:"type"`
-	Model         string          `yaml:"model"`
-	Manufacturer  string          `yaml:"manufacturer"`
-	Protocol      string          `yaml:"protocol"`
-	Output        []DeviceOutput  `yaml:"output"`
+	Version      string         `yaml:"version"`
+	Type         string         `yaml:"type"`
+	Model        string         `yaml:"model"`
+	Manufacturer string         `yaml:"manufacturer"`
+	Protocol     string         `yaml:"protocol"`
+	Output       []DeviceOutput `yaml:"output"`
 }
 
 // DeviceOutput represents the reading output for a configured device.
 type DeviceOutput struct {
-	Type       string       `yaml:"type"`
-	DataType   string       `yaml:"data_type"`
-	Unit       *OutputUnit  `yaml:"unit"`
-	Precision  int32        `yaml:"precision"`
-	Range      *OutputRange `yaml:"range"`
+	Type      string       `yaml:"type"`
+	DataType  string       `yaml:"data_type"`
+	Unit      *OutputUnit  `yaml:"unit"`
+	Precision int32        `yaml:"precision"`
+	Range     *OutputRange `yaml:"range"`
 }
 
 // toMetaOutput converts the DeviceOutput to the gRPC MetaOutput model.
@@ -272,32 +261,32 @@ func (o *DeviceOutput) toMetaOutput() *synse.MetaOutput {
 	}
 
 	return &synse.MetaOutput{
-		Type: o.Type,
-		DataType: o.DataType,
+		Type:      o.Type,
+		DataType:  o.DataType,
 		Precision: o.Precision,
-		Unit: unit.toMetaOutputUnit(),
-		Range: rang.toMetaOutputRange(),
+		Unit:      unit.toMetaOutputUnit(),
+		Range:     rang.toMetaOutputRange(),
 	}
 }
 
 // OutputUnit describes the unit of measure for a device output.
 type OutputUnit struct {
-	Name    string  `yaml:"name"`
-	Symbol  string  `yaml:"symbol"`
+	Name   string `yaml:"name"`
+	Symbol string `yaml:"symbol"`
 }
 
 // toMetaOutputUnit converts the OutputUnit to the gRPC MetaOutputUnit model.
 func (u *OutputUnit) toMetaOutputUnit() *synse.MetaOutputUnit {
 	return &synse.MetaOutputUnit{
-		Name: u.Name,
+		Name:   u.Name,
 		Symbol: u.Symbol,
 	}
 }
 
 // OutputRange describes the min and max valid numerical values for a reading.
 type OutputRange struct {
-	Min  int32  `yaml:"min"`
-	Max  int32  `yaml:"max"`
+	Min int32 `yaml:"min"`
+	Max int32 `yaml:"max"`
 }
 
 // toMetaOutputRange converts the OutputRange to the gRPC MetaOutputRange model.
@@ -349,15 +338,13 @@ func parsePrototypeConfig(dir string) ([]*PrototypeConfig, error) {
 	return protos, nil
 }
 
-
-
 // InstanceConfig represents the configuration for a device instance.
 type InstanceConfig struct {
-	Version   string `yaml:"version"`
-	Type      string `yaml:"type"`
-	Model     string `yaml:"model"`
+	Version   string                    `yaml:"version"`
+	Type      string                    `yaml:"type"`
+	Model     string                    `yaml:"model"`
 	Locations map[string]DeviceLocation `yaml:"locations"`
-	Devices   []map[string]string `yaml:"devices"`
+	Devices   []map[string]string       `yaml:"devices"`
 }
 
 // DeviceLocation represents the location of a device instance.
@@ -369,7 +356,7 @@ type DeviceLocation struct {
 // toMetaLocation converts the DeviceLocation to the gRPC MetaLocation model.
 func (l *DeviceLocation) toMetaLocation() *synse.MetaLocation {
 	return &synse.MetaLocation{
-		Rack: l.Rack,
+		Rack:  l.Rack,
 		Board: l.Board,
 	}
 }
@@ -430,11 +417,11 @@ func parseDeviceConfig(dir string) ([]*DeviceConfig, error) {
 			location := instanceCfg.Locations[loc]
 
 			deviceCfg := DeviceConfig{
-				Version: instanceCfg.Version,
-				Type: instanceCfg.Type,
-				Model: instanceCfg.Model,
+				Version:  instanceCfg.Version,
+				Type:     instanceCfg.Type,
+				Model:    instanceCfg.Model,
 				Location: location,
-				Data: data,
+				Data:     data,
 			}
 
 			devices = append(devices, &deviceCfg)

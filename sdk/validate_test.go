@@ -2,9 +2,9 @@ package sdk
 
 import (
 	"testing"
+
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
-
 
 func TestValidateReadRequest(t *testing.T) {
 	// everything is there
@@ -35,7 +35,6 @@ func TestValidateReadRequest(t *testing.T) {
 		t.Error("Got no error when validating read request, but was expecting one.")
 	}
 }
-
 
 func TestValidateWriteRequest(t *testing.T) {
 	// everything is there

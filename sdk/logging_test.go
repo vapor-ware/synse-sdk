@@ -6,7 +6,6 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-
 func TestSetLogLevel(t *testing.T) {
 	// the default logger level is info, so it should start at info.
 	if Logger.Level != logrus.InfoLevel {

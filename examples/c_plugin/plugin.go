@@ -8,18 +8,18 @@ import (
 	"time"
 )
 
-
 // ExamplePluginHandler is a plugin-specific handler required by the
 // SDK. It defines the plugin's read and write functionality.
-type ExamplePluginHandler struct {}
+type ExamplePluginHandler struct{}
 
 func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
-	id, err := strconv.Atoi(in.Data()["id"]); if err != nil {
+	id, err := strconv.Atoi(in.Data()["id"])
+	if err != nil {
 		log.Fatalf("Invalid device ID - should be an integer in configuration.")
 	}
 	value := cRead(id, in.Model())
 	return &sdk.ReadResource{
-		Device: in.UID(),
+		Device:  in.UID(),
 		Reading: []*sdk.Reading{{time.Now().String(), in.Type(), value}},
 	}, nil
 }
@@ -28,11 +28,10 @@ func (h *ExamplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error 
 	return &sdk.UnsupportedCommandError{}
 }
 
-
 // ExampleDeviceHandler is a plugin-specific handler required by the
 // SDK. It defines functions which are needed to parse/make sense of
 // some of the plugin-specific configurations.
-type ExampleDeviceHandler struct {}
+type ExampleDeviceHandler struct{}
 
 // GetProtocolIdentifiers gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
@@ -46,7 +45,6 @@ func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.DeviceConfig, error) {
 	return nil, &sdk.EnumerationNotSupported{}
 }
-
 
 // The main function - this is where we will configure, create, and run
 // the plugin.
@@ -66,7 +64,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = p.Run(); if err != nil {
+	err = p.Run()
+	if err != nil {
 		log.Fatal(err)
 	}
 }

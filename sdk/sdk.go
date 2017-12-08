@@ -12,7 +12,8 @@ const (
 // set up a new instance of the PluginServer.
 func NewPlugin(config *PluginConfig, pluginHandler PluginHandler, deviceHandler DeviceHandler) (*PluginServer, error) {
 
-	err := configurePlugin(config); if err != nil {
+	err := configurePlugin(config)
+	if err != nil {
 		return nil, err
 	}
 	SetLogLevel(Config.Debug)
@@ -22,7 +23,7 @@ func NewPlugin(config *PluginConfig, pluginHandler PluginHandler, deviceHandler 
 
 	readManager := ReadingManager{
 		channel: readChan,
-		values: make(map[string][]*Reading),
+		values:  make(map[string][]*Reading),
 	}
 
 	writeManager := WritingManager{
@@ -30,7 +31,7 @@ func NewPlugin(config *PluginConfig, pluginHandler PluginHandler, deviceHandler 
 	}
 
 	rwloop := RWLoop{
-		handler: pluginHandler,
+		handler:        pluginHandler,
 		readingManager: readManager,
 		writingManager: writeManager,
 	}
@@ -38,8 +39,8 @@ func NewPlugin(config *PluginConfig, pluginHandler PluginHandler, deviceHandler 
 	Logger.Debugf("Config: %+v", Config)
 
 	s := &PluginServer{
-		name: Config.Name,
-		rwLoop: rwloop,
+		name:           Config.Name,
+		rwLoop:         rwloop,
 		readingManager: readManager,
 		writingManager: writeManager,
 	}
@@ -56,4 +57,3 @@ func NewPlugin(config *PluginConfig, pluginHandler PluginHandler, deviceHandler 
 	Logger.Infof("[plugin] registered %v devices", len(s.pluginDevices))
 	return s, nil
 }
-

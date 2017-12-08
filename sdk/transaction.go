@@ -8,7 +8,6 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-
 const (
 
 	// statuses
@@ -39,26 +38,25 @@ const (
 // status and overall state. This model is used to look up transaction ids
 // and return the asynchronous write responses.
 type TransactionState struct {
-	id        string
-	status    synse.WriteResponse_WriteStatus
-	state     synse.WriteResponse_WriteState
-	created   string
-	updated   string
-	message   string
+	id      string
+	status  synse.WriteResponse_WriteStatus
+	state   synse.WriteResponse_WriteState
+	created string
+	updated string
+	message string
 }
 
 // toGRPC is a convenience method which translates the SDK's TransactionState
 // model to the GRPC WriteResponse model.
 func (t *TransactionState) toGRPC() *synse.WriteResponse {
 	return &synse.WriteResponse{
-		Status: t.status,
-		State: t.state,
+		Status:  t.status,
+		State:   t.state,
 		Created: t.created,
 		Updated: t.updated,
 		Message: t.message,
 	}
 }
-
 
 // transactionCache is a cache with a configurable default expiration time that
 // is used to track the asynchronous write transactions as they are processed.
@@ -66,7 +64,6 @@ var transactionCache = cache.New(
 	time.Duration(Config.Settings.Transaction.TTL)*time.Second,
 	time.Duration(Config.Settings.Transaction.TTL)*2*time.Second,
 )
-
 
 // NewTransactionID creates a new `TransactionState` instance and gives it a
 // new id. The newly created `TransactionState` is then added to the
@@ -80,7 +77,6 @@ func NewTransactionID() *TransactionState {
 	return ts
 }
 
-
 // GetTransaction takes a transaction id and returns the corresponding
 // `TransactionState`, if it exists. If no transaction is found, nil
 // is returned.
@@ -91,7 +87,6 @@ func GetTransaction(id string) *TransactionState {
 	}
 	return nil
 }
-
 
 // UpdateTransactionState updates the state field for a transaction's corresponding
 // TransactionState. If the given id does not correspond to a known transaction,
@@ -109,7 +104,6 @@ func UpdateTransactionState(id string, state synse.WriteResponse_WriteState) {
 	t.state = state
 	t.updated = now
 }
-
 
 // UpdateTransactionStatus updates the status field for a transaction's corresponding
 // TransactionState. If the given id does not correspond to a known transaction,

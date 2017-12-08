@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/vapor-ware/synse-server-grpc/go"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // ReadingManager is used to manage the reading of devices in an asynchronous
@@ -26,7 +26,7 @@ func (r *ReadingManager) start() {
 
 	go func() {
 		for {
-			reading := <- r.channel
+			reading := <-r.channel
 			r.lock.Lock()
 			r.values[reading.IDString()] = reading.Reading
 			r.lock.Unlock()
@@ -40,7 +40,8 @@ func (r *ReadingManager) start() {
 // readings will be returned.
 func (r *ReadingManager) read(in *synse.ReadRequest) ([]*synse.ReadResponse, error) {
 
-	err := validateReadRequest(in); if err != nil {
+	err := validateReadRequest(in)
+	if err != nil {
 		return nil, err
 	}
 
@@ -54,8 +55,8 @@ func (r *ReadingManager) read(in *synse.ReadRequest) ([]*synse.ReadResponse, err
 	for _, r := range readings {
 		reading := &synse.ReadResponse{
 			Timestamp: r.Timestamp,
-			Type: r.Type,
-			Value: r.Value,
+			Type:      r.Type,
+			Value:     r.Value,
 		}
 		response = append(response, reading)
 	}
@@ -72,14 +73,12 @@ func (r *ReadingManager) getReadings(key string) []*Reading {
 	return reading
 }
 
-
 // WritingManager is used to manage the writing of data to devices. It has a
 // channel that is used to push pending writes to. This channel acts as a job
 // queue which is worked on at the top of the read-write loop.
 type WritingManager struct {
 	channel chan *WriteResource
 }
-
 
 // write is used to put new data from WriteRequests onto the write queue.
 // Each WriteRequest contains a slice of WriteData. Each of these WriteData
@@ -90,7 +89,8 @@ type WritingManager struct {
 // more than one WriteData.
 func (w *WritingManager) write(in *synse.WriteRequest) (map[string]*synse.WriteData, error) {
 
-	err := validateWriteRequest(in); if err != nil {
+	err := validateWriteRequest(in)
+	if err != nil {
 		return nil, err
 	}
 
