@@ -3,17 +3,16 @@ package main
 import (
 	"github.com/vapor-ware/synse-sdk/sdk"
 
+	"fmt"
 	"log"
+	"math/rand"
 	"strconv"
 	"time"
-	"math/rand"
-	"fmt"
 )
-
 
 // ExamplePluginHandler is a plugin-specific handler required by the
 // SDK. It defines the plugin's read and write functionality.
-type ExamplePluginHandler struct {}
+type ExamplePluginHandler struct{}
 
 func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
 
@@ -21,7 +20,7 @@ func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
 	strVal := strconv.Itoa(val)
 	return &sdk.ReadResource{
 		Device:  in.UID(),
-		Reading: []*sdk.Reading{{time.Now().String(), in.Type(),strVal}},
+		Reading: []*sdk.Reading{{time.Now().String(), in.Type(), strVal}},
 	}, nil
 }
 
@@ -29,11 +28,10 @@ func (h *ExamplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error 
 	return &sdk.UnsupportedCommandError{}
 }
 
-
 // ExampleDeviceHandler is a plugin-specific handler required by the
 // SDK. It defines functions which are needed to parse/make sense of
 // some of the plugin-specific configurations.
-type ExampleDeviceHandler struct {}
+type ExampleDeviceHandler struct{}
 
 // GetProtocolIdentifiers gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
@@ -69,10 +67,10 @@ func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) (
 		// e.g. for IPMI - the SDR records.
 		d := sdk.DeviceConfig{
 			Version: "1.0",
-			Type: "temperature",
-			Model: "temp2010",
+			Type:    "temperature",
+			Model:   "temp2010",
 			Location: sdk.DeviceLocation{
-				Rack: "rack-1",
+				Rack:  "rack-1",
 				Board: "board-1",
 			},
 			// we want to have "id" in the map because our `GetProtocolIdentifiers"
@@ -86,7 +84,6 @@ func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) (
 
 	return res, nil
 }
-
 
 // The main function - this is where we will configure, create, and run
 // the plugin.
@@ -106,7 +103,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = p.Run(); if err != nil {
+	err = p.Run()
+	if err != nil {
 		log.Fatal(err)
 	}
 }

@@ -13,7 +13,6 @@ type RWLoop struct {
 	devices        map[string]*Device
 }
 
-
 // run the read-write loop.
 //
 // Device reads are pushed through the 'read' channel, where the ReadingManager
@@ -39,7 +38,7 @@ func (rwl *RWLoop) run() {
 			// Get the next values off of the write queue
 			for i := 0; i < writesPerLoop; i++ {
 				select {
-				case w := <- rwl.writingManager.channel:
+				case w := <-rwl.writingManager.channel:
 					Logger.Debugf("Writing for %v (transaction: %v)", w.device, w.transaction.id)
 					UpdateTransactionStatus(w.transaction.id, WRITING)
 
@@ -57,7 +56,6 @@ func (rwl *RWLoop) run() {
 					// to do here, so we just move on.
 				}
 			}
-
 
 			// ~~ Read portion of the loop ~~
 			for _, d := range rwl.devices {

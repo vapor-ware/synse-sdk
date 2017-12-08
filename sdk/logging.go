@@ -8,7 +8,6 @@ import (
 // written using the SDK.
 var Logger = logrus.New()
 
-
 // SetLogLevel sets the level of `Logger` to either debug or info based on
 // the debug boolean flag passed to it.
 //

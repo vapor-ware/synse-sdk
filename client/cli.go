@@ -5,26 +5,26 @@ import (
 	"io"
 	"net"
 	"os"
-	"time"
 	"text/template"
+	"time"
 
 	"github.com/spf13/cobra"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 var (
 	globalUsage = "Simple CLI client for Synse Server gRPC/Plugin testing."
 
 	rootCmd = &cobra.Command{
-		Use: "pcli",
+		Use:   "pcli",
 		Short: globalUsage,
-		Long: globalUsage,
+		Long:  globalUsage,
 	}
 
-	conn *grpc.ClientConn
-	c synse.InternalApiClient
+	conn       *grpc.ClientConn
+	c          synse.InternalApiClient
 	socketName string
 )
 
@@ -42,7 +42,6 @@ const (
 `
 )
 
-
 // check checks if an error exists. If it does, it will log out the
 // error and terminate.
 func check(err error) {
@@ -51,12 +50,11 @@ func check(err error) {
 	}
 }
 
-
 // readCmd is the CLI command for the "read" command.
 var readCmd = &cobra.Command{
-	Use: "read",
+	Use:   "read",
 	Short: "Issue a gRPC Read request",
-	Args: cobra.MinimumNArgs(1),
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		read(cmd, args)
 	},
@@ -64,9 +62,9 @@ var readCmd = &cobra.Command{
 
 // writeCmd is the CLI command for the "write" command.
 var writeCmd = &cobra.Command{
-	Use: "write",
+	Use:   "write",
 	Short: "Issue a gRPC Write request",
-	Args: cobra.MinimumNArgs(2),
+	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		write(cmd, args)
 	},
@@ -74,7 +72,7 @@ var writeCmd = &cobra.Command{
 
 // metainfoCmd is the CLI command for the "metainfo" command.
 var metainfoCmd = &cobra.Command{
-	Use: "metainfo",
+	Use:   "metainfo",
 	Short: "Issue a gRPC Metainfo request",
 	Run: func(cmd *cobra.Command, args []string) {
 		metainfo(cmd, args)
@@ -83,14 +81,13 @@ var metainfoCmd = &cobra.Command{
 
 // transactionCmd is the CLI command for the "transaction" command.
 var transactionCmd = &cobra.Command{
-	Use: "transaction",
+	Use:   "transaction",
 	Short: "Issue a gRPC Transaction Check request",
-	Args: cobra.MinimumNArgs(1),
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		transaction(cmd, args)
 	},
 }
-
 
 // read is the handler for the "read" command.
 func read(cmd *cobra.Command, args []string) {
@@ -120,25 +117,23 @@ func outputReadHeader() {
 	t := template.Must(template.New("read").Parse(readTemplate))
 
 	var output = map[string]string{
-		"device": "DEVICE",
-		"type": "TYPE",
+		"device":  "DEVICE",
+		"type":    "TYPE",
 		"reading": "READING",
 	}
 	check(t.Execute(os.Stdout, output))
 }
 
-
 func outputRead(id string, response *synse.ReadResponse) {
 	t := template.Must(template.New("read").Parse(readTemplate))
 
 	var output = map[string]string{
-		"device": id,
-		"type": response.Type,
+		"device":  id,
+		"type":    response.Type,
 		"reading": response.Value,
 	}
 	check(t.Execute(os.Stdout, output))
 }
-
 
 // write is the handler for the "write" command.
 func write(cmd *cobra.Command, args []string) {
@@ -153,10 +148,9 @@ func write(cmd *cobra.Command, args []string) {
 		cliError(fmt.Errorf("Invalid number of args"))
 	}
 
-
 	transactions, err := c.Write(context.Background(), &synse.WriteRequest{
 		Device: args[0],
-		Data: []*synse.WriteData{wd},
+		Data:   []*synse.WriteData{wd},
 	})
 	if err != nil {
 		cliError(err)
@@ -172,9 +166,9 @@ func outputWriteHeader() {
 	t := template.Must(template.New("write").Parse(writeTemplate))
 
 	var output = map[string]string{
-		"id": "TRANSACTION",
+		"id":     "TRANSACTION",
 		"action": "ACTION",
-		"raw": "RAW",
+		"raw":    "RAW",
 	}
 	check(t.Execute(os.Stdout, output))
 }
@@ -190,13 +184,12 @@ func outputWrite(id string, response *synse.WriteData) {
 	}
 
 	var output = map[string]string{
-		"id": id,
+		"id":     id,
 		"action": response.Action,
-		"raw": raw,
+		"raw":    raw,
 	}
 	check(t.Execute(os.Stdout, output))
 }
-
 
 // metainfo is the handler for the "metainfo" command.
 func metainfo(cmd *cobra.Command, args []string) {
@@ -223,29 +216,27 @@ func outputMetainfoHeader() {
 	t := template.Must(template.New("metainfo").Parse(metainfoTemplate))
 
 	var output = map[string]string{
-		"id": "ID",
-		"type": "TYPE",
-		"model": "MODEL",
+		"id":       "ID",
+		"type":     "TYPE",
+		"model":    "MODEL",
 		"protocol": "PROTOCOL",
-		"info": "INFO",
+		"info":     "INFO",
 	}
 	check(t.Execute(os.Stdout, output))
 }
-
 
 func outputMetainfo(response *synse.MetainfoResponse) {
 	t := template.Must(template.New("metainfo").Parse(metainfoTemplate))
 
 	var output = map[string]string{
-		"id": response.Uid,
-		"type": response.Type,
-		"model": response.Model,
+		"id":       response.Uid,
+		"type":     response.Type,
+		"model":    response.Model,
 		"protocol": response.Protocol,
-		"info": response.Info,
+		"info":     response.Info,
 	}
 	check(t.Execute(os.Stdout, output))
 }
-
 
 // transaction is the handler for the "transaction" command.
 func transaction(cmd *cobra.Command, args []string) {
@@ -266,9 +257,9 @@ func outputTransactionHeader() {
 	t := template.Must(template.New("transaction").Parse(transactionTemplate))
 
 	var output = map[string]string{
-		"id": "TRANSACTION",
-		"status": "STATUS",
-		"state": "STATE",
+		"id":      "TRANSACTION",
+		"status":  "STATUS",
+		"state":   "STATE",
 		"created": "CREATED",
 		"updated": "UPDATED",
 	}
@@ -279,15 +270,14 @@ func outputTransaction(id string, response *synse.WriteResponse) {
 	t := template.Must(template.New("transaction").Parse(transactionTemplate))
 
 	var output = map[string]string{
-		"id": id,
-		"status": response.Status.String(),
-		"state": response.State.String(),
+		"id":      id,
+		"status":  response.Status.String(),
+		"state":   response.State.String(),
 		"created": response.Created,
 		"updated": response.Updated,
 	}
 	check(t.Execute(os.Stdout, output))
 }
-
 
 // makeAPIClient creates a new instance of the gRPC API client.
 func makeAPIClient() {
@@ -315,13 +305,13 @@ func makeAPIClient() {
 func cliError(err error) {
 	fmt.Printf("error: %v\n", err)
 	if conn != nil {
-		e := conn.Close(); if e != nil {
+		e := conn.Close()
+		if e != nil {
 			fmt.Printf("failed to close gRPC connection: %v", e)
 		}
 	}
 	os.Exit(1)
 }
-
 
 func main() {
 

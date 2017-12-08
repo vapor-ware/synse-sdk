@@ -16,9 +16,8 @@ type PluginHandler interface {
 	Read(*Device) (*ReadResource, error)
 
 	// Write data to the specified device.
-	Write(*Device, *WriteData) (error)
+	Write(*Device, *WriteData) error
 }
-
 
 // DeviceHandler defines the interface which a plugin implementation should
 // fulfil for plugin-specific device parsing and handling.
@@ -27,7 +26,7 @@ type DeviceHandler interface {
 	// GetProtocolIdentifiers gets the protocol-specific pieces of information
 	// that make a device instance unique. This value (or joined set of values)
 	// will be used as a component when creating the device UID.
-	GetProtocolIdentifiers(map[string]string) (string)
+	GetProtocolIdentifiers(map[string]string) string
 
 	// EnumerateDevices defines how the plugin can auto-enumerate the devices
 	// it manages. This will not be relevant for all plugins, so it is optional.

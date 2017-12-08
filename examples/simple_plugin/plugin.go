@@ -11,13 +11,12 @@ package main
 import (
 	"github.com/vapor-ware/synse-sdk/sdk"
 
+	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 	"time"
-	"fmt"
-	"log"
 )
-
 
 // SimplePluginHandler fulfils the SDK's PluginHandler interface. It requires a
 // Read and Write function to be defined, which specify how the plugin will read
@@ -28,7 +27,7 @@ import (
 // devices for the plugin, so while this example handles all reads the same, a
 // more complex plugin could need to further dispatch read/write operations depending
 // on the device type, model, etc.
-type SimplePluginHandler struct {}
+type SimplePluginHandler struct{}
 
 func (ph *SimplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
 
@@ -36,11 +35,11 @@ func (ph *SimplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
 	strVal := strconv.Itoa(val)
 	return &sdk.ReadResource{
 		Device:  in.UID(),
-		Reading: []*sdk.Reading{{time.Now().String(), in.Type(),strVal}},
+		Reading: []*sdk.Reading{{time.Now().String(), in.Type(), strVal}},
 	}, nil
 }
 
-func (ph *SimplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) (error) {
+func (ph *SimplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error {
 
 	fmt.Printf("[simple plugin handler]: WRITE\n")
 
@@ -48,7 +47,6 @@ func (ph *SimplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) (error
 	fmt.Printf("Action -> %v\n", data.Action)
 	return nil
 }
-
 
 // SimpleDeviceHandler fulfils the SDK's DeviceHandler interface.
 // Each device that is generated from the configurations will be able to
@@ -73,7 +71,7 @@ func (ph *SimplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) (error
 // specific. As such, we need the plugin to define which bits of information
 // here are to be used when generating the ID. In this case, we use the "id"
 // field, but a concatenation of any number of fields is permissible.
-type SimpleDeviceHandler struct {}
+type SimpleDeviceHandler struct{}
 
 // GetProtocolIdentifiers gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
@@ -88,7 +86,6 @@ func (dh *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.
 	return nil, &sdk.EnumerationNotSupported{}
 }
 
-
 // The Main Function
 //   This is the entry point for the plugin. With both handlers defined,
 //   all that is left to do is create a new PluginServer instance and
@@ -100,9 +97,9 @@ func (dh *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.
 func main() {
 
 	config := sdk.PluginConfig{
-		Name: "simple-plugin",
+		Name:    "simple-plugin",
 		Version: "1.0.0",
-		Debug: true,
+		Debug:   true,
 	}
 
 	p, err := sdk.NewPlugin(
@@ -115,7 +112,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = p.Run(); if err != nil {
+	err = p.Run()
+	if err != nil {
 		log.Fatal(err)
 	}
 }

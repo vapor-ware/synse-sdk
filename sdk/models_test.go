@@ -7,15 +7,15 @@ import (
 )
 
 var pConfig = PrototypeConfig{
-	Version: "1",
-	Type: "TestDevice",
-	Model: "TestModel",
+	Version:      "1",
+	Type:         "TestDevice",
+	Model:        "TestModel",
 	Manufacturer: "TestManufacturer",
-	Protocol: "TestProtocol",
+	Protocol:     "TestProtocol",
 	Output: []DeviceOutput{{
 		Type: "TestType",
 		Unit: &OutputUnit{
-			Name: "TestName",
+			Name:   "TestName",
 			Symbol: "TestSymbol",
 		},
 		Precision: 3,
@@ -28,16 +28,16 @@ var pConfig = PrototypeConfig{
 
 var dConfig = DeviceConfig{
 	Version: "1",
-	Type: "TestDevice",
-	Model: "TestModel",
+	Type:    "TestDevice",
+	Model:   "TestModel",
 	Location: DeviceLocation{
-		Rack: "TestRack",
+		Rack:  "TestRack",
 		Board: "TestBoard",
 	},
 	Data: map[string]string{"testKey": "testValue"},
 }
 
-type TestHandler struct {}
+type TestHandler struct{}
 
 func (h *TestHandler) GetProtocolIdentifiers(in map[string]string) string {
 	return ""
@@ -47,15 +47,14 @@ func (h *TestHandler) EnumerateDevices(map[string]interface{}) ([]*DeviceConfig,
 	return nil, nil
 }
 
-
 func TestWriteData_ToGRPC(t *testing.T) {
 	expected := &synse.WriteData{
-		Raw: [][]byte{{0, 1, 2}},
+		Raw:    [][]byte{{0, 1, 2}},
 		Action: "test",
 	}
 
 	wd := WriteData{
-		Raw: [][]byte{{0, 1, 2}},
+		Raw:    [][]byte{{0, 1, 2}},
 		Action: "test",
 	}
 
@@ -80,12 +79,12 @@ func TestWriteData_ToGRPC(t *testing.T) {
 
 func TestWriteDataFromGRPC(t *testing.T) {
 	expected := &WriteData{
-		Raw: [][]byte{{3, 2, 1}},
+		Raw:    [][]byte{{3, 2, 1}},
 		Action: "test",
 	}
 
 	wd := &synse.WriteData{
-		Raw: [][]byte{{3, 2, 1}},
+		Raw:    [][]byte{{3, 2, 1}},
 		Action: "test",
 	}
 
@@ -108,7 +107,6 @@ func TestWriteDataFromGRPC(t *testing.T) {
 	}
 }
 
-
 func TestNewUID(t *testing.T) {
 	hash1 := newUID("", "", "", "")
 	hash2 := newUID("", "", "", "")
@@ -125,12 +123,11 @@ func TestNewUID(t *testing.T) {
 
 }
 
-
 func TestDevice_Type(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	if d.Type() != pConfig.Type {
@@ -138,12 +135,11 @@ func TestDevice_Type(t *testing.T) {
 	}
 }
 
-
 func TestDevice_Model(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	if d.Model() != pConfig.Model {
@@ -151,12 +147,11 @@ func TestDevice_Model(t *testing.T) {
 	}
 }
 
-
 func TestDevice_Manufacturer(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	if d.Manufacturer() != pConfig.Manufacturer {
@@ -164,12 +159,11 @@ func TestDevice_Manufacturer(t *testing.T) {
 	}
 }
 
-
 func TestDevice_Protocol(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	if d.Protocol() != pConfig.Protocol {
@@ -177,12 +171,11 @@ func TestDevice_Protocol(t *testing.T) {
 	}
 }
 
-
 func TestDevice_UID(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	if d.UID() != "664f6cfa51c9bef163682bd2a766613b" {
@@ -190,12 +183,11 @@ func TestDevice_UID(t *testing.T) {
 	}
 }
 
-
 func TestDevice_Output(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	if len(d.Output()) != len(pConfig.Output) {
@@ -209,12 +201,11 @@ func TestDevice_Output(t *testing.T) {
 	}
 }
 
-
 func TestDevice_Location(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	if d.Location() != dConfig.Location {
@@ -222,12 +213,11 @@ func TestDevice_Location(t *testing.T) {
 	}
 }
 
-
 func TestDevice_Data(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	if len(d.Data()) != len(dConfig.Data) {
@@ -241,12 +231,11 @@ func TestDevice_Data(t *testing.T) {
 	}
 }
 
-
 func TestDevice_ToMetainfoResponse(t *testing.T) {
 	d := Device{
 		Prototype: &pConfig,
-		Instance: &dConfig,
-		Handler: &TestHandler{},
+		Instance:  &dConfig,
+		Handler:   &TestHandler{},
 	}
 
 	meta := d.toMetainfoResponse()
@@ -291,8 +280,8 @@ func TestDevice_ToMetainfoResponse(t *testing.T) {
 func TestReadResource_IdString(t *testing.T) {
 	r := ReadResource{
 		Device: "123",
-		Board: "456",
-		Rack: "789",
+		Board:  "456",
+		Rack:   "789",
 	}
 
 	id := r.IDString()
