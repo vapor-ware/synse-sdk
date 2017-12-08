@@ -56,7 +56,7 @@ func makeDevices(deviceConfigs []*DeviceConfig, protoConfigs []*PrototypeConfig,
 // setupSocket is used to make sure the unix socket used for gRPC communication
 // is set up and accessible locally.
 func setupSocket(name string) (string, error) {
-	socket := fmt.Sprintf("%s/%s.sock", sockPath, name)
+	socket := fmt.Sprintf("%s/%s", sockPath, name)
 
 	_, err := os.Stat(sockPath)
 	if err != nil {

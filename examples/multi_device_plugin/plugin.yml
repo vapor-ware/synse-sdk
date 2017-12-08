@@ -1,6 +1,9 @@
 name: example-plugin
 version: 1.0.0
 debug: true
+socket:
+  network: unix
+  address: example-plugin.sock
 settings:
   loop_delay: 100
   read:

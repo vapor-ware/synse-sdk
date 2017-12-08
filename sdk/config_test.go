@@ -65,6 +65,9 @@ func TestPluginConfig_FromFile3(t *testing.T) {
 	cfgFile := `name: test-plugin
 version: 1.0
 debug: false
+socket:
+  network: unix
+  address: /vapor/test.sock
 settings:
   loop_delay: 10
   read:
@@ -105,6 +108,14 @@ context:
 
 	if c.Debug {
 		t.Error("Unexpected value in the Debug field.")
+	}
+
+	if c.Socket.Network != "unix" {
+		t.Error("Unexpected value in the Socket Network field.")
+	}
+
+	if c.Socket.Address != "/vapor/test.sock" {
+		t.Error("Unexpected value in the Socket Address field.")
 	}
 
 	if c.Settings.LoopDelay != 10 {

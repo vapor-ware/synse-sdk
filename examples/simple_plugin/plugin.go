@@ -100,6 +100,10 @@ func main() {
 		Name:    "simple-plugin",
 		Version: "1.0.0",
 		Debug:   true,
+		Socket:  sdk.PluginConfigSocket{
+			Network: "tcp",
+			Address: ":50051",
+		},
 	}
 
 	p, err := sdk.NewPlugin(

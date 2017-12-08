@@ -133,14 +133,23 @@ func (ps *PluginServer) Run() error {
 	// start the RW loop
 	ps.rwLoop.run()
 
-	// create the socket used to communicate with the gRPC server
-	socket, err := setupSocket(ps.name)
-	if err != nil {
-		return err
+	// set up the gRPC server
+	var address string
+	var err error
+	if Config.Socket.Network == "unix" {
+		// if we are configuring for unix socket communication, we first need
+		// to create the socket.
+		address, err = setupSocket(Config.Socket.Address)
+		if err != nil {
+			return err
+		}
+	} else {
+		// otherwise, we will just use the address specified in the configuration
+		address = Config.Socket.Address
 	}
 
-	Logger.Infof("[grpc] listening on socket %v", socket)
-	lis, err := net.Listen("unix", socket)
+	Logger.Infof("[grpc] listening on network %v with address %v", Config.Socket.Network, address)
+	lis, err := net.Listen(Config.Socket.Network, address)
 	if err != nil {
 		Logger.Fatalf("Failed to listen: %v", err)
 		return err
