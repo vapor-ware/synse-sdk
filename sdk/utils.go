@@ -1,21 +1,24 @@
 package sdk
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
 
 const (
+	// fixme: we should probably make this a more standard place.. /var/run?
+	// also - probably doesn't belong here.
 	sockPath = "/synse/procs"
 )
 
 // makeIDString makes a compound string out of the given rack, board, and
-// device identifier strings. This string should be a globally unique identifer
+// device identifier strings. This string should be a globally unique identifier
 // for a given device.
 func makeIDString(rack, board, device string) string {
-	s := []string{rack, board, device}
-	return strings.Join(s, "-")
+	return strings.Join([]string{rack, board, device}, "-")
 }
 
 // makeDevices takes the prototype and device instance configurations, parsed
@@ -71,4 +74,22 @@ func setupSocket(name string) (string, error) {
 		_ = os.Remove(socket)
 	}
 	return socket, nil
+}
+
+// newUID creates a new unique identifier for a device. The device id is
+// deterministic because it is created as a hash of various components that
+// make up the device's configuration. By definition, each device will have
+// a (slightly) different configuration (otherwise they would just be the same
+// devices).
+//
+// These device IDs are not guaranteed to be globally unique, but they should
+// be unique to the board they reside on.
+func newUID(protocol, deviceType, model, protoComp string) string {
+	h := md5.New()
+	io.WriteString(h, protocol)
+	io.WriteString(h, deviceType)
+	io.WriteString(h, model)
+	io.WriteString(h, protoComp)
+
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

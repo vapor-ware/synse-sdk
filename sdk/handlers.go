@@ -1,5 +1,11 @@
 package sdk
 
+// Handlers
+type Handlers struct {
+	Plugin PluginHandler
+	Device DeviceHandler
+}
+
 // PluginHandler defines the interface that a plugin implementation needs to
 // fulfil in order to handle reads and writes.
 //
@@ -12,8 +18,8 @@ package sdk
 // behavior to allow for parallel reads and writes.
 type PluginHandler interface {
 
-	// Read the device specified by the `ReadResource`.
-	Read(*Device) (*ReadResource, error)
+	// Read the device specified by the ReadContext.
+	Read(*Device) (*ReadContext, error)
 
 	// Write data to the specified device.
 	Write(*Device, *WriteData) error

@@ -14,17 +14,16 @@ import (
 // SDK. It defines the plugin's read and write functionality.
 type ExamplePluginHandler struct{}
 
-func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
-
+func (h *ExamplePluginHandler) Read(device *sdk.Device) (*sdk.ReadContext, error) {
 	val := rand.Int()
 	strVal := strconv.Itoa(val)
-	return &sdk.ReadResource{
-		Device:  in.UID(),
-		Reading: []*sdk.Reading{{time.Now().String(), in.Type(), strVal}},
+	return &sdk.ReadContext{
+		Device:  device.UID(),
+		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), strVal}},
 	}, nil
 }
 
-func (h *ExamplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error {
+func (h *ExamplePluginHandler) Write(device *sdk.Device, data *sdk.WriteData) error {
 	return &sdk.UnsupportedCommandError{}
 }
 
@@ -88,22 +87,27 @@ func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) (
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
-	config := sdk.PluginConfig{}
-	err := config.FromFile("plugin.yml")
+	// Collect the Plugin handlers.
+	handlers := sdk.Handlers{
+		Plugin: &ExamplePluginHandler{},
+		Device: &ExampleDeviceHandler{},
+	}
+
+	// Create a new Plugin and configure it.
+	plugin := sdk.NewPlugin(&handlers)
+	err := plugin.ConfigureFromFile("plugin.yml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	p, err := sdk.NewPlugin(
-		&config,
-		&ExamplePluginHandler{},
-		&ExampleDeviceHandler{},
-	)
+	// Register the Plugin devices.
+	err = plugin.RegisterDevices()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = p.Run()
+	// Run the plugin.
+	err = plugin.Run()
 	if err != nil {
 		log.Fatal(err)
 	}

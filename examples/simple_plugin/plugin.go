@@ -29,17 +29,19 @@ import (
 // on the device type, model, etc.
 type SimplePluginHandler struct{}
 
-func (ph *SimplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
+func (h *SimplePluginHandler) Read(device *sdk.Device) (*sdk.ReadContext, error) {
 
 	val := rand.Int()
 	strVal := strconv.Itoa(val)
-	return &sdk.ReadResource{
-		Device:  in.UID(),
-		Reading: []*sdk.Reading{{time.Now().String(), in.Type(), strVal}},
+	return &sdk.ReadContext{
+		Device:  device.UID(),
+		Board:   device.Location().Board,
+		Rack:    device.Location().Rack,
+		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), strVal}},
 	}, nil
 }
 
-func (ph *SimplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error {
+func (h *SimplePluginHandler) Write(device *sdk.Device, data *sdk.WriteData) error {
 
 	fmt.Printf("[simple plugin handler]: WRITE\n")
 
@@ -75,14 +77,14 @@ type SimpleDeviceHandler struct{}
 
 // GetProtocolIdentifiers gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
-func (dh *SimpleDeviceHandler) GetProtocolIdentifiers(data map[string]string) string {
+func (h *SimpleDeviceHandler) GetProtocolIdentifiers(data map[string]string) string {
 	return data["id"]
 }
 
 // EnumerateDevices is used to auto-enumerate device configurations for plugins
 // that support it. This example plugin does not support it, so we just return
 // the appropriate error.
-func (dh *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.DeviceConfig, error) {
+func (h *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.DeviceConfig, error) {
 	return nil, &sdk.EnumerationNotSupported{}
 }
 
@@ -95,28 +97,40 @@ func (dh *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.
 //   the devices from config, start the read-write loop, and start the GRPC
 //   server.
 func main() {
-
+	// Configuration for the Simple Plugin.
 	config := sdk.PluginConfig{
 		Name:    "simple-plugin",
 		Version: "1.0.0",
 		Debug:   true,
-		Socket:  sdk.PluginConfigSocket{
+		Socket: sdk.PluginConfigSocket{
 			Network: "tcp",
 			Address: ":50051",
 		},
 	}
 
-	p, err := sdk.NewPlugin(
-		&config,
-		&SimplePluginHandler{},
-		&SimpleDeviceHandler{},
-	)
+	// Collect the Simple Plugin handlers.
+	handlers := sdk.Handlers{
+		Plugin: &SimplePluginHandler{},
+		Device: &SimpleDeviceHandler{},
+	}
 
+	// Create a new Plugin and configure it.
+	plugin := sdk.NewPlugin(&handlers)
+	err := plugin.SetConfig(&config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = p.Run()
+	// Register the Plugin devices - this will read the device
+	// instance and prototype config to determine what it will
+	// read from / write to.
+	err = plugin.RegisterDevices()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Run the plugin.
+	err = plugin.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
