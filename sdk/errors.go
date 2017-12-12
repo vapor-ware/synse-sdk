@@ -26,10 +26,10 @@ func (e *EnumerationNotSupported) Error() string {
 
 // invalidArgumentErr creates a gRPC InvalidArgument error with the given description.
 func invalidArgumentErr(format string, a ...interface{}) error {
-	return status.Errorf(codes.InvalidArgument, format, a)
+	return status.Errorf(codes.InvalidArgument, format, a...)
 }
 
 // notFoundErr creates a gRPC NotFound error with the given description.
 func notFoundErr(format string, a ...interface{}) error {
-	return status.Errorf(codes.NotFound, format, a)
+	return status.Errorf(codes.NotFound, format, a...)
 }

@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"os"
+	"fmt"
 )
 
 // Plugin represents an instance of a Synse plugin. Along with metadata
@@ -11,18 +12,27 @@ type Plugin struct {
 	server   *Server
 	handlers *Handlers
 	dm       *DataManager
+
+	// a flag to denote whether or not the plugin has been configured yet
+	isConfigured bool
 }
 
 // NewPlugin creates a new Plugin instance
 func NewPlugin(handlers *Handlers) *Plugin {
 	p := &Plugin{}
 	p.handlers = handlers
+	p.isConfigured = false
 	return p
 }
 
 // SetConfig sets the configuration of the Plugin.
 func (p *Plugin) SetConfig(config *PluginConfig) error {
-	return configurePlugin(config)
+	err := configurePlugin(config)
+	if err != nil {
+		return err
+	}
+	p.isConfigured = true
+	return nil
 }
 
 // ConfigureFromFile sets the Plugin configuration from the specified YAML file.
@@ -32,7 +42,12 @@ func (p *Plugin) ConfigureFromFile(path string) error {
 	if err != nil {
 		return err
 	}
-	return configurePlugin(&config)
+	err = configurePlugin(&config)
+	if err != nil {
+		return err
+	}
+	p.isConfigured = true
+	return nil
 }
 
 // Configure reads in the specified config file and uses its contents
@@ -49,7 +64,12 @@ func (p *Plugin) Configure() error {
 	if err != nil {
 		return err
 	}
-	return configurePlugin(&config)
+	err = configurePlugin(&config)
+	if err != nil {
+		return err
+	}
+	p.isConfigured = true
+	return nil
 }
 
 // RegisterDevices registers all of the configured devices (via their proto and
@@ -82,8 +102,15 @@ func (p *Plugin) Run() error {
 // are validated and runtime components of the plugin are initialized.
 func (p *Plugin) setup() error {
 	// validate that handlers are set
+	err := validateHandlers(p.handlers)
+	if err != nil {
+		return err
+	}
 
 	// validate that configuration is set
+	if !p.isConfigured {
+		return fmt.Errorf("plugin must be configured before it is run")
+	}
 
 	// Register a new Server and DataManager for the Plugin. This should
 	// be done prior to running the plugin, as opposed to on initialization

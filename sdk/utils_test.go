@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// ===== Test Data =====
+
 var testInst1 = DeviceConfig{
 	Version: "1.0",
 	Type:    "test-device",
@@ -41,14 +43,15 @@ var testProto2 = PrototypeConfig{
 	Protocol:     "test",
 }
 
+// ===== Test Cases =====
+
 func TestMakeDevices(t *testing.T) {
 	inst := []*DeviceConfig{&testInst1, &testInst2}
 	proto := []*PrototypeConfig{&testProto1}
 
-	devices := makeDevices(inst, proto, &TestHandler{})
-
+	devices := makeDevices(inst, proto, &testDeviceHandler{})
 	if len(devices) != 2 {
-		t.Error("Expected two instances to match the prototype.")
+		t.Error("expected 2 instances to match the prototype")
 	}
 }
 
@@ -56,10 +59,9 @@ func TestMakeDevices2(t *testing.T) {
 	inst := []*DeviceConfig{&testInst1, &testInst2}
 	proto := []*PrototypeConfig{&testProto2}
 
-	devices := makeDevices(inst, proto, &TestHandler{})
-
+	devices := makeDevices(inst, proto, &testDeviceHandler{})
 	if len(devices) != 0 {
-		t.Error("Expected no instances to match the prototype.")
+		t.Error("expected 0 instances to match the prototype")
 	}
 }
 
@@ -67,32 +69,30 @@ func TestMakeDevices3(t *testing.T) {
 	inst := []*DeviceConfig{&testInst1}
 	proto := []*PrototypeConfig{&testProto1, &testProto2}
 
-	devices := makeDevices(inst, proto, &TestHandler{})
-
+	devices := makeDevices(inst, proto, &testDeviceHandler{})
 	if len(devices) != 1 {
-		t.Error("Expected one instance to match the prototypes.")
+		t.Error("expected 1 instance to match the prototypes")
 	}
 }
 
 func TestMakeDevices4(t *testing.T) {
 	inst := []*DeviceConfig{&testInst1, &testInst2}
-	proto := []*PrototypeConfig{}
+	var proto []*PrototypeConfig
 
-	devices := makeDevices(inst, proto, &TestHandler{})
-
+	devices := makeDevices(inst, proto, &testDeviceHandler{})
 	if len(devices) != 0 {
-		t.Error("Expected no matches - no prototypes defined.")
+		t.Error("expected 0 matches (no prototypes defined)")
 	}
 }
 
 func TestMakeDevices5(t *testing.T) {
-	inst := []*DeviceConfig{}
+	var inst []*DeviceConfig
 	proto := []*PrototypeConfig{&testProto1, &testProto2}
 
-	devices := makeDevices(inst, proto, &TestHandler{})
+	devices := makeDevices(inst, proto, &testDeviceHandler{})
 
 	if len(devices) != 0 {
-		t.Error("Expected no matches - no instances defined.")
+		t.Error("expected 0 matches (no instances defined)")
 	}
 }
 
@@ -102,22 +102,21 @@ func TestSetupSocket(t *testing.T) {
 
 	_, err := os.Stat(sockPath)
 	if !os.IsNotExist(err) {
-		t.Errorf("Expected path to not exist, got error: %v", err)
+		t.Errorf("expected path to not exist, got error: %v", err)
 	}
 
 	sock, err := setupSocket("test.sock")
-
 	if err != nil {
 		t.Error(err)
 	}
 
 	if sock != "/synse/procs/test.sock" {
-		t.Errorf("Unexpected socket path returned: %v", sock)
+		t.Errorf("unexpected socket path returned: %v", sock)
 	}
 
 	_, err = os.Stat(sockPath)
 	if err != nil {
-		t.Errorf("Error when checking socket path: %v", err)
+		t.Errorf("error when checking socket path: %v", err)
 	}
 }
 
@@ -133,38 +132,156 @@ func TestSetupSocket2(t *testing.T) {
 
 	_, err = os.Stat(filename)
 	if err != nil {
-		t.Errorf("Expected file to exist, but does not.")
+		t.Errorf("expected file to exist, but does not")
 	}
 
 	sock, err := setupSocket("test.sock")
-
 	if err != nil {
 		t.Error(err)
 	}
 
 	if sock != filename {
-		t.Errorf("Unexpected socket path returned: %v", sock)
+		t.Errorf("unexpected socket path returned: %v", sock)
 	}
 
 	_, err = os.Stat(filename)
 	if !os.IsNotExist(err) {
-		t.Error("Socket should no longer exist, but still does.")
+		t.Error("socket should no longer exist, but still does")
 	}
 }
 
-func TestMakeIdString(t *testing.T) {
-	matrix := map[string][]string{
-		"rack-board-device":       {"rack", "board", "device"},
-		"123-456-789":             {"123", "456", "789"},
-		"abc-def-ghi":             {"abc", "def", "ghi"},
-		"1234567890abcdefghi-1-2": {"1234567890abcdefghi", "1", "2"},
-		"------_____-+=+=&8^":     {"-----", "_____", "+=+=&8^"},
-	}
 
-	for expected, test := range matrix {
-		actual := makeIDString(test[0], test[1], test[2])
-		if expected != actual {
-			t.Errorf("Failed to make expected id string (%v): %v", expected, actual)
+var makeIDStringTestTable = []struct{
+	rack string
+	board string
+	device string
+	out string
+}{
+	{
+		rack: "rack",
+		board: "board",
+		device: "device",
+		out: "rack-board-device",
+	},
+	{
+		rack: "123",
+		board: "456",
+		device: "789",
+		out: "123-456-789",
+	},
+	{
+		rack: "abc",
+		board: "def",
+		device: "ghi",
+		out: "abc-def-ghi",
+	},
+	{
+		rack: "1234567890abcdefghi",
+		board: "1",
+		device: "2",
+		out: "1234567890abcdefghi-1-2",
+	},
+	{
+		rack: "-----",
+		board: "_____",
+		device: "+=+=&8^",
+		out: "------_____-+=+=&8^",
+	},
+}
+
+func TestMakeIDString(t *testing.T) {
+	for _, tc := range makeIDStringTestTable {
+		r := makeIDString(tc.rack, tc.board, tc.device)
+		if r != tc.out {
+			t.Errorf("makeIDString(%s, %s, %s) => %s, want %q", tc.rack, tc.board, tc.device, r, tc.out)
+		}
+	}
+}
+
+
+var newUIDTestTable = []struct{
+	p string
+	d string
+	m string
+	c string
+	out string
+}{
+	{
+		p: "test-protocol",
+		d: "test-device",
+		m: "test-model",
+		c: "test-comp",
+		out: "732bb43a825b8330e6d50a6722a8e1f0",
+	},
+	{
+		p: "i2c",
+		d: "thermistor",
+		m: "max116",
+		c: "1",
+		out: "019de8ff9de6aba9ddb9ebb6d5f5b5e0",
+	},
+	{
+		p: "",
+		d: "",
+		m: "",
+		c: "",
+		out: "d41d8cd98f00b204e9800998ecf8427e",
+	},
+	{
+		p: "?",
+		d: "!",
+		m: "%",
+		c: "$",
+		out: "65722f8565fb36c7a6da67bae4ee1f2d",
+	},
+}
+
+func TestNewUID(t *testing.T) {
+	for _, tc := range newUIDTestTable {
+		r := newUID(tc.p, tc.d, tc.m, tc.c)
+		if r != tc.out {
+			t.Errorf("newUID(%s, %s, %s, %s) => %s, want %s", tc.p, tc.d, tc.m, tc.c, r, tc.out)
+		}
+	}
+}
+
+
+var setupListenTestTable = []struct{
+	inNet string
+	inAddr string
+	outNet string
+	outAddr string
+}{
+	{
+		inNet: "tcp",
+		inAddr: ":55001",
+		outNet: "tcp",
+		outAddr: ":55001",
+	},
+	{
+		inNet: "udp",
+		inAddr: ":666",
+		outNet: "udp",
+		outAddr: ":666",
+	},
+	{
+		inNet: "unix",
+		inAddr: "test.sock",
+		outNet: "unix",
+		outAddr: "/synse/procs/test.sock",
+	},
+}
+
+func TestSetupListen(t *testing.T) {
+	for _, tc := range setupListenTestTable {
+		Config.Socket.Network = tc.inNet
+		Config.Socket.Address = tc.inAddr
+		net, addr, err := setupListen()
+		if err != nil {
+			t.Error(err)
+		}
+		if net != tc.outNet || addr != tc.outAddr {
+			t.Errorf("setupListen() [%q, %q] => %q %q, want %q %q", tc.inNet, tc.inAddr, net, addr, tc.outNet, tc.outAddr)
 		}
 	}
 }

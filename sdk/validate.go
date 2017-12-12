@@ -39,3 +39,15 @@ func validateWriteRequest(request *synse.WriteRequest) error {
 	}
 	return nil
 }
+
+// validateHandlers validates that the given Handlers struct has non-nil
+// values in its Plugin and Device fields.
+func validateHandlers(handlers *Handlers) error {
+	if handlers.Plugin == nil {
+		return notFoundErr("plugin handler not defined")
+	}
+	if handlers.Device == nil {
+		return notFoundErr("device handler not defined")
+	}
+	return nil
+}
