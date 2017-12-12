@@ -4,11 +4,6 @@ import (
 	"os"
 )
 
-const (
-	// FIXME - this is probably not the right place for this const to be defined.
-	defaultConfigFile = "/etc/synse/plugin/config.yml"
-)
-
 // Plugin represents an instance of a Synse plugin. Along with metadata
 // and definable handlers, it contains a gRPC server to handle the plugin
 // requests.

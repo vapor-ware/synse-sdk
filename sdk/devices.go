@@ -6,12 +6,6 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-const (
-	// the directory which contains the device configurations.
-	// FIXME - this is currently relative to the binary.. should be configurable?
-	configDir = "config"
-)
-
 // The deviceMap holds all of the known devices configured for the plugin.
 var deviceMap = make(map[string]*Device)
 
@@ -96,8 +90,9 @@ func (d *Device) encode() *synse.MetainfoResponse {
 	}
 }
 
+// registerDevicesFromConfig reads in the device configuration files and generates
+// Device instances based on those configurations.
 func registerDevicesFromConfig(handler DeviceHandler) error {
-
 	var instanceCfg []*DeviceConfig
 
 	// get any instance configurations from plugin-defined enumeration function

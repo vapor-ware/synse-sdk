@@ -8,12 +8,6 @@ import (
 	"strings"
 )
 
-const (
-	// fixme: we should probably make this a more standard place.. /var/run?
-	// also - probably doesn't belong here.
-	sockPath = "/synse/procs"
-)
-
 // makeIDString makes a compound string out of the given rack, board, and
 // device identifier strings. This string should be a globally unique identifier
 // for a given device.
