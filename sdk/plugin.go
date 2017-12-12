@@ -1,8 +1,8 @@
 package sdk
 
 import (
-	"os"
 	"fmt"
+	"os"
 )
 
 // Plugin represents an instance of a Synse plugin. Along with metadata

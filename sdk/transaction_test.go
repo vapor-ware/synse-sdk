@@ -33,7 +33,6 @@ func TestNewTransaction(t *testing.T) {
 	}
 }
 
-
 func TestNewTransaction2(t *testing.T) {
 	t1 := NewTransaction()
 	t2 := NewTransaction()

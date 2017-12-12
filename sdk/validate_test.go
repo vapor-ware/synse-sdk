@@ -22,7 +22,6 @@ func (h *testDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*DeviceC
 	return nil, nil
 }
 
-
 type testPluginHandler struct{}
 
 func (h *testPluginHandler) Read(dev *Device) (*ReadContext, error) {

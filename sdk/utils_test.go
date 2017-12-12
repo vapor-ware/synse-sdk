@@ -150,42 +150,41 @@ func TestSetupSocket2(t *testing.T) {
 	}
 }
 
-
-var makeIDStringTestTable = []struct{
-	rack string
-	board string
+var makeIDStringTestTable = []struct {
+	rack   string
+	board  string
 	device string
-	out string
+	out    string
 }{
 	{
-		rack: "rack",
-		board: "board",
+		rack:   "rack",
+		board:  "board",
 		device: "device",
-		out: "rack-board-device",
+		out:    "rack-board-device",
 	},
 	{
-		rack: "123",
-		board: "456",
+		rack:   "123",
+		board:  "456",
 		device: "789",
-		out: "123-456-789",
+		out:    "123-456-789",
 	},
 	{
-		rack: "abc",
-		board: "def",
+		rack:   "abc",
+		board:  "def",
 		device: "ghi",
-		out: "abc-def-ghi",
+		out:    "abc-def-ghi",
 	},
 	{
-		rack: "1234567890abcdefghi",
-		board: "1",
+		rack:   "1234567890abcdefghi",
+		board:  "1",
 		device: "2",
-		out: "1234567890abcdefghi-1-2",
+		out:    "1234567890abcdefghi-1-2",
 	},
 	{
-		rack: "-----",
-		board: "_____",
+		rack:   "-----",
+		board:  "_____",
 		device: "+=+=&8^",
-		out: "------_____-+=+=&8^",
+		out:    "------_____-+=+=&8^",
 	},
 }
 
@@ -198,40 +197,39 @@ func TestMakeIDString(t *testing.T) {
 	}
 }
 
-
-var newUIDTestTable = []struct{
-	p string
-	d string
-	m string
-	c string
+var newUIDTestTable = []struct {
+	p   string
+	d   string
+	m   string
+	c   string
 	out string
 }{
 	{
-		p: "test-protocol",
-		d: "test-device",
-		m: "test-model",
-		c: "test-comp",
+		p:   "test-protocol",
+		d:   "test-device",
+		m:   "test-model",
+		c:   "test-comp",
 		out: "732bb43a825b8330e6d50a6722a8e1f0",
 	},
 	{
-		p: "i2c",
-		d: "thermistor",
-		m: "max116",
-		c: "1",
+		p:   "i2c",
+		d:   "thermistor",
+		m:   "max116",
+		c:   "1",
 		out: "019de8ff9de6aba9ddb9ebb6d5f5b5e0",
 	},
 	{
-		p: "",
-		d: "",
-		m: "",
-		c: "",
+		p:   "",
+		d:   "",
+		m:   "",
+		c:   "",
 		out: "d41d8cd98f00b204e9800998ecf8427e",
 	},
 	{
-		p: "?",
-		d: "!",
-		m: "%",
-		c: "$",
+		p:   "?",
+		d:   "!",
+		m:   "%",
+		c:   "$",
 		out: "65722f8565fb36c7a6da67bae4ee1f2d",
 	},
 }
@@ -245,29 +243,28 @@ func TestNewUID(t *testing.T) {
 	}
 }
 
-
-var setupListenTestTable = []struct{
-	inNet string
-	inAddr string
-	outNet string
+var setupListenTestTable = []struct {
+	inNet   string
+	inAddr  string
+	outNet  string
 	outAddr string
 }{
 	{
-		inNet: "tcp",
-		inAddr: ":55001",
-		outNet: "tcp",
+		inNet:   "tcp",
+		inAddr:  ":55001",
+		outNet:  "tcp",
 		outAddr: ":55001",
 	},
 	{
-		inNet: "udp",
-		inAddr: ":666",
-		outNet: "udp",
+		inNet:   "udp",
+		inAddr:  ":666",
+		outNet:  "udp",
 		outAddr: ":666",
 	},
 	{
-		inNet: "unix",
-		inAddr: "test.sock",
-		outNet: "unix",
+		inNet:   "unix",
+		inAddr:  "test.sock",
+		outNet:  "unix",
 		outAddr: "/synse/procs/test.sock",
 	},
 }

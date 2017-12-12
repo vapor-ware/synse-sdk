@@ -37,7 +37,6 @@ var deviceConfig = DeviceConfig{
 	Data: map[string]string{"testKey": "testValue"},
 }
 
-
 var testDevice = Device{
 	Prototype: &protoConfig,
 	Instance:  &deviceConfig,

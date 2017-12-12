@@ -1,8 +1,8 @@
 package sdk
 
 import (
-	"testing"
 	"strings"
+	"testing"
 )
 
 func TestInvalidArgumentErr(t *testing.T) {

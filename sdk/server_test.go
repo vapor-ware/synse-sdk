@@ -1,8 +1,8 @@
 package sdk
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
 
 func TestNewServer(t *testing.T) {
