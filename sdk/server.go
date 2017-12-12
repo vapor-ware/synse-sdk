@@ -1,14 +1,11 @@
 package sdk
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Server is the the Plugin's server component. It acts as the InternalApiServer
@@ -17,32 +14,23 @@ type Server struct {
 	plugin *Plugin
 }
 
-// NewServer
+// NewServer creates a new instance of a Server.
 func NewServer(plugin *Plugin) *Server {
 	return &Server{
 		plugin: plugin,
 	}
 }
 
-// serve
+// serve configures and runs the gRPC server.
 func (s *Server) serve() error {
-	// set up the gRPC server
-	var address string
-	var err error
-	if Config.Socket.Network == "unix" {
-		// if we are configuring for unix socket communication, we first need
-		// to create the socket.
-		address, err = setupSocket(Config.Socket.Address)
-		if err != nil {
-			return err
-		}
-	} else {
-		// otherwise, we will just use the address specified in the configuration
-		address = Config.Socket.Address
+
+	network, address, err := setupListen()
+	if err != nil {
+		return err
 	}
 
-	Logger.Infof("[grpc] listening on network %v with address %v", Config.Socket.Network, address)
-	lis, err := net.Listen(Config.Socket.Network, address)
+	Logger.Infof("[grpc] listening on network %v with address %v", network, address)
+	lis, err := net.Listen(network, address)
 	if err != nil {
 		Logger.Fatalf("Failed to listen: %v", err)
 		return err
@@ -50,9 +38,7 @@ func (s *Server) serve() error {
 
 	// create the GRPC server and register our plugin server to it
 	svr := grpc.NewServer()
-	Logger.Debugf("[grpc] creating new grpc server")
 	synse.RegisterInternalApiServer(svr, s)
-	Logger.Debugf("[grpc] registering handlers")
 
 	// start gRPC the server
 	Logger.Infof("[grpc] serving")
@@ -63,6 +49,7 @@ func (s *Server) serve() error {
 	return nil
 }
 
+// Read is the handler for gRPC Read requests.
 func (s *Server) Read(req *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
 	responses, err := s.plugin.dm.Read(req)
 	if err != nil {
@@ -76,6 +63,7 @@ func (s *Server) Read(req *synse.ReadRequest, stream synse.InternalApi_ReadServe
 	return nil
 }
 
+// Write is the handler for gRPC Write requests.
 func (s *Server) Write(ctx context.Context, req *synse.WriteRequest) (*synse.Transactions, error) {
 	transactions, err := s.plugin.dm.Write(req)
 	if err != nil {
@@ -86,19 +74,21 @@ func (s *Server) Write(ctx context.Context, req *synse.WriteRequest) (*synse.Tra
 	}, nil
 }
 
+// Metainfo is the handler for gRPC Metainfo requests.
 func (s *Server) Metainfo(req *synse.MetainfoRequest, stream synse.InternalApi_MetainfoServer) error {
 	for _, device := range deviceMap {
-		if err := stream.Send(device.toMetainfoResponse()); err != nil {
+		if err := stream.Send(device.encode()); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// TransactionCheck is the handler for gRPC TransactionCheck requests.
 func (s *Server) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
 	transaction := GetTransaction(in.Id)
 	if transaction == nil {
-		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Transaction %v not found.", in.Id))
+		return nil, notFoundErr("transaction not found: %v", in.Id)
 	}
 	return transaction.encode(), nil
 }

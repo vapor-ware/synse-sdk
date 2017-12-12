@@ -12,6 +12,7 @@ const (
 	configDir = "config"
 )
 
+// The deviceMap holds all of the known devices configured for the plugin.
 var deviceMap = make(map[string]*Device)
 
 // Device describes a single configured device for the plugin.
@@ -41,16 +42,16 @@ func (d *Device) Protocol() string {
 	return d.Prototype.Protocol
 }
 
-// UID gets the id for the Device.
-func (d *Device) UID() string {
+// ID gets the id for the Device.
+func (d *Device) ID() string {
 	protocolComp := d.Handler.GetProtocolIdentifiers(d.Data())
 	return newUID(d.Protocol(), d.Type(), d.Model(), protocolComp)
 }
 
-// IDString generates a globally unique ID string by creating a composite
+// GUID generates a globally unique ID string by creating a composite
 // string from the rack, board, and device UID.
-func (d *Device) IDString() string {
-	return makeIDString(d.Location().Rack, d.Location().Board, d.UID())
+func (d *Device) GUID() string {
+	return makeIDString(d.Location().Rack, d.Location().Board, d.ID())
 }
 
 // Output gets the list of configured reading outputs for the Device.
@@ -70,28 +71,27 @@ func (d *Device) Data() map[string]string {
 	return d.Instance.Data
 }
 
-// toMetainfoResponse converts the Device into its corresponding
-// MetainfoResponse representation.
-func (d *Device) toMetainfoResponse() *synse.MetainfoResponse {
+// encode translates the Device to a corresponding gRPC MetainfoResponse.
+func (d *Device) encode() *synse.MetainfoResponse {
 
 	location := d.Location()
 
 	var output []*synse.MetaOutput
 	for _, out := range d.Output() {
-		mo := out.toMetaOutput()
+		mo := out.encode()
 		output = append(output, mo)
 	}
 
 	return &synse.MetainfoResponse{
 		Timestamp:    time.Now().String(),
-		Uid:          d.UID(),
+		Uid:          d.ID(),
 		Type:         d.Type(),
 		Model:        d.Model(),
 		Manufacturer: d.Manufacturer(),
 		Protocol:     d.Protocol(),
 		Info:         d.Data()["info"],
 		Comment:      d.Data()["comment"],
-		Location:     location.toMetaLocation(),
+		Location:     location.encode(),
 		Output:       output,
 	}
 }
@@ -127,7 +127,7 @@ func registerDevicesFromConfig(handler DeviceHandler) error {
 	devices := makeDevices(instanceCfg, protoCfg, handler)
 
 	for _, device := range devices {
-		deviceMap[device.IDString()] = device
+		deviceMap[device.GUID()] = device
 	}
 	return nil
 }

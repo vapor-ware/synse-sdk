@@ -58,7 +58,7 @@ func TestWriteData_ToGRPC(t *testing.T) {
 		Action: "test",
 	}
 
-	actual := wd.toGRPC()
+	actual := wd.encode()
 
 	if len(actual.Raw) != len(expected.Raw) {
 		t.Error("WriteData Raw length mismatch.")
@@ -238,7 +238,7 @@ func TestDevice_ToMetainfoResponse(t *testing.T) {
 		Handler:   &TestHandler{},
 	}
 
-	meta := d.toMetainfoResponse()
+	meta := d.encode()
 
 	if meta.Uid != d.UID() {
 		t.Error("MetainfoResponse Uid incorrect.")

@@ -11,7 +11,9 @@ type Air8884 struct{}
 
 func (d *Air8884) Read(device *sdk.Device) (*sdk.ReadContext, error) {
 	return &sdk.ReadContext{
-		Device:  device.UID(),
+		Device:  device.ID(),
+		Board:   device.Location().Board,
+		Rack:    device.Location().Rack,
 		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), "100"}},
 	}, nil
 }

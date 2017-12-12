@@ -34,7 +34,7 @@ func (h *SimplePluginHandler) Read(device *sdk.Device) (*sdk.ReadContext, error)
 	val := rand.Int()
 	strVal := strconv.Itoa(val)
 	return &sdk.ReadContext{
-		Device:  device.UID(),
+		Device:  device.ID(),
 		Board:   device.Location().Board,
 		Rack:    device.Location().Rack,
 		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), strVal}},

@@ -19,7 +19,9 @@ func (h *ExamplePluginHandler) Read(device *sdk.Device) (*sdk.ReadContext, error
 	}
 	value := cRead(id, device.Model())
 	return &sdk.ReadContext{
-		Device:  device.UID(),
+		Device:  device.ID(),
+		Board:   device.Location().Board,
+		Rack:    device.Location().Rack,
 		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), value}},
 	}, nil
 }

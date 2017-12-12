@@ -11,14 +11,15 @@ type Reading struct {
 	Value     string
 }
 
-// ReadResource is used to associate a set of Readings with a known device,
-// which is specified by its uid string.
+// ReadContext provides the context for a device reading. This context
+// identifies the device being read and associates it with a set of readings
+// at a given time.
 //
-// Since a single device can provide more than one reading (e.g. a humidity
-// device could provide humidity and temperature data, or an LED could provide
-// on/off state, color, etc.) a ReadResource will allow multiple readings to
-// be associated with the device. Note that a ReadResource corresponds to a
-// single pass of the read loop.
+// A single device can provide more than one reading (e.g. a humidity sensor
+// could provide both a humidity and temperature reading). To accommodate, the
+// ReadContext allows for multiple readings to be associated with the device.
+// Note that the collection of readings in a single ReadContext would correspond
+// to a single Read request.
 type ReadContext struct {
 	Device  string
 	Board   string
@@ -33,7 +34,7 @@ func (ctx *ReadContext) ID() string {
 	return makeIDString(ctx.Rack, ctx.Board, ctx.Device)
 }
 
-// WriteResource describes a single write transaction.
+// WriteContext describes a single write transaction.
 type WriteContext struct {
 	transaction *Transaction
 	device      string
@@ -53,19 +54,16 @@ func (ctx *WriteContext) ID() string {
 // make writing new plugins easier.
 type WriteData synse.WriteData
 
-// FIXME -- should rename to 'encode'
-// toGRPC converts the SDK WriteData to the Synse gRPC WriteData.
-func (w *WriteData) toGRPC() *synse.WriteData {
+// encode translates the WriteData to a corresponding gRPC WriteData.
+func (w *WriteData) encode() *synse.WriteData {
 	return &synse.WriteData{
 		Raw:    w.Raw,
 		Action: w.Action,
 	}
 }
 
-// FIXME -- rename to 'decode'
-// writeDataFromGRPC takes the Synse gRPC WriteData and converts it to the
-// SDK WriteData.
-func writeDataFromGRPC(data *synse.WriteData) *WriteData {
+// decodeWriteData decodes the gRPC WriteData to the SDK WriteData.
+func decodeWriteData(data *synse.WriteData) *WriteData {
 	return &WriteData{
 		Raw:    data.Raw,
 		Action: data.Action,

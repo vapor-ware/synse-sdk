@@ -11,7 +11,9 @@ type Volt1103 struct{}
 
 func (d *Volt1103) Read(device *sdk.Device) (*sdk.ReadContext, error) {
 	return &sdk.ReadContext{
-		Device:  device.UID(),
+		Device:  device.ID(),
+		Board:   device.Location().Board,
+		Rack:    device.Location().Rack,
 		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), "1"}},
 	}, nil
 }

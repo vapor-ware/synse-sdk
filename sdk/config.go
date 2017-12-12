@@ -146,10 +146,10 @@ func (c *PluginConfig) FromFile(path string) error {
 	return nil
 }
 
-// Merge updates the fields of the PluginConfig struct with those of
+// merge updates the fields of the PluginConfig struct with those of
 // another PluginConfig. This is used primarily to combine user configurations
 // with default configurations.
-func (c *PluginConfig) Merge(config *PluginConfig) error {
+func (c *PluginConfig) merge(config *PluginConfig) error {
 
 	// Since Go structs will default to the zero value for a struct field
 	// that is unspecified on initialization, we need to perform some checks
@@ -217,10 +217,10 @@ func (c *PluginConfig) Merge(config *PluginConfig) error {
 	return nil
 }
 
-// GetDefaultConfig returns a PluginConfig instance that holds the default
+// getDefaultConfig returns a PluginConfig instance that holds the default
 // values for the plugin configuration. Name and Version do not have default
 // values because they are required to be specified by the plugin itself.
-func GetDefaultConfig() *PluginConfig {
+func getDefaultConfig() *PluginConfig {
 	return &PluginConfig{
 		Debug: false,
 		Settings: PluginConfigSettings{
@@ -243,13 +243,13 @@ func GetDefaultConfig() *PluginConfig {
 // Config is the global plugin configuration. It contains the default
 // configuration values to start and can be updated via the `ConfigurePlugin`
 // function.
-var Config = GetDefaultConfig()
+var Config = getDefaultConfig()
 
 // configurePlugin takes a plugin-specified configuration and sets it as
 // the configuration that is used by the SDK. The given configuration is
 // merged with the existing configuration.
 func configurePlugin(config *PluginConfig) error {
-	return Config.Merge(config)
+	return Config.merge(config)
 }
 
 // PrototypeConfig represents the configuration for a device prototype.
@@ -271,8 +271,8 @@ type DeviceOutput struct {
 	Range     *OutputRange `yaml:"range"`
 }
 
-// toMetaOutput converts the DeviceOutput to the gRPC MetaOutput model.
-func (o *DeviceOutput) toMetaOutput() *synse.MetaOutput {
+// encode translates the DeviceOutput to a corresponding gRPC MetaOutput.
+func (o *DeviceOutput) encode() *synse.MetaOutput {
 
 	unit := &OutputUnit{}
 	if o.Unit != nil {
@@ -288,8 +288,8 @@ func (o *DeviceOutput) toMetaOutput() *synse.MetaOutput {
 		Type:      o.Type,
 		DataType:  o.DataType,
 		Precision: o.Precision,
-		Unit:      unit.toMetaOutputUnit(),
-		Range:     rang.toMetaOutputRange(),
+		Unit:      unit.encode(),
+		Range:     rang.encode(),
 	}
 }
 
@@ -299,8 +299,8 @@ type OutputUnit struct {
 	Symbol string `yaml:"symbol"`
 }
 
-// toMetaOutputUnit converts the OutputUnit to the gRPC MetaOutputUnit model.
-func (u *OutputUnit) toMetaOutputUnit() *synse.MetaOutputUnit {
+// encode translates the OutputUnit to a corresponding gRPC MetaOutputUnit.
+func (u *OutputUnit) encode() *synse.MetaOutputUnit {
 	return &synse.MetaOutputUnit{
 		Name:   u.Name,
 		Symbol: u.Symbol,
@@ -313,8 +313,8 @@ type OutputRange struct {
 	Max int32 `yaml:"max"`
 }
 
-// toMetaOutputRange converts the OutputRange to the gRPC MetaOutputRange model.
-func (r *OutputRange) toMetaOutputRange() *synse.MetaOutputRange {
+// encode translates the OutputRange to a corresponding gRPC MetaOutputRange.
+func (r *OutputRange) encode() *synse.MetaOutputRange {
 	return &synse.MetaOutputRange{
 		Min: r.Min,
 		Max: r.Max,
@@ -377,8 +377,8 @@ type DeviceLocation struct {
 	Board string `yaml:"board"`
 }
 
-// toMetaLocation converts the DeviceLocation to the gRPC MetaLocation model.
-func (l *DeviceLocation) toMetaLocation() *synse.MetaLocation {
+// encode translates the DeviceLocation to a corresponding gRPC MetaLocation.
+func (l *DeviceLocation) encode() *synse.MetaLocation {
 	return &synse.MetaLocation{
 		Rack:  l.Rack,
 		Board: l.Board,

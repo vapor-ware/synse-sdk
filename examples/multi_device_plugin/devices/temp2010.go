@@ -11,7 +11,9 @@ type Temp2010 struct{}
 
 func (d *Temp2010) Read(device *sdk.Device) (*sdk.ReadContext, error) {
 	return &sdk.ReadContext{
-		Device:  device.UID(),
+		Device:  device.ID(),
+		Board:   device.Location().Board,
+		Rack:    device.Location().Rack,
 		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), "10"}},
 	}, nil
 }

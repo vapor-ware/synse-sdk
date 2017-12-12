@@ -24,8 +24,12 @@ func (e *EnumerationNotSupported) Error() string {
 	return "This plugin does not support device auto-enumeration."
 }
 
-// invalidArgument is a convenience function to create an invalid argument
-// error with the given description.
-func invalidArgument(message string) error {
-	return status.Errorf(codes.InvalidArgument, message)
+// invalidArgumentErr creates a gRPC InvalidArgument error with the given description.
+func invalidArgumentErr(format string, a ...interface{}) error {
+	return status.Errorf(codes.InvalidArgument, format, a)
+}
+
+// notFoundErr creates a gRPC NotFound error with the given description.
+func notFoundErr(format string, a ...interface{}) error {
+	return status.Errorf(codes.NotFound, format, a)
 }

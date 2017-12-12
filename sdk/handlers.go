@@ -1,6 +1,6 @@
 package sdk
 
-// Handlers
+// Handlers contains the user-defined handlers for a Plugin instance.
 type Handlers struct {
 	Plugin PluginHandler
 	Device DeviceHandler
@@ -11,7 +11,7 @@ type Handlers struct {
 //
 // Within the SDK, Read and Write are are called synchronously. First, writes
 // are processed, and then all of the reads are processed. This is done in
-// order to support serial device. Not all protocols are serial bound, but
+// order to support serial devices. Not all protocols are serial bound, but
 // we must cater to the lowest common denominator.
 //
 // FUTURE: A configuration option could be added to modify the read-write

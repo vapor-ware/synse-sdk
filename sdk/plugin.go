@@ -40,9 +40,9 @@ func (p *Plugin) ConfigureFromFile(path string) error {
 	return configurePlugin(&config)
 }
 
-// FIXME - this can probably be tidied up somehow / the logic moved to the 'config' file
 // Configure reads in the specified config file and uses its contents
 // to configure the Plugin.
+// FIXME - this can probably be tidied up somehow / the logic moved to the 'config' file
 func (p *Plugin) Configure() error {
 	config := PluginConfig{}
 
@@ -57,6 +57,8 @@ func (p *Plugin) Configure() error {
 	return configurePlugin(&config)
 }
 
+// RegisterDevices registers all of the configured devices (via their proto and
+// instance config) with the plugin.
 func (p *Plugin) RegisterDevices() error {
 	return registerDevicesFromConfig(p.handlers.Device)
 }
@@ -93,7 +95,7 @@ func (p *Plugin) setup() error {
 	// of the Plugin struct, because their configuration is configuration
 	// dependent. The Plugin should be configured prior to running.
 	p.server = NewServer(p)
-	p.dm = NewDataManager()
+	p.dm = NewDataManager(p)
 
 	return nil
 }
