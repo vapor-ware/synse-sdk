@@ -32,6 +32,8 @@ func (p *Plugin) SetConfig(config *PluginConfig) error {
 		return err
 	}
 	p.isConfigured = true
+
+	SetLogLevel(Config.Debug)
 	return nil
 }
 
@@ -47,6 +49,8 @@ func (p *Plugin) ConfigureFromFile(path string) error {
 		return err
 	}
 	p.isConfigured = true
+
+	SetLogLevel(Config.Debug)
 	return nil
 }
 
@@ -68,6 +72,8 @@ func (p *Plugin) Configure() error {
 		return err
 	}
 	p.isConfigured = true
+
+	SetLogLevel(Config.Debug)
 	return nil
 }
 
@@ -83,6 +89,7 @@ func (p *Plugin) Run() error {
 	if err != nil {
 		return err
 	}
+	p.logInfo()
 
 	// Start the go routines to poll devices and to update internal state
 	// with those readings.
@@ -115,4 +122,20 @@ func (p *Plugin) setup() error {
 	p.dm = NewDataManager(p)
 
 	return nil
+}
+
+// logInfo logs out the information about the plugin. This is called just before the
+// plugin begins running all of its components.
+func (p *Plugin) logInfo() {
+	Logger.Info("-- Starting Plugin --")
+	Logger.Infof(" Name:        %v", Config.Name)
+	Logger.Infof(" Version:     %v", Config.Version)
+	Logger.Infof(" SDK Version: %v", Version)
+	Logger.Info("-- Plugin Config --")
+	Logger.Infof(" %#v", Config)
+	Logger.Info("-- Configured Devices --")
+	for id, dev := range deviceMap {
+		Logger.Infof(" %v (%v)", id, dev.Model())
+	}
+	Logger.Info("---------------------")
 }

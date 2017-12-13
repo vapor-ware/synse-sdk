@@ -103,8 +103,11 @@ func main() {
 		Version: "1.0.0",
 		Debug:   true,
 		Socket: sdk.PluginConfigSocket{
-			Network: "tcp",
-			Address: ":50051",
+			Network: "unix",
+			Address: "simple-plugin.sock",
+		},
+		Settings: sdk.PluginConfigSettings{
+			LoopDelay: 500,
 		},
 	}
 

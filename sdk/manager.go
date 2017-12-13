@@ -32,6 +32,7 @@ func NewDataManager(plugin *Plugin) *DataManager {
 // attempts to fulfill any pending write requests, then performs reads on all
 // of the configured devices.
 func (d *DataManager) goPollData() {
+	Logger.Debug("starting read-write poller")
 	go func() {
 		delay := Config.Settings.LoopDelay
 		for {
@@ -83,6 +84,7 @@ func (d *DataManager) pollRead() {
 // goUpdateData updates the DeviceManager's readings state with the latest
 // values that were read for each device.
 func (d *DataManager) goUpdateData() {
+	Logger.Debug("starting data updater")
 	go func() {
 		for {
 			reading := <-d.readChannel

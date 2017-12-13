@@ -43,8 +43,6 @@ func makeDevices(deviceConfigs []*DeviceConfig, protoConfigs []*PrototypeConfig,
 			Instance:  dev,
 			Handler:   deviceHandler,
 		}
-
-		Logger.Debugf("New Device: %v", d.ID())
 		devices = append(devices, &d)
 	}
 	return devices
