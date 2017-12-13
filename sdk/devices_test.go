@@ -1,6 +1,8 @@
 package sdk
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -146,5 +148,193 @@ func TestEncodeDevice(t *testing.T) {
 
 	if encoded.Location.Board != testDevice.Location().Board {
 		t.Error("Device.encode() -> Location.Board incorrect")
+	}
+}
+
+func makeDeviceConfig() error {
+	err := os.MkdirAll("config/device", os.ModePerm)
+	if err != nil {
+		return err
+	}
+	cfgFile := `version: 1.0
+type: emulated-temperature
+model: emul8-temp
+
+locations:
+  unknown:
+    rack: unknown
+    board: unknown
+
+devices:
+  - id: 1
+    location: unknown
+    comment: first emulated temperature device
+    info: CEC temp 1`
+
+	return ioutil.WriteFile("config/device/test_config.yaml", []byte(cfgFile), 0644)
+}
+
+func makeProtoConfig() error {
+	err := os.MkdirAll("config/proto", os.ModePerm)
+	if err != nil {
+		return err
+	}
+	cfgFile := `version: 1.0
+type: emulated-temperature
+model: emul8-temp
+manufacturer: vaporio
+protocol: emulator
+output:
+  - type: temperature
+    data_type: float
+    unit:
+      name: celsius
+      symbol: C
+    precision: 2
+    range:
+      min: 0
+      max: 100`
+
+	return ioutil.WriteFile("config/proto/test_config.yaml", []byte(cfgFile), 0644)
+}
+
+type devicesTestHandler struct{}
+
+func (h *devicesTestHandler) GetProtocolIdentifiers(data map[string]string) string {
+	return data["id"]
+}
+
+func (h *devicesTestHandler) EnumerateDevices(config map[string]interface{}) ([]*DeviceConfig, error) {
+	dc := DeviceConfig{
+		Version: "1.0",
+		Type:    "emulated-temperature",
+		Model:   "emul8-temp",
+		Location: DeviceLocation{
+			Rack:  "unknown",
+			Board: "unknown",
+		},
+		Data: map[string]string{
+			"id":      config["id"].(string),
+			"comment": "auto-enumerated",
+		},
+	}
+	return []*DeviceConfig{&dc}, nil
+}
+
+func TestRegisterDevicesFromConfig(t *testing.T) {
+	err := makeProtoConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	err = makeDeviceConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() {
+		err = os.RemoveAll("config")
+		if err != nil {
+			t.Error(err)
+		}
+		// reset the device map
+		deviceMap = make(map[string]*Device)
+	}()
+
+	startLen := len(deviceMap)
+
+	err = registerDevicesFromConfig(&devicesTestHandler{})
+	if err != nil {
+		t.Errorf("unexpected error when registering devices from config: %v", err)
+	}
+
+	if len(deviceMap) != startLen+1 {
+		t.Errorf("expected 1 device to be added to device map, %v added instead", len(deviceMap)-startLen)
+	}
+}
+
+// no device instance configurations
+func TestRegisterDevicesFromConfig2(t *testing.T) {
+	err := makeProtoConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() {
+		err = os.RemoveAll("config")
+		if err != nil {
+			t.Error(err)
+		}
+		// reset the device map
+		deviceMap = make(map[string]*Device)
+	}()
+
+	startLen := len(deviceMap)
+
+	err = registerDevicesFromConfig(&devicesTestHandler{})
+	if err == nil {
+		t.Errorf("expected error for missing device instance config, but got none")
+	}
+
+	if startLen != len(deviceMap) {
+		t.Error("deviceMap size changed when nothing should have been added")
+	}
+}
+
+// no device prototype configurations
+func TestRegisterDevicesFromConfig3(t *testing.T) {
+	err := makeDeviceConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() {
+		err = os.RemoveAll("config")
+		if err != nil {
+			t.Error(err)
+		}
+		// reset the device map
+		deviceMap = make(map[string]*Device)
+	}()
+
+	startLen := len(deviceMap)
+
+	err = registerDevicesFromConfig(&devicesTestHandler{})
+	if err == nil {
+		t.Errorf("expected error for missing device prototype config, but got none")
+	}
+
+	if startLen != len(deviceMap) {
+		t.Error("deviceMap size changed when nothing should have been added")
+	}
+}
+
+// test with auto-enumeration
+func TestRegisterDevicesFromConfig4(t *testing.T) {
+	Config.AutoEnumerate = []map[string]interface{}{
+		{"id": "2"},
+	}
+	err := makeProtoConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	err = makeDeviceConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() {
+		err = os.RemoveAll("config")
+		if err != nil {
+			t.Error(err)
+		}
+		// reset the device map
+		deviceMap = make(map[string]*Device)
+	}()
+
+	startLen := len(deviceMap)
+
+	err = registerDevicesFromConfig(&devicesTestHandler{})
+	if err != nil {
+		t.Errorf("unexpected error when registering devices from config: %v", err)
+	}
+
+	if len(deviceMap) != startLen+2 {
+		t.Errorf("expected 2 devices to be added to device map, %v added instead", len(deviceMap)-startLen)
 	}
 }

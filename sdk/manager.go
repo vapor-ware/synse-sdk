@@ -64,7 +64,7 @@ func (d *DataManager) pollWrite() {
 			w.transaction.setStatusDone()
 
 		default:
-			break
+			// if there is nothing to write, do nothing
 		}
 	}
 }

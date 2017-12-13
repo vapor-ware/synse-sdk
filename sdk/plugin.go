@@ -52,7 +52,6 @@ func (p *Plugin) ConfigureFromFile(path string) error {
 
 // Configure reads in the specified config file and uses its contents
 // to configure the Plugin.
-// FIXME - this can probably be tidied up somehow / the logic moved to the 'config' file
 func (p *Plugin) Configure() error {
 	config := PluginConfig{}
 
@@ -91,11 +90,7 @@ func (p *Plugin) Run() error {
 	p.dm.goUpdateData()
 
 	// Start the gRPC server
-	err = p.server.serve()
-	if err != nil {
-		return err
-	}
-	return nil
+	return p.server.serve()
 }
 
 // setup is the pre-run stage where the Plugin handlers and configuration
