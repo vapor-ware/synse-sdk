@@ -26,6 +26,7 @@ var (
 	conn       *grpc.ClientConn
 	c          synse.InternalApiClient
 	socketName string
+	tcpAddr    string
 )
 
 const (
@@ -95,6 +96,8 @@ func read(cmd *cobra.Command, args []string) {
 
 	stream, err := c.Read(context.Background(), &synse.ReadRequest{
 		Device: args[0],
+		Board: args[1],
+		Rack: args[2],
 	})
 	if err != nil {
 		cliError(err)
@@ -281,23 +284,39 @@ func outputTransaction(id string, response *synse.WriteResponse) {
 
 // makeAPIClient creates a new instance of the gRPC API client.
 func makeAPIClient() {
-	if socketName == "" {
-		cliError(fmt.Errorf("plugin name not specified. Need to specify via the --name flag"))
+	if socketName == "" && tcpAddr == "" {
+		cliError(fmt.Errorf(
+			"plugin address not specified. Need to specify via the --name flag" +
+				"(for unix socket) or the --addr flag (for tcp port)",
+		))
 	}
 
-	socket := fmt.Sprintf("/synse/procs/%s.sock", socketName)
+	var conn *grpc.ClientConn
 	var err error
 
-	conn, err = grpc.Dial(
-		socket,
-		grpc.WithInsecure(),
-		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-			return net.DialTimeout("unix", addr, timeout)
-		}),
-	)
-	if err != nil {
-		cliError(fmt.Errorf("unable to connect: %v", err))
+	if socketName != "" {
+		socket := fmt.Sprintf("/synse/procs/%s.sock", socketName)
+		conn, err = grpc.Dial(
+			socket,
+			grpc.WithInsecure(),
+			grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
+				return net.DialTimeout("unix", addr, timeout)
+			}),
+		)
+		if err != nil {
+			cliError(fmt.Errorf("unable to connect to %v: %v", socket, err))
+		}
+
+	} else {
+		conn, err = grpc.Dial(
+			tcpAddr,
+			grpc.WithInsecure(),
+		)
+		if err != nil {
+			cliError(fmt.Errorf("unabled to connect to %v: %v", tcpAddr, err))
+		}
 	}
+
 	c = synse.NewInternalApiClient(conn)
 }
 
@@ -322,7 +341,8 @@ func main() {
 		transactionCmd,
 	)
 
-	rootCmd.PersistentFlags().StringVarP(&socketName, "name", "n", "", "Name of the plugin (e.g. socket name)")
+	rootCmd.PersistentFlags().StringVarP(&socketName, "sock", "n", "", "Name of the plugin (e.g. socket name)")
+	rootCmd.PersistentFlags().StringVarP(&tcpAddr, "addr", "a", "", "TCP address for the plugin (e.g. localhost:5001)")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
