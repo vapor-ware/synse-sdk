@@ -130,7 +130,7 @@ type PluginConfigSettingsTransaction struct {
 
 // FromFile reads in a YAML file and parses it into a PluginConfig struct.
 func (c *PluginConfig) FromFile(path string) error {
-
+	Logger.Infof("Using configuration from file: %s", path)
 	yamlFile, err := ioutil.ReadFile(path)
 	if err != nil {
 		Logger.Errorf("Could not read plugin config file %v.", path)
