@@ -452,3 +452,145 @@ devices:
 		t.Errorf("Expecting only one device proto config, but got %v", len(devices))
 	}
 }
+
+// merge PluginConfig when the required "name" is not specified.
+func TestPluginConfig_merge(t *testing.T) {
+	base := PluginConfig{}
+	toMerge := PluginConfig{
+		Version: "1.0",
+		Socket: PluginConfigSocket{
+			Network: "tcp",
+			Address: ":666",
+		},
+	}
+
+	err := base.merge(&toMerge)
+	if err == nil {
+		t.Error("merge should fail due to missing required fields.")
+	}
+}
+
+// merge PluginConfig when the required "version" is not specified.
+func TestPluginConfig_merge2(t *testing.T) {
+	base := PluginConfig{}
+	toMerge := PluginConfig{
+		Name: "test-plugin",
+		Socket: PluginConfigSocket{
+			Network: "tcp",
+			Address: ":666",
+		},
+	}
+
+	err := base.merge(&toMerge)
+	if err == nil {
+		t.Error("merge should fail due to missing required fields.")
+	}
+}
+
+// merge with all configurations specified. in this case, the
+// original config struct should have the same values as the one
+// that is being merged in
+func TestPluginConfig_merge3(t *testing.T) {
+	base := PluginConfig{
+		Name:    "initial",
+		Version: "1.0",
+		Debug:   false,
+		Settings: PluginConfigSettings{
+			LoopDelay: 10,
+			Read: PluginConfigSettingsRead{
+				BufferSize: 200,
+			},
+			Write: PluginConfigSettingsWrite{
+				BufferSize: 200,
+				PerLoop:    10,
+			},
+			Transaction: PluginConfigSettingsTransaction{
+				TTL: 350,
+			},
+		},
+		Socket: PluginConfigSocket{
+			Network: "unix",
+			Address: "test.sock",
+		},
+		AutoEnumerate: []map[string]interface{}{
+			{"test-key": "test-value"},
+		},
+		Context: map[string]interface{}{
+			"ctx-key": "ctx-value",
+		},
+	}
+
+	toMerge := PluginConfig{
+		Name:    "new",
+		Version: "2.0",
+		Debug:   true,
+		Settings: PluginConfigSettings{
+			LoopDelay: 15,
+			Read: PluginConfigSettingsRead{
+				BufferSize: 300,
+			},
+			Write: PluginConfigSettingsWrite{
+				BufferSize: 300,
+				PerLoop:    5,
+			},
+			Transaction: PluginConfigSettingsTransaction{
+				TTL: 500,
+			},
+		},
+		Socket: PluginConfigSocket{
+			Network: "tcp",
+			Address: ":50051",
+		},
+		AutoEnumerate: []map[string]interface{}{
+			{"new-key": "new-value"},
+		},
+		Context: map[string]interface{}{
+			"new-ctx-key": "new-ctx-value",
+		},
+	}
+
+	err := base.merge(&toMerge)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !configEqual(base, toMerge) {
+		t.Errorf("configs expected to be equal after merge: %#v but wanted %#v", base, toMerge)
+	}
+}
+
+func configEqual(c1, c2 PluginConfig) bool {
+	if c1.Name != c2.Name {
+		return false
+	}
+	if c1.Version != c2.Version {
+		return false
+	}
+	if c1.Debug != c2.Debug {
+		return false
+	}
+	if c1.Settings.LoopDelay != c2.Settings.LoopDelay {
+		return false
+	}
+	if c1.Settings.Read != c2.Settings.Read {
+		return false
+	}
+	if c1.Settings.Write != c2.Settings.Write {
+		return false
+	}
+	if c1.Settings.Transaction != c2.Settings.Transaction {
+		return false
+	}
+	if c1.Socket != c2.Socket {
+		return false
+	}
+	if len(c1.AutoEnumerate) != len(c2.AutoEnumerate) {
+		return false
+	}
+	for i := 0; i < len(c1.AutoEnumerate); i++ {
+		if !reflect.DeepEqual(c1.AutoEnumerate[i], c2.AutoEnumerate[i]) {
+			return false
+		}
+	}
+	return reflect.DeepEqual(c1.Context, c2.Context)
+}

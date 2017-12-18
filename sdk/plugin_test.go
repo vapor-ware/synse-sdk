@@ -1,0 +1,204 @@
+package sdk
+
+import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func writeConfigFile(path string) error {
+	_, err := os.Stat(filepath.Dir(path))
+	if os.IsNotExist(err) {
+		os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	}
+
+	cfg := `name: test-plugin
+version: 1.0.0
+debug: true
+socket:
+  network: tcp
+  address: ":50051"
+settings:
+  loop_delay: 100
+  read:
+    buffer_size: 150
+  write:
+    buffer_size: 150
+    per_loop: 4
+  transaction:
+    ttl: 600`
+
+	return ioutil.WriteFile(path, []byte(cfg), 0644)
+}
+
+func TestNewPlugin(t *testing.T) {
+	h := Handlers{}
+	p := NewPlugin(&h)
+
+	if p.server != nil {
+		t.Error("plugin server should not be initialized with new plugin")
+	}
+	if p.handlers != &h {
+		t.Error("handlers did not match expected")
+	}
+	if p.dm != nil {
+		t.Error("plugin data manager should not be initialized with new plugin")
+	}
+	if p.isConfigured {
+		t.Error("plugin should not be configured on initialization")
+	}
+}
+
+func TestPlugin_SetConfig(t *testing.T) {
+	h := Handlers{}
+	p := NewPlugin(&h)
+
+	c := PluginConfig{
+		Name:    "test-plugin",
+		Version: "1.0",
+		Socket: PluginConfigSocket{
+			Network: "tcp",
+			Address: ":666",
+		},
+	}
+
+	err := p.SetConfig(&c)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !p.isConfigured {
+		t.Error("plugin should be configured")
+	}
+}
+
+func TestPlugin_SetConfig2(t *testing.T) {
+	// test passing a bad configuration
+	h := Handlers{}
+	p := NewPlugin(&h)
+
+	// socket spec missing but required
+	c := PluginConfig{
+		Name:    "test-plugin",
+		Version: "1.0",
+	}
+
+	err := p.SetConfig(&c)
+	if err == nil {
+		t.Error("expected error when setting config, but got none")
+	}
+}
+
+func TestPlugin_Configure(t *testing.T) {
+	// test configuring using ENV
+	cfgFile := "tmp/config.yml"
+	err := writeConfigFile(cfgFile)
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() {
+		err = os.RemoveAll("tmp")
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
+	os.Setenv("PLUGIN_CONFIG", cfgFile)
+	p := Plugin{}
+
+	err = p.Configure()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !p.isConfigured {
+		t.Error("plugin is not set as configured, but should be")
+	}
+
+	if Config.Name != "test-plugin" {
+		t.Error("plugin config was not properly set")
+	}
+}
+
+func TestPlugin_ConfigureFromFile(t *testing.T) {
+	// test configuring from the specified file
+	cfgFile := "tmp/config.yml"
+	err := writeConfigFile(cfgFile)
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() {
+		err = os.RemoveAll("tmp")
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
+	p := Plugin{}
+
+	err = p.ConfigureFromFile(cfgFile)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !p.isConfigured {
+		t.Error("plugin is not set as configured, but should be")
+	}
+
+	if Config.Name != "test-plugin" {
+		t.Error("plugin config was not properly set")
+	}
+}
+
+func TestPlugin_setup(t *testing.T) {
+	// setup and validation is good
+	h := Handlers{
+		&testPluginHandler{},
+		&testDeviceHandler{},
+	}
+	p := NewPlugin(&h)
+	p.isConfigured = true
+
+	err := p.setup()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if p.server == nil {
+		t.Error("upon setup, plugin server should be initialized")
+	}
+	if p.dm == nil {
+		t.Error("upon setup, plugin device manager should be initialized")
+	}
+}
+
+func TestPlugin_setup2(t *testing.T) {
+	// validate handlers gives error
+	h := Handlers{
+		&testPluginHandler{},
+		nil,
+	}
+	p := NewPlugin(&h)
+	p.isConfigured = true
+
+	err := p.setup()
+	if err == nil {
+		t.Error("expected error due to bad handlers, but got no error")
+	}
+}
+
+func TestPlugin_setup3(t *testing.T) {
+	// plugin not yet configured
+	h := Handlers{
+		&testPluginHandler{},
+		&testDeviceHandler{},
+	}
+	p := NewPlugin(&h)
+	p.isConfigured = false
+
+	err := p.setup()
+	if err == nil {
+		t.Error("expected error due to plugin not being configured, but got no error")
+	}
+}

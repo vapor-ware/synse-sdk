@@ -23,20 +23,20 @@ var lookup = map[string]devices.DeviceInterface{
 // SDK. It defines the plugin's read and write functionality.
 type ExamplePluginHandler struct{}
 
-func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
-	handler := lookup[in.Model()]
+func (h *ExamplePluginHandler) Read(device *sdk.Device) (*sdk.ReadContext, error) {
+	handler := lookup[device.Model()]
 	if handler == nil {
-		log.Fatalf("Unsupported device model: %+v", in)
+		log.Fatalf("Unsupported device model: %+v", device)
 	}
-	return handler.Read(in)
+	return handler.Read(device)
 }
 
-func (h *ExamplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error {
-	handler := lookup[in.Model()]
+func (h *ExamplePluginHandler) Write(device *sdk.Device, data *sdk.WriteData) error {
+	handler := lookup[device.Model()]
 	if handler == nil {
-		log.Fatalf("Unsupported device model: %+v", in)
+		log.Fatalf("Unsupported device model: %+v", device)
 	}
-	return handler.Write(in, data)
+	return handler.Write(device, data)
 }
 
 // ExampleDeviceHandler is a plugin-specific handler required by the
@@ -60,22 +60,27 @@ func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
-	config := sdk.PluginConfig{}
-	err := config.FromFile("plugin.yml")
+	// Collect the Plugin handlers.
+	handlers := sdk.Handlers{
+		Plugin: &ExamplePluginHandler{},
+		Device: &ExampleDeviceHandler{},
+	}
+
+	// Create a new Plugin and configure it.
+	plugin := sdk.NewPlugin(&handlers)
+	err := plugin.ConfigureFromFile("plugin.yml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	p, err := sdk.NewPlugin(
-		&config,
-		&ExamplePluginHandler{},
-		&ExampleDeviceHandler{},
-	)
+	// Register the Plugin devices.
+	err = plugin.RegisterDevices()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = p.Run()
+	// Run the plugin.
+	err = plugin.Run()
 	if err != nil {
 		log.Fatal(err)
 	}

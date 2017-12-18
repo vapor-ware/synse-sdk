@@ -1,5 +1,10 @@
 package sdk
 
+import (
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
 // UnsupportedCommandError is an error that can be used to designate that
 // a given device does not support an operation, e.g. write. Write is required
 // by the PluginHandler interface, but if a device (e.g. a temperature sensor)
@@ -17,4 +22,14 @@ type EnumerationNotSupported struct{}
 
 func (e *EnumerationNotSupported) Error() string {
 	return "This plugin does not support device auto-enumeration."
+}
+
+// invalidArgumentErr creates a gRPC InvalidArgument error with the given description.
+func invalidArgumentErr(format string, a ...interface{}) error {
+	return status.Errorf(codes.InvalidArgument, format, a...)
+}
+
+// notFoundErr creates a gRPC NotFound error with the given description.
+func notFoundErr(format string, a ...interface{}) error {
+	return status.Errorf(codes.NotFound, format, a...)
 }

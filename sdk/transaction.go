@@ -9,35 +9,52 @@ import (
 )
 
 const (
+	statusUnknown = synse.WriteResponse_UNKNOWN
+	statusPending = synse.WriteResponse_PENDING
+	statusWriting = synse.WriteResponse_WRITING
+	statusDone    = synse.WriteResponse_DONE
 
-	// statuses
-
-	// UNKNOWN is the unknown status, as defined by the gRPC API
-	UNKNOWN = synse.WriteResponse_UNKNOWN
-
-	// PENDING is the pending status, as defined by the gRPC API
-	PENDING = synse.WriteResponse_PENDING
-
-	// WRITING is the writing status, as defined by the gRPC API
-	WRITING = synse.WriteResponse_WRITING
-
-	// DONE is the done status, as defined by the gRPC API
-	DONE = synse.WriteResponse_DONE
-
-	// states
-
-	// OK is the ok state, as defined by the gRPC API
-	OK = synse.WriteResponse_OK
-
-	// ERROR is the error state, as defined by the gRPC API
-	ERROR = synse.WriteResponse_ERROR
+	stateOk    = synse.WriteResponse_OK
+	stateError = synse.WriteResponse_ERROR
 )
 
-// TransactionState is used to represent a Write transaction as it is
-// processed. It holds the ID of the transaction, as well as the processing
-// status and overall state. This model is used to look up transaction ids
-// and return the asynchronous write responses.
-type TransactionState struct {
+// transactionCache is a cache with a configurable default expiration time that
+// is used to track the asynchronous write transactions as they are processed.
+var transactionCache = cache.New(
+	time.Duration(Config.Settings.Transaction.TTL)*time.Second,
+	time.Duration(Config.Settings.Transaction.TTL)*2*time.Second,
+)
+
+// NewTransaction creates a new Transaction instance. Upon creation, the
+// Transaction is given a unique ID and is added to the transaction cache.
+func NewTransaction() *Transaction {
+	id := xid.New().String()
+	now := time.Now().String()
+	transaction := Transaction{
+		id:      id,
+		status:  statusUnknown,
+		state:   stateOk,
+		created: now,
+		updated: now,
+		message: "",
+	}
+	transactionCache.Set(id, &transaction, cache.DefaultExpiration)
+	return &transaction
+}
+
+// GetTransaction looks up the given transaction ID in the cache. If it exists,
+// that Transaction is returned; otherwise nil is returned.
+func GetTransaction(id string) *Transaction {
+	transaction, found := transactionCache.Get(id)
+	if found {
+		return transaction.(*Transaction)
+	}
+	return nil
+}
+
+// Transaction represents an asynchronous write transaction for the Plugin. It
+// tracks the state and status of that transaction over its lifetime.
+type Transaction struct {
 	id      string
 	status  synse.WriteResponse_WriteStatus
 	state   synse.WriteResponse_WriteState
@@ -46,9 +63,8 @@ type TransactionState struct {
 	message string
 }
 
-// toGRPC is a convenience method which translates the SDK's TransactionState
-// model to the GRPC WriteResponse model.
-func (t *TransactionState) toGRPC() *synse.WriteResponse {
+// encode translates the Transaction to a corresponding gRPC WriteResponse.
+func (t *Transaction) encode() *synse.WriteResponse {
 	return &synse.WriteResponse{
 		Status:  t.status,
 		State:   t.state,
@@ -58,66 +74,44 @@ func (t *TransactionState) toGRPC() *synse.WriteResponse {
 	}
 }
 
-// transactionCache is a cache with a configurable default expiration time that
-// is used to track the asynchronous write transactions as they are processed.
-var transactionCache = cache.New(
-	time.Duration(Config.Settings.Transaction.TTL)*time.Second,
-	time.Duration(Config.Settings.Transaction.TTL)*2*time.Second,
-)
-
-// NewTransactionID creates a new `TransactionState` instance and gives it a
-// new id. The newly created `TransactionState` is then added to the
-// transactionCache.
-func NewTransactionID() *TransactionState {
-	id := xid.New().String()
-	now := time.Now().String()
-
-	ts := &TransactionState{id, UNKNOWN, OK, now, now, ""}
-	transactionCache.Set(id, ts, cache.DefaultExpiration)
-	return ts
+// setStateOk sets the Transaction to be in the 'ok' state. Since a pointer
+// to this struct is stored in the cache, and update here should update the
+// in-memory cache as well.
+func (t *Transaction) setStateOk() {
+	t.state = stateOk
 }
 
-// GetTransaction takes a transaction id and returns the corresponding
-// `TransactionState`, if it exists. If no transaction is found, nil
-// is returned.
-func GetTransaction(id string) *TransactionState {
-	transaction, found := transactionCache.Get(id)
-	if found {
-		return transaction.(*TransactionState)
-	}
-	return nil
+// setStateError sets the Transaction to be in the 'error' state. Since a
+// pointer to this struct is stored in the cache, and update here should
+// update the in-memory cache as well.
+func (t *Transaction) setStateError() {
+	t.state = stateError
 }
 
-// UpdateTransactionState updates the state field for a transaction's corresponding
-// TransactionState. If the given id does not correspond to a known transaction,
-// no action is taken.
-func UpdateTransactionState(id string, state synse.WriteResponse_WriteState) {
-	transaction, found := transactionCache.Get(id)
-	if !found {
-		Logger.Debugf("Did not find transaction %v when updating state.", id)
-		return
-	}
-
-	t := transaction.(*TransactionState)
-	now := time.Now().String()
-
-	t.state = state
-	t.updated = now
+// setStatusUnknown sets the Transaction status to 'unknown'. Since a
+// pointer to this struct is stored in the cache, and update here should
+// update the in-memory cache as well.
+func (t *Transaction) setStatusUnknown() {
+	t.status = statusUnknown
 }
 
-// UpdateTransactionStatus updates the status field for a transaction's corresponding
-// TransactionState. If the given id does not correspond to a known transaction,
-// no action is taken.
-func UpdateTransactionStatus(id string, status synse.WriteResponse_WriteStatus) {
-	transaction, found := transactionCache.Get(id)
-	if !found {
-		Logger.Debugf("Did not find transaction %v when updating status.", id)
-		return
-	}
+// setStatusPending sets the Transaction status to 'pending'. Since a
+// pointer to this struct is stored in the cache, and update here should
+// update the in-memory cache as well.
+func (t *Transaction) setStatusPending() {
+	t.status = statusPending
+}
 
-	t := transaction.(*TransactionState)
-	now := time.Now().String()
+// setStatusWriting sets the Transaction status to 'writing'. Since a
+// pointer to this struct is stored in the cache, and update here should
+// update the in-memory cache as well.
+func (t *Transaction) setStatusWriting() {
+	t.status = statusWriting
+}
 
-	t.status = status
-	t.updated = now
+// setStatusDone sets the Transaction status to 'done'. Since a pointer
+// to this struct is stored in the cache, and update here should update
+// the in-memory cache as well.
+func (t *Transaction) setStatusDone() {
+	t.status = statusDone
 }

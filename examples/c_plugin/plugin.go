@@ -12,19 +12,21 @@ import (
 // SDK. It defines the plugin's read and write functionality.
 type ExamplePluginHandler struct{}
 
-func (h *ExamplePluginHandler) Read(in *sdk.Device) (*sdk.ReadResource, error) {
-	id, err := strconv.Atoi(in.Data()["id"])
+func (h *ExamplePluginHandler) Read(device *sdk.Device) (*sdk.ReadContext, error) {
+	id, err := strconv.Atoi(device.Data()["id"])
 	if err != nil {
 		log.Fatalf("Invalid device ID - should be an integer in configuration.")
 	}
-	value := cRead(id, in.Model())
-	return &sdk.ReadResource{
-		Device:  in.UID(),
-		Reading: []*sdk.Reading{{time.Now().String(), in.Type(), value}},
+	value := cRead(id, device.Model())
+	return &sdk.ReadContext{
+		Device:  device.ID(),
+		Board:   device.Location().Board,
+		Rack:    device.Location().Rack,
+		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), value}},
 	}, nil
 }
 
-func (h *ExamplePluginHandler) Write(in *sdk.Device, data *sdk.WriteData) error {
+func (h *ExamplePluginHandler) Write(device *sdk.Device, data *sdk.WriteData) error {
 	return &sdk.UnsupportedCommandError{}
 }
 
@@ -49,22 +51,27 @@ func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
-	config := sdk.PluginConfig{}
-	err := config.FromFile("plugin.yml")
+	// Collect the Plugin handlers.
+	handlers := sdk.Handlers{
+		Plugin: &ExamplePluginHandler{},
+		Device: &ExampleDeviceHandler{},
+	}
+
+	// Create a new Plugin and configure it.
+	plugin := sdk.NewPlugin(&handlers)
+	err := plugin.ConfigureFromFile("plugin.yml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	p, err := sdk.NewPlugin(
-		&config,
-		&ExamplePluginHandler{},
-		&ExampleDeviceHandler{},
-	)
+	// Register the Plugin devices.
+	err = plugin.RegisterDevices()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = p.Run()
+	// Run the plugin.
+	err = plugin.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
