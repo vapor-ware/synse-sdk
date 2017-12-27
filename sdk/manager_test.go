@@ -12,7 +12,7 @@ func TestNewDataManager(t *testing.T) {
 		Name:    "test",
 		Version: "test",
 		Network: config.NetworkSettings{
-			Type: "tcp",
+			Type:    "tcp",
 			Address: "test",
 		},
 		Settings: config.Settings{
@@ -45,7 +45,7 @@ func TestNewDataManager2(t *testing.T) {
 		Name:    "test",
 		Version: "test",
 		Network: config.NetworkSettings{
-			Type: "tcp",
+			Type:    "tcp",
 			Address: "test",
 		},
 		Settings: config.Settings{

@@ -13,9 +13,12 @@ const (
 )
 
 const (
+	// EnvPluginConfig is the environment variable that can be used to
+	// specify the config directory for any non-default location.
 	EnvPluginConfig = "PLUGIN_CONFIG"
 )
 
+// PluginConfig specifies the configuration options for the plugin.
 type PluginConfig struct {
 	Name          string
 	Version       string
@@ -26,11 +29,15 @@ type PluginConfig struct {
 	Context       map[string]interface{}
 }
 
+// NetworkSettings specifies the configuration options surrounding the
+// gRPC server's networking behavior.
 type NetworkSettings struct {
 	Type    string
 	Address string
 }
 
+// Settings specifies the configuration options that determine the
+// behavior of the plugin.
 type Settings struct {
 	LoopDelay   int
 	Read        ReadSettings
@@ -38,15 +45,18 @@ type Settings struct {
 	Transaction TransactionSettings
 }
 
+// ReadSettings provides configuration options for read operations.
 type ReadSettings struct {
 	BufferSize int
 }
 
+// WriteSettings provides configuration options for write operations.
 type WriteSettings struct {
 	BufferSize int
 	PerLoop    int
 }
 
+// TransactionSettings provides configuration options for transaction operations.
 type TransactionSettings struct {
 	TTL int
 }
@@ -72,6 +82,8 @@ func (c *PluginConfig) Validate() error {
 	return nil
 }
 
+// NewPluginConfig creates a new PluginConfig instance which is populated from
+// the configuration read in by Viper.
 func NewPluginConfig() (*PluginConfig, error) {
 	v := viper.New()
 	setLookupInfo(v)
@@ -93,10 +105,10 @@ func NewPluginConfig() (*PluginConfig, error) {
 	}
 
 	p := &PluginConfig{
-		Name: v.GetString("name"),
+		Name:    v.GetString("name"),
 		Version: v.GetString("version"),
 		Network: NetworkSettings{
-			Type: v.GetString("network.type"),
+			Type:    v.GetString("network.type"),
 			Address: v.GetString("network.address"),
 		},
 		Settings: Settings{
@@ -106,14 +118,14 @@ func NewPluginConfig() (*PluginConfig, error) {
 			},
 			Write: WriteSettings{
 				BufferSize: v.GetInt("settings.write.buffer_size"),
-				PerLoop: v.GetInt("settings.write.per_loop"),
+				PerLoop:    v.GetInt("settings.write.per_loop"),
 			},
 			Transaction: TransactionSettings{
 				TTL: v.GetInt("settings.transaction.ttl"),
 			},
 		},
 		AutoEnumerate: autoEnum,
-		Context: ctx,
+		Context:       ctx,
 	}
 
 	err = p.Validate()
@@ -123,6 +135,7 @@ func NewPluginConfig() (*PluginConfig, error) {
 	return p, nil
 }
 
+// setDefaults sets default configuration values for a Viper instance.
 func setDefaults(v *viper.Viper) {
 	// the "name", "version" and "network" fields are required, so they should
 	// not have any default values.
@@ -143,6 +156,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("context", map[string]interface{}{})
 }
 
+// setLookupInfo sets the config name, environment prefix, and search
+// path(s) for a Viper instance.
 func setLookupInfo(v *viper.Viper) {
 	// Set the name of the config file (without the extension)
 	v.SetConfigName("config")
