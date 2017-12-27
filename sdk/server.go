@@ -21,10 +21,31 @@ func NewServer(plugin *Plugin) *Server {
 	}
 }
 
+// setup gets the network and address string which are used as parameters
+// to net.Listen(). Any additional setup happens here, e.g. if using the "unix"
+// network type, this will create the necessary unix socket.
+func (s *Server) setup() (string, string, error) {
+	var network = s.plugin.Config.Network.Type
+	var address string
+	var err error
+
+	if network == "unix" {
+		address, err = setupSocket(s.plugin.Config.Network.Address)
+		if err != nil {
+			return "", "", err
+		}
+	} else {
+		// otherwise, we will just use the address specified in the configuration
+		address = s.plugin.Config.Network.Address
+	}
+
+	return network, address, nil
+}
+
 // serve configures and runs the gRPC server.
 func (s *Server) serve() error {
 
-	network, address, err := setupListen()
+	network, address, err := s.setup()
 	if err != nil {
 		return err
 	}

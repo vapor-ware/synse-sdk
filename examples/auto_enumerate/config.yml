@@ -1,8 +1,8 @@
 name: auto-enum-plugin
 version: 1.0.0
 debug: true
-socket:
-  network: unix
+network:
+  type: unix
   address: auto-enum-plugin.sock
 settings:
   loop_delay: 500

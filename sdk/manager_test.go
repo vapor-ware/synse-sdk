@@ -2,14 +2,29 @@ package sdk
 
 import (
 	"testing"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 func TestNewDataManager(t *testing.T) {
-	Config.Settings.Read.BufferSize = 200
-	Config.Settings.Write.BufferSize = 200
-
 	h := &Handlers{}
+	c := config.PluginConfig{
+		Name:    "test",
+		Version: "test",
+		Network: config.NetworkSettings{
+			Type: "tcp",
+			Address: "test",
+		},
+		Settings: config.Settings{
+			Read:  config.ReadSettings{BufferSize: 200},
+			Write: config.WriteSettings{BufferSize: 200},
+		},
+	}
 	p := Plugin{handlers: h}
+	err := p.SetConfig(&c)
+	if err != nil {
+		t.Error(err)
+	}
 
 	d := NewDataManager(&p)
 
@@ -25,11 +40,21 @@ func TestNewDataManager(t *testing.T) {
 }
 
 func TestNewDataManager2(t *testing.T) {
-	Config.Settings.Read.BufferSize = 500
-	Config.Settings.Write.BufferSize = 500
-
 	h := &Handlers{}
+	c := &config.PluginConfig{
+		Name:    "test",
+		Version: "test",
+		Network: config.NetworkSettings{
+			Type: "tcp",
+			Address: "test",
+		},
+		Settings: config.Settings{
+			Read:  config.ReadSettings{BufferSize: 500},
+			Write: config.WriteSettings{BufferSize: 500},
+		},
+	}
 	p := Plugin{handlers: h}
+	p.SetConfig(c)
 
 	d := NewDataManager(&p)
 

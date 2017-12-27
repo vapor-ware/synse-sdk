@@ -10,6 +10,7 @@ package main
 
 import (
 	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 
 	"fmt"
 	"log"
@@ -98,15 +99,15 @@ func (h *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.D
 //   server.
 func main() {
 	// Configuration for the Simple Plugin.
-	config := sdk.PluginConfig{
+	cfg := config.PluginConfig{
 		Name:    "simple-plugin",
 		Version: "1.0.0",
 		Debug:   true,
-		Socket: sdk.PluginConfigSocket{
-			Network: "unix",
+		Network: config.NetworkSettings{
+			Type:    "unix",
 			Address: "simple-plugin.sock",
 		},
-		Settings: sdk.PluginConfigSettings{
+		Settings: config.Settings{
 			LoopDelay: 500,
 		},
 	}
@@ -119,7 +120,7 @@ func main() {
 
 	// Create a new Plugin and configure it.
 	plugin := sdk.NewPlugin(&handlers)
-	err := plugin.SetConfig(&config)
+	err := plugin.SetConfig(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

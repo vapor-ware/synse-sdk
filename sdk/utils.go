@@ -85,24 +85,3 @@ func newUID(protocol, deviceType, model, protoComp string) string {
 
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
-
-// setupListen gets the network and address string which are used as parameters
-// to net.Listen(). Any additional setup happens here, e.g. if using the "unix"
-// network type, this will create the necessary unix socket.
-func setupListen() (string, string, error) {
-	var network = Config.Socket.Network
-	var address string
-	var err error
-
-	if network == "unix" {
-		address, err = setupSocket(Config.Socket.Address)
-		if err != nil {
-			return "", "", err
-		}
-	} else {
-		// otherwise, we will just use the address specified in the configuration
-		address = Config.Socket.Address
-	}
-
-	return network, address, nil
-}

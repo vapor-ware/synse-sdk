@@ -92,11 +92,11 @@ func (d *Device) encode() *synse.MetainfoResponse {
 
 // registerDevicesFromConfig reads in the device configuration files and generates
 // Device instances based on those configurations.
-func registerDevicesFromConfig(handler DeviceHandler) error {
+func registerDevicesFromConfig(handler DeviceHandler, autoEnumCfg []map[string]interface{}) error {
 	var instanceCfg []*DeviceConfig
 
 	// get any instance configurations from plugin-defined enumeration function
-	for _, enumCfg := range Config.AutoEnumerate {
+	for _, enumCfg := range autoEnumCfg {
 		deviceEnum, err := handler.EnumerateDevices(enumCfg)
 		if err != nil {
 			Logger.Errorf("Error enumerating devices with %+v: %v", enumCfg, err)

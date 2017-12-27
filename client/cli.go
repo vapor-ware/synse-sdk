@@ -96,8 +96,8 @@ func read(cmd *cobra.Command, args []string) {
 
 	stream, err := c.Read(context.Background(), &synse.ReadRequest{
 		Device: args[0],
-		Board: args[1],
-		Rack: args[2],
+		Board:  args[1],
+		Rack:   args[2],
 	})
 	if err != nil {
 		cliError(err)

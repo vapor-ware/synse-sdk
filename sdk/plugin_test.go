@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 func writeConfigFile(path string) error {
@@ -16,8 +18,8 @@ func writeConfigFile(path string) error {
 	cfg := `name: test-plugin
 version: 1.0.0
 debug: true
-socket:
-  network: tcp
+network:
+  type: tcp
   address: ":50051"
 settings:
   loop_delay: 100
@@ -45,7 +47,7 @@ func TestNewPlugin(t *testing.T) {
 	if p.dm != nil {
 		t.Error("plugin data manager should not be initialized with new plugin")
 	}
-	if p.isConfigured {
+	if p.Config != nil {
 		t.Error("plugin should not be configured on initialization")
 	}
 }
@@ -54,11 +56,11 @@ func TestPlugin_SetConfig(t *testing.T) {
 	h := Handlers{}
 	p := NewPlugin(&h)
 
-	c := PluginConfig{
+	c := config.PluginConfig{
 		Name:    "test-plugin",
 		Version: "1.0",
-		Socket: PluginConfigSocket{
-			Network: "tcp",
+		Network: config.NetworkSettings{
+			Type:    "tcp",
 			Address: ":666",
 		},
 	}
@@ -68,7 +70,7 @@ func TestPlugin_SetConfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !p.isConfigured {
+	if p.Config == nil {
 		t.Error("plugin should be configured")
 	}
 }
@@ -79,7 +81,7 @@ func TestPlugin_SetConfig2(t *testing.T) {
 	p := NewPlugin(&h)
 
 	// socket spec missing but required
-	c := PluginConfig{
+	c := config.PluginConfig{
 		Name:    "test-plugin",
 		Version: "1.0",
 	}
@@ -104,7 +106,7 @@ func TestPlugin_Configure(t *testing.T) {
 		}
 	}()
 
-	os.Setenv("PLUGIN_CONFIG", cfgFile)
+	os.Setenv("PLUGIN_CONFIG", "tmp")
 	p := Plugin{}
 
 	err = p.Configure()
@@ -112,41 +114,11 @@ func TestPlugin_Configure(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !p.isConfigured {
+	if p.Config == nil {
 		t.Error("plugin is not set as configured, but should be")
 	}
 
-	if Config.Name != "test-plugin" {
-		t.Error("plugin config was not properly set")
-	}
-}
-
-func TestPlugin_ConfigureFromFile(t *testing.T) {
-	// test configuring from the specified file
-	cfgFile := "tmp/config.yml"
-	err := writeConfigFile(cfgFile)
-	if err != nil {
-		t.Error(err)
-	}
-	defer func() {
-		err = os.RemoveAll("tmp")
-		if err != nil {
-			t.Error(err)
-		}
-	}()
-
-	p := Plugin{}
-
-	err = p.ConfigureFromFile(cfgFile)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if !p.isConfigured {
-		t.Error("plugin is not set as configured, but should be")
-	}
-
-	if Config.Name != "test-plugin" {
+	if p.Config.Name != "test-plugin" {
 		t.Error("plugin config was not properly set")
 	}
 }
@@ -158,7 +130,7 @@ func TestPlugin_setup(t *testing.T) {
 		&testDeviceHandler{},
 	}
 	p := NewPlugin(&h)
-	p.isConfigured = true
+	p.Config = &config.PluginConfig{}
 
 	err := p.setup()
 	if err != nil {
@@ -180,7 +152,7 @@ func TestPlugin_setup2(t *testing.T) {
 		nil,
 	}
 	p := NewPlugin(&h)
-	p.isConfigured = true
+	p.Config = &config.PluginConfig{}
 
 	err := p.setup()
 	if err == nil {
@@ -195,7 +167,6 @@ func TestPlugin_setup3(t *testing.T) {
 		&testDeviceHandler{},
 	}
 	p := NewPlugin(&h)
-	p.isConfigured = false
 
 	err := p.setup()
 	if err == nil {

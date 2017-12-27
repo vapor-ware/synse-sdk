@@ -59,7 +59,7 @@ func main() {
 
 	// Create a new Plugin and configure it.
 	plugin := sdk.NewPlugin(&handlers)
-	err := plugin.ConfigureFromFile("plugin.yml")
+	err := plugin.Configure()
 	if err != nil {
 		log.Fatal(err)
 	}
