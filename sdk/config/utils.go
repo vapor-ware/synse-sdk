@@ -1,6 +1,30 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+// extensions supported for device configuration files
+var supportedExts = []string{".yml", ".yaml"}
+
+// isValidConfig checks if the given FileInfo corresponds to a file that could be
+// a valid configuration file. It checks that it is actually a file (not a Dir)
+// and checks that its extension matches the supported extensions.
+func isValidConfig(f os.FileInfo) bool {
+	if f.IsDir() {
+		return false
+	}
+
+	ok := false
+	for _, ext := range supportedExts {
+		if filepath.Ext(f.Name()) == ext {
+			ok = true
+		}
+	}
+	return ok
+}
 
 // toSliceStringMapI casts an interface to a []map[string]interface{} type. This is used
 // to convert the Viper []interface{} type read in for the 'auto_enumerate' config field

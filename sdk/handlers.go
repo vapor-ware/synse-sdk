@@ -1,5 +1,7 @@
 package sdk
 
+import "github.com/vapor-ware/synse-sdk/sdk/config"
+
 // Handlers contains the user-defined handlers for a Plugin instance.
 type Handlers struct {
 	Plugin PluginHandler
@@ -50,5 +52,5 @@ type DeviceHandler interface {
 	// configurations. The device prototype configurations should still be
 	// defined ahead of time and packaged with the plugin - not created or
 	// configured at runtime.
-	EnumerateDevices(map[string]interface{}) ([]*DeviceConfig, error)
+	EnumerateDevices(map[string]interface{}) ([]*config.DeviceConfig, error)
 }

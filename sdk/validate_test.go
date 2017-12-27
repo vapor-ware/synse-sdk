@@ -3,6 +3,7 @@ package sdk
 import (
 	"testing"
 
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -18,7 +19,7 @@ func (h *testDeviceHandler) GetProtocolIdentifiers(in map[string]string) string 
 	return ""
 }
 
-func (h *testDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*DeviceConfig, error) {
+func (h *testDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*config.DeviceConfig, error) {
 	return nil, nil
 }
 
