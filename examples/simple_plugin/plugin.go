@@ -15,9 +15,9 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
-	"os"
 )
 
 // SimplePluginHandler fulfils the SDK's PluginHandler interface. It requires a

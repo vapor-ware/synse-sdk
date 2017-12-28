@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/vapor-ware/synse-server-grpc/go"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -18,11 +17,6 @@ const (
 	// specify a non-default directory for protocol configs.
 	EnvProtoPath = "PLUGIN_PROTO_PATH"
 )
-
-type v1protoConfig struct {
-	Version    string            `yaml:"version"`
-	Prototypes []PrototypeConfig `yaml:"prototypes"`
-}
 
 // PrototypeConfig represents the configuration for a device prototype.
 type PrototypeConfig struct {
@@ -114,22 +108,33 @@ func ParsePrototypeConfig() ([]*PrototypeConfig, error) {
 
 	for _, f := range files {
 		if isValidConfig(f) {
-			var scheme v1protoConfig
-
+			// Get the file contents
 			fpath := filepath.Join(path, f.Name())
 			yml, err := ioutil.ReadFile(fpath)
 			if err != nil {
 				return nil, err
 			}
-			err = yaml.Unmarshal(yml, &scheme)
+
+			// Get the version of the configuration file
+			ver, err := getConfigVersion(yml)
 			if err != nil {
 				return nil, err
 			}
 
-			for _, p := range scheme.Prototypes {
-				p.Version = scheme.Version
-				cfgs = append(cfgs, &p)
+			// Get the handler for the given configuration version
+			cfgHandler, err := getDeviceConfigVersionHandler(ver)
+			if err != nil {
+				return nil, err
 			}
+
+			// Process the configuration files with the specific handler
+			// for the version of that config file.
+			c, err := cfgHandler.processPrototypeConfig(yml)
+			if err != nil {
+				return nil, err
+			}
+
+			cfgs = append(cfgs, c...)
 		}
 	}
 	return cfgs, nil

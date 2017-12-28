@@ -1,13 +1,11 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/vapor-ware/synse-server-grpc/go"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -19,18 +17,6 @@ const (
 	// specify a non-default directory for device configs.
 	EnvDevicePath = "PLUGIN_DEVICE_PATH"
 )
-
-type v1deviceConfig struct {
-	Version   string              `yaml:"version"`
-	Locations map[string]Location `yaml:"locations"`
-	Devices   []v1device          `yaml:"devices"`
-}
-
-type v1device struct {
-	Type      string              `yaml:"type"`
-	Model     string              `yaml:"model"`
-	Instances []map[string]string `yaml:"instances"`
-}
 
 // DeviceConfig represents a single device instance.
 type DeviceConfig struct {
@@ -77,36 +63,33 @@ func ParseDeviceConfig() ([]*DeviceConfig, error) {
 
 	for _, f := range files {
 		if isValidConfig(f) {
-			var scheme v1deviceConfig
-
+			// Get the file contents
 			fpath := filepath.Join(path, f.Name())
 			yml, err := ioutil.ReadFile(fpath)
 			if err != nil {
 				return nil, err
 			}
-			err = yaml.Unmarshal(yml, &scheme)
+
+			// Get the version of the configuration file
+			ver, err := getConfigVersion(yml)
 			if err != nil {
 				return nil, err
 			}
 
-			for _, device := range scheme.Devices {
-				for _, i := range device.Instances {
-					locationTag := i["location"]
-					if locationTag == "" {
-						return nil, fmt.Errorf("no location defined for device: %#v", device)
-					}
-					location := scheme.Locations[locationTag]
-
-					cfg := DeviceConfig{
-						Version:  scheme.Version,
-						Type:     device.Type,
-						Model:    device.Model,
-						Location: location,
-						Data:     i,
-					}
-					cfgs = append(cfgs, &cfg)
-				}
+			// Get the handler for the given configuration version
+			cfgHandler, err := getDeviceConfigVersionHandler(ver)
+			if err != nil {
+				return nil, err
 			}
+
+			// Process the configuration files with the specific handler
+			// for the version of that config file.
+			c, err := cfgHandler.processDeviceConfig(yml)
+			if err != nil {
+				return nil, err
+			}
+
+			cfgs = append(cfgs, c...)
 		}
 	}
 	return cfgs, nil

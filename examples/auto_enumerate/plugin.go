@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"os"
 )
 
 // ExamplePluginHandler is a plugin-specific handler required by the
