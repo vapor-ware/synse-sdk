@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // makeIDString makes a compound string out of the given rack, board, and
@@ -18,11 +20,11 @@ func makeIDString(rack, board, device string) string {
 // makeDevices takes the prototype and device instance configurations, parsed
 // into their corresponding structs, and generates Device instances with that
 // information.
-func makeDevices(deviceConfigs []*DeviceConfig, protoConfigs []*PrototypeConfig, deviceHandler DeviceHandler) []*Device {
+func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.PrototypeConfig, deviceHandler DeviceHandler) []*Device {
 	var devices []*Device
 
 	for _, dev := range deviceConfigs {
-		var protoconfig *PrototypeConfig
+		var protoconfig *config.PrototypeConfig
 		found := false
 
 		for _, proto := range protoConfigs {

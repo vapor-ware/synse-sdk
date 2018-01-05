@@ -4,35 +4,37 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // ===== Test Data =====
 
-var protoConfig = PrototypeConfig{
+var protoConfig = config.PrototypeConfig{
 	Version:      "1",
 	Type:         "TestDevice",
 	Model:        "TestModel",
 	Manufacturer: "TestManufacturer",
 	Protocol:     "TestProtocol",
-	Output: []DeviceOutput{{
+	Output: []config.DeviceOutput{{
 		Type: "TestType",
-		Unit: &OutputUnit{
+		Unit: &config.Unit{
 			Name:   "TestName",
 			Symbol: "TestSymbol",
 		},
 		Precision: 3,
-		Range: &OutputRange{
+		Range: &config.Range{
 			Min: 1,
 			Max: 5,
 		},
 	}},
 }
 
-var deviceConfig = DeviceConfig{
+var deviceConfig = config.DeviceConfig{
 	Version: "1",
 	Type:    "TestDevice",
 	Model:   "TestModel",
-	Location: DeviceLocation{
+	Location: config.Location{
 		Rack:  "TestRack",
 		Board: "TestBoard",
 	},
@@ -204,21 +206,21 @@ func (h *devicesTestHandler) GetProtocolIdentifiers(data map[string]string) stri
 	return data["id"]
 }
 
-func (h *devicesTestHandler) EnumerateDevices(config map[string]interface{}) ([]*DeviceConfig, error) {
-	dc := DeviceConfig{
+func (h *devicesTestHandler) EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error) {
+	dc := config.DeviceConfig{
 		Version: "1.0",
 		Type:    "emulated-temperature",
 		Model:   "emul8-temp",
-		Location: DeviceLocation{
+		Location: config.Location{
 			Rack:  "unknown",
 			Board: "unknown",
 		},
 		Data: map[string]string{
-			"id":      config["id"].(string),
+			"id":      cfg["id"].(string),
 			"comment": "auto-enumerated",
 		},
 	}
-	return []*DeviceConfig{&dc}, nil
+	return []*config.DeviceConfig{&dc}, nil
 }
 
 // FIXME -- theses tests are doing a bad thing! removing 'config' dir.

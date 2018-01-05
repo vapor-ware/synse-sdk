@@ -3,6 +3,7 @@ package sdk
 import (
 	"time"
 
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -11,8 +12,8 @@ var deviceMap = make(map[string]*Device)
 
 // Device describes a single configured device for the plugin.
 type Device struct {
-	Prototype *PrototypeConfig
-	Instance  *DeviceConfig
+	Prototype *config.PrototypeConfig
+	Instance  *config.DeviceConfig
 	Handler   DeviceHandler
 }
 
@@ -49,12 +50,12 @@ func (d *Device) GUID() string {
 }
 
 // Output gets the list of configured reading outputs for the Device.
-func (d *Device) Output() []DeviceOutput {
+func (d *Device) Output() []config.DeviceOutput {
 	return d.Prototype.Output
 }
 
 // Location gets the configured location of the Device.
-func (d *Device) Location() DeviceLocation {
+func (d *Device) Location() config.Location {
 	return d.Instance.Location
 }
 
@@ -72,7 +73,7 @@ func (d *Device) encode() *synse.MetainfoResponse {
 
 	var output []*synse.MetaOutput
 	for _, out := range d.Output() {
-		mo := out.encode()
+		mo := out.Encode()
 		output = append(output, mo)
 	}
 
@@ -85,7 +86,7 @@ func (d *Device) encode() *synse.MetainfoResponse {
 		Protocol:     d.Protocol(),
 		Info:         d.Data()["info"],
 		Comment:      d.Data()["comment"],
-		Location:     location.encode(),
+		Location:     location.Encode(),
 		Output:       output,
 	}
 }
@@ -93,7 +94,7 @@ func (d *Device) encode() *synse.MetainfoResponse {
 // registerDevicesFromConfig reads in the device configuration files and generates
 // Device instances based on those configurations.
 func registerDevicesFromConfig(handler DeviceHandler, autoEnumCfg []map[string]interface{}) error {
-	var instanceCfg []*DeviceConfig
+	var instanceCfg []*config.DeviceConfig
 
 	// get any instance configurations from plugin-defined enumeration function
 	for _, enumCfg := range autoEnumCfg {
@@ -106,14 +107,14 @@ func registerDevicesFromConfig(handler DeviceHandler, autoEnumCfg []map[string]i
 	}
 
 	// get any instance configurations from YAML
-	deviceCfg, err := parseDeviceConfig(configDir)
+	deviceCfg, err := config.ParseDeviceConfig()
 	if err != nil {
 		return err
 	}
 	instanceCfg = append(instanceCfg, deviceCfg...)
 
 	// get the prototype configurations from YAML
-	protoCfg, err := parsePrototypeConfig(configDir)
+	protoCfg, err := config.ParsePrototypeConfig()
 	if err != nil {
 		return err
 	}
