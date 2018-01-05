@@ -10,10 +10,12 @@ package main
 
 import (
 	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 )
@@ -84,7 +86,7 @@ func (h *SimpleDeviceHandler) GetProtocolIdentifiers(data map[string]string) str
 // EnumerateDevices is used to auto-enumerate device configurations for plugins
 // that support it. This example plugin does not support it, so we just return
 // the appropriate error.
-func (h *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.DeviceConfig, error) {
+func (h *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*config.DeviceConfig, error) {
 	return nil, &sdk.EnumerationNotSupported{}
 }
 
@@ -97,16 +99,22 @@ func (h *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.D
 //   the devices from config, start the read-write loop, and start the GRPC
 //   server.
 func main() {
+	// Set the prototype and device instance config paths to be relative to the
+	// current working directory instead of using the default location. This way
+	// the plugin can be run from within this directory.
+	os.Setenv("PLUGIN_DEVICE_PATH", "./config/device")
+	os.Setenv("PLUGIN_PROTO_PATH", "./config/proto")
+
 	// Configuration for the Simple Plugin.
-	config := sdk.PluginConfig{
+	cfg := config.PluginConfig{
 		Name:    "simple-plugin",
 		Version: "1.0.0",
 		Debug:   true,
-		Socket: sdk.PluginConfigSocket{
-			Network: "unix",
+		Network: config.NetworkSettings{
+			Type:    "unix",
 			Address: "simple-plugin.sock",
 		},
-		Settings: sdk.PluginConfigSettings{
+		Settings: config.Settings{
 			LoopDelay: 500,
 		},
 	}
@@ -119,7 +127,7 @@ func main() {
 
 	// Create a new Plugin and configure it.
 	plugin := sdk.NewPlugin(&handlers)
-	err := plugin.SetConfig(&config)
+	err := plugin.SetConfig(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

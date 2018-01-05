@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // ExamplePluginHandler is a plugin-specific handler required by the
@@ -51,11 +54,11 @@ func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 // "auto-enumeration" by definition, but it is a valid usage. A more appropriate
 // example could be taking an IP from the configuration, and using that to hit some
 // endpoint which would give back all the information on the devices it manages.
-func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) ([]*sdk.DeviceConfig, error) {
+func (h *ExampleDeviceHandler) EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error) {
 
-	var res []*sdk.DeviceConfig
+	var res []*config.DeviceConfig
 
-	baseAddr := config["base"]
+	baseAddr := cfg["base"]
 	for i := 0; i < 3; i++ {
 		devAddr := fmt.Sprintf("%v-%v", baseAddr, i)
 
@@ -66,11 +69,11 @@ func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) (
 		// we only have the temperature device prototype. in a real case, this info
 		// should be gathered from whatever the real source of auto-enumeration is,
 		// e.g. for IPMI - the SDR records.
-		d := sdk.DeviceConfig{
+		d := config.DeviceConfig{
 			Version: "1.0",
 			Type:    "temperature",
 			Model:   "temp2010",
-			Location: sdk.DeviceLocation{
+			Location: config.Location{
 				Rack:  "rack-1",
 				Board: "board-1",
 			},
@@ -89,6 +92,12 @@ func (h *ExampleDeviceHandler) EnumerateDevices(config map[string]interface{}) (
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
+	// Set the prototype and device instance config paths to be relative to the
+	// current working directory instead of using the default location. This way
+	// the plugin can be run from within this directory.
+	os.Setenv("PLUGIN_DEVICE_PATH", "./config/device")
+	os.Setenv("PLUGIN_PROTO_PATH", "./config/proto")
+
 	// Collect the Plugin handlers.
 	handlers := sdk.Handlers{
 		Plugin: &ExamplePluginHandler{},
@@ -97,7 +106,7 @@ func main() {
 
 	// Create a new Plugin and configure it.
 	plugin := sdk.NewPlugin(&handlers)
-	err := plugin.ConfigureFromFile("plugin.yml")
+	err := plugin.Configure()
 	if err != nil {
 		log.Fatal(err)
 	}

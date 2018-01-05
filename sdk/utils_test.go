@@ -3,31 +3,33 @@ package sdk
 import (
 	"os"
 	"testing"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // ===== Test Data =====
 
-var testInst1 = DeviceConfig{
+var testInst1 = config.DeviceConfig{
 	Version: "1.0",
 	Type:    "test-device",
 	Model:   "td-1",
-	Location: DeviceLocation{
+	Location: config.Location{
 		Rack:  "rack-1",
 		Board: "board-1",
 	},
 }
 
-var testInst2 = DeviceConfig{
+var testInst2 = config.DeviceConfig{
 	Version: "1.0",
 	Type:    "test-device",
 	Model:   "td-1",
-	Location: DeviceLocation{
+	Location: config.Location{
 		Rack:  "rack-1",
 		Board: "board-2",
 	},
 }
 
-var testProto1 = PrototypeConfig{
+var testProto1 = config.PrototypeConfig{
 	Version:      "1.0",
 	Type:         "test-device",
 	Model:        "td-1",
@@ -35,7 +37,7 @@ var testProto1 = PrototypeConfig{
 	Protocol:     "test",
 }
 
-var testProto2 = PrototypeConfig{
+var testProto2 = config.PrototypeConfig{
 	Version:      "1.0",
 	Type:         "test-device",
 	Model:        "td-3",
@@ -46,8 +48,8 @@ var testProto2 = PrototypeConfig{
 // ===== Test Cases =====
 
 func TestMakeDevices(t *testing.T) {
-	inst := []*DeviceConfig{&testInst1, &testInst2}
-	proto := []*PrototypeConfig{&testProto1}
+	inst := []*config.DeviceConfig{&testInst1, &testInst2}
+	proto := []*config.PrototypeConfig{&testProto1}
 
 	devices := makeDevices(inst, proto, &testDeviceHandler{})
 	if len(devices) != 2 {
@@ -56,8 +58,8 @@ func TestMakeDevices(t *testing.T) {
 }
 
 func TestMakeDevices2(t *testing.T) {
-	inst := []*DeviceConfig{&testInst1, &testInst2}
-	proto := []*PrototypeConfig{&testProto2}
+	inst := []*config.DeviceConfig{&testInst1, &testInst2}
+	proto := []*config.PrototypeConfig{&testProto2}
 
 	devices := makeDevices(inst, proto, &testDeviceHandler{})
 	if len(devices) != 0 {
@@ -66,8 +68,8 @@ func TestMakeDevices2(t *testing.T) {
 }
 
 func TestMakeDevices3(t *testing.T) {
-	inst := []*DeviceConfig{&testInst1}
-	proto := []*PrototypeConfig{&testProto1, &testProto2}
+	inst := []*config.DeviceConfig{&testInst1}
+	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
 
 	devices := makeDevices(inst, proto, &testDeviceHandler{})
 	if len(devices) != 1 {
@@ -76,8 +78,8 @@ func TestMakeDevices3(t *testing.T) {
 }
 
 func TestMakeDevices4(t *testing.T) {
-	inst := []*DeviceConfig{&testInst1, &testInst2}
-	var proto []*PrototypeConfig
+	inst := []*config.DeviceConfig{&testInst1, &testInst2}
+	var proto []*config.PrototypeConfig
 
 	devices := makeDevices(inst, proto, &testDeviceHandler{})
 	if len(devices) != 0 {
@@ -86,8 +88,8 @@ func TestMakeDevices4(t *testing.T) {
 }
 
 func TestMakeDevices5(t *testing.T) {
-	var inst []*DeviceConfig
-	proto := []*PrototypeConfig{&testProto1, &testProto2}
+	var inst []*config.DeviceConfig
+	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
 
 	devices := makeDevices(inst, proto, &testDeviceHandler{})
 
@@ -239,46 +241,6 @@ func TestNewUID(t *testing.T) {
 		r := newUID(tc.p, tc.d, tc.m, tc.c)
 		if r != tc.out {
 			t.Errorf("newUID(%s, %s, %s, %s) => %s, want %s", tc.p, tc.d, tc.m, tc.c, r, tc.out)
-		}
-	}
-}
-
-var setupListenTestTable = []struct {
-	inNet   string
-	inAddr  string
-	outNet  string
-	outAddr string
-}{
-	{
-		inNet:   "tcp",
-		inAddr:  ":55001",
-		outNet:  "tcp",
-		outAddr: ":55001",
-	},
-	{
-		inNet:   "udp",
-		inAddr:  ":666",
-		outNet:  "udp",
-		outAddr: ":666",
-	},
-	{
-		inNet:   "unix",
-		inAddr:  "test.sock",
-		outNet:  "unix",
-		outAddr: "/synse/procs/test.sock",
-	},
-}
-
-func TestSetupListen(t *testing.T) {
-	for _, tc := range setupListenTestTable {
-		Config.Socket.Network = tc.inNet
-		Config.Socket.Address = tc.inAddr
-		net, addr, err := setupListen()
-		if err != nil {
-			t.Error(err)
-		}
-		if net != tc.outNet || addr != tc.outAddr {
-			t.Errorf("setupListen() [%q, %q] => %q %q, want %q %q", tc.inNet, tc.inAddr, net, addr, tc.outNet, tc.outAddr)
 		}
 	}
 }

@@ -2,85 +2,56 @@ package sdk
 
 import (
 	"fmt"
-	"os"
+
+	"runtime"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // Plugin represents an instance of a Synse plugin. Along with metadata
 // and definable handlers, it contains a gRPC server to handle the plugin
 // requests.
 type Plugin struct {
+	Config   *config.PluginConfig
 	server   *Server
 	handlers *Handlers
 	dm       *DataManager
-
-	// a flag to denote whether or not the plugin has been configured yet
-	isConfigured bool
 }
 
 // NewPlugin creates a new Plugin instance
 func NewPlugin(handlers *Handlers) *Plugin {
 	p := &Plugin{}
 	p.handlers = handlers
-	p.isConfigured = false
 	return p
 }
 
-// SetConfig sets the configuration of the Plugin.
-func (p *Plugin) SetConfig(config *PluginConfig) error {
-	err := configurePlugin(config)
+// SetConfig manually sets the configuration of the Plugin.
+func (p *Plugin) SetConfig(config *config.PluginConfig) error {
+	err := config.Validate()
 	if err != nil {
 		return err
 	}
-	p.isConfigured = true
+	p.Config = config
 
-	SetLogLevel(Config.Debug)
+	SetLogLevel(p.Config.Debug)
 	return nil
 }
 
-// ConfigureFromFile sets the Plugin configuration from the specified YAML file.
-func (p *Plugin) ConfigureFromFile(path string) error {
-	config := PluginConfig{}
-	err := config.FromFile(path)
-	if err != nil {
-		return err
-	}
-	err = configurePlugin(&config)
-	if err != nil {
-		return err
-	}
-	p.isConfigured = true
-
-	SetLogLevel(Config.Debug)
-	return nil
-}
-
-// Configure reads in the specified config file and uses its contents
-// to configure the Plugin.
+// Configure reads in the config file and uses it to set the Plugin configuration.
 func (p *Plugin) Configure() error {
-	config := PluginConfig{}
-
-	configFile := os.Getenv("PLUGIN_CONFIG")
-	if configFile == "" {
-		configFile = defaultConfigFile
-	}
-	err := config.FromFile(configFile)
+	cfg, err := config.NewPluginConfig()
 	if err != nil {
 		return err
 	}
-	err = configurePlugin(&config)
-	if err != nil {
-		return err
-	}
-	p.isConfigured = true
-
-	SetLogLevel(Config.Debug)
+	p.Config = cfg
+	SetLogLevel(p.Config.Debug)
 	return nil
 }
 
 // RegisterDevices registers all of the configured devices (via their proto and
 // instance config) with the plugin.
 func (p *Plugin) RegisterDevices() error {
-	return registerDevicesFromConfig(p.handlers.Device)
+	return registerDevicesFromConfig(p.handlers.Device, p.Config.AutoEnumerate)
 }
 
 // Run starts the Plugin server which begins listening for gRPC requests.
@@ -110,9 +81,12 @@ func (p *Plugin) setup() error {
 	}
 
 	// validate that configuration is set
-	if !p.isConfigured {
+	if p.Config == nil {
 		return fmt.Errorf("plugin must be configured before it is run")
 	}
+
+	// Setup the transaction cache
+	SetupTransactionCache(p.Config.Settings.Transaction.TTL)
 
 	// Register a new Server and DataManager for the Plugin. This should
 	// be done prior to running the plugin, as opposed to on initialization
@@ -127,15 +101,21 @@ func (p *Plugin) setup() error {
 // logInfo logs out the information about the plugin. This is called just before the
 // plugin begins running all of its components.
 func (p *Plugin) logInfo() {
-	Logger.Info("-- Starting Plugin --")
-	Logger.Infof(" Name:        %v", Config.Name)
-	Logger.Infof(" Version:     %v", Config.Version)
-	Logger.Infof(" SDK Version: %v", Version)
-	Logger.Info("-- Plugin Config --")
-	Logger.Infof(" %#v", Config)
-	Logger.Info("-- Configured Devices --")
+	Logger.Info("Plugin Info:")
+	Logger.Infof(" Name:        %s", p.Config.Name)
+	Logger.Infof(" Version:     %s", VersionString)
+	Logger.Infof(" SDK Version: %s", SDKVersion)
+	Logger.Infof(" Git Commit:  %s", GitCommit)
+	Logger.Infof(" Git Tag:     %s", GitTag)
+	Logger.Infof(" Go Version:  %s", GoVersion)
+	Logger.Infof(" Build Date:  %s", BuildDate)
+	Logger.Infof(" OS:          %s", runtime.GOOS)
+	Logger.Infof(" Arch:        %s", runtime.GOARCH)
+	Logger.Debug("Plugin Config:")
+	Logger.Debugf(" %#v", p.Config)
+	Logger.Info("Registered Devices:")
 	for id, dev := range deviceMap {
 		Logger.Infof(" %v (%v)", id, dev.Model())
 	}
-	Logger.Info("---------------------")
+	Logger.Info("--------------------------------")
 }

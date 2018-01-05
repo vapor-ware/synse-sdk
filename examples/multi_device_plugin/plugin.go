@@ -3,8 +3,11 @@ package main
 import (
 	"log"
 
+	"os"
+
 	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // lookup is a simple lookup table that maps the known device models
@@ -53,13 +56,19 @@ func (h *ExampleDeviceHandler) GetProtocolIdentifiers(data map[string]string) st
 // EnumerateDevices is used to auto-enumerate device configurations for plugins
 // that support it. This example plugin does not support it, so we just return
 // the appropriate error.
-func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*sdk.DeviceConfig, error) {
+func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*config.DeviceConfig, error) {
 	return nil, &sdk.EnumerationNotSupported{}
 }
 
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
+	// Set the prototype and device instance config paths to be relative to the
+	// current working directory instead of using the default location. This way
+	// the plugin can be run from within this directory.
+	os.Setenv("PLUGIN_DEVICE_PATH", "./config/device")
+	os.Setenv("PLUGIN_PROTO_PATH", "./config/proto")
+
 	// Collect the Plugin handlers.
 	handlers := sdk.Handlers{
 		Plugin: &ExamplePluginHandler{},
@@ -68,7 +77,7 @@ func main() {
 
 	// Create a new Plugin and configure it.
 	plugin := sdk.NewPlugin(&handlers)
-	err := plugin.ConfigureFromFile("plugin.yml")
+	err := plugin.Configure()
 	if err != nil {
 		log.Fatal(err)
 	}

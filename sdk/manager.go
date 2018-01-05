@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -14,17 +15,19 @@ type DataManager struct {
 	readings     map[string][]*Reading
 	lock         *sync.Mutex
 	handlers     *Handlers
+	config       *config.PluginConfig
 }
 
 // NewDataManager creates a new instance of the DataManager. It initializes
 // its fields appropriately, based on the current plugin configuration settings.
 func NewDataManager(plugin *Plugin) *DataManager {
 	return &DataManager{
-		readChannel:  make(chan *ReadContext, Config.Settings.Read.BufferSize),
-		writeChannel: make(chan *WriteContext, Config.Settings.Write.BufferSize),
+		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.BufferSize),
+		writeChannel: make(chan *WriteContext, plugin.Config.Settings.Write.BufferSize),
 		readings:     make(map[string][]*Reading),
 		lock:         &sync.Mutex{},
 		handlers:     plugin.handlers,
+		config:       plugin.Config,
 	}
 }
 
@@ -34,7 +37,7 @@ func NewDataManager(plugin *Plugin) *DataManager {
 func (d *DataManager) goPollData() {
 	Logger.Debug("starting read-write poller")
 	go func() {
-		delay := Config.Settings.LoopDelay
+		delay := d.config.Settings.LoopDelay
 		for {
 			d.pollWrite()
 			d.pollRead()
@@ -49,7 +52,7 @@ func (d *DataManager) goPollData() {
 // pollWrite checks for any pending writes and, if any exist, attempts to fulfill
 // the writes and update the transaction state accordingly.
 func (d *DataManager) pollWrite() {
-	for i := 0; i < Config.Settings.Write.PerLoop; i++ {
+	for i := 0; i < d.config.Settings.Write.PerLoop; i++ {
 		select {
 		case w := <-d.writeChannel:
 			Logger.Debugf("writing for %v (transaction: %v)", w.device, w.transaction.id)

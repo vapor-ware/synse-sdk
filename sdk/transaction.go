@@ -20,10 +20,15 @@ const (
 
 // transactionCache is a cache with a configurable default expiration time that
 // is used to track the asynchronous write transactions as they are processed.
-var transactionCache = cache.New(
-	time.Duration(Config.Settings.Transaction.TTL)*time.Second,
-	time.Duration(Config.Settings.Transaction.TTL)*2*time.Second,
-)
+var transactionCache *cache.Cache
+
+// SetupTransactionCache creates the transaction cache with the configured TTL.
+func SetupTransactionCache(ttl int) {
+	transactionCache = cache.New(
+		time.Duration(ttl)*time.Second,
+		time.Duration(ttl)*2*time.Second,
+	)
+}
 
 // NewTransaction creates a new Transaction instance. Upon creation, the
 // Transaction is given a unique ID and is added to the transaction cache.
