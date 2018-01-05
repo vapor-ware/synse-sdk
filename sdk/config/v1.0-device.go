@@ -43,6 +43,10 @@ func (h *v1DeviceConfigHandler) processPrototypeConfig(yml []byte) ([]*Prototype
 		return nil, err
 	}
 
+	if scheme.Prototypes == nil {
+		return nil, fmt.Errorf("no prototypes defined in proto config")
+	}
+
 	for _, p := range scheme.Prototypes {
 		p.Version = scheme.Version
 		cfgs = append(cfgs, &p)
