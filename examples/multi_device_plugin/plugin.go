@@ -3,10 +3,11 @@ package main
 import (
 	"log"
 
+	"os"
+
 	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"os"
 )
 
 // lookup is a simple lookup table that maps the known device models

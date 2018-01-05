@@ -1,5 +1,5 @@
+version: 1
 name: auto-enum-plugin
-version: 1.0.0
 debug: true
 network:
   type: unix

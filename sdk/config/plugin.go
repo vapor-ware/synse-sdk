@@ -87,73 +87,7 @@ func (c *PluginConfig) Validate() error {
 func NewPluginConfig() (*PluginConfig, error) {
 	v := viper.New()
 	setLookupInfo(v)
-	setDefaults(v)
-
-	err := v.ReadInConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	autoEnum, err := toSliceStringMapI(v.Get("auto_enumerate"))
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, err := toStringMapI(v.Get("context"))
-	if err != nil {
-		return nil, err
-	}
-
-	p := &PluginConfig{
-		Name:    v.GetString("name"),
-		Version: v.GetString("version"),
-		Network: NetworkSettings{
-			Type:    v.GetString("network.type"),
-			Address: v.GetString("network.address"),
-		},
-		Settings: Settings{
-			LoopDelay: v.GetInt("settings.loop_delay"),
-			Read: ReadSettings{
-				BufferSize: v.GetInt("settings.read.buffer_size"),
-			},
-			Write: WriteSettings{
-				BufferSize: v.GetInt("settings.write.buffer_size"),
-				PerLoop:    v.GetInt("settings.write.per_loop"),
-			},
-			Transaction: TransactionSettings{
-				TTL: v.GetInt("settings.transaction.ttl"),
-			},
-		},
-		AutoEnumerate: autoEnum,
-		Context:       ctx,
-	}
-
-	err = p.Validate()
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
-}
-
-// setDefaults sets default configuration values for a Viper instance.
-func setDefaults(v *viper.Viper) {
-	// the "name", "version" and "network" fields are required, so they should
-	// not have any default values.
-
-	v.SetDefault("debug", false)
-
-	// settings
-	v.SetDefault("settings.loop_delay", 0)
-	v.SetDefault("settings.read.buffer_size", 100)
-	v.SetDefault("settings.write.buffer_size", 100)
-	v.SetDefault("settings.write.per_loop", 5)
-	v.SetDefault("settings.transaction.ttl", 60*5) // five minutes
-
-	// auto-enumerate
-	v.SetDefault("auto_enumerate", []map[string]interface{}{})
-
-	// context
-	v.SetDefault("context", map[string]interface{}{})
+	return parseVersionedPluginConfig(v)
 }
 
 // setLookupInfo sets the config name, environment prefix, and search
