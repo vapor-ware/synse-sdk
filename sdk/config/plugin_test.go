@@ -36,30 +36,30 @@ var pluginConfigValidateErrorsTestList = []PluginConfig{
 	{
 		Version: "1",
 		Network: NetworkSettings{
-			Type: "test",
+			Type:    "test",
 			Address: "test",
 		},
 	},
 	{
 		Name: "test",
 		Network: NetworkSettings{
-			Type: "test",
+			Type:    "test",
 			Address: "test",
 		},
 	},
 	{
-		Name: "test",
+		Name:    "test",
 		Version: "1",
 	},
 	{
-		Name: "test",
+		Name:    "test",
 		Version: "1",
 		Network: NetworkSettings{
 			Address: "test",
 		},
 	},
 	{
-		Name: "test",
+		Name:    "test",
 		Version: "1",
 		Network: NetworkSettings{
 			Type: "test",

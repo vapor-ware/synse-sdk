@@ -1,11 +1,12 @@
 package config
 
 import (
-	"github.com/vapor-ware/synse-server-grpc/go"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 var deviceOutputEncodeTestTable = []struct {
