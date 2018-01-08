@@ -17,8 +17,10 @@ clean:  ## Remove temporary files
 .PHONY: cover
 cover:  ## Run tests and open the coverage report
 	go test -covermode=atomic -coverprofile=coverage.txt -v -race -timeout=30s ./sdk
+	go test -covermode=atomic -coverprofile=coverage_config.txt -v -race -timeout=30s ./sdk/config
 	go tool cover -html=coverage.txt
-	rm coverage.txt
+	go tool cover -html=coverage_config.txt
+	rm coverage.txt && rm coverage_config.txt
 
 .PHONY: dep
 dep:  ## Ensure and prune dependencies
@@ -53,7 +55,7 @@ setup:  ## Install the build and development dependencies
 
 .PHONY: test
 test:  ## Run all tests
-	go test -cover -v ./sdk
+	go test -cover -v ./sdk/...
 
 .PHONY: version
 version: ## Print the version of the SDK
