@@ -44,15 +44,6 @@ jobs:
             cd examples/multi_device_plugin ; go build -v ; cd ../..
             cd examples/c_plugin ; go build -v ; cd ../..
             cd examples/auto_enumerate ; go build -v ; cd ../..
-      - run:
-          name: Build CLI
-          command: |
-            mkdir -p /tmp/bin
-            cd client ; go build -o /tmp/bin/pcli ; cd ..
-      - persist_to_workspace:
-          root: /tmp
-          paths:
-            - bin
       - save_cache:
           when: on_success
           key: vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
@@ -68,8 +59,11 @@ jobs:
       - image: circleci/golang:1.8
     steps:
       - checkout
-      - attach_workspace:
-          at: /tmp
+      - run:
+          name: Build CLI
+          command: |
+            mkdir -p /tmp/bin
+            cd client ; go build -o /tmp/bin/pcli ; cd ..
       - run:
           name: Get GHR Distributor
           command: |
