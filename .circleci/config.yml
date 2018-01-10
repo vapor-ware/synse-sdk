@@ -47,12 +47,7 @@ jobs:
       - run:
           name: Build CLI
           command: |
-            mkdir -p /tmp/bin
-            cd client ; go build -o /tmp/bin/pcli ; cd ..
-      - persist_to_workspace:
-          root: /tmp
-          paths:
-            - bin
+            cd client ; go build -o pcli ; cd ..
       - save_cache:
           when: on_success
           key: vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
@@ -68,8 +63,11 @@ jobs:
       - image: circleci/golang:1.8
     steps:
       - checkout
-      - attach_workspace:
-          at: /tmp
+      - run:
+          name: Build CLI
+          command: |
+            mkdir -p /tmp/bin
+            cd client ; go build -o /tmp/bin/pcli ; cd ..
       - run:
           name: Get GHR Distributor
           command: |
@@ -94,8 +92,6 @@ workflows:
     jobs:
       - test
       - release:
-          requires:
-            - test
           filters:
             branches:
               ignore: /.*/
