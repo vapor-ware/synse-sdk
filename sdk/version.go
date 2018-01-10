@@ -1,7 +1,7 @@
 package sdk
 
 // SDKVersion specifies the version of the Synse Plugin SDK.
-const SDKVersion = "0.2.0"
+const SDKVersion = "0.3.0"
 
 // Variables for specifying the plugin version. These should be set
 // at run time.
