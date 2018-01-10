@@ -16,13 +16,20 @@ type Plugin struct {
 	server   *Server
 	handlers *Handlers
 	dm       *DataManager
+	v        *VersionInfo
 }
 
 // NewPlugin creates a new Plugin instance
 func NewPlugin(handlers *Handlers) *Plugin {
 	p := &Plugin{}
 	p.handlers = handlers
+	p.v = emptyVersionInfo()
 	return p
+}
+
+// SetVersion sets the VersionInfo for the Plugin.
+func (p *Plugin) SetVersion(info VersionInfo) {
+	p.v.Merge(&info)
 }
 
 // SetConfig manually sets the configuration of the Plugin.
@@ -103,12 +110,12 @@ func (p *Plugin) setup() error {
 func (p *Plugin) logInfo() {
 	Logger.Info("Plugin Info:")
 	Logger.Infof(" Name:        %s", p.Config.Name)
-	Logger.Infof(" Version:     %s", VersionString)
+	Logger.Infof(" Version:     %s", p.v.VersionString)
 	Logger.Infof(" SDK Version: %s", SDKVersion)
-	Logger.Infof(" Git Commit:  %s", GitCommit)
-	Logger.Infof(" Git Tag:     %s", GitTag)
-	Logger.Infof(" Go Version:  %s", GoVersion)
-	Logger.Infof(" Build Date:  %s", BuildDate)
+	Logger.Infof(" Git Commit:  %s", p.v.GitCommit)
+	Logger.Infof(" Git Tag:     %s", p.v.GitTag)
+	Logger.Infof(" Go Version:  %s", p.v.GoVersion)
+	Logger.Infof(" Build Date:  %s", p.v.BuildDate)
 	Logger.Infof(" OS:          %s", runtime.GOOS)
 	Logger.Infof(" Arch:        %s", runtime.GOARCH)
 	Logger.Debug("Plugin Config:")

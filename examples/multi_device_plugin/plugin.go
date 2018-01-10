@@ -10,6 +10,15 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
+// Build time variables for setting the version info of a Plugin.
+var (
+	BuildDate     string
+	GitCommit     string
+	GitTag        string
+	GoVersion     string
+	VersionString string
+)
+
 // lookup is a simple lookup table that maps the known device models
 // that are supported by this plugin to the handler for that model.
 //
@@ -81,6 +90,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Set build-time version info
+	plugin.SetVersion(sdk.VersionInfo{
+		BuildDate:     BuildDate,
+		GitCommit:     GitCommit,
+		GitTag:        GitTag,
+		GoVersion:     GoVersion,
+		VersionString: VersionString,
+	})
 
 	// Register the Plugin devices.
 	err = plugin.RegisterDevices()
