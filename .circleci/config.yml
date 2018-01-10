@@ -1,64 +1,103 @@
 version: 2
 jobs:
-  build:
+
+  # run tests, linting, and build examples for the SDK
+  test:
+    working_directory: /go/src/github.com/vapor-ware/synse-sdk
     docker:
       - image: circleci/golang:1.8
-        environment:
-          DEBUG: true
-
-    working_directory: /go/src/github.com/vapor-ware/synse-sdk
-
     steps:
       - checkout
-
       - restore_cache:
           keys:
             - vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
             - vendor-{{ checksum "Gopkg.toml" }}
-
       - run:
-          name: "Setup"
+          name: Setup
           command: |
             mkdir -p /tmp/gotest
             sudo mkdir /synse
             sudo chown -R $(whoami) /synse
-
       - run:
-          name: "Lint"
+          name: Lint
           command: |
             go get -u github.com/golang/lint/golint
             golint -set_exit_status sdk/... client/... examples/...
-
       - run:
-          name: "Install Vendored Dependencies"
+          name: Install Vendored Dependencies
           command: |
             go get -v github.com/golang/dep/cmd/dep
             go install github.com/golang/dep/cmd/dep
             dep ensure -v
-
       - run:
-          name: "Get Test JUnit Parser"
+          name: Get Test JUnit Parser
           command: |
             go get -v -u github.com/jstemmer/go-junit-report
-
       - run:
-          name: "Test"
+          name: Test
           command: |
             go test -v ./sdk 2>&1 | go-junit-report > /tmp/gotest/report.xml
-
       - run:
-          name: "Build Examples"
+          name: Build Examples
           command: |
             cd examples/simple_plugin ; go build -v ; cd ../..
             cd examples/multi_device_plugin ; go build -v ; cd ../..
             cd examples/c_plugin ; go build -v ; cd ../..
             cd examples/auto_enumerate ; go build -v ; cd ../..
-
+      - run:
+          name: Build CLI
+          command: |
+            mkdir -p /tmp/bin
+            cd client ; go build -o /tmp/bin/pcli ; cd ..
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - bin
       - save_cache:
           when: on_success
           key: vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
           paths:
             - vendor/
-
       - store_test_results:
           path: /tmp/gotest
+
+  # release creates a github release draft for the changes
+  release:
+    working_directory: /go/src/github.com/vapor-ware/synse-sdk
+    docker:
+      - image: circleci/golang:1.8
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp
+      - run:
+          name: Get GHR Distributor
+          command: |
+            go get -v github.com/tcnksm/ghr
+      - run:
+          name: Create Release
+          command: |
+            if git describe --exact-match --tags HEAD; then
+              CIRCLE_TAG=$(git describe --exact-match --tags HEAD)
+            fi
+            ghr \
+              -u ${GITHUB_USER} \
+              -t ${GITHUB_TOKEN} \
+              -replace \
+              -draft \
+              ${CIRCLE_TAG} /tmp/bin/
+
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - test
+      - release:
+          requires:
+            - test
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^[0-9]*(\.[0-9]*)*$/
