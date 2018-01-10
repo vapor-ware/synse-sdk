@@ -44,6 +44,10 @@ jobs:
             cd examples/multi_device_plugin ; go build -v ; cd ../..
             cd examples/c_plugin ; go build -v ; cd ../..
             cd examples/auto_enumerate ; go build -v ; cd ../..
+      - run:
+          name: Build CLI
+          command: |
+            cd client ; go build -o pcli ; cd ..
       - save_cache:
           when: on_success
           key: vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
