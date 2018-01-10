@@ -64,6 +64,12 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install Vendored Dependencies
+          command: |
+            go get -v github.com/golang/dep/cmd/dep
+            go install github.com/golang/dep/cmd/dep
+            dep ensure -v
+      - run:
           name: Build CLI
           command: |
             mkdir -p /tmp/bin
