@@ -94,8 +94,6 @@ workflows:
     jobs:
       - test
       - release:
-          requires:
-            - test
           filters:
             branches:
               ignore: /.*/
