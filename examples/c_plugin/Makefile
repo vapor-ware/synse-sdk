@@ -1,6 +1,6 @@
 PLUGIN_VERSION=1.0
 
-PKG_CTX=github.com/vapor-ware/synse-sdk/sdk
+PKG_CTX=main
 BUILD_DATE := $(shell date -u +%Y-%m-%dT%T 2> /dev/null)
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2> /dev/null || true)
 GIT_TAG := $(shell git describe --tags 2> /dev/null || true)

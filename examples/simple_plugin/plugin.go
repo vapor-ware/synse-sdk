@@ -20,6 +20,15 @@ import (
 	"time"
 )
 
+// Build time variables for setting the version info of a Plugin.
+var (
+	BuildDate     string
+	GitCommit     string
+	GitTag        string
+	GoVersion     string
+	VersionString string
+)
+
 // SimplePluginHandler fulfils the SDK's PluginHandler interface. It requires a
 // Read and Write function to be defined, which specify how the plugin will read
 // and write to the configured devices.
@@ -131,6 +140,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Set build-time version info
+	plugin.SetVersion(sdk.VersionInfo{
+		BuildDate:     BuildDate,
+		GitCommit:     GitCommit,
+		GitTag:        GitTag,
+		GoVersion:     GoVersion,
+		VersionString: VersionString,
+	})
 
 	// Register the Plugin devices - this will read the device
 	// instance and prototype config to determine what it will
