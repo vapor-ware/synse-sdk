@@ -361,3 +361,89 @@ prototypes:
 		t.Errorf("expected 1 prototype configuration, but got %v", len(res))
 	}
 }
+
+// process unsuccessfully using env for root config dir
+func TestParseProtoConfig8(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	os.Setenv(EnvDeviceConfig, tmpdir)
+	defer os.Unsetenv(EnvDeviceConfig)
+
+	data := `version: 1.0
+prototypes:
+  - type: airflow
+    model: air8884
+    manufacturer: vaporio
+    protocol: emulator
+    output:
+      - type: airflow
+        data_type: float
+        unit:
+          name: cubic feet per minute
+          symbol: CFM
+        precision: 2
+        range:
+          min: 0
+          max: 1000`
+
+	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
+	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = ParsePrototypeConfig()
+	if err == nil {
+		t.Error("expected error: PLUGIN_DEVICE_CONFIG path does not contain 'proto' subdir")
+	}
+}
+
+// process successfully using env for root config dir
+func TestParseProtoConfig9(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	os.Setenv(EnvDeviceConfig, tmpdir)
+	defer os.Unsetenv(EnvDeviceConfig)
+
+	protoDir := filepath.Join(tmpdir, "proto")
+	os.Mkdir(protoDir, 0700)
+
+	data := `version: 1.0
+prototypes:
+  - type: airflow
+    model: air8884
+    manufacturer: vaporio
+    protocol: emulator
+    output:
+      - type: airflow
+        data_type: float
+        unit:
+          name: cubic feet per minute
+          symbol: CFM
+        precision: 2
+        range:
+          min: 0
+          max: 1000`
+
+	tmpf := filepath.Join(protoDir, "tmpfile.yml")
+	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
+	if err != nil {
+		t.Error(err)
+	}
+
+	res, err := ParsePrototypeConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(res) != 1 {
+		t.Errorf("expected 1 prototype configuration, but got %v", len(res))
+	}
+}

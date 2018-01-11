@@ -240,3 +240,81 @@ devices:
 		t.Errorf("expected 1 device configuration, but got %v", len(res))
 	}
 }
+
+// process unsuccessfully using env for root config dir
+func TestParseDeviceConfig8(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	os.Setenv(EnvDeviceConfig, tmpdir)
+	defer os.Unsetenv(EnvDeviceConfig)
+
+	data := `version: 1.0
+locations:
+  r1b1:
+    rack: rack-1
+    board: board-1
+devices:
+  - type: airflow
+    model: air8884
+    instances:
+      - id: 1
+        location: r1b1
+        comment: first emulated airflow device`
+
+	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
+	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = ParseDeviceConfig()
+	if err == nil {
+		t.Error("expected error: PLUGIN_DEVICE_CONFIG path does not contain 'device' subdir")
+	}
+}
+
+// process successfully using env for root config dir
+func TestParseDeviceConfig9(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	os.Setenv(EnvDeviceConfig, tmpdir)
+	defer os.Unsetenv(EnvDeviceConfig)
+
+	deviceDir := filepath.Join(tmpdir, "device")
+	os.Mkdir(deviceDir, 0700)
+
+	data := `version: 1.0
+locations:
+  r1b1:
+    rack: rack-1
+    board: board-1
+devices:
+  - type: airflow
+    model: air8884
+    instances:
+      - id: 1
+        location: r1b1
+        comment: first emulated airflow device`
+
+	tmpf := filepath.Join(deviceDir, "tmpfile.yml")
+	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
+	if err != nil {
+		t.Error(err)
+	}
+
+	res, err := ParseDeviceConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(res) != 1 {
+		t.Errorf("expected 1 device configuration, but got %v", len(res))
+	}
+}
