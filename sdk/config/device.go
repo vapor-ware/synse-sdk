@@ -12,12 +12,6 @@ const (
 	defaultDeviceConfig = "/etc/synse/plugin/config/device"
 )
 
-const (
-	// EnvDevicePath is the environment variable that can be used to
-	// specify a non-default directory for device configs.
-	EnvDevicePath = "PLUGIN_DEVICE_PATH"
-)
-
 // DeviceConfig represents a single device instance.
 type DeviceConfig struct {
 	Version  string
@@ -46,9 +40,14 @@ func (l *Location) Encode() *synse.MetaLocation {
 func ParseDeviceConfig() ([]*DeviceConfig, error) {
 	var cfgs []*DeviceConfig
 
-	path := os.Getenv(EnvDevicePath)
-	if path == "" {
-		path = defaultDeviceConfig
+	path := os.Getenv(EnvDeviceConfig)
+	if path != "" {
+		path = filepath.Join(path, "device")
+	} else {
+		path = os.Getenv(EnvDevicePath)
+		if path == "" {
+			path = defaultDeviceConfig
+		}
 	}
 
 	_, err := os.Stat(path)

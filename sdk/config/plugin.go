@@ -12,12 +12,6 @@ const (
 	homeConfigPath    = "$HOME/.synse/plugin"
 )
 
-const (
-	// EnvPluginConfig is the environment variable that can be used to
-	// specify the config directory for any non-default location.
-	EnvPluginConfig = "PLUGIN_CONFIG"
-)
-
 // PluginConfig specifies the configuration options for the plugin.
 type PluginConfig struct {
 	Name          string

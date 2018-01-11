@@ -12,12 +12,6 @@ const (
 	defaultProtoConfig = "/etc/synse/plugin/config/proto"
 )
 
-const (
-	// EnvProtoPath is the environment variable that can be used to
-	// specify a non-default directory for protocol configs.
-	EnvProtoPath = "PLUGIN_PROTO_PATH"
-)
-
 // PrototypeConfig represents the configuration for a device prototype.
 type PrototypeConfig struct {
 	Version      string
@@ -91,9 +85,14 @@ func (r *Range) Encode() *synse.MetaOutputRange {
 func ParsePrototypeConfig() ([]*PrototypeConfig, error) {
 	var cfgs []*PrototypeConfig
 
-	path := os.Getenv(EnvProtoPath)
-	if path == "" {
-		path = defaultProtoConfig
+	path := os.Getenv(EnvDeviceConfig)
+	if path != "" {
+		path = filepath.Join(path, "proto")
+	} else {
+		path = os.Getenv(EnvProtoPath)
+		if path == "" {
+			path = defaultProtoConfig
+		}
 	}
 
 	_, err := os.Stat(path)
