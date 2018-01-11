@@ -116,7 +116,7 @@ func ParsePrototypeConfig() ([]*PrototypeConfig, error) {
 			}
 
 			// Get the version of the configuration file
-			ver, err := getConfigVersion(yml)
+			ver, err := getConfigVersion(fpath, yml)
 			if err != nil {
 				return nil, err
 			}

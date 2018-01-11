@@ -9,19 +9,19 @@ var configVersionToStringTestTable = []struct {
 	out string
 }{
 	{
-		in:  configVersion{0, 0},
+		in:  configVersion{0, 0, "test"},
 		out: "0.0",
 	},
 	{
-		in:  configVersion{1, 0},
+		in:  configVersion{1, 0, "test"},
 		out: "1.0",
 	},
 	{
-		in:  configVersion{1, 1},
+		in:  configVersion{1, 1, "test"},
 		out: "1.1",
 	},
 	{
-		in:  configVersion{888, 66666},
+		in:  configVersion{888, 66666, "test"},
 		out: "888.66666",
 	},
 }
@@ -38,7 +38,7 @@ func TestConfigVersion_ToString(t *testing.T) {
 func TestGetConfigVersion(t *testing.T) {
 	cfg := ``
 
-	_, err := getConfigVersion([]byte(cfg))
+	_, err := getConfigVersion("test", []byte(cfg))
 	if err == nil {
 		t.Error("expected error: given YAML should be invalid")
 	}
@@ -47,7 +47,7 @@ func TestGetConfigVersion(t *testing.T) {
 func TestGetConfigVersion2(t *testing.T) {
 	cfg := `version: "abc123 is not a supported version"`
 
-	_, err := getConfigVersion([]byte(cfg))
+	_, err := getConfigVersion("test", []byte(cfg))
 	if err == nil {
 		t.Error("expected error: given version configuration is invalid")
 	}
@@ -56,7 +56,7 @@ func TestGetConfigVersion2(t *testing.T) {
 func TestGetConfigVersion3(t *testing.T) {
 	cfg := `version: 1.1`
 
-	cv, err := getConfigVersion([]byte(cfg))
+	cv, err := getConfigVersion("test", []byte(cfg))
 	if err != nil {
 		t.Error(err)
 	}
@@ -69,25 +69,25 @@ func TestGetConfigVersion3(t *testing.T) {
 }
 
 func TestIsSupportedVersion(t *testing.T) {
-	cv := configVersion{2, 0}
+	cv := configVersion{2, 0, "test"}
 
-	isSupported := isSupportedVersion(&cv, []configVersion{{1, 0}, {1, 1}})
+	isSupported := isSupportedVersion(&cv, []string{"1.0", "1.1"})
 	if isSupported != false {
 		t.Error("expected config version to fail supported check")
 	}
 }
 
 func TestIsSupportedVersion2(t *testing.T) {
-	cv := configVersion{1, 0}
+	cv := configVersion{1, 0, "test"}
 
-	isSupported := isSupportedVersion(&cv, []configVersion{{1, 0}, {1, 1}})
+	isSupported := isSupportedVersion(&cv, []string{"1.0", "1.1"})
 	if isSupported != true {
 		t.Error("expected config version to pass supported check")
 	}
 }
 
 func TestCfgVersionToConfigVersion(t *testing.T) {
-	c := cfgVersion{""}
+	c := cfgVersion{"", "test"}
 
 	_, err := c.toConfigVersion()
 	if err == nil {
@@ -96,7 +96,7 @@ func TestCfgVersionToConfigVersion(t *testing.T) {
 }
 
 func TestCfgVersionToConfigVersion2(t *testing.T) {
-	c := cfgVersion{"abc"}
+	c := cfgVersion{"abc", "test"}
 
 	_, err := c.toConfigVersion()
 	if err == nil {
@@ -105,7 +105,7 @@ func TestCfgVersionToConfigVersion2(t *testing.T) {
 }
 
 func TestCfgVersionToConfigVersion3(t *testing.T) {
-	c := cfgVersion{"abc.0"}
+	c := cfgVersion{"abc.0", "test"}
 
 	_, err := c.toConfigVersion()
 	if err == nil {
@@ -114,7 +114,7 @@ func TestCfgVersionToConfigVersion3(t *testing.T) {
 }
 
 func TestCfgVersionToConfigVersion4(t *testing.T) {
-	c := cfgVersion{"0.abc"}
+	c := cfgVersion{"0.abc", "test"}
 
 	_, err := c.toConfigVersion()
 	if err == nil {
@@ -123,35 +123,35 @@ func TestCfgVersionToConfigVersion4(t *testing.T) {
 }
 
 func TestCfgVersionToConfigVersion5(t *testing.T) {
-	c := cfgVersion{"1"}
+	c := cfgVersion{"1", "test"}
 
 	cv, err := c.toConfigVersion()
 	if err != nil {
 		t.Error(err)
 	}
 
-	expected := configVersion{1, 0}
+	expected := configVersion{1, 0, "test"}
 	if *cv != expected {
 		t.Errorf("expected version to match 1.0, but instead is %v", cv)
 	}
 }
 
 func TestCfgVersionToConfigVersion6(t *testing.T) {
-	c := cfgVersion{"1.1"}
+	c := cfgVersion{"1.1", "test"}
 
 	cv, err := c.toConfigVersion()
 	if err != nil {
 		t.Error(err)
 	}
 
-	expected := configVersion{1, 1}
+	expected := configVersion{1, 1, "test"}
 	if *cv != expected {
 		t.Errorf("expected version to match 1.1, but instead is %v", cv)
 	}
 }
 
 func TestGetDeviceConfigVersionHandler(t *testing.T) {
-	cv := configVersion{9999, 9999}
+	cv := configVersion{9999, 9999, "test"}
 
 	_, err := getDeviceConfigVersionHandler(&cv)
 	if err == nil {
@@ -160,7 +160,7 @@ func TestGetDeviceConfigVersionHandler(t *testing.T) {
 }
 
 func TestGetDeviceConfigVersionHandler2(t *testing.T) {
-	cv := configVersion{1, 0}
+	cv := configVersion{1, 0, "test"}
 
 	h, err := getDeviceConfigVersionHandler(&cv)
 	if err != nil {
@@ -184,7 +184,7 @@ func TestGetDeviceConfigVersionHandler3(t *testing.T) {
 }
 
 func TestGetPluginConfigVersionHandler(t *testing.T) {
-	cv := configVersion{9999, 9999}
+	cv := configVersion{9999, 9999, "test"}
 
 	_, err := getPluginConfigVersionHandler(&cv)
 	if err == nil {
@@ -193,7 +193,7 @@ func TestGetPluginConfigVersionHandler(t *testing.T) {
 }
 
 func TestGetPluginConfigVersionHandler2(t *testing.T) {
-	cv := configVersion{1, 0}
+	cv := configVersion{1, 0, "test"}
 
 	h, err := getPluginConfigVersionHandler(&cv)
 	if err != nil {

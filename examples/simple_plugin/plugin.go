@@ -108,7 +108,7 @@ func main() {
 	// Configuration for the Simple Plugin.
 	cfg := config.PluginConfig{
 		Name:    "simple-plugin",
-		Version: "1.0.0",
+		Version: "1.0",
 		Debug:   true,
 		Network: config.NetworkSettings{
 			Type:    "unix",

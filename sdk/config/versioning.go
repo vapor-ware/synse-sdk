@@ -25,6 +25,8 @@ var (
 type configVersion struct {
 	Major int
 	Minor int
+
+	cfgFile string
 }
 
 // ToString converts the ConfigVersion to a version string.
@@ -33,8 +35,9 @@ func (v *configVersion) ToString() string {
 }
 
 // getConfigVersion gets the version of the specified configuration file.
-func getConfigVersion(data []byte) (*configVersion, error) {
+func getConfigVersion(path string, data []byte) (*configVersion, error) {
 	var version cfgVersion
+	version.cfgFile = path
 	err := yaml.Unmarshal(data, &version)
 	if err != nil {
 		return nil, err
@@ -48,10 +51,10 @@ func getConfigVersion(data []byte) (*configVersion, error) {
 
 // isSupportedVersion checks whether the given ConfigVersion is in the slice
 // of supported versions.
-func isSupportedVersion(cfg *configVersion, supported []configVersion) bool {
+func isSupportedVersion(cfg *configVersion, supported []string) bool {
 	isSupported := false
 	for _, version := range supported {
-		if *cfg == version {
+		if cfg.ToString() == version {
 			isSupported = true
 			break
 		}
@@ -63,6 +66,8 @@ func isSupportedVersion(cfg *configVersion, supported []configVersion) bool {
 // information from a configuration file.
 type cfgVersion struct {
 	Version string `yaml:"version"`
+
+	cfgFile string
 }
 
 // toConfigVersion converts the cfgVersion struct into a corresponding
@@ -71,11 +76,11 @@ func (v *cfgVersion) toConfigVersion() (*configVersion, error) {
 	var min, maj int
 	var err error
 
-	s := strings.Split(v.Version, ".")
-	if len(s) == 0 {
-		return nil, fmt.Errorf("no version info found in config file")
+	if v.Version == "" {
+		return nil, fmt.Errorf("no version info found in config file (%v)", v.cfgFile)
 	}
 
+	s := strings.Split(v.Version, ".")
 	if len(s) == 1 {
 		maj, err = strconv.Atoi(s[0])
 		if err != nil {
@@ -93,8 +98,9 @@ func (v *cfgVersion) toConfigVersion() (*configVersion, error) {
 		}
 	}
 	return &configVersion{
-		Major: maj,
-		Minor: min,
+		Major:   maj,
+		Minor:   min,
+		cfgFile: v.cfgFile,
 	}, nil
 }
 
@@ -111,16 +117,16 @@ type deviceConfigVersionHandler interface {
 
 // deviceConfigHandler defines which device config versions are supported as
 // well as the config handlers for each of those supported versions.
-var deviceConfigHandlers = map[configVersion]deviceConfigVersionHandler{
+var deviceConfigHandlers = map[string]deviceConfigVersionHandler{
 	// versions: "1", "1.0"
-	v1maj0min: &v1DeviceConfigHandler{},
+	v1maj0min.ToString(): &v1DeviceConfigHandler{},
 }
 
 // supportedDeviceConfigVersions defines the collection of versions which the
 // current version of the SDK supports for device instance/prototype configuration
 // files.
-var supportedDeviceConfigVersions = func() []configVersion {
-	s := make([]configVersion, len(deviceConfigHandlers))
+var supportedDeviceConfigVersions = func() []string {
+	s := make([]string, len(deviceConfigHandlers))
 	i := 0
 	for k := range deviceConfigHandlers {
 		s[i] = k
@@ -133,11 +139,11 @@ var supportedDeviceConfigVersions = func() []configVersion {
 // configuration version.
 func getDeviceConfigVersionHandler(cv *configVersion) (deviceConfigVersionHandler, error) {
 	if !isSupportedVersion(cv, supportedDeviceConfigVersions) {
-		return nil, fmt.Errorf("config version '%s' not supported", cv.ToString())
+		return nil, fmt.Errorf("config version '%s' not supported (%s)", cv.ToString(), cv.cfgFile)
 	}
-	h := deviceConfigHandlers[*cv]
+	h := deviceConfigHandlers[cv.ToString()]
 	if h == nil {
-		return nil, fmt.Errorf("no handler defined for config version '%s'", cv.ToString())
+		return nil, fmt.Errorf("no handler defined for config version '%s' (%s)", cv.ToString(), cv.cfgFile)
 	}
 	return h, nil
 }
@@ -154,15 +160,15 @@ type pluginConfigVersionHandler interface {
 
 // pluginConfigHandler defines which plugin config versions are supported as
 // well as the config handlers for each of those supported versions.
-var pluginConfigHandlers = map[configVersion]pluginConfigVersionHandler{
+var pluginConfigHandlers = map[string]pluginConfigVersionHandler{
 	// versions: "1", "1.0"
-	v1maj0min: &v1PluginConfigHandler{},
+	v1maj0min.ToString(): &v1PluginConfigHandler{},
 }
 
 // supportedPluginConfigVersions defines the collection of versions which the
 // current version of the SDK supports for plugin configuration files.
-var supportedPluginConfigVersions = func() []configVersion {
-	s := make([]configVersion, len(pluginConfigHandlers))
+var supportedPluginConfigVersions = func() []string {
+	s := make([]string, len(pluginConfigHandlers))
 	i := 0
 	for k := range pluginConfigHandlers {
 		s[i] = k
@@ -175,11 +181,11 @@ var supportedPluginConfigVersions = func() []configVersion {
 // configuration version.
 func getPluginConfigVersionHandler(cv *configVersion) (pluginConfigVersionHandler, error) {
 	if !isSupportedVersion(cv, supportedPluginConfigVersions) {
-		return nil, fmt.Errorf("config version '%s' not supported", cv.ToString())
+		return nil, fmt.Errorf("config version '%s' not supported (%s)", cv.ToString(), cv.cfgFile)
 	}
-	h := pluginConfigHandlers[*cv]
+	h := pluginConfigHandlers[cv.ToString()]
 	if h == nil {
-		return nil, fmt.Errorf("no handler defined for config version '%s'", cv.ToString())
+		return nil, fmt.Errorf("no handler defined for config version '%s' (%s)", cv.ToString(), cv.cfgFile)
 	}
 	return h, nil
 }
@@ -196,7 +202,7 @@ func parseVersionedPluginConfig(v *viper.Viper) (*PluginConfig, error) {
 	}
 
 	// Get the plugin configuration version
-	cv := cfgVersion{v.GetString("version")}
+	cv := cfgVersion{v.GetString("version"), v.ConfigFileUsed()}
 	version, err := cv.toConfigVersion()
 	if err != nil {
 		return nil, err
