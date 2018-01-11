@@ -79,6 +79,16 @@ jobs:
           command: |
             go get -v github.com/tcnksm/ghr
       - run:
+          name: "Generate Changelog"
+          command: |
+            docker pull timfallmk/github-changelog-generator
+            docker run --name changelog timfallmk/github-changelog-generator \
+              -u vapor-ware \
+              -p synse-sdk \
+              --since-tag $(git describe --abbrev=0 --tags `git rev-list --tags --skip=1 --max-count=1`) \
+              -t ${GITHUB_TOKEN}
+            docker cp changelog:/usr/local/src/your-app/CHANGELOG.md ./
+      - run:
           name: Create Release
           command: |
             if git describe --exact-match --tags HEAD; then
@@ -87,6 +97,7 @@ jobs:
             ghr \
               -u ${GITHUB_USER} \
               -t ${GITHUB_TOKEN} \
+              -b "$(cat ./CHANGELOG.md)" \
               -replace \
               -draft \
               ${CIRCLE_TAG} /tmp/bin/
