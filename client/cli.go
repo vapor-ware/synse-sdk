@@ -66,7 +66,7 @@ var readCmd = &cobra.Command{
 var writeCmd = &cobra.Command{
 	Use:   "write",
 	Short: "Issue a gRPC Write request",
-    Long:  "Issue a gRPC Write request, example: ./pcli --sock PLUGIN write DEVICE_ID BOARD RACK ACTION DATA",
+	Long:  "Issue a gRPC Write request, example: ./pcli --sock PLUGIN write DEVICE_ID BOARD RACK ACTION DATA",
 	Args:  cobra.RangeArgs(4, 5),
 	Run: func(cmd *cobra.Command, args []string) {
 		write(cmd, args)
