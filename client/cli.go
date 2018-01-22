@@ -39,7 +39,7 @@ const (
 	writeTemplate = `{{ printf "%-25s" .id }}{{ printf "%-20s" .action }}{{ printf "%-20s" .raw }}
 `
 
-	metainfoTemplate = `{{ printf "%-40s" .id }}{{ printf "%-15s" .type }}{{ printf "%-15s" .model }}{{ printf "%-10s" .protocol }}{{ printf "%-30s" .info }}
+	metainfoTemplate = `{{ printf "%-40s" .id }}{{ printf "%-15s" .type }}{{ printf "%-15s" .model }}{{ printf "%-10s" .protocol }}{{ printf "%-15s" .info }}{{printf "%-15s" .rack }}{{printf "%-30s" .board}}
 `
 )
 
@@ -55,7 +55,8 @@ func check(err error) {
 var readCmd = &cobra.Command{
 	Use:   "read",
 	Short: "Issue a gRPC Read request",
-	Args:  cobra.MinimumNArgs(1),
+	Long:  "Issue a gRPC Read request, example: ./pcli --sock PLUGIN read DEVICE_ID BOARD RACK",
+	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		read(cmd, args)
 	},
@@ -65,7 +66,8 @@ var readCmd = &cobra.Command{
 var writeCmd = &cobra.Command{
 	Use:   "write",
 	Short: "Issue a gRPC Write request",
-	Args:  cobra.MinimumNArgs(2),
+	Long:  "Issue a gRPC Write request, example: ./pcli --sock PLUGIN write DEVICE_ID BOARD RACK ACTION DATA",
+	Args:  cobra.RangeArgs(4, 5),
 	Run: func(cmd *cobra.Command, args []string) {
 		write(cmd, args)
 	},
@@ -143,16 +145,18 @@ func write(cmd *cobra.Command, args []string) {
 	makeAPIClient()
 
 	var wd *synse.WriteData
-	if len(args) == 2 {
-		wd = &synse.WriteData{Action: args[1]}
-	} else if len(args) == 3 {
-		wd = &synse.WriteData{Action: args[1], Raw: [][]byte{[]byte(args[2])}}
+	if len(args) == 4 {
+		wd = &synse.WriteData{Action: args[3]}
+	} else if len(args) == 5 {
+		wd = &synse.WriteData{Action: args[3], Raw: [][]byte{[]byte(args[4])}}
 	} else {
 		cliError(fmt.Errorf("Invalid number of args"))
 	}
 
 	transactions, err := c.Write(context.Background(), &synse.WriteRequest{
 		Device: args[0],
+		Board:  args[1],
+		Rack:   args[2],
 		Data:   []*synse.WriteData{wd},
 	})
 	if err != nil {
@@ -224,6 +228,8 @@ func outputMetainfoHeader() {
 		"model":    "MODEL",
 		"protocol": "PROTOCOL",
 		"info":     "INFO",
+		"rack":     "RACK",
+		"board":    "BOARD",
 	}
 	check(t.Execute(os.Stdout, output))
 }
@@ -237,6 +243,8 @@ func outputMetainfo(response *synse.MetainfoResponse) {
 		"model":    response.Model,
 		"protocol": response.Protocol,
 		"info":     response.Info,
+		"rack":     response.Location.Rack,
+		"board":    response.Location.Board,
 	}
 	check(t.Execute(os.Stdout, output))
 }
