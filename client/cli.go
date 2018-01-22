@@ -55,7 +55,7 @@ func check(err error) {
 var readCmd = &cobra.Command{
 	Use:   "read",
 	Short: "Issue a gRPC Read request",
-    Long:  "Issue a gRPC Read request, example: ./pcli --sock PLUGIN read DEVICE_ID BOARD RACK",
+	Long:  "Issue a gRPC Read request, example: ./pcli --sock PLUGIN read DEVICE_ID BOARD RACK",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		read(cmd, args)
