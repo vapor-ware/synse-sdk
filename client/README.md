@@ -38,13 +38,13 @@ Available Commands:
 
 Flags:
   -h, --help          help for pcli
-  -n, --name string   Name of the plugin (e.g. socket name)
+  -s, --sock string   Name of the plugin (e.g. socket name)
 
 Use "pcli [command] --help" for more information about a command.
 ```
 
 > ***Note***: 
-> *the `--name` flag is required, as it tells us which gRPC server to talk to. This
+> *the `--sock` flag is required, as it tells us which gRPC server to talk to. This
 > could be made easier in the future by extending this CLI, but since it is mainly 
 > intended for simple experimentation/demonstration, it was kept simple.*
 > 
@@ -62,7 +62,7 @@ command should typically be run first, as it gives the device's uid which is
 used in subsequent commands.
 
 ```
-$ ./pcli --name simple-plugin metainfo
+$ ./pcli --sock simple-plugin metainfo
 2017/10/18 08:58:56 timestamp:"2017-10-18 08:58:56.279858737 -0400 EDT" uid:"847d2d1d7d4e4b9776f6f73bebb8825d" type:"emulated-led" model:"emul8-led" manufacturer:"vaporio" protocol:"emulator" info:"Chamber LED 1" comment:"first emulated led device" location:<rack:"unknown" board:"unknown" > output:<type:"led_state" unit:<> range:<> > output:<type:"led_color" unit:<> range:<> > 
 2017/10/18 08:58:56 timestamp:"2017-10-18 08:58:56.280472777 -0400 EDT" uid:"21f96641b1d525d9d81966f5ca7e6213" type:"emulated-led" model:"emul8-led" manufacturer:"vaporio" protocol:"emulator" info:"Chamber LED 2" comment:"second emulated led device" location:<rack:"unknown" board:"unknown" > output:<type:"led_state" unit:<> range:<> > output:<type:"led_color" unit:<> range:<> > 
 2017/10/18 08:58:56 timestamp:"2017-10-18 08:58:56.280489013 -0400 EDT" uid:"7ba58b52c2f0e4aad5d7e45cafa63d0f" type:"emulated-temperature" model:"emul8-temp" manufacturer:"vaporio" protocol:"emulator" info:"CEC temp 1" comment:"first emulated temperature device" location:<rack:"unknown" board:"unknown" > output:<type:"temperature" precision:2 unit:<name:"celsius" symbol:"C" > range:<max:100 > > 
@@ -77,7 +77,7 @@ reading values (e.g. a humidity device may return both humidity and temperature
 readings).
 
 ```
-$ ./pcli --name simple-plugin read 847d2d1d7d4e4b9776f6f73bebb8825d
+$ ./pcli --sock simple-plugin read 847d2d1d7d4e4b9776f6f73bebb8825d
 2017/10/18 08:59:14 timestamp:"2017-10-18 08:59:14.523144898 -0400 EDT" type:"emulated-led" value:"1900820199766248294" 
 ```
 
@@ -87,7 +87,7 @@ raw byte values for the write command. The transaction id and some
 transaction context is returned.
 
 ```
-$ ./pcli --name simple-plugin write 847d2d1d7d4e4b9776f6f73bebb8825d on
+$ ./pcli --sock simple-plugin write 847d2d1d7d4e4b9776f6f73bebb8825d on
 b7jl0b2un4a154rn9u4g  - action:"on"
 ```
 
@@ -97,6 +97,6 @@ b7jl0b2un4a154rn9u4g  - action:"on"
 of that transaction. The transaction id is returned from the `write` command.
 
 ```
-$ ./pcli --name simple-plugin transaction b7jl0b2un4a154rn9u4g
+$ ./pcli --sock simple-plugin transaction b7jl0b2un4a154rn9u4g
 created:"2017-10-18 08:59:24.700894929 -0400 EDT" updated:"2017-10-18 08:59:24.701427269 -0400 EDT" status:DONE
 ```

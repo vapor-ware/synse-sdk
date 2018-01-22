@@ -286,7 +286,7 @@ func outputTransaction(id string, response *synse.WriteResponse) {
 func makeAPIClient() {
 	if socketName == "" && tcpAddr == "" {
 		cliError(fmt.Errorf(
-			"plugin address not specified. Need to specify via the --name flag" +
+			"plugin address not specified. Need to specify via the --sock flag" +
 				"(for unix socket) or the --addr flag (for tcp port)",
 		))
 	}
@@ -341,7 +341,7 @@ func main() {
 		transactionCmd,
 	)
 
-	rootCmd.PersistentFlags().StringVarP(&socketName, "sock", "n", "", "Name of the plugin (e.g. socket name)")
+	rootCmd.PersistentFlags().StringVarP(&socketName, "sock", "s", "", "Name of the plugin (e.g. socket name)")
 	rootCmd.PersistentFlags().StringVarP(&tcpAddr, "addr", "a", "", "TCP address for the plugin (e.g. localhost:5001)")
 
 	if err := rootCmd.Execute(); err != nil {
