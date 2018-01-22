@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 // Plugin represents an instance of a Synse plugin. Along with metadata
@@ -40,7 +41,7 @@ func (p *Plugin) SetConfig(config *config.PluginConfig) error {
 	}
 	p.Config = config
 
-	SetLogLevel(p.Config.Debug)
+	logger.SetLogLevel(p.Config.Debug)
 	return nil
 }
 
@@ -51,7 +52,7 @@ func (p *Plugin) Configure() error {
 		return err
 	}
 	p.Config = cfg
-	SetLogLevel(p.Config.Debug)
+	logger.SetLogLevel(p.Config.Debug)
 	return nil
 }
 
@@ -108,21 +109,21 @@ func (p *Plugin) setup() error {
 // logInfo logs out the information about the plugin. This is called just before the
 // plugin begins running all of its components.
 func (p *Plugin) logInfo() {
-	Logger.Info("Plugin Info:")
-	Logger.Infof(" Name:        %s", p.Config.Name)
-	Logger.Infof(" Version:     %s", p.v.VersionString)
-	Logger.Infof(" SDK Version: %s", SDKVersion)
-	Logger.Infof(" Git Commit:  %s", p.v.GitCommit)
-	Logger.Infof(" Git Tag:     %s", p.v.GitTag)
-	Logger.Infof(" Go Version:  %s", p.v.GoVersion)
-	Logger.Infof(" Build Date:  %s", p.v.BuildDate)
-	Logger.Infof(" OS:          %s", runtime.GOOS)
-	Logger.Infof(" Arch:        %s", runtime.GOARCH)
-	Logger.Debug("Plugin Config:")
-	Logger.Debugf(" %#v", p.Config)
-	Logger.Info("Registered Devices:")
+	logger.Info("Plugin Info:")
+	logger.Infof(" Name:        %s", p.Config.Name)
+	logger.Infof(" Version:     %s", p.v.VersionString)
+	logger.Infof(" SDK Version: %s", SDKVersion)
+	logger.Infof(" Git Commit:  %s", p.v.GitCommit)
+	logger.Infof(" Git Tag:     %s", p.v.GitTag)
+	logger.Infof(" Go Version:  %s", p.v.GoVersion)
+	logger.Infof(" Build Date:  %s", p.v.BuildDate)
+	logger.Infof(" OS:          %s", runtime.GOOS)
+	logger.Infof(" Arch:        %s", runtime.GOARCH)
+	logger.Debug("Plugin Config:")
+	logger.Debugf(" %#v", p.Config)
+	logger.Info("Registered Devices:")
 	for id, dev := range deviceMap {
-		Logger.Infof(" %v (%v)", id, dev.Model())
+		logger.Infof(" %v (%v)", id, dev.Model())
 	}
-	Logger.Info("--------------------------------")
+	logger.Info("--------------------------------")
 }

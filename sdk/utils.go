@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 // makeIDString makes a compound string out of the given rack, board, and
@@ -36,7 +37,7 @@ func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.Pr
 		}
 
 		if !found {
-			Logger.Warnf("Did not find prototype matching instance for %v-%v", dev.Type, dev.Model)
+			logger.Warnf("Did not find prototype matching instance for %v-%v", dev.Type, dev.Model)
 			break
 		}
 
