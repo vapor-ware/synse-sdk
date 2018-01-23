@@ -91,7 +91,7 @@ func TestDevice_Output(t *testing.T) {
 	}
 	for i := 0; i < len(testDevice.Output()); i++ {
 		if testDevice.Output()[i] != protoConfig.Output[i] {
-			t.Error("device Output does nto match prototype config")
+			t.Error("device Output does not match prototype config")
 		}
 	}
 }
