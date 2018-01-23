@@ -66,6 +66,14 @@ jobs:
           docker_layer_caching: true
       - checkout
       - run:
+          name: Check Version matches Tag
+          command: |
+            version=$(make version)
+            if [ "${version}" != "${CIRCLE_TAG}" ]; then
+              print "Version ${version} does not match Tag ${CIRCLE_TAG}"
+              exit 1
+            fi
+      - run:
           name: Install Vendored Dependencies
           command: |
             go get -v github.com/golang/dep/cmd/dep
