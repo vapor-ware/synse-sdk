@@ -38,7 +38,7 @@ settings:
 		t.Error(err)
 	}
 
-	if cfg.Debug != true {
+	if !cfg.Debug {
 		t.Errorf("expected config 'debug' to be 'true', but was %v", cfg.Debug)
 	}
 	if cfg.Name != "example" {
