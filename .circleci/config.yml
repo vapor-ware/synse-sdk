@@ -71,7 +71,7 @@ jobs:
           command: |
             version=$(make version)
             if [ "${version}" != "${CIRCLE_TAG}" ]; then
-              print "Version ${version} does not match Tag ${CIRCLE_TAG}"
+              echo "Version ${version} does not match Tag ${CIRCLE_TAG}"
               exit 1
             fi
       - run:
