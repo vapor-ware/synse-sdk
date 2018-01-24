@@ -91,7 +91,7 @@ func TestIsValidConfig(t *testing.T) {
 	}
 
 	isValid := isValidConfig(fi)
-	if isValid != false {
+	if isValid {
 		t.Error("expected validation failure: file info is a dir")
 	}
 }
@@ -102,7 +102,7 @@ func TestIsValidConfig2(t *testing.T) {
 	}
 
 	isValid := isValidConfig(fi)
-	if isValid != false {
+	if isValid {
 		t.Error("expected validation failure: file info is not in supported file exts")
 	}
 }
@@ -113,7 +113,7 @@ func TestIsValidConfig3(t *testing.T) {
 	}
 
 	isValid := isValidConfig(fi)
-	if isValid != true {
+	if !isValid {
 		t.Error("expected config to be valid, but was not")
 	}
 }
@@ -124,7 +124,7 @@ func TestIsValidConfig4(t *testing.T) {
 	}
 
 	isValid := isValidConfig(fi)
-	if isValid != true {
+	if !isValid {
 		t.Error("expected config to be valid, but was not")
 	}
 }

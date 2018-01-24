@@ -299,12 +299,12 @@ func makeAPIClient() {
 		))
 	}
 
-	var conn *grpc.ClientConn
+	var grpcConn *grpc.ClientConn
 	var err error
 
 	if socketName != "" {
 		socket := fmt.Sprintf("/synse/procs/%s.sock", socketName)
-		conn, err = grpc.Dial(
+		grpcConn, err = grpc.Dial(
 			socket,
 			grpc.WithInsecure(),
 			grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -316,7 +316,7 @@ func makeAPIClient() {
 		}
 
 	} else {
-		conn, err = grpc.Dial(
+		grpcConn, err = grpc.Dial(
 			tcpAddr,
 			grpc.WithInsecure(),
 		)
@@ -325,7 +325,7 @@ func makeAPIClient() {
 		}
 	}
 
-	c = synse.NewInternalApiClient(conn)
+	c = synse.NewInternalApiClient(grpcConn)
 }
 
 // cliError prints out the CLI error message and cleans up the connection.
