@@ -87,3 +87,41 @@ func newUID(protocol, deviceType, model, protoComp string) string {
 
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
+
+// filterDevices returns a list of Devices (a subset of the deviceMap) which
+// match the specified filter(s) in the given filter string.
+func filterDevices(filter string) ([]*Device, error) {
+	filters := strings.Split(filter, ",")
+
+	var devices []*Device
+	for _, d := range deviceMap {
+		devices = append(devices, d)
+	}
+
+	for _, f := range filters {
+		pair := strings.Split(f, "=")
+		if len(pair) != 2 {
+			return nil, fmt.Errorf("incorrect filter string: %s", filter)
+		}
+		k, v := pair[0], pair[1]
+
+		var isValid func(d *Device) bool
+		if k == "type" {
+			isValid = func(d *Device) bool { return d.Instance.Type == v || v == "*" }
+		} else if k == "model" {
+			isValid = func(d *Device) bool { return d.Instance.Model == v || v == "*" }
+		} else {
+			return nil, fmt.Errorf("unsupported filter key. expect 'type' or 'string' but got %s", k)
+		}
+
+		i := 0
+		for _, d := range devices {
+			if isValid(d) {
+				devices[i] = d
+				i++
+			}
+		}
+		devices = devices[:i]
+	}
+	return devices, nil
+}
