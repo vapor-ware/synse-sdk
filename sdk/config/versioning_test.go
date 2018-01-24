@@ -72,7 +72,7 @@ func TestIsSupportedVersion(t *testing.T) {
 	cv := configVersion{2, 0, "test"}
 
 	isSupported := isSupportedVersion(&cv, []string{"1.0", "1.1"})
-	if isSupported != false {
+	if isSupported {
 		t.Error("expected config version to fail supported check")
 	}
 }
@@ -81,7 +81,7 @@ func TestIsSupportedVersion2(t *testing.T) {
 	cv := configVersion{1, 0, "test"}
 
 	isSupported := isSupportedVersion(&cv, []string{"1.0", "1.1"})
-	if isSupported != true {
+	if !isSupported {
 		t.Error("expected config version to pass supported check")
 	}
 }

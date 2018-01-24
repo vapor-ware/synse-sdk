@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
@@ -32,6 +34,13 @@ func NewDataManager(plugin *Plugin) *DataManager {
 	}
 }
 
+// writesEnabled checks to see whether writing is enable based on the configuration.
+// If the PerLoop setting is set to 0, we will never be able to write, so we consider
+// writing to be disabled.
+func (d *DataManager) writesEnabled() bool {
+	return d.config.Settings.Write.PerLoop > 0
+}
+
 // goPollData starts a go routine which acts as the read-write loop. It first
 // attempts to fulfill any pending write requests, then performs reads on all
 // of the configured devices.
@@ -40,7 +49,9 @@ func (d *DataManager) goPollData() {
 	go func() {
 		delay := d.config.Settings.LoopDelay
 		for {
-			d.pollWrite()
+			if d.writesEnabled() {
+				d.pollWrite()
+			}
 			d.pollRead()
 
 			if delay != 0 {
@@ -141,6 +152,10 @@ func (d *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteDat
 	err := validateWriteRequest(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if !d.writesEnabled() {
+		return nil, fmt.Errorf("writing is not enabled (via plugin configuration)")
 	}
 
 	var resp = make(map[string]*synse.WriteData)
