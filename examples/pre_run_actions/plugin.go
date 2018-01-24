@@ -8,6 +8,7 @@ import (
 	"github.com/vapor-ware/synse-sdk/examples/pre_run_actions/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 // Build time variables for setting the version info of a Plugin.
@@ -70,7 +71,7 @@ func (h *ExampleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*conf
 
 // preRunAction1 defines a function we will use as a pre-run action.
 func preRunAction1(p *sdk.Plugin) error {
-	sdk.Logger.Debug("preRunAction1 -> adding to config context")
+	logger.Debug("preRunAction1 -> adding to config context")
 	p.Config.Context = make(map[string]interface{})
 	p.Config.Context["example_ctx"] = true
 	return nil
@@ -78,18 +79,18 @@ func preRunAction1(p *sdk.Plugin) error {
 
 // preRunAction2 defines a function we will use as a pre-run action.
 func preRunAction2(p *sdk.Plugin) error {
-	sdk.Logger.Debug("preRunAction2 -> displaying plugin config")
-	sdk.Logger.Debug(p.Config)
+	logger.Debug("preRunAction2 -> displaying plugin config")
+	logger.Debug(p.Config)
 	return nil
 }
 
 // deviceSetupAction defines a function we will use as a device setup action.
 func deviceSetupAction(p *sdk.Plugin, d *sdk.Device) error {
-	sdk.Logger.Debug("deviceSetupAction1 -> print device info for the given filter")
-	sdk.Logger.Debug("device")
-	sdk.Logger.Debugf("  id:    %v", d.ID())
-	sdk.Logger.Debugf("  type:  %v", d.Type())
-	sdk.Logger.Debugf("  model: %v", d.Model())
+	logger.Debug("deviceSetupAction1 -> print device info for the given filter")
+	logger.Debug("device")
+	logger.Debugf("  id:    %v", d.ID())
+	logger.Debugf("  type:  %v", d.Type())
+	logger.Debugf("  model: %v", d.Model())
 	return nil
 }
 
@@ -136,13 +137,13 @@ func main() {
 		preRunAction2,
 	)
 
-	sdk.Logger.Debug("Registering action for filter 'type=airflow'")
+	logger.Debug("Registering action for filter 'type=airflow'")
 	plugin.RegisterDeviceSetupActions(
 		"type=airflow",
 		deviceSetupAction,
 	)
 
-	sdk.Logger.Debug("Registering action for filter 'model=*'")
+	logger.Debug("Registering action for filter 'model=*'")
 	plugin.RegisterDeviceSetupActions(
 		"model=*",
 		deviceSetupAction,

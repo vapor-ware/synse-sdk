@@ -121,9 +121,9 @@ func (p *Plugin) Run() error {
 	// Before we start the DataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
 	if len(p.preRunActions) > 0 {
-		Logger.Debug("Executing Pre Run Actions:")
+		logger.Debug("Executing Pre Run Actions:")
 		for _, action := range p.preRunActions {
-			Logger.Debugf(" * %v", action)
+			logger.Debugf(" * %v", action)
 			err := action(p)
 			if err != nil {
 				return err
@@ -136,13 +136,13 @@ func (p *Plugin) Run() error {
 	// now process any device setup actions prior to reading to/writing from
 	// the device(s).
 	if len(p.devSetupActions) > 0 {
-		Logger.Debug("Executing Device Setup Actions:")
+		logger.Debug("Executing Device Setup Actions:")
 		for filter, actions := range p.devSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
 				return err
 			}
-			Logger.Debugf("* %v (%v devices match filter %v)", actions, len(devices), filter)
+			logger.Debugf("* %v (%v devices match filter %v)", actions, len(devices), filter)
 			for _, d := range devices {
 				for _, action := range actions {
 					err := action(p, d)
