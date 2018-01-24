@@ -91,8 +91,9 @@ func (d *DataManager) pollRead() {
 		resp, err := d.handlers.Plugin.Read(dev)
 		if err != nil {
 			logger.Errorf("failed to read from device %v: %v", dev.GUID(), err)
+		} else {
+			d.readChannel <- resp
 		}
-		d.readChannel <- resp
 	}
 }
 
