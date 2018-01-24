@@ -3,6 +3,7 @@ package sdk
 import (
 	"net"
 
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -50,10 +51,10 @@ func (s *Server) serve() error {
 		return err
 	}
 
-	Logger.Infof("listening on network %v with address %v", network, address)
+	logger.Infof("listening on network %v with address %v", network, address)
 	lis, err := net.Listen(network, address)
 	if err != nil {
-		Logger.Fatalf("Failed to listen: %v", err)
+		logger.Fatalf("Failed to listen: %v", err)
 		return err
 	}
 
@@ -62,9 +63,9 @@ func (s *Server) serve() error {
 	synse.RegisterInternalApiServer(svr, s)
 
 	// start gRPC the server
-	Logger.Infof("serving")
+	logger.Infof("serving")
 	if err := svr.Serve(lis); err != nil {
-		Logger.Fatalf("Failed to serve: %v", err)
+		logger.Fatalf("Failed to serve: %v", err)
 		return err
 	}
 	return nil

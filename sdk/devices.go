@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -100,7 +101,7 @@ func registerDevicesFromConfig(handler DeviceHandler, autoEnumCfg []map[string]i
 	for _, enumCfg := range autoEnumCfg {
 		deviceEnum, err := handler.EnumerateDevices(enumCfg)
 		if err != nil {
-			Logger.Errorf("Error enumerating devices with %+v: %v", enumCfg, err)
+			logger.Errorf("Error enumerating devices with %+v: %v", enumCfg, err)
 		} else {
 			instanceCfg = append(instanceCfg, deviceEnum...)
 		}

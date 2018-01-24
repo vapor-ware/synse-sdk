@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -44,7 +45,7 @@ func (d *DataManager) writesEnabled() bool {
 // attempts to fulfill any pending write requests, then performs reads on all
 // of the configured devices.
 func (d *DataManager) goPollData() {
-	Logger.Debug("starting read-write poller")
+	logger.Debug("starting read-write poller")
 	go func() {
 		delay := d.config.Settings.LoopDelay
 		for {
@@ -66,7 +67,7 @@ func (d *DataManager) pollWrite() {
 	for i := 0; i < d.config.Settings.Write.PerLoop; i++ {
 		select {
 		case w := <-d.writeChannel:
-			Logger.Debugf("writing for %v (transaction: %v)", w.device, w.transaction.id)
+			logger.Debugf("writing for %v (transaction: %v)", w.device, w.transaction.id)
 			w.transaction.setStatusWriting()
 
 			data := decodeWriteData(w.data)
@@ -74,7 +75,7 @@ func (d *DataManager) pollWrite() {
 			if err != nil {
 				w.transaction.setStateError()
 				w.transaction.message = err.Error()
-				Logger.Errorf("failed to write to device %v: %v", w.device, err)
+				logger.Errorf("failed to write to device %v: %v", w.device, err)
 			}
 			w.transaction.setStatusDone()
 
@@ -89,7 +90,7 @@ func (d *DataManager) pollRead() {
 	for _, dev := range deviceMap {
 		resp, err := d.handlers.Plugin.Read(dev)
 		if err != nil {
-			Logger.Errorf("failed to read from device %v: %v", dev.GUID(), err)
+			logger.Errorf("failed to read from device %v: %v", dev.GUID(), err)
 		}
 		d.readChannel <- resp
 	}
@@ -98,7 +99,7 @@ func (d *DataManager) pollRead() {
 // goUpdateData updates the DeviceManager's readings state with the latest
 // values that were read for each device.
 func (d *DataManager) goUpdateData() {
-	Logger.Debug("starting data updater")
+	logger.Debug("starting data updater")
 	go func() {
 		for {
 			reading := <-d.readChannel
@@ -171,6 +172,6 @@ func (d *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteDat
 			data:        data,
 		}
 	}
-	Logger.Debugf("write response data: %#v", resp)
+	logger.Debugf("write response data: %#v", resp)
 	return resp, nil
 }

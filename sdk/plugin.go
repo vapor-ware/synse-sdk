@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 type pluginAction func(p *Plugin) error
@@ -47,7 +48,7 @@ func (p *Plugin) SetConfig(config *config.PluginConfig) error {
 	}
 	p.Config = config
 
-	SetLogLevel(p.Config.Debug)
+	logger.SetLogLevel(p.Config.Debug)
 	return nil
 }
 
@@ -58,7 +59,7 @@ func (p *Plugin) Configure() error {
 		return err
 	}
 	p.Config = cfg
-	SetLogLevel(p.Config.Debug)
+	logger.SetLogLevel(p.Config.Debug)
 	return nil
 }
 
@@ -120,9 +121,9 @@ func (p *Plugin) Run() error {
 	// Before we start the DataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
 	if len(p.preRunActions) > 0 {
-		Logger.Debug("Executing Pre Run Actions:")
+		logger.Debug("Executing Pre Run Actions:")
 		for _, action := range p.preRunActions {
-			Logger.Debugf(" * %v", action)
+			logger.Debugf(" * %v", action)
 			err := action(p)
 			if err != nil {
 				return err
@@ -135,13 +136,13 @@ func (p *Plugin) Run() error {
 	// now process any device setup actions prior to reading to/writing from
 	// the device(s).
 	if len(p.devSetupActions) > 0 {
-		Logger.Debug("Executing Device Setup Actions:")
+		logger.Debug("Executing Device Setup Actions:")
 		for filter, actions := range p.devSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
 				return err
 			}
-			Logger.Debugf("* %v (%v devices match filter %v)", actions, len(devices), filter)
+			logger.Debugf("* %v (%v devices match filter %v)", actions, len(devices), filter)
 			for _, d := range devices {
 				for _, action := range actions {
 					err := action(p, d)
@@ -194,21 +195,21 @@ func (p *Plugin) setup() error {
 // logInfo logs out the information about the plugin. This is called just before the
 // plugin begins running all of its components.
 func (p *Plugin) logInfo() {
-	Logger.Info("Plugin Info:")
-	Logger.Infof(" Name:        %s", p.Config.Name)
-	Logger.Infof(" Version:     %s", p.v.VersionString)
-	Logger.Infof(" SDK Version: %s", SDKVersion)
-	Logger.Infof(" Git Commit:  %s", p.v.GitCommit)
-	Logger.Infof(" Git Tag:     %s", p.v.GitTag)
-	Logger.Infof(" Go Version:  %s", p.v.GoVersion)
-	Logger.Infof(" Build Date:  %s", p.v.BuildDate)
-	Logger.Infof(" OS:          %s", runtime.GOOS)
-	Logger.Infof(" Arch:        %s", runtime.GOARCH)
-	Logger.Debug("Plugin Config:")
-	Logger.Debugf(" %#v", p.Config)
-	Logger.Info("Registered Devices:")
+	logger.Info("Plugin Info:")
+	logger.Infof(" Name:        %s", p.Config.Name)
+	logger.Infof(" Version:     %s", p.v.VersionString)
+	logger.Infof(" SDK Version: %s", SDKVersion)
+	logger.Infof(" Git Commit:  %s", p.v.GitCommit)
+	logger.Infof(" Git Tag:     %s", p.v.GitTag)
+	logger.Infof(" Go Version:  %s", p.v.GoVersion)
+	logger.Infof(" Build Date:  %s", p.v.BuildDate)
+	logger.Infof(" OS:          %s", runtime.GOOS)
+	logger.Infof(" Arch:        %s", runtime.GOARCH)
+	logger.Debug("Plugin Config:")
+	logger.Debugf(" %#v", p.Config)
+	logger.Info("Registered Devices:")
 	for id, dev := range deviceMap {
-		Logger.Infof(" %v (%v)", id, dev.Model())
+		logger.Infof(" %v (%v)", id, dev.Model())
 	}
-	Logger.Info("--------------------------------")
+	logger.Info("--------------------------------")
 }

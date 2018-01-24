@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/viper"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 const (
@@ -58,6 +59,7 @@ type TransactionSettings struct {
 // Validate checks the PluginConfig instance to make sure it has all of
 // the required fields populated.
 func (c *PluginConfig) Validate() error {
+	// Config errors
 	if c.Name == "" {
 		return fmt.Errorf("config validation failed: missing required field 'name'")
 	}
@@ -73,6 +75,28 @@ func (c *PluginConfig) Validate() error {
 	if c.Network.Address == "" {
 		return fmt.Errorf("config validation failed: missing required field 'network.address'")
 	}
+
+	// Config warnings
+	if c.Settings.Write.BufferSize == 0 {
+		logger.Warn("config validation warning: settings.write.buffer_size is 0, but must be " +
+			"greater than 0 to allow device writing")
+	}
+
+	if c.Settings.Write.PerLoop == 0 {
+		logger.Warn("config validation warning: settings.write.per_loop is 0, but must be " +
+			"greater than 0 to allow device writing")
+	}
+
+	if c.Settings.Read.BufferSize == 0 {
+		logger.Warn("config validation warning: settings.read.buffer_size is 0, but must be " +
+			"greater than 0 to allow device reading")
+	}
+
+	if c.Settings.Transaction.TTL == 0 {
+		logger.Warn("config validation warning: settings.transaction.ttl is 0. transactions " +
+			"will not be cached and lookups for write status will fail")
+	}
+
 	return nil
 }
 
