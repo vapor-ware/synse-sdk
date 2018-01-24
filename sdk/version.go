@@ -1,7 +1,7 @@
 package sdk
 
 // SDKVersion specifies the version of the Synse Plugin SDK.
-const SDKVersion = "0.3.1"
+const SDKVersion = "0.3.2"
 
 // VersionInfo contains the versioning information for a Plugin.
 type VersionInfo struct {
