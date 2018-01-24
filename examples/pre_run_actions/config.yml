@@ -1,0 +1,15 @@
+version: 1
+name: example-plugin
+debug: true
+network:
+  type: unix
+  address: example-plugin.sock
+settings:
+  loop_delay: 100
+  read:
+    buffer_size: 150
+  write:
+    buffer_size: 150
+    per_loop: 4
+  transaction:
+    ttl: 600

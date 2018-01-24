@@ -41,6 +41,7 @@ jobs:
           name: Build Examples
           command: |
             cd examples/simple_plugin ; go build -v ; cd ../..
+            cd examples/pre_run_actions ; go build -v ; cd ../..
             cd examples/multi_device_plugin ; go build -v ; cd ../..
             cd examples/c_plugin ; go build -v ; cd ../..
             cd examples/auto_enumerate ; go build -v ; cd ../..
