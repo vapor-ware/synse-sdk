@@ -1,8 +1,6 @@
 package sdk
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -153,75 +151,75 @@ func TestEncodeDevice(t *testing.T) {
 	}
 }
 
-func makeDeviceConfig() error {
-	err := os.MkdirAll("config/device", os.ModePerm)
-	if err != nil {
-		return err
-	}
-	cfgFile := `version: 1.0
-type: emulated-temperature
-model: emul8-temp
-
-locations:
-  unknown:
-    rack: unknown
-    board: unknown
-
-devices:
-  - id: 1
-    location: unknown
-    comment: first emulated temperature device
-    info: CEC temp 1`
-
-	return ioutil.WriteFile("config/device/test_config.yaml", []byte(cfgFile), 0644)
-}
-
-func makeProtoConfig() error {
-	err := os.MkdirAll("config/proto", os.ModePerm)
-	if err != nil {
-		return err
-	}
-	cfgFile := `version: 1.0
-type: emulated-temperature
-model: emul8-temp
-manufacturer: vaporio
-protocol: emulator
-output:
-  - type: temperature
-    data_type: float
-    unit:
-      name: celsius
-      symbol: C
-    precision: 2
-    range:
-      min: 0
-      max: 100`
-
-	return ioutil.WriteFile("config/proto/test_config.yaml", []byte(cfgFile), 0644)
-}
-
-type devicesTestHandler struct{}
-
-func (h *devicesTestHandler) GetProtocolIdentifiers(data map[string]string) string {
-	return data["id"]
-}
-
-func (h *devicesTestHandler) EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error) {
-	dc := config.DeviceConfig{
-		Version: "1.0",
-		Type:    "emulated-temperature",
-		Model:   "emul8-temp",
-		Location: config.Location{
-			Rack:  "unknown",
-			Board: "unknown",
-		},
-		Data: map[string]string{
-			"id":      cfg["id"].(string),
-			"comment": "auto-enumerated",
-		},
-	}
-	return []*config.DeviceConfig{&dc}, nil
-}
+//func makeDeviceConfig() error {
+//	err := os.MkdirAll("config/device", os.ModePerm)
+//	if err != nil {
+//		return err
+//	}
+//	cfgFile := `version: 1.0
+//type: emulated-temperature
+//model: emul8-temp
+//
+//locations:
+//  unknown:
+//    rack: unknown
+//    board: unknown
+//
+//devices:
+//  - id: 1
+//    location: unknown
+//    comment: first emulated temperature device
+//    info: CEC temp 1`
+//
+//	return ioutil.WriteFile("config/device/test_config.yaml", []byte(cfgFile), 0644)
+//}
+//
+//func makeProtoConfig() error {
+//	err := os.MkdirAll("config/proto", os.ModePerm)
+//	if err != nil {
+//		return err
+//	}
+//	cfgFile := `version: 1.0
+//type: emulated-temperature
+//model: emul8-temp
+//manufacturer: vaporio
+//protocol: emulator
+//output:
+//  - type: temperature
+//    data_type: float
+//    unit:
+//      name: celsius
+//      symbol: C
+//    precision: 2
+//    range:
+//      min: 0
+//      max: 100`
+//
+//	return ioutil.WriteFile("config/proto/test_config.yaml", []byte(cfgFile), 0644)
+//}
+//
+//type devicesTestHandler struct{}
+//
+//func (h *devicesTestHandler) GetProtocolIdentifiers(data map[string]string) string {
+//	return data["id"]
+//}
+//
+//func (h *devicesTestHandler) EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error) {
+//	dc := config.DeviceConfig{
+//		Version: "1.0",
+//		Type:    "emulated-temperature",
+//		Model:   "emul8-temp",
+//		Location: config.Location{
+//			Rack:  "unknown",
+//			Board: "unknown",
+//		},
+//		Data: map[string]string{
+//			"id":      cfg["id"].(string),
+//			"comment": "auto-enumerated",
+//		},
+//	}
+//	return []*config.DeviceConfig{&dc}, nil
+//}
 
 // FIXME -- theses tests are doing a bad thing! removing 'config' dir.
 // now that we have a 'config' package here, it will delete that. right

@@ -41,6 +41,7 @@ jobs:
           name: Build Examples
           command: |
             cd examples/simple_plugin ; go build -v ; cd ../..
+            cd examples/pre_run_actions ; go build -v ; cd ../..
             cd examples/multi_device_plugin ; go build -v ; cd ../..
             cd examples/c_plugin ; go build -v ; cd ../..
             cd examples/auto_enumerate ; go build -v ; cd ../..
@@ -65,6 +66,14 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
       - checkout
+      - run:
+          name: Check Version matches Tag
+          command: |
+            version=$(make version)
+            if [ "${version}" != "${CIRCLE_TAG}" ]; then
+              print "Version ${version} does not match Tag ${CIRCLE_TAG}"
+              exit 1
+            fi
       - run:
           name: Install Vendored Dependencies
           command: |
