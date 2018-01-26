@@ -51,8 +51,9 @@ func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.Pr
 	return devices
 }
 
-// setupSocket is used to make sure the unix socket used for gRPC communication
-// is set up and accessible locally.
+// setupSocket is used to make sure the path for unix socket used for gRPC communication
+// is set up and accessible locally. Creates the directory for the socket. Returns the
+// directoryName and err.
 func setupSocket(name string) (string, error) {
 	socket := fmt.Sprintf("%s/%s", sockPath, name)
 

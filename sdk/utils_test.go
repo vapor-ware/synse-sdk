@@ -112,7 +112,7 @@ func TestSetupSocket(t *testing.T) {
 		t.Error(err)
 	}
 
-	if sock != "/synse/procs/test.sock" {
+	if sock != "/tmp/synse/procs/test.sock" {
 		t.Errorf("unexpected socket path returned: %v", sock)
 	}
 
@@ -126,7 +126,7 @@ func TestSetupSocket(t *testing.T) {
 func TestSetupSocket2(t *testing.T) {
 	_ = os.MkdirAll("/synse/procs", os.ModePerm)
 
-	filename := "/synse/procs/test.sock"
+	filename := "/tmp/synse/procs/test.sock"
 	_, err := os.Create(filename)
 	if err != nil {
 		t.Error(err)
