@@ -76,7 +76,7 @@ func TestMakeDevices(t *testing.T) {
 	inst := []*config.DeviceConfig{&testInst1, &testInst2}
 	proto := []*config.PrototypeConfig{&testProto1}
 
-	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -89,7 +89,7 @@ func TestMakeDevices2(t *testing.T) {
 	inst := []*config.DeviceConfig{&testInst1, &testInst2}
 	proto := []*config.PrototypeConfig{&testProto2}
 
-	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -102,7 +102,7 @@ func TestMakeDevices3(t *testing.T) {
 	inst := []*config.DeviceConfig{&testInst1}
 	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
 
-	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -115,7 +115,7 @@ func TestMakeDevices4(t *testing.T) {
 	inst := []*config.DeviceConfig{&testInst1, &testInst2}
 	var proto []*config.PrototypeConfig
 
-	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {
 		t.Error(err)
 	}
@@ -128,7 +128,7 @@ func TestMakeDevices5(t *testing.T) {
 	var inst []*config.DeviceConfig
 	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
 
-	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {
 		t.Error(err)
 	}
