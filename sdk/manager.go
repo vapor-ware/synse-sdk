@@ -140,13 +140,9 @@ func (d *DataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse, error
 	}
 
 	deviceID := makeIDString(req.Rack, req.Board, req.Device)
-	device := deviceMap[deviceID]
-	if device == nil {
-		return nil, fmt.Errorf("no device with ID %v found", deviceID)
-	}
-
-	if !device.IsReadable() {
-		return nil, fmt.Errorf("reading is not enabled (no read handler for device)")
+	err = validateForRead(deviceID)
+	if err != nil {
+		return nil, err
 	}
 
 	readings := d.getReadings(deviceID)
@@ -174,15 +170,10 @@ func (d *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteDat
 		return nil, err
 	}
 
-	// TODO - look into cleaning up all of this/consolidating the checking
-	devID := makeIDString(req.Rack, req.Board, req.Device)
-	device := deviceMap[devID]
-	if device == nil {
-		return nil, fmt.Errorf("no device with ID %v found", devID)
-	}
-
-	if !device.IsWritable() {
-		return nil, fmt.Errorf("writing is not enabled (no write handler for device)")
+	deviceID := makeIDString(req.Rack, req.Board, req.Device)
+	err = validateForWrite(deviceID)
+	if err != nil {
+		return nil, err
 	}
 
 	if ctx, enabled := d.writesEnabled(); !enabled {

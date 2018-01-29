@@ -1,6 +1,8 @@
 package sdk
 
 import (
+	"fmt"
+
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -46,5 +48,33 @@ func validateHandlers(handlers *Handlers) error {
 	if handlers.DeviceIdentifier == nil {
 		return notFoundErr("device identifier not defined")
 	}
+	return nil
+}
+
+// validateForRead validates that a device with the given device ID is readable.
+func validateForRead(deviceID string) error {
+	device := deviceMap[deviceID]
+	if device == nil {
+		return fmt.Errorf("no device with ID %v found", deviceID)
+	}
+
+	if !device.IsReadable() {
+		return fmt.Errorf("reading not enabled for device %v (no read handler)", deviceID)
+	}
+
+	return nil
+}
+
+// validateForWrite validates that a device with the given device ID is writable.
+func validateForWrite(deviceID string) error {
+	device := deviceMap[deviceID]
+	if device == nil {
+		return fmt.Errorf("no device with ID %v found", deviceID)
+	}
+
+	if !device.IsWritable() {
+		return fmt.Errorf("writing not enabled for device %v (no write handler)", deviceID)
+	}
+
 	return nil
 }
