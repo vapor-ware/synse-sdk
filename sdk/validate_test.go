@@ -3,16 +3,8 @@ package sdk
 import (
 	"testing"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
-
-// ===== Test Data =====
-
-func testDeviceIdentifier(in map[string]string) string                            { return "" }
-func testDeviceEnumerator(map[string]interface{}) ([]*config.DeviceConfig, error) { return nil, nil }
-
-// ===== Test Cases =====
 
 func TestValidateReadRequest(t *testing.T) {
 	// everything is there

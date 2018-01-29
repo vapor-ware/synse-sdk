@@ -1,38 +1,11 @@
 package sdk
 
 import (
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
-
-func writeConfigFile(path string) error {
-	_, err := os.Stat(filepath.Dir(path))
-	if os.IsNotExist(err) {
-		os.MkdirAll(filepath.Dir(path), os.ModePerm)
-	}
-
-	cfg := `name: test-plugin
-version: 1.0.0
-debug: true
-network:
-  type: tcp
-  address: ":50051"
-settings:
-  loop_delay: 100
-  read:
-    buffer_size: 150
-  write:
-    buffer_size: 150
-    per_loop: 4
-  transaction:
-    ttl: 600`
-
-	return ioutil.WriteFile(path, []byte(cfg), 0644)
-}
 
 func TestNewPlugin(t *testing.T) {
 	p := NewPlugin()
@@ -95,7 +68,23 @@ func TestPlugin_SetConfig2(t *testing.T) {
 func TestPlugin_Configure(t *testing.T) {
 	// test configuring using ENV
 	cfgFile := "tmp/config.yml"
-	err := writeConfigFile(cfgFile)
+	cfg := `name: test-plugin
+version: 1.0.0
+debug: true
+network:
+  type: tcp
+  address: ":50051"
+settings:
+  loop_delay: 100
+  read:
+    buffer_size: 150
+  write:
+    buffer_size: 150
+    per_loop: 4
+  transaction:
+    ttl: 600`
+
+	err := writeConfigFile(cfgFile, cfg)
 	if err != nil {
 		t.Error(err)
 	}
