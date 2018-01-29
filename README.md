@@ -109,7 +109,7 @@ make ci
 ```
 
 ## License
-This SDK is licensed under the ____. See LICENSE.txt and NOTICE.txt for more information.
+This SDK is licensed under GPLv2. See [LICENSE](LICENSE) for more information.
 
 
 
