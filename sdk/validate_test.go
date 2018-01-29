@@ -9,29 +9,8 @@ import (
 
 // ===== Test Data =====
 
-// FIXME - this is used elsewhere for testing. what is the best way of sharing
-// test data? not sure what a "good" way of doing that in Go is. for now leaving
-// it here, but maybe we need a separate "test_utils" file or something?
-
-type testDeviceHandler struct{}
-
-func (h *testDeviceHandler) GetProtocolIdentifiers(in map[string]string) string {
-	return ""
-}
-
-func (h *testDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*config.DeviceConfig, error) {
-	return nil, nil
-}
-
-type testPluginHandler struct{}
-
-func (h *testPluginHandler) Read(dev *Device) (*ReadContext, error) {
-	return nil, nil
-}
-
-func (h *testPluginHandler) Write(dev *Device, data *WriteData) error {
-	return nil
-}
+func testDeviceIdentifier(in map[string]string) string                            { return "" }
+func testDeviceEnumerator(map[string]interface{}) ([]*config.DeviceConfig, error) { return nil, nil }
 
 // ===== Test Cases =====
 
@@ -96,35 +75,35 @@ func TestValidateWriteRequest(t *testing.T) {
 }
 
 func TestValidateHandlers(t *testing.T) {
-	// handlers are ok
+	// handlers is ok
 	h := &Handlers{
-		Plugin: &testPluginHandler{},
-		Device: &testDeviceHandler{},
+		DeviceIdentifier: testDeviceIdentifier,
+		DeviceEnumerator: testDeviceEnumerator,
 	}
 	err := validateHandlers(h)
 	if err != nil {
 		t.Errorf("validateHandlers(%v) -> unexpected error: %q", h, err)
 	}
 
-	// plugin handler nil
+	// handlers are ok
 	h = &Handlers{
-		Device: &testDeviceHandler{},
+		DeviceIdentifier: testDeviceIdentifier,
+	}
+	err = validateHandlers(h)
+	if err != nil {
+		t.Errorf("validateHandlers(%v) -> unexpected error: %q", h, err)
+	}
+
+	// device identifier nil
+	h = &Handlers{
+		DeviceEnumerator: testDeviceEnumerator,
 	}
 	err = validateHandlers(h)
 	if err == nil {
 		t.Errorf("validateHandlers(%v) -> expected error but got nil", h)
 	}
 
-	// device handler nil
-	h = &Handlers{
-		Plugin: &testPluginHandler{},
-	}
-	err = validateHandlers(h)
-	if err == nil {
-		t.Errorf("validateHandlers(%v) -> expected error but got nil", h)
-	}
-
-	// both handlers nil
+	// all device handlers nil
 	h = &Handlers{}
 	err = validateHandlers(h)
 	if err == nil {

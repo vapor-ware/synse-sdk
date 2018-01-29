@@ -9,15 +9,15 @@ package main
 //   3.  the main method   - this is where the plugin is initialized and run.
 
 import (
-	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // Build time variables for setting the version info of a Plugin.
@@ -29,6 +29,41 @@ var (
 	VersionString string
 )
 
+// Read defines the behavior for device reads in this example plugin.
+func Read(device *sdk.Device) ([]*sdk.Reading, error) {
+	return []*sdk.Reading{{
+		Timestamp: time.Now().String(),
+		Type:      device.Type,
+		Value:     strconv.Itoa(rand.Int()),
+	}}, nil
+}
+
+// Write defines the behavior for device writes in this example plugin.
+func Write(device *sdk.Device, data *sdk.WriteData) error {
+	fmt.Printf("[simple plugin handler]: WRITE (%v)\n", device.ID())
+	fmt.Printf("Data   -> %v\n", data.Raw)
+	fmt.Printf("Action -> %v\n", data.Action)
+	return nil
+}
+
+// ledHandler defines the read/write behavior for the "emul8-led"
+// emulated-led device.
+var ledHandler = sdk.DeviceHandler{
+	Type:  "emulated-led",
+	Model: "emul8-led",
+	Read:  Read,
+	Write: Write,
+}
+
+// temperatureHandler defines the read/write behavior for the "emul8-temp"
+// emulated-temperature device.
+var temperatureHandler = sdk.DeviceHandler{
+	Type:  "emulated-temperature",
+	Model: "emul8-temp",
+	Read:  Read,
+	Write: Write,
+}
+
 // SimplePluginHandler fulfils the SDK's PluginHandler interface. It requires a
 // Read and Write function to be defined, which specify how the plugin will read
 // and write to the configured devices.
@@ -38,28 +73,6 @@ var (
 // devices for the plugin, so while this example handles all reads the same, a
 // more complex plugin could need to further dispatch read/write operations depending
 // on the device type, model, etc.
-type SimplePluginHandler struct{}
-
-func (h *SimplePluginHandler) Read(device *sdk.Device) (*sdk.ReadContext, error) {
-
-	val := rand.Int()
-	strVal := strconv.Itoa(val)
-	return &sdk.ReadContext{
-		Device:  device.ID(),
-		Board:   device.Location().Board,
-		Rack:    device.Location().Rack,
-		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), strVal}},
-	}, nil
-}
-
-func (h *SimplePluginHandler) Write(device *sdk.Device, data *sdk.WriteData) error {
-
-	fmt.Printf("[simple plugin handler]: WRITE\n")
-
-	fmt.Printf("Data -> %v\n", data.Raw)
-	fmt.Printf("Action -> %v\n", data.Action)
-	return nil
-}
 
 // SimpleDeviceHandler fulfils the SDK's DeviceHandler interface.
 // Each device that is generated from the configurations will be able to
@@ -84,19 +97,11 @@ func (h *SimplePluginHandler) Write(device *sdk.Device, data *sdk.WriteData) err
 // specific. As such, we need the plugin to define which bits of information
 // here are to be used when generating the ID. In this case, we use the "id"
 // field, but a concatenation of any number of fields is permissible.
-type SimpleDeviceHandler struct{}
 
 // GetProtocolIdentifiers gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
-func (h *SimpleDeviceHandler) GetProtocolIdentifiers(data map[string]string) string {
+func GetProtocolIdentifiers(data map[string]string) string {
 	return data["id"]
-}
-
-// EnumerateDevices is used to auto-enumerate device configurations for plugins
-// that support it. This example plugin does not support it, so we just return
-// the appropriate error.
-func (h *SimpleDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*config.DeviceConfig, error) {
-	return nil, &sdk.EnumerationNotSupported{}
 }
 
 // The Main Function
@@ -128,18 +133,18 @@ func main() {
 		},
 	}
 
-	// Collect the Simple Plugin handlers.
-	handlers := sdk.Handlers{
-		Plugin: &SimplePluginHandler{},
-		Device: &SimpleDeviceHandler{},
-	}
-
 	// Create a new Plugin and configure it.
-	plugin := sdk.NewPlugin(&handlers)
+	plugin := sdk.NewPlugin()
 	err := plugin.SetConfig(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	plugin.RegisterDeviceIdentifier(GetProtocolIdentifiers)
+	plugin.RegisterDeviceHandlers(
+		&temperatureHandler,
+		&ledHandler,
+	)
 
 	// Set build-time version info
 	plugin.SetVersion(sdk.VersionInfo{
@@ -149,14 +154,6 @@ func main() {
 		GoVersion:     GoVersion,
 		VersionString: VersionString,
 	})
-
-	// Register the Plugin devices - this will read the device
-	// instance and prototype config to determine what it will
-	// read from / write to.
-	err = plugin.RegisterDevices()
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// Run the plugin.
 	err = plugin.Run()

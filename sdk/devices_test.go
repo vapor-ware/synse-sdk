@@ -40,33 +40,42 @@ var deviceConfig = config.DeviceConfig{
 }
 
 var testDevice = Device{
-	Prototype: &protoConfig,
-	Instance:  &deviceConfig,
-	Handler:   &testDeviceHandler{},
+	pconfig:      &protoConfig,
+	dconfig:      &deviceConfig,
+	Type:         protoConfig.Type,
+	Model:        protoConfig.Model,
+	Manufacturer: protoConfig.Manufacturer,
+	Protocol:     protoConfig.Protocol,
+	Output:       protoConfig.Output,
+	Location:     deviceConfig.Location,
+	Data:         deviceConfig.Data,
+
+	Handler:    &DeviceHandler{},
+	Identifier: testDeviceIdentifier,
 }
 
 // ===== Test Cases =====
 
 func TestDevice_Type(t *testing.T) {
-	if testDevice.Type() != protoConfig.Type {
+	if testDevice.Type != protoConfig.Type {
 		t.Error("device Type does not match prototype config")
 	}
 }
 
 func TestDevice_Model(t *testing.T) {
-	if testDevice.Model() != protoConfig.Model {
+	if testDevice.Model != protoConfig.Model {
 		t.Error("device Model does not match prototype config")
 	}
 }
 
 func TestDevice_Manufacturer(t *testing.T) {
-	if testDevice.Manufacturer() != protoConfig.Manufacturer {
+	if testDevice.Manufacturer != protoConfig.Manufacturer {
 		t.Error("device Manufacturer does not match prototype config")
 	}
 }
 
 func TestDevice_Protocol(t *testing.T) {
-	if testDevice.Protocol() != protoConfig.Protocol {
+	if testDevice.Protocol != protoConfig.Protocol {
 		t.Error("device Protocol does not match prototype config")
 	}
 }
@@ -84,27 +93,27 @@ func TestDevice_GUID(t *testing.T) {
 }
 
 func TestDevice_Output(t *testing.T) {
-	if len(testDevice.Output()) != len(protoConfig.Output) {
+	if len(testDevice.Output) != len(protoConfig.Output) {
 		t.Error("device Output length does not match expected")
 	}
-	for i := 0; i < len(testDevice.Output()); i++ {
-		if testDevice.Output()[i] != protoConfig.Output[i] {
+	for i := 0; i < len(testDevice.Output); i++ {
+		if testDevice.Output[i] != protoConfig.Output[i] {
 			t.Error("device Output does not match prototype config")
 		}
 	}
 }
 
 func TestDevice_Location(t *testing.T) {
-	if testDevice.Location() != deviceConfig.Location {
+	if testDevice.Location != deviceConfig.Location {
 		t.Error("device Location does not match instance config")
 	}
 }
 
 func TestDevice_Data(t *testing.T) {
-	if len(testDevice.Data()) != len(deviceConfig.Data) {
+	if len(testDevice.Data) != len(deviceConfig.Data) {
 		t.Error("device Data length does not match expected")
 	}
-	for k, v := range testDevice.Data() {
+	for k, v := range testDevice.Data {
 		if deviceConfig.Data[k] != v {
 			t.Error("device Data key/value mismatch")
 		}
@@ -118,19 +127,19 @@ func TestEncodeDevice(t *testing.T) {
 		t.Error("Device.encode() -> Uid incorrect")
 	}
 
-	if encoded.Type != testDevice.Type() {
+	if encoded.Type != testDevice.Type {
 		t.Error("Device.encode() -> Type incorrect")
 	}
 
-	if encoded.Model != testDevice.Model() {
+	if encoded.Model != testDevice.Model {
 		t.Error("Device.encode() -> Model incorrect")
 	}
 
-	if encoded.Manufacturer != testDevice.Manufacturer() {
+	if encoded.Manufacturer != testDevice.Manufacturer {
 		t.Error("Device.encode() -> Manufacturer incorrect")
 	}
 
-	if encoded.Protocol != testDevice.Protocol() {
+	if encoded.Protocol != testDevice.Protocol {
 		t.Error("Device.encode() -> Protocol incorrect")
 	}
 
@@ -142,11 +151,11 @@ func TestEncodeDevice(t *testing.T) {
 		t.Error("Device.encode() -> Comment incorrect")
 	}
 
-	if encoded.Location.Rack != testDevice.Location().Rack {
+	if encoded.Location.Rack != testDevice.Location.Rack {
 		t.Error("Device.encode() -> Location.Rack incorrect")
 	}
 
-	if encoded.Location.Board != testDevice.Location().Board {
+	if encoded.Location.Board != testDevice.Location.Board {
 		t.Error("Device.encode() -> Location.Board incorrect")
 	}
 }

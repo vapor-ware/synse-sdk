@@ -7,17 +7,15 @@ import (
 )
 
 // Temp2010 is the handler for the example "temp2010" device model.
-type Temp2010 struct{}
+var Temp2010 = sdk.DeviceHandler{
+	Type:  "temperature",
+	Model: "temp2010",
 
-func (d *Temp2010) Read(device *sdk.Device) (*sdk.ReadContext, error) {
-	return &sdk.ReadContext{
-		Device:  device.ID(),
-		Board:   device.Location().Board,
-		Rack:    device.Location().Rack,
-		Reading: []*sdk.Reading{{time.Now().String(), device.Type(), "10"}},
-	}, nil
-}
-
-func (d *Temp2010) Write(device *sdk.Device, data *sdk.WriteData) error {
-	return &sdk.UnsupportedCommandError{}
+	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
+		return []*sdk.Reading{{
+			Timestamp: time.Now().String(),
+			Type:      device.Type,
+			Value:     "10",
+		}}, nil
+	},
 }

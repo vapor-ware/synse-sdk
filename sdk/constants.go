@@ -1,7 +1,7 @@
 package sdk
 
 const (
-	// fixme: we should probably make this a more standard place.. /var/run?
-	// also - probably doesn't belong here.
-	sockPath = "/synse/procs"
+	// sockPath is the base path for gRPC sockets.
+	// It's under /tmp rather than /var/run so that local tests pass.
+	sockPath = "/tmp/synse/procs"
 )

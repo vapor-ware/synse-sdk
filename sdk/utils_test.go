@@ -45,13 +45,41 @@ var testProto2 = config.PrototypeConfig{
 	Protocol:     "test",
 }
 
+var testHandlers = Handlers{
+	DeviceIdentifier: testDeviceIdentifier,
+	DeviceEnumerator: nil,
+}
+
+var devHandler1 = DeviceHandler{
+	Type:  "test-device",
+	Model: "td-1",
+}
+
+var devHandler2 = DeviceHandler{
+	Type:  "test-device",
+	Model: "td-3",
+}
+
+var testDevHandlers = []*DeviceHandler{
+	&devHandler1,
+	&devHandler2,
+}
+
+var testPlugin = Plugin{
+	handlers:       &testHandlers,
+	deviceHandlers: testDevHandlers,
+}
+
 // ===== Test Cases =====
 
 func TestMakeDevices(t *testing.T) {
 	inst := []*config.DeviceConfig{&testInst1, &testInst2}
 	proto := []*config.PrototypeConfig{&testProto1}
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
+	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 2 {
 		t.Error("expected 2 instances to match the prototype")
 	}
@@ -61,7 +89,10 @@ func TestMakeDevices2(t *testing.T) {
 	inst := []*config.DeviceConfig{&testInst1, &testInst2}
 	proto := []*config.PrototypeConfig{&testProto2}
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
+	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 0 {
 		t.Error("expected 0 instances to match the prototype")
 	}
@@ -71,7 +102,10 @@ func TestMakeDevices3(t *testing.T) {
 	inst := []*config.DeviceConfig{&testInst1}
 	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
+	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 1 {
 		t.Error("expected 1 instance to match the prototypes")
 	}
@@ -81,7 +115,10 @@ func TestMakeDevices4(t *testing.T) {
 	inst := []*config.DeviceConfig{&testInst1, &testInst2}
 	var proto []*config.PrototypeConfig
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
+	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 0 {
 		t.Error("expected 0 matches (no prototypes defined)")
 	}
@@ -91,8 +128,10 @@ func TestMakeDevices5(t *testing.T) {
 	var inst []*config.DeviceConfig
 	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
-
+	devices, err := makeDevices(inst, proto, &testHandlers, testDevHandlers, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 0 {
 		t.Error("expected 0 matches (no instances defined)")
 	}
@@ -112,7 +151,7 @@ func TestSetupSocket(t *testing.T) {
 		t.Error(err)
 	}
 
-	if sock != "/synse/procs/test.sock" {
+	if sock != "/tmp/synse/procs/test.sock" {
 		t.Errorf("unexpected socket path returned: %v", sock)
 	}
 
@@ -126,7 +165,7 @@ func TestSetupSocket(t *testing.T) {
 func TestSetupSocket2(t *testing.T) {
 	_ = os.MkdirAll("/synse/procs", os.ModePerm)
 
-	filename := "/synse/procs/test.sock"
+	filename := "/tmp/synse/procs/test.sock"
 	_, err := os.Create(filename)
 	if err != nil {
 		t.Error(err)

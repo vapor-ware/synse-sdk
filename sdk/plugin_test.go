@@ -35,14 +35,16 @@ settings:
 }
 
 func TestNewPlugin(t *testing.T) {
-	h := Handlers{}
-	p := NewPlugin(&h)
+	p := NewPlugin()
 
 	if p.server != nil {
 		t.Error("plugin server should not be initialized with new plugin")
 	}
-	if p.handlers != &h {
-		t.Error("handlers did not match expected")
+	if p.handlers.DeviceEnumerator != nil {
+		t.Error("device enumerator handler did not match expected")
+	}
+	if p.handlers.DeviceIdentifier != nil {
+		t.Error("device identifier handler did not match expected")
 	}
 	if p.dm != nil {
 		t.Error("plugin data manager should not be initialized with new plugin")
@@ -53,8 +55,7 @@ func TestNewPlugin(t *testing.T) {
 }
 
 func TestPlugin_SetConfig(t *testing.T) {
-	h := Handlers{}
-	p := NewPlugin(&h)
+	p := NewPlugin()
 
 	c := config.PluginConfig{
 		Name:    "test-plugin",
@@ -77,8 +78,7 @@ func TestPlugin_SetConfig(t *testing.T) {
 
 func TestPlugin_SetConfig2(t *testing.T) {
 	// test passing a bad configuration
-	h := Handlers{}
-	p := NewPlugin(&h)
+	p := NewPlugin()
 
 	// socket spec missing but required
 	c := config.PluginConfig{
@@ -126,10 +126,11 @@ func TestPlugin_Configure(t *testing.T) {
 func TestPlugin_setup(t *testing.T) {
 	// setup and validation is good
 	h := Handlers{
-		&testPluginHandler{},
-		&testDeviceHandler{},
+		DeviceIdentifier: testDeviceIdentifier,
+		DeviceEnumerator: testDeviceEnumerator,
 	}
-	p := NewPlugin(&h)
+	p := NewPlugin()
+	p.RegisterHandlers(&h)
 	p.Config = &config.PluginConfig{}
 
 	err := p.setup()
@@ -147,11 +148,9 @@ func TestPlugin_setup(t *testing.T) {
 
 func TestPlugin_setup2(t *testing.T) {
 	// validate handlers gives error
-	h := Handlers{
-		&testPluginHandler{},
-		nil,
-	}
-	p := NewPlugin(&h)
+	h := Handlers{}
+	p := NewPlugin()
+	p.RegisterHandlers(&h)
 	p.Config = &config.PluginConfig{}
 
 	err := p.setup()
@@ -163,10 +162,11 @@ func TestPlugin_setup2(t *testing.T) {
 func TestPlugin_setup3(t *testing.T) {
 	// plugin not yet configured
 	h := Handlers{
-		&testPluginHandler{},
-		&testDeviceHandler{},
+		DeviceIdentifier: testDeviceIdentifier,
+		DeviceEnumerator: testDeviceEnumerator,
 	}
-	p := NewPlugin(&h)
+	p := NewPlugin()
+	p.RegisterHandlers(&h)
 
 	err := p.setup()
 	if err == nil {
