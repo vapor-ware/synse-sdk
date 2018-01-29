@@ -13,9 +13,7 @@ write functionality as well as plugin-specific configuration parsing.
 
 
 ## Setting up the golang environment on a mac using homebrew.
-```
 brew install golang
-```
 
 ### Setup .bashrc
 GOPATH is the path to your workspace. It is required to be set and has no default.
