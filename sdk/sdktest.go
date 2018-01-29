@@ -30,6 +30,11 @@ var testPlugin = Plugin{
 	deviceHandlers: testDevHandlers,
 }
 
+var testDeviceHandler = DeviceHandler{
+	Read:  func(device *Device) ([]*Reading, error) { return nil, nil },
+	Write: func(device *Device, data *WriteData) error { return nil },
+}
+
 // == Utility Functions ==
 
 func makeDeviceConfig() *config.DeviceConfig {

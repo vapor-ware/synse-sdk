@@ -3,7 +3,6 @@ package sdk
 import (
 	"fmt"
 	"time"
-	"fmt"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
