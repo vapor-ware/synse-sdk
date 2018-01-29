@@ -2,11 +2,11 @@ package sdk
 
 import (
 	"time"
+	"fmt"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
-	"fmt"
 )
 
 // The deviceMap holds all of the known devices configured for the plugin.

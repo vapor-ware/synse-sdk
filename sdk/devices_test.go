@@ -62,7 +62,7 @@ var testDevice = Device{
 }
 
 var deviceHandler = DeviceHandler{
-	Read: func(device *Device) ([]*Reading, error) { return nil, nil},
+	Read:  func(device *Device) ([]*Reading, error) { return nil, nil },
 	Write: func(device *Device, data *WriteData) error { return nil },
 }
 
@@ -171,7 +171,6 @@ func TestEncodeDevice(t *testing.T) {
 		t.Error("Device.encode() -> Location.Board incorrect")
 	}
 }
-
 
 func TestNewDevice(t *testing.T) {
 	p := Plugin{
