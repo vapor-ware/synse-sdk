@@ -150,6 +150,8 @@ func (d *Device) encode() *synse.MetainfoResponse {
 	}
 }
 
+// devicesFromConfig generates device instance configurations from YAML, if any
+// are specified.
 func devicesFromConfig() ([]*config.DeviceConfig, error) {
 	var configs []*config.DeviceConfig
 
@@ -162,6 +164,8 @@ func devicesFromConfig() ([]*config.DeviceConfig, error) {
 	return configs, nil
 }
 
+// devicesFromAutoEnum generates device instance configurations based on the auto
+// enumeration configuration and handler specified for the plugin.
 func devicesFromAutoEnum(plugin *Plugin) ([]*config.DeviceConfig, error) {
 	var configs []*config.DeviceConfig
 
@@ -185,6 +189,9 @@ func devicesFromAutoEnum(plugin *Plugin) ([]*config.DeviceConfig, error) {
 	return configs, nil
 }
 
+// registerDevices registers all devices specified in the given device configurations
+// with the Plugin by matching them up with their corresponding prototype config and
+// creating new Devices for each of those devices.
 func registerDevices(plugin *Plugin, deviceConfigs []*config.DeviceConfig) error {
 
 	// get the prototype configuration from YAML
