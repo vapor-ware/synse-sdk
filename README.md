@@ -12,6 +12,27 @@ In most cases, a plugin author will only need to write the plugin-specific read 
 write functionality as well as plugin-specific configuration parsing.
 
 
+## Setting up the golang environment on a mac using homebrew.
+brew install golang
+
+### Setup .bashrc
+GOPATH is the path to your workspace. It is required to be set and has no default.
+```go get``` will install to the first entry in the GOPATH list.
+
+GOROOT is the path to where the Go standard library is located on your local filesystem.
+
+GOBIN is the path to where your Go binaries are installed from running go install.
+
+Sample .bashrc:
+```
+export GOPATH=$HOME/go:$HOME
+export GOROOT=/usr/local/opt/go/libexec
+export GOBIN=$HOME/go/bin
+export PATH=$PATH:$GOPATH/bin
+export PATH=$PATH:$GOROOT/bin
+export PATH=$PATH:$GOBIN
+```
+
 ## Installing
 ```
 go get -u github.com/vapor-ware/synse-sdk/sdk
@@ -31,6 +52,11 @@ These examples should give you a good idea on how to start writing your own plug
 TODO: link to documentation
 
 ## Development
+
+### Setting up the project
+```
+make setup
+```
 
 ### Dependencies
 [`go dep`](https://github.com/golang/dep) is used for dependency management. After cloning the repo, you can install `dep` with:
@@ -77,6 +103,10 @@ source files in the `client` and `examples` directory.
 make lint
 ```
 
+## Ensuring local changes pass in ci.
+```
+make ci
+```
 
 ## License
 This SDK is licensed under the ____. See LICENSE.txt and NOTICE.txt for more information.
