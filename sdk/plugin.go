@@ -94,8 +94,21 @@ func (p *Plugin) Configure() error {
 // registerDevices registers all of the configured devices (via their proto and
 // instance config) with the plugin.
 func (p *Plugin) registerDevices() error {
-	// FIXME -- clean this whole thing up. its sorta a mess right now.
-	return registerDevicesFromConfig(p.handlers, p.deviceHandlers, p.Config.AutoEnumerate, p)
+	var devices []*config.DeviceConfig
+
+	cfgDevices, err := devicesFromConfig()
+	if err != nil {
+		return err
+	}
+	devices = append(devices, cfgDevices...)
+
+	enumDevices, err := devicesFromAutoEnum(p)
+	if err != nil {
+		return err
+	}
+	devices = append(devices, enumDevices...)
+
+	return registerDevices(p, devices)
 }
 
 // RegisterPreRunActions registers functions with the plugin that will be called
