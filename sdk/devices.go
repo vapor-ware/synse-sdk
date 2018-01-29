@@ -6,6 +6,7 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
+	"fmt"
 )
 
 // The deviceMap holds all of the known devices configured for the plugin.
@@ -28,10 +29,19 @@ type DeviceHandler struct {
 }
 
 // NewDevice creates a new instance of a Device.
-func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandler, plugin *Plugin) *Device {
-	// FIXME this should also do a bunch of validation
-	//  - does it have the handlers it needs?
-	//  - do the prototype and instance configs match (type/model)
+func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandler, plugin *Plugin) (*Device, error) {
+	if plugin.handlers.DeviceIdentifier == nil {
+		return nil, fmt.Errorf("identifier function not defined for device")
+	}
+
+	if p.Type != d.Type {
+		return nil, fmt.Errorf("prototype and instance config mismatch (type): %v != %v", p.Type, d.Type)
+	}
+
+	if p.Model != d.Model {
+		return nil, fmt.Errorf("prototype and instance config mismatch (model): %v != %v", p.Model, d.Model)
+	}
+
 	dev := Device{
 		Type:         p.Type,
 		Model:        p.Model,
@@ -45,7 +55,7 @@ func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandl
 		pconfig:      p,
 		dconfig:      d,
 	}
-	return &dev
+	return &dev, nil
 }
 
 // Device is the internal model for a device (whether physical or virtual)
