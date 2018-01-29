@@ -31,7 +31,7 @@ func getHandlerForDevice(handlers []*DeviceHandler, device *config.DeviceConfig)
 // makeDevices takes the prototype and device instance configurations, parsed
 // into their corresponding structs, and generates Device instances with that
 // information.
-func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.PrototypeConfig, handlers *Handlers, devHandlers []*DeviceHandler, plugin *Plugin) ([]*Device, error) {
+func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.PrototypeConfig, plugin *Plugin) ([]*Device, error) {
 	var devices []*Device
 
 	for _, dev := range deviceConfigs {
@@ -51,17 +51,20 @@ func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.Pr
 			break
 		}
 
-		handler, err := getHandlerForDevice(devHandlers, dev)
+		handler, err := getHandlerForDevice(plugin.deviceHandlers, dev)
 		if err != nil {
 			return nil, err
 		}
 
-		d := NewDevice(
+		d, err := NewDevice(
 			protoconfig,
 			dev,
 			handler,
 			plugin,
 		)
+		if err != nil {
+			return nil, err
+		}
 		devices = append(devices, d)
 	}
 	return devices, nil

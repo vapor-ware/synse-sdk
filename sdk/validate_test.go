@@ -102,3 +102,79 @@ func TestValidateHandlers(t *testing.T) {
 		t.Errorf("validateHandlers(%v) -> expected error but got nil", h)
 	}
 }
+
+func TestValidateForRead_1(t *testing.T) {
+	// the given ID is not in the device map
+	deviceMap = make(map[string]*Device)
+
+	err := validateForRead("foo")
+	if err == nil {
+		t.Errorf("validateForRead -> expected error but got nil")
+	}
+}
+
+func TestValidateForRead_2(t *testing.T) {
+	// the given device is not readable
+	deviceMap = make(map[string]*Device)
+	deviceMap["abc"] = &Device{
+		Handler: &DeviceHandler{},
+	}
+
+	err := validateForRead("abc")
+	if err == nil {
+		t.Errorf("validateForRead -> expected error but got nil")
+	}
+}
+
+func TestValidateForRead_3(t *testing.T) {
+	// the given device is readable
+	deviceMap = make(map[string]*Device)
+	deviceMap["abc"] = &Device{
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) { return nil, nil },
+		},
+	}
+
+	err := validateForRead("abc")
+	if err != nil {
+		t.Errorf("validateForRead -> unexpected error: %v", err)
+	}
+}
+
+func TestValidateForWrite_1(t *testing.T) {
+	// the given ID is not in the device map
+	deviceMap = make(map[string]*Device)
+
+	err := validateForWrite("foo")
+	if err == nil {
+		t.Errorf("validateForWrite -> expected error but got nil")
+	}
+}
+
+func TestValidateForWrite_2(t *testing.T) {
+	// the given device is not writable
+	deviceMap = make(map[string]*Device)
+	deviceMap["abc"] = &Device{
+		Handler: &DeviceHandler{},
+	}
+
+	err := validateForWrite("abc")
+	if err == nil {
+		t.Errorf("validateForWrite -> expected error but got nil")
+	}
+}
+
+func TestValidateForWrite_3(t *testing.T) {
+	// the given device is writable
+	deviceMap = make(map[string]*Device)
+	deviceMap["abc"] = &Device{
+		Handler: &DeviceHandler{
+			Write: func(d *Device, data *WriteData) error { return nil },
+		},
+	}
+
+	err := validateForWrite("abc")
+	if err != nil {
+		t.Errorf("validateForWrite -> unexpected error: %v", err)
+	}
+}

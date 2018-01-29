@@ -1,7 +1,9 @@
 package sdk
 
 import (
+	"fmt"
 	"time"
+	"fmt"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -28,10 +30,19 @@ type DeviceHandler struct {
 }
 
 // NewDevice creates a new instance of a Device.
-func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandler, plugin *Plugin) *Device {
-	// FIXME this should also do a bunch of validation
-	//  - does it have the handlers it needs?
-	//  - do the prototype and instance configs match (type/model)
+func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandler, plugin *Plugin) (*Device, error) {
+	if plugin.handlers.DeviceIdentifier == nil {
+		return nil, fmt.Errorf("identifier function not defined for device")
+	}
+
+	if p.Type != d.Type {
+		return nil, fmt.Errorf("prototype and instance config mismatch (type): %v != %v", p.Type, d.Type)
+	}
+
+	if p.Model != d.Model {
+		return nil, fmt.Errorf("prototype and instance config mismatch (model): %v != %v", p.Model, d.Model)
+	}
+
 	dev := Device{
 		Type:         p.Type,
 		Model:        p.Model,
@@ -45,7 +56,7 @@ func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandl
 		pconfig:      p,
 		dconfig:      d,
 	}
-	return &dev
+	return &dev, nil
 }
 
 // Device is the internal model for a device (whether physical or virtual)
@@ -149,40 +160,57 @@ func (d *Device) encode() *synse.MetainfoResponse {
 	}
 }
 
-// registerDevicesFromConfig reads in the device configuration files and generates
-// Device instances based on those configurations.
-func registerDevicesFromConfig(handlers *Handlers, devHandlers []*DeviceHandler, autoEnumCfg []map[string]interface{}, plugin *Plugin) error {
-	var instanceCfg []*config.DeviceConfig
+// devicesFromConfig generates device instance configurations from YAML, if any
+// are specified.
+func devicesFromConfig() ([]*config.DeviceConfig, error) {
+	var configs []*config.DeviceConfig
 
-	// get any instance configurations from plugin-defined enumeration function
-	// FIXME - maybe this should be its own fn, and registering from config is its own fn
-	//   then the results of the two can be merged and passed along to the "make devices"
-	//   function? doing so might clean up the usage pattern here and not make the function
-	//   signature so ugly.
-	for _, enumCfg := range autoEnumCfg {
-		deviceEnum, err := handlers.DeviceEnumerator(enumCfg)
-		if err != nil {
-			logger.Errorf("Error enumerating devices with %+v: %v", enumCfg, err)
-		} else {
-			instanceCfg = append(instanceCfg, deviceEnum...)
+	deviceConfig, err := config.ParseDeviceConfig()
+	if err != nil {
+		return nil, err
+	}
+	configs = append(configs, deviceConfig...)
+
+	return configs, nil
+}
+
+// devicesFromAutoEnum generates device instance configurations based on the auto
+// enumeration configuration and handler specified for the plugin.
+func devicesFromAutoEnum(plugin *Plugin) ([]*config.DeviceConfig, error) {
+	var configs []*config.DeviceConfig
+
+	// get any instance configurations from the enumerator function registered
+	// with the plugin, if any is registered.
+	autoEnum := plugin.Config.AutoEnumerate
+	if len(autoEnum) > 0 {
+		if plugin.handlers.DeviceEnumerator == nil {
+			return nil, fmt.Errorf("no device enumerator function registered with the plugin")
+		}
+
+		for _, c := range autoEnum {
+			deviceConfigs, err := plugin.handlers.DeviceEnumerator(c)
+			if err != nil {
+				logger.Errorf("failed to enumerate devices with %#v: %v", c, err)
+			} else {
+				configs = append(configs, deviceConfigs...)
+			}
 		}
 	}
+	return configs, nil
+}
 
-	// get any instance configurations from YAML
-	deviceCfg, err := config.ParseDeviceConfig()
+// registerDevices registers all devices specified in the given device configurations
+// with the Plugin by matching them up with their corresponding prototype config and
+// creating new Devices for each of those devices.
+func registerDevices(plugin *Plugin, deviceConfigs []*config.DeviceConfig) error {
+
+	// get the prototype configuration from YAML
+	protoConfigs, err := config.ParsePrototypeConfig()
 	if err != nil {
 		return err
 	}
-	instanceCfg = append(instanceCfg, deviceCfg...)
 
-	// get the prototype configurations from YAML
-	protoCfg, err := config.ParsePrototypeConfig()
-	if err != nil {
-		return err
-	}
-
-	// make the composite device records
-	devices, err := makeDevices(instanceCfg, protoCfg, handlers, devHandlers, plugin)
+	devices, err := makeDevices(deviceConfigs, protoConfigs, plugin)
 	if err != nil {
 		return err
 	}
