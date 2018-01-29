@@ -56,12 +56,15 @@ func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.Pr
 			return nil, err
 		}
 
-		d := NewDevice(
+		d, err := NewDevice(
 			protoconfig,
 			dev,
 			handler,
 			plugin,
 		)
+		if err != nil {
+			return nil, err
+		}
 		devices = append(devices, d)
 	}
 	return devices, nil

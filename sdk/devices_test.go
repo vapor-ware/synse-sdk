@@ -8,40 +8,47 @@ import (
 
 // ===== Test Data =====
 
-var protoConfig = config.PrototypeConfig{
-	Version:      "1",
-	Type:         "TestDevice",
-	Model:        "TestModel",
-	Manufacturer: "TestManufacturer",
-	Protocol:     "TestProtocol",
-	Output: []config.DeviceOutput{{
-		Type: "TestType",
-		Unit: &config.Unit{
-			Name:   "TestName",
-			Symbol: "TestSymbol",
-		},
-		Precision: 3,
-		Range: &config.Range{
-			Min: 1,
-			Max: 5,
-		},
-	}},
+func makeTestPrototypeConfig() *config.PrototypeConfig {
+	return &config.PrototypeConfig{
+		Version:      "1",
+		Type:         "TestDevice",
+		Model:        "TestModel",
+		Manufacturer: "TestManufacturer",
+		Protocol:     "TestProtocol",
+		Output: []config.DeviceOutput{{
+			Type: "TestType",
+			Unit: &config.Unit{
+				Name:   "TestName",
+				Symbol: "TestSymbol",
+			},
+			Precision: 3,
+			Range: &config.Range{
+				Min: 1,
+				Max: 5,
+			},
+		}},
+	}
 }
 
-var deviceConfig = config.DeviceConfig{
-	Version: "1",
-	Type:    "TestDevice",
-	Model:   "TestModel",
-	Location: config.Location{
-		Rack:  "TestRack",
-		Board: "TestBoard",
-	},
-	Data: map[string]string{"testKey": "testValue"},
+func makeTestDeviceConfig() *config.DeviceConfig {
+	return &config.DeviceConfig{
+		Version: "1",
+		Type:    "TestDevice",
+		Model:   "TestModel",
+		Location: config.Location{
+			Rack:  "TestRack",
+			Board: "TestBoard",
+		},
+		Data: map[string]string{"testKey": "testValue"},
+	}
 }
+
+var protoConfig = makeTestPrototypeConfig()
+var deviceConfig = makeTestDeviceConfig()
 
 var testDevice = Device{
-	pconfig:      &protoConfig,
-	dconfig:      &deviceConfig,
+	pconfig:      protoConfig,
+	dconfig:      deviceConfig,
 	Type:         protoConfig.Type,
 	Model:        protoConfig.Model,
 	Manufacturer: protoConfig.Manufacturer,
@@ -52,6 +59,11 @@ var testDevice = Device{
 
 	Handler:    &DeviceHandler{},
 	Identifier: testDeviceIdentifier,
+}
+
+var deviceHandler = DeviceHandler{
+	Read:  func(device *Device) ([]*Reading, error) { return nil, nil },
+	Write: func(device *Device, data *WriteData) error { return nil },
 }
 
 // ===== Test Cases =====
@@ -157,6 +169,102 @@ func TestEncodeDevice(t *testing.T) {
 
 	if encoded.Location.Board != testDevice.Location.Board {
 		t.Error("Device.encode() -> Location.Board incorrect")
+	}
+}
+
+func TestNewDevice(t *testing.T) {
+	p := Plugin{
+		handlers: &Handlers{
+			DeviceIdentifier: testDeviceIdentifier,
+		},
+	}
+
+	d, err := NewDevice(protoConfig, deviceConfig, &deviceHandler, &p)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if d.Type != protoConfig.Type {
+		t.Errorf("device Type does not match expected")
+	}
+
+	if d.Model != protoConfig.Model {
+		t.Errorf("device Model does not match expected")
+	}
+
+	if d.Manufacturer != protoConfig.Manufacturer {
+		t.Errorf("device Manufacturer does not match expected")
+	}
+
+	if d.Protocol != protoConfig.Protocol {
+		t.Errorf("device Protocol does not match expected")
+	}
+
+	if len(d.Output) != len(protoConfig.Output) {
+		t.Errorf("device Output length does not match expected")
+	}
+
+	if d.Location != deviceConfig.Location {
+		t.Errorf("device Location does not match expected")
+	}
+
+	if len(d.Data) != len(deviceConfig.Data) {
+		t.Errorf("device Data length does not match expected")
+	}
+
+	if d.Handler != &deviceHandler {
+		t.Errorf("device Handler does not match expected")
+	}
+
+	if d.dconfig != deviceConfig {
+		t.Errorf("device instance config does not match expected")
+	}
+
+	if d.pconfig != protoConfig {
+		t.Errorf("device prototype config does not match expected")
+	}
+}
+
+func TestNewDevice2(t *testing.T) {
+	p := Plugin{
+		handlers: &Handlers{},
+	}
+
+	_, err := NewDevice(protoConfig, deviceConfig, &deviceHandler, &p)
+	if err == nil {
+		t.Error("NewDevice -> expected validation error, but got no error")
+	}
+}
+
+func TestNewDevice3(t *testing.T) {
+	p := Plugin{
+		handlers: &Handlers{
+			DeviceIdentifier: testDeviceIdentifier,
+		},
+	}
+
+	dCfg := makeTestDeviceConfig()
+	dCfg.Type = "foo"
+
+	_, err := NewDevice(protoConfig, dCfg, &deviceHandler, &p)
+	if err == nil {
+		t.Error("NewDevice -> expected validation error, but got no error")
+	}
+}
+
+func TestNewDevice4(t *testing.T) {
+	p := Plugin{
+		handlers: &Handlers{
+			DeviceIdentifier: testDeviceIdentifier,
+		},
+	}
+
+	dCfg := makeTestDeviceConfig()
+	dCfg.Model = "foo"
+
+	_, err := NewDevice(protoConfig, dCfg, &deviceHandler, &p)
+	if err == nil {
+		t.Error("NewDevice -> expected validation error, but got no error")
 	}
 }
 
