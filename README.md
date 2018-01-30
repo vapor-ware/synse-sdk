@@ -17,7 +17,7 @@ brew install golang
 
 ### Setup .bashrc
 GOPATH is the path to your workspace. It is required to be set and has no default.
-```go get``` will install to the first entry in the GOPATH list.
+Just leave it at $HOME/go and everything works. Non-default GOPATH is a major headache.
 
 GOROOT is the path to where the Go standard library is located on your local filesystem.
 
@@ -25,13 +25,16 @@ GOBIN is the path to where your Go binaries are installed from running go instal
 
 Sample .bashrc:
 ```
-export GOPATH=$HOME/go:$HOME
+export GOPATH=$HOME/go
 export GOROOT=/usr/local/opt/go/libexec
 export GOBIN=$HOME/go/bin
 export PATH=$PATH:$GOPATH/bin
 export PATH=$PATH:$GOROOT/bin
 export PATH=$PATH:$GOBIN
 ```
+
+Clone all vapor-ware git repos from the local ${HOME}/go/src/git@github.com/vapor-ware directory.
+Things just work this way.
 
 ## Installing
 ```
