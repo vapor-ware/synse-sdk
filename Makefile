@@ -24,7 +24,7 @@ cover:  ## Run tests and open the coverage report
 
 .PHONY: dep
 dep:  ## Ensure and prune dependencies
-	dep ensure -v
+	dep ensure -v --vendor-only
 	# Prune is done automatically by dep ensure now.
 
 .PHONY: examples
@@ -43,6 +43,7 @@ fmt:  ## Run goimports on all go files
 .PHONY: lint
 lint:  ## Lint project source files
 	gometalinter ./... --vendor --tests --deadline=5m \
+		--exclude='(sdk\/sdktest\.go)' \
 		--disable=gas --disable=errcheck --disable=gocyclo
 
 .PHONY: setup
@@ -50,13 +51,12 @@ setup:  ## Install the build and development dependencies
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u github.com/alecthomas/gometalinter
 	go get -u golang.org/x/tools/cmd/cover
-	go get -u github.com/golang/dep/cmd/dep
 	gometalinter --install
 	@$(MAKE) dep
 
 .PHONY: test
 test:  ## Run all tests
-	go test -cover -v ./sdk/...
+	go test -cover ./sdk/...
 
 .PHONY: version
 version: ## Print the version of the SDK

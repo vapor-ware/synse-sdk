@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -11,69 +12,135 @@ import (
 // The deviceMap holds all of the known devices configured for the plugin.
 var deviceMap = make(map[string]*Device)
 
-// Device describes a single configured device for the plugin.
+// DeviceRead is a function that defines the read behavior for a Device.
+type DeviceRead func(*Device) ([]*Reading, error)
+
+// DeviceWrite is a function that defines the write behavior for a Device.
+type DeviceWrite func(*Device, *WriteData) error
+
+// DeviceHandler specifies the read and write handlers for a certain device
+// based on its type and model.
+type DeviceHandler struct {
+	Type  string
+	Model string
+
+	Write DeviceWrite
+	Read  DeviceRead
+}
+
+// NewDevice creates a new instance of a Device.
+func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandler, plugin *Plugin) (*Device, error) {
+	if plugin.handlers.DeviceIdentifier == nil {
+		return nil, fmt.Errorf("identifier function not defined for device")
+	}
+
+	if p.Type != d.Type {
+		return nil, fmt.Errorf("prototype and instance config mismatch (type): %v != %v", p.Type, d.Type)
+	}
+
+	if p.Model != d.Model {
+		return nil, fmt.Errorf("prototype and instance config mismatch (model): %v != %v", p.Model, d.Model)
+	}
+
+	dev := Device{
+		Type:         p.Type,
+		Model:        p.Model,
+		Manufacturer: p.Manufacturer,
+		Protocol:     p.Protocol,
+		Output:       p.Output,
+		Location:     d.Location,
+		Data:         d.Data,
+		Handler:      h,
+		Identifier:   plugin.handlers.DeviceIdentifier,
+		pconfig:      p,
+		dconfig:      d,
+	}
+	return &dev, nil
+}
+
+// Device is the internal model for a device (whether physical or virtual)
+// that a plugin can read to or write from.
 type Device struct {
-	Prototype *config.PrototypeConfig
-	Instance  *config.DeviceConfig
-	Handler   DeviceHandler
+	// prototype
+	pconfig      *config.PrototypeConfig
+	Type         string
+	Model        string
+	Manufacturer string
+	Protocol     string
+	Output       []config.DeviceOutput
+
+	// instance
+	dconfig  *config.DeviceConfig
+	Location config.Location
+	Data     map[string]string
+
+	Handler    *DeviceHandler
+	Identifier DeviceIdentifier
+
+	id string
 }
 
-// Type gets the configured type of the Device.
-func (d *Device) Type() string {
-	return d.Prototype.Type
+// Read performs the read action for the device, as set by its DeviceHandler
+// implementation. If reading is not supported on the device, an Unsupported
+// Command Error is returned.
+func (d *Device) Read() (*ReadContext, error) {
+	if d.IsReadable() {
+		readings, err := d.Handler.Read(d)
+		if err != nil {
+			return nil, err
+		}
+		return &ReadContext{
+			Device:  d.ID(),
+			Board:   d.Location.Board,
+			Rack:    d.Location.Rack,
+			Reading: readings,
+		}, nil
+
+	}
+	return nil, &UnsupportedCommandError{}
 }
 
-// Model gets the configured model of the Device.
-func (d *Device) Model() string {
-	return d.Prototype.Model
+// Write performs the write action for the device, as set by its DeviceHandler
+// implementation. If writing is not supported on the device, an Unsupported
+// Command Error is returned.
+func (d *Device) Write(data *WriteData) error {
+	if d.IsWritable() {
+		return d.Handler.Write(d, data)
+	}
+	return &UnsupportedCommandError{}
 }
 
-// Manufacturer gets the configured manufacturer of the Device.
-func (d *Device) Manufacturer() string {
-	return d.Prototype.Manufacturer
+// IsReadable checks if the Device is readable via the presence/absence of
+// a Read action defined in its DeviceHandler.
+func (d *Device) IsReadable() bool {
+	return d.Handler.Read != nil
 }
 
-// Protocol gets the configured protocol of the Device.
-func (d *Device) Protocol() string {
-	return d.Prototype.Protocol
+// IsWritable checks if the Device is writable via the presence/absence of
+// a Write action defined in its DeviceHandler.
+func (d *Device) IsWritable() bool {
+	return d.Handler.Write != nil
 }
 
-// ID gets the id for the Device.
+// ID generates the ID for the Device.
 func (d *Device) ID() string {
-	protocolComp := d.Handler.GetProtocolIdentifiers(d.Data())
-	return newUID(d.Protocol(), d.Type(), d.Model(), protocolComp)
+	if d.id == "" {
+		protocolComp := d.Identifier(d.Data)
+		d.id = newUID(d.Protocol, d.Type, d.Model, protocolComp)
+	}
+	return d.id
 }
 
 // GUID generates a globally unique ID string by creating a composite
 // string from the rack, board, and device UID.
 func (d *Device) GUID() string {
-	return makeIDString(d.Location().Rack, d.Location().Board, d.ID())
-}
-
-// Output gets the list of configured reading outputs for the Device.
-func (d *Device) Output() []config.DeviceOutput {
-	return d.Prototype.Output
-}
-
-// Location gets the configured location of the Device.
-func (d *Device) Location() config.Location {
-	return d.Instance.Location
-}
-
-// Data gets the plugin-specific data for the device. This is left as a map
-// of string to string (how it is read from the config YAML) and is left to
-// the plugin itself to parse further.
-func (d *Device) Data() map[string]string {
-	return d.Instance.Data
+	return makeIDString(d.Location.Rack, d.Location.Board, d.ID())
 }
 
 // encode translates the Device to a corresponding gRPC MetainfoResponse.
 func (d *Device) encode() *synse.MetainfoResponse {
-
-	location := d.Location()
-
 	var output []*synse.MetaOutput
-	for _, out := range d.Output() {
+	for _, out := range d.Output {
 		mo := out.Encode()
 		output = append(output, mo)
 	}
@@ -81,47 +148,71 @@ func (d *Device) encode() *synse.MetainfoResponse {
 	return &synse.MetainfoResponse{
 		Timestamp:    time.Now().String(),
 		Uid:          d.ID(),
-		Type:         d.Type(),
-		Model:        d.Model(),
-		Manufacturer: d.Manufacturer(),
-		Protocol:     d.Protocol(),
-		Info:         d.Data()["info"],
-		Comment:      d.Data()["comment"],
-		Location:     location.Encode(),
+		Type:         d.Type,
+		Model:        d.Model,
+		Manufacturer: d.Manufacturer,
+		Protocol:     d.Protocol,
+		Info:         d.Data["info"],
+		Comment:      d.Data["comment"],
+		Location:     d.Location.Encode(),
 		Output:       output,
 	}
 }
 
-// registerDevicesFromConfig reads in the device configuration files and generates
-// Device instances based on those configurations.
-func registerDevicesFromConfig(handler DeviceHandler, autoEnumCfg []map[string]interface{}) error {
-	var instanceCfg []*config.DeviceConfig
+// devicesFromConfig generates device instance configurations from YAML, if any
+// are specified.
+func devicesFromConfig() ([]*config.DeviceConfig, error) {
+	var configs []*config.DeviceConfig
 
-	// get any instance configurations from plugin-defined enumeration function
-	for _, enumCfg := range autoEnumCfg {
-		deviceEnum, err := handler.EnumerateDevices(enumCfg)
-		if err != nil {
-			logger.Errorf("Error enumerating devices with %+v: %v", enumCfg, err)
-		} else {
-			instanceCfg = append(instanceCfg, deviceEnum...)
+	deviceConfig, err := config.ParseDeviceConfig()
+	if err != nil {
+		return nil, err
+	}
+	configs = append(configs, deviceConfig...)
+
+	return configs, nil
+}
+
+// devicesFromAutoEnum generates device instance configurations based on the auto
+// enumeration configuration and handler specified for the plugin.
+func devicesFromAutoEnum(plugin *Plugin) ([]*config.DeviceConfig, error) {
+	var configs []*config.DeviceConfig
+
+	// get any instance configurations from the enumerator function registered
+	// with the plugin, if any is registered.
+	autoEnum := plugin.Config.AutoEnumerate
+	if len(autoEnum) > 0 {
+		if plugin.handlers.DeviceEnumerator == nil {
+			return nil, fmt.Errorf("no device enumerator function registered with the plugin")
+		}
+
+		for _, c := range autoEnum {
+			deviceConfigs, err := plugin.handlers.DeviceEnumerator(c)
+			if err != nil {
+				logger.Errorf("failed to enumerate devices with %#v: %v", c, err)
+			} else {
+				configs = append(configs, deviceConfigs...)
+			}
 		}
 	}
+	return configs, nil
+}
 
-	// get any instance configurations from YAML
-	deviceCfg, err := config.ParseDeviceConfig()
+// registerDevices registers all devices specified in the given device configurations
+// with the Plugin by matching them up with their corresponding prototype config and
+// creating new Devices for each of those devices.
+func registerDevices(plugin *Plugin, deviceConfigs []*config.DeviceConfig) error {
+
+	// get the prototype configuration from YAML
+	protoConfigs, err := config.ParsePrototypeConfig()
 	if err != nil {
 		return err
 	}
-	instanceCfg = append(instanceCfg, deviceCfg...)
 
-	// get the prototype configurations from YAML
-	protoCfg, err := config.ParsePrototypeConfig()
+	devices, err := makeDevices(deviceConfigs, protoConfigs, plugin)
 	if err != nil {
 		return err
 	}
-
-	// make the composite device records
-	devices := makeDevices(instanceCfg, protoCfg, handler)
 
 	for _, device := range devices {
 		deviceMap[device.GUID()] = device

@@ -1,48 +1,23 @@
 package sdk
 
 import (
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
-func writeConfigFile(path string) error {
-	_, err := os.Stat(filepath.Dir(path))
-	if os.IsNotExist(err) {
-		os.MkdirAll(filepath.Dir(path), os.ModePerm)
-	}
-
-	cfg := `name: test-plugin
-version: 1.0.0
-debug: true
-network:
-  type: tcp
-  address: ":50051"
-settings:
-  loop_delay: 100
-  read:
-    buffer_size: 150
-  write:
-    buffer_size: 150
-    per_loop: 4
-  transaction:
-    ttl: 600`
-
-	return ioutil.WriteFile(path, []byte(cfg), 0644)
-}
-
 func TestNewPlugin(t *testing.T) {
-	h := Handlers{}
-	p := NewPlugin(&h)
+	p := NewPlugin()
 
 	if p.server != nil {
 		t.Error("plugin server should not be initialized with new plugin")
 	}
-	if p.handlers != &h {
-		t.Error("handlers did not match expected")
+	if p.handlers.DeviceEnumerator != nil {
+		t.Error("device enumerator handler did not match expected")
+	}
+	if p.handlers.DeviceIdentifier != nil {
+		t.Error("device identifier handler did not match expected")
 	}
 	if p.dm != nil {
 		t.Error("plugin data manager should not be initialized with new plugin")
@@ -53,8 +28,7 @@ func TestNewPlugin(t *testing.T) {
 }
 
 func TestPlugin_SetConfig(t *testing.T) {
-	h := Handlers{}
-	p := NewPlugin(&h)
+	p := NewPlugin()
 
 	c := config.PluginConfig{
 		Name:    "test-plugin",
@@ -77,8 +51,7 @@ func TestPlugin_SetConfig(t *testing.T) {
 
 func TestPlugin_SetConfig2(t *testing.T) {
 	// test passing a bad configuration
-	h := Handlers{}
-	p := NewPlugin(&h)
+	p := NewPlugin()
 
 	// socket spec missing but required
 	c := config.PluginConfig{
@@ -95,7 +68,23 @@ func TestPlugin_SetConfig2(t *testing.T) {
 func TestPlugin_Configure(t *testing.T) {
 	// test configuring using ENV
 	cfgFile := "tmp/config.yml"
-	err := writeConfigFile(cfgFile)
+	cfg := `name: test-plugin
+version: 1.0.0
+debug: true
+network:
+  type: tcp
+  address: ":50051"
+settings:
+  loop_delay: 100
+  read:
+    buffer_size: 150
+  write:
+    buffer_size: 150
+    per_loop: 4
+  transaction:
+    ttl: 600`
+
+	err := writeConfigFile(cfgFile, cfg)
 	if err != nil {
 		t.Error(err)
 	}
@@ -126,10 +115,11 @@ func TestPlugin_Configure(t *testing.T) {
 func TestPlugin_setup(t *testing.T) {
 	// setup and validation is good
 	h := Handlers{
-		&testPluginHandler{},
-		&testDeviceHandler{},
+		DeviceIdentifier: testDeviceIdentifier,
+		DeviceEnumerator: testDeviceEnumerator,
 	}
-	p := NewPlugin(&h)
+	p := NewPlugin()
+	p.RegisterHandlers(&h)
 	p.Config = &config.PluginConfig{}
 
 	err := p.setup()
@@ -147,11 +137,9 @@ func TestPlugin_setup(t *testing.T) {
 
 func TestPlugin_setup2(t *testing.T) {
 	// validate handlers gives error
-	h := Handlers{
-		&testPluginHandler{},
-		nil,
-	}
-	p := NewPlugin(&h)
+	h := Handlers{}
+	p := NewPlugin()
+	p.RegisterHandlers(&h)
 	p.Config = &config.PluginConfig{}
 
 	err := p.setup()
@@ -163,10 +151,11 @@ func TestPlugin_setup2(t *testing.T) {
 func TestPlugin_setup3(t *testing.T) {
 	// plugin not yet configured
 	h := Handlers{
-		&testPluginHandler{},
-		&testDeviceHandler{},
+		DeviceIdentifier: testDeviceIdentifier,
+		DeviceEnumerator: testDeviceEnumerator,
 	}
-	p := NewPlugin(&h)
+	p := NewPlugin()
+	p.RegisterHandlers(&h)
 
 	err := p.setup()
 	if err == nil {

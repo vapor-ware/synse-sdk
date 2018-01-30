@@ -18,10 +18,20 @@ func makeIDString(rack, board, device string) string {
 	return strings.Join([]string{rack, board, device}, "-")
 }
 
+// getHandlerForDevice
+func getHandlerForDevice(handlers []*DeviceHandler, device *config.DeviceConfig) (*DeviceHandler, error) {
+	for _, h := range handlers {
+		if device.Type == h.Type && device.Model == h.Model {
+			return h, nil
+		}
+	}
+	return nil, fmt.Errorf("no handler found for device %#v", device)
+}
+
 // makeDevices takes the prototype and device instance configurations, parsed
 // into their corresponding structs, and generates Device instances with that
 // information.
-func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.PrototypeConfig, deviceHandler DeviceHandler) []*Device {
+func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.PrototypeConfig, plugin *Plugin) ([]*Device, error) {
 	var devices []*Device
 
 	for _, dev := range deviceConfigs {
@@ -41,14 +51,23 @@ func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.Pr
 			break
 		}
 
-		d := Device{
-			Prototype: protoconfig,
-			Instance:  dev,
-			Handler:   deviceHandler,
+		handler, err := getHandlerForDevice(plugin.deviceHandlers, dev)
+		if err != nil {
+			return nil, err
 		}
-		devices = append(devices, &d)
+
+		d, err := NewDevice(
+			protoconfig,
+			dev,
+			handler,
+			plugin,
+		)
+		if err != nil {
+			return nil, err
+		}
+		devices = append(devices, d)
 	}
-	return devices
+	return devices, nil
 }
 
 // setupSocket is used to make sure the path for unix socket used for gRPC communication
@@ -109,9 +128,9 @@ func filterDevices(filter string) ([]*Device, error) {
 
 		var isValid func(d *Device) bool
 		if k == "type" {
-			isValid = func(d *Device) bool { return d.Instance.Type == v || v == "*" }
+			isValid = func(d *Device) bool { return d.Type == v || v == "*" }
 		} else if k == "model" {
-			isValid = func(d *Device) bool { return d.Instance.Model == v || v == "*" }
+			isValid = func(d *Device) bool { return d.Model == v || v == "*" }
 		} else {
 			return nil, fmt.Errorf("unsupported filter key. expect 'type' or 'string' but got %s", k)
 		}

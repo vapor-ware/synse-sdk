@@ -1,10 +1,9 @@
 package sdk
 
 import (
+	"fmt"
 	"sync"
 	"time"
-
-	"fmt"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -37,8 +36,11 @@ func NewDataManager(plugin *Plugin) *DataManager {
 // writesEnabled checks to see whether writing is enable based on the configuration.
 // If the PerLoop setting is set to 0, we will never be able to write, so we consider
 // writing to be disabled.
-func (d *DataManager) writesEnabled() bool {
-	return d.config.Settings.Write.PerLoop > 0
+func (d *DataManager) writesEnabled() (string, bool) {
+	if d.config.Settings.Write.PerLoop <= 0 {
+		return "PerLoop setting <= 0", false
+	}
+	return "", true
 }
 
 // goPollData starts a go routine which acts as the read-write loop. It first
@@ -49,7 +51,7 @@ func (d *DataManager) goPollData() {
 	go func() {
 		delay := d.config.Settings.LoopDelay
 		for {
-			if d.writesEnabled() {
+			if _, ok := d.writesEnabled(); ok {
 				d.pollWrite()
 			}
 			d.pollRead()
@@ -70,8 +72,16 @@ func (d *DataManager) pollWrite() {
 			logger.Debugf("writing for %v (transaction: %v)", w.device, w.transaction.id)
 			w.transaction.setStatusWriting()
 
+			device := deviceMap[w.ID()]
+			if device == nil {
+				w.transaction.setStateError()
+				msg := "no device found with ID " + w.ID()
+				w.transaction.message = msg
+				logger.Error(msg)
+			}
+
 			data := decodeWriteData(w.data)
-			err := d.handlers.Plugin.Write(deviceMap[w.ID()], data)
+			err := device.Write(data)
 			if err != nil {
 				w.transaction.setStateError()
 				w.transaction.message = err.Error()
@@ -88,7 +98,7 @@ func (d *DataManager) pollWrite() {
 // pollRead reads from every configured device.
 func (d *DataManager) pollRead() {
 	for _, dev := range deviceMap {
-		resp, err := d.handlers.Plugin.Read(dev)
+		resp, err := dev.Read()
 		if err != nil {
 			logger.Errorf("failed to read from device %v: %v", dev.GUID(), err)
 		} else {
@@ -130,6 +140,11 @@ func (d *DataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse, error
 	}
 
 	deviceID := makeIDString(req.Rack, req.Board, req.Device)
+	err = validateForRead(deviceID)
+	if err != nil {
+		return nil, err
+	}
+
 	readings := d.getReadings(deviceID)
 	if readings == nil {
 		return nil, notFoundErr("no readings found for device: %s", deviceID)
@@ -155,8 +170,14 @@ func (d *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteDat
 		return nil, err
 	}
 
-	if !d.writesEnabled() {
-		return nil, fmt.Errorf("writing is not enabled (via plugin configuration)")
+	deviceID := makeIDString(req.Rack, req.Board, req.Device)
+	err = validateForWrite(deviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx, enabled := d.writesEnabled(); !enabled {
+		return nil, fmt.Errorf("writing is not enabled (%v)", ctx)
 	}
 
 	var resp = make(map[string]*synse.WriteData)

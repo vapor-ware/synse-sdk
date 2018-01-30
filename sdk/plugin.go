@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"fmt"
-
 	"runtime"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -22,17 +21,46 @@ type Plugin struct {
 	dm       *DataManager
 	v        *VersionInfo
 
+	deviceHandlers  []*DeviceHandler
 	preRunActions   []pluginAction
 	postRunActions  []pluginAction
 	devSetupActions map[string][]deviceAction
 }
 
-// NewPlugin creates a new Plugin instance
-func NewPlugin(handlers *Handlers) *Plugin {
+// NewPlugin creates a new Plugin instance. This is the preferred way of
+// initializing a new Plugin instance.
+func NewPlugin() *Plugin {
 	p := &Plugin{}
-	p.handlers = handlers
+	p.handlers = &Handlers{}
 	p.v = emptyVersionInfo()
 	return p
+}
+
+// RegisterHandlers registers device handlers for the plugin.
+func (p *Plugin) RegisterHandlers(handlers *Handlers) {
+	p.handlers = handlers
+}
+
+// RegisterDeviceIdentifier sets the given identifier function as the DeviceIdentifier
+// handler for the plugin.
+func (p *Plugin) RegisterDeviceIdentifier(identifier DeviceIdentifier) {
+	p.handlers.DeviceIdentifier = identifier
+}
+
+// RegisterDeviceEnumerator sets the given enumerator function as the DeviceEnumerator
+// handler for the plugin.
+func (p *Plugin) RegisterDeviceEnumerator(enumerator DeviceEnumerator) {
+	p.handlers.DeviceEnumerator = enumerator
+}
+
+// RegisterDeviceHandlers adds DeviceHandlers to the Plugin which will be registered
+// with the corresponding devices.
+func (p *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
+	if p.deviceHandlers == nil {
+		p.deviceHandlers = handlers
+	} else {
+		p.deviceHandlers = append(p.deviceHandlers, handlers...)
+	}
 }
 
 // SetVersion sets the VersionInfo for the Plugin.
@@ -63,10 +91,24 @@ func (p *Plugin) Configure() error {
 	return nil
 }
 
-// RegisterDevices registers all of the configured devices (via their proto and
+// registerDevices registers all of the configured devices (via their proto and
 // instance config) with the plugin.
-func (p *Plugin) RegisterDevices() error {
-	return registerDevicesFromConfig(p.handlers.Device, p.Config.AutoEnumerate)
+func (p *Plugin) registerDevices() error {
+	var devices []*config.DeviceConfig
+
+	cfgDevices, err := devicesFromConfig()
+	if err != nil {
+		return err
+	}
+	devices = append(devices, cfgDevices...)
+
+	enumDevices, err := devicesFromAutoEnum(p)
+	if err != nil {
+		return err
+	}
+	devices = append(devices, enumDevices...)
+
+	return registerDevices(p, devices)
 }
 
 // RegisterPreRunActions registers functions with the plugin that will be called
@@ -174,10 +216,13 @@ func (p *Plugin) setup() error {
 		return err
 	}
 
-	// validate that configuration is set
+	// validate that the plugin configuration is set
 	if p.Config == nil {
 		return fmt.Errorf("plugin must be configured before it is run")
 	}
+
+	// register configured devices with the plugin
+	p.registerDevices()
 
 	// Setup the transaction cache
 	SetupTransactionCache(p.Config.Settings.Transaction.TTL)
@@ -206,10 +251,10 @@ func (p *Plugin) logInfo() {
 	logger.Infof(" OS:          %s", runtime.GOOS)
 	logger.Infof(" Arch:        %s", runtime.GOARCH)
 	logger.Debug("Plugin Config:")
-	logger.Debugf(" %#v", p.Config)
+	logger.Debugf(" %#v", p.Config) // FIXME - is there a nice way to print this info?
 	logger.Info("Registered Devices:")
 	for id, dev := range deviceMap {
-		logger.Infof(" %v (%v)", id, dev.Model())
+		logger.Infof(" %v (%v)", id, dev.Model)
 	}
 	logger.Info("--------------------------------")
 }

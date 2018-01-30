@@ -7,81 +7,53 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
-// ===== Test Data =====
-
-var testInst1 = config.DeviceConfig{
-	Version: "1.0",
-	Type:    "test-device",
-	Model:   "td-1",
-	Location: config.Location{
-		Rack:  "rack-1",
-		Board: "board-1",
-	},
-}
-
-var testInst2 = config.DeviceConfig{
-	Version: "1.0",
-	Type:    "test-device",
-	Model:   "td-1",
-	Location: config.Location{
-		Rack:  "rack-1",
-		Board: "board-2",
-	},
-}
-
-var testProto1 = config.PrototypeConfig{
-	Version:      "1.0",
-	Type:         "test-device",
-	Model:        "td-1",
-	Manufacturer: "vaporio",
-	Protocol:     "test",
-}
-
-var testProto2 = config.PrototypeConfig{
-	Version:      "1.0",
-	Type:         "test-device",
-	Model:        "td-3",
-	Manufacturer: "vaporio",
-	Protocol:     "test",
-}
-
-// ===== Test Cases =====
-
 func TestMakeDevices(t *testing.T) {
-	inst := []*config.DeviceConfig{&testInst1, &testInst2}
-	proto := []*config.PrototypeConfig{&testProto1}
+	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+	proto := []*config.PrototypeConfig{&testPrototypeConfig1}
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
+	devices, err := makeDevices(inst, proto, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 2 {
 		t.Error("expected 2 instances to match the prototype")
 	}
 }
 
 func TestMakeDevices2(t *testing.T) {
-	inst := []*config.DeviceConfig{&testInst1, &testInst2}
-	proto := []*config.PrototypeConfig{&testProto2}
+	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+	proto := []*config.PrototypeConfig{&testPrototypeConfig2}
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
+	devices, err := makeDevices(inst, proto, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 0 {
 		t.Error("expected 0 instances to match the prototype")
 	}
 }
 
 func TestMakeDevices3(t *testing.T) {
-	inst := []*config.DeviceConfig{&testInst1}
-	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
+	inst := []*config.DeviceConfig{&testDeviceConfig1}
+	proto := []*config.PrototypeConfig{&testPrototypeConfig1, &testPrototypeConfig2}
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
+	devices, err := makeDevices(inst, proto, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 1 {
 		t.Error("expected 1 instance to match the prototypes")
 	}
 }
 
 func TestMakeDevices4(t *testing.T) {
-	inst := []*config.DeviceConfig{&testInst1, &testInst2}
+	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
 	var proto []*config.PrototypeConfig
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
+	devices, err := makeDevices(inst, proto, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 0 {
 		t.Error("expected 0 matches (no prototypes defined)")
 	}
@@ -89,10 +61,12 @@ func TestMakeDevices4(t *testing.T) {
 
 func TestMakeDevices5(t *testing.T) {
 	var inst []*config.DeviceConfig
-	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
+	proto := []*config.PrototypeConfig{&testPrototypeConfig1, &testPrototypeConfig2}
 
-	devices := makeDevices(inst, proto, &testDeviceHandler{})
-
+	devices, err := makeDevices(inst, proto, &testPlugin)
+	if err != nil {
+		t.Error(err)
+	}
 	if len(devices) != 0 {
 		t.Error("expected 0 matches (no instances defined)")
 	}

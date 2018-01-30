@@ -3,37 +3,8 @@ package sdk
 import (
 	"testing"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
-
-// ===== Test Data =====
-
-// FIXME - this is used elsewhere for testing. what is the best way of sharing
-// test data? not sure what a "good" way of doing that in Go is. for now leaving
-// it here, but maybe we need a separate "test_utils" file or something?
-
-type testDeviceHandler struct{}
-
-func (h *testDeviceHandler) GetProtocolIdentifiers(in map[string]string) string {
-	return ""
-}
-
-func (h *testDeviceHandler) EnumerateDevices(map[string]interface{}) ([]*config.DeviceConfig, error) {
-	return nil, nil
-}
-
-type testPluginHandler struct{}
-
-func (h *testPluginHandler) Read(dev *Device) (*ReadContext, error) {
-	return nil, nil
-}
-
-func (h *testPluginHandler) Write(dev *Device, data *WriteData) error {
-	return nil
-}
-
-// ===== Test Cases =====
 
 func TestValidateReadRequest(t *testing.T) {
 	// everything is there
@@ -96,38 +67,114 @@ func TestValidateWriteRequest(t *testing.T) {
 }
 
 func TestValidateHandlers(t *testing.T) {
-	// handlers are ok
+	// handlers is ok
 	h := &Handlers{
-		Plugin: &testPluginHandler{},
-		Device: &testDeviceHandler{},
+		DeviceIdentifier: testDeviceIdentifier,
+		DeviceEnumerator: testDeviceEnumerator,
 	}
 	err := validateHandlers(h)
 	if err != nil {
 		t.Errorf("validateHandlers(%v) -> unexpected error: %q", h, err)
 	}
 
-	// plugin handler nil
+	// handlers are ok
 	h = &Handlers{
-		Device: &testDeviceHandler{},
+		DeviceIdentifier: testDeviceIdentifier,
+	}
+	err = validateHandlers(h)
+	if err != nil {
+		t.Errorf("validateHandlers(%v) -> unexpected error: %q", h, err)
+	}
+
+	// device identifier nil
+	h = &Handlers{
+		DeviceEnumerator: testDeviceEnumerator,
 	}
 	err = validateHandlers(h)
 	if err == nil {
 		t.Errorf("validateHandlers(%v) -> expected error but got nil", h)
 	}
 
-	// device handler nil
-	h = &Handlers{
-		Plugin: &testPluginHandler{},
-	}
-	err = validateHandlers(h)
-	if err == nil {
-		t.Errorf("validateHandlers(%v) -> expected error but got nil", h)
-	}
-
-	// both handlers nil
+	// all device handlers nil
 	h = &Handlers{}
 	err = validateHandlers(h)
 	if err == nil {
 		t.Errorf("validateHandlers(%v) -> expected error but got nil", h)
+	}
+}
+
+func TestValidateForRead_1(t *testing.T) {
+	// the given ID is not in the device map
+	deviceMap = make(map[string]*Device)
+
+	err := validateForRead("foo")
+	if err == nil {
+		t.Errorf("validateForRead -> expected error but got nil")
+	}
+}
+
+func TestValidateForRead_2(t *testing.T) {
+	// the given device is not readable
+	deviceMap = make(map[string]*Device)
+	deviceMap["abc"] = &Device{
+		Handler: &DeviceHandler{},
+	}
+
+	err := validateForRead("abc")
+	if err == nil {
+		t.Errorf("validateForRead -> expected error but got nil")
+	}
+}
+
+func TestValidateForRead_3(t *testing.T) {
+	// the given device is readable
+	deviceMap = make(map[string]*Device)
+	deviceMap["abc"] = &Device{
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) { return nil, nil },
+		},
+	}
+
+	err := validateForRead("abc")
+	if err != nil {
+		t.Errorf("validateForRead -> unexpected error: %v", err)
+	}
+}
+
+func TestValidateForWrite_1(t *testing.T) {
+	// the given ID is not in the device map
+	deviceMap = make(map[string]*Device)
+
+	err := validateForWrite("foo")
+	if err == nil {
+		t.Errorf("validateForWrite -> expected error but got nil")
+	}
+}
+
+func TestValidateForWrite_2(t *testing.T) {
+	// the given device is not writable
+	deviceMap = make(map[string]*Device)
+	deviceMap["abc"] = &Device{
+		Handler: &DeviceHandler{},
+	}
+
+	err := validateForWrite("abc")
+	if err == nil {
+		t.Errorf("validateForWrite -> expected error but got nil")
+	}
+}
+
+func TestValidateForWrite_3(t *testing.T) {
+	// the given device is writable
+	deviceMap = make(map[string]*Device)
+	deviceMap["abc"] = &Device{
+		Handler: &DeviceHandler{
+			Write: func(d *Device, data *WriteData) error { return nil },
+		},
+	}
+
+	err := validateForWrite("abc")
+	if err != nil {
+		t.Errorf("validateForWrite -> unexpected error: %v", err)
 	}
 }
