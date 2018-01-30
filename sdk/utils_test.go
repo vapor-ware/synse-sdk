@@ -7,74 +7,9 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
-// ===== Test Data =====
-
-var testInst1 = config.DeviceConfig{
-	Version: "1.0",
-	Type:    "test-device",
-	Model:   "td-1",
-	Location: config.Location{
-		Rack:  "rack-1",
-		Board: "board-1",
-	},
-}
-
-var testInst2 = config.DeviceConfig{
-	Version: "1.0",
-	Type:    "test-device",
-	Model:   "td-1",
-	Location: config.Location{
-		Rack:  "rack-1",
-		Board: "board-2",
-	},
-}
-
-var testProto1 = config.PrototypeConfig{
-	Version:      "1.0",
-	Type:         "test-device",
-	Model:        "td-1",
-	Manufacturer: "vaporio",
-	Protocol:     "test",
-}
-
-var testProto2 = config.PrototypeConfig{
-	Version:      "1.0",
-	Type:         "test-device",
-	Model:        "td-3",
-	Manufacturer: "vaporio",
-	Protocol:     "test",
-}
-
-var testHandlers = Handlers{
-	DeviceIdentifier: testDeviceIdentifier,
-	DeviceEnumerator: nil,
-}
-
-var devHandler1 = DeviceHandler{
-	Type:  "test-device",
-	Model: "td-1",
-}
-
-var devHandler2 = DeviceHandler{
-	Type:  "test-device",
-	Model: "td-3",
-}
-
-var testDevHandlers = []*DeviceHandler{
-	&devHandler1,
-	&devHandler2,
-}
-
-var testPlugin = Plugin{
-	handlers:       &testHandlers,
-	deviceHandlers: testDevHandlers,
-}
-
-// ===== Test Cases =====
-
 func TestMakeDevices(t *testing.T) {
-	inst := []*config.DeviceConfig{&testInst1, &testInst2}
-	proto := []*config.PrototypeConfig{&testProto1}
+	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+	proto := []*config.PrototypeConfig{&testPrototypeConfig1}
 
 	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {
@@ -86,8 +21,8 @@ func TestMakeDevices(t *testing.T) {
 }
 
 func TestMakeDevices2(t *testing.T) {
-	inst := []*config.DeviceConfig{&testInst1, &testInst2}
-	proto := []*config.PrototypeConfig{&testProto2}
+	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+	proto := []*config.PrototypeConfig{&testPrototypeConfig2}
 
 	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {
@@ -99,8 +34,8 @@ func TestMakeDevices2(t *testing.T) {
 }
 
 func TestMakeDevices3(t *testing.T) {
-	inst := []*config.DeviceConfig{&testInst1}
-	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
+	inst := []*config.DeviceConfig{&testDeviceConfig1}
+	proto := []*config.PrototypeConfig{&testPrototypeConfig1, &testPrototypeConfig2}
 
 	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {
@@ -112,7 +47,7 @@ func TestMakeDevices3(t *testing.T) {
 }
 
 func TestMakeDevices4(t *testing.T) {
-	inst := []*config.DeviceConfig{&testInst1, &testInst2}
+	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
 	var proto []*config.PrototypeConfig
 
 	devices, err := makeDevices(inst, proto, &testPlugin)
@@ -126,7 +61,7 @@ func TestMakeDevices4(t *testing.T) {
 
 func TestMakeDevices5(t *testing.T) {
 	var inst []*config.DeviceConfig
-	proto := []*config.PrototypeConfig{&testProto1, &testProto2}
+	proto := []*config.PrototypeConfig{&testPrototypeConfig1, &testPrototypeConfig2}
 
 	devices, err := makeDevices(inst, proto, &testPlugin)
 	if err != nil {

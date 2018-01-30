@@ -43,6 +43,7 @@ fmt:  ## Run goimports on all go files
 .PHONY: lint
 lint:  ## Lint project source files
 	gometalinter ./... --vendor --tests --deadline=5m \
+		--exclude='(sdk\/sdktest\.go)' \
 		--disable=gas --disable=errcheck --disable=gocyclo
 
 .PHONY: setup
