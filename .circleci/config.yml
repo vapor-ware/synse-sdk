@@ -15,47 +15,42 @@ jobs:
       - run:
           name: Setup
           command: |
-            mkdir -p /tmp/gotest
             sudo mkdir /synse
             sudo chown -R $(whoami) /synse
       - run:
-          name: Lint
-          command: |
-            go get -u github.com/golang/lint/golint
-            golint -set_exit_status sdk/... client/... examples/...
-      - run:
           name: Install Vendored Dependencies
           command: |
-            go get -v github.com/golang/dep/cmd/dep
-            go install github.com/golang/dep/cmd/dep
-            dep ensure -v
+            make dep
       - run:
-          name: Get Test JUnit Parser
+          name: Lint
           command: |
-            go get -v -u github.com/jstemmer/go-junit-report
+            make lint
+      - run:
+          name: Format
+          command: |
+            fmt="$(find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do goimports -d "$file"; done)"
+            if [ "$fmt" != "" ]; then
+              echo "$fmt"
+              exit 1
+            fi
       - run:
           name: Test
           command: |
-            go test -v ./sdk 2>&1 | go-junit-report > /tmp/gotest/report.xml
+            make test
       - run:
           name: Build Examples
           command: |
-            cd examples/simple_plugin ; go build -v ; cd ../..
-            cd examples/pre_run_actions ; go build -v ; cd ../..
-            cd examples/multi_device_plugin ; go build -v ; cd ../..
-            cd examples/c_plugin ; go build -v ; cd ../..
-            cd examples/auto_enumerate ; go build -v ; cd ../..
+            make examples
       - run:
           name: Build CLI
           command: |
+            # this will be removed soon https://github.com/vapor-ware/synse-cli/issues/51
             cd client ; go build -o pcli ; cd ..
       - save_cache:
           when: on_success
           key: vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
           paths:
             - vendor/
-      - store_test_results:
-          path: /tmp/gotest
 
   # release creates a github release draft for the changes
   release:
@@ -77,12 +72,11 @@ jobs:
       - run:
           name: Install Vendored Dependencies
           command: |
-            go get -v github.com/golang/dep/cmd/dep
-            go install github.com/golang/dep/cmd/dep
-            dep ensure -v
+            make dep
       - run:
           name: Build CLI
           command: |
+            # this will be removed soon https://github.com/vapor-ware/synse-cli/issues/51
             mkdir -p /tmp/bin
             cd client ; go build -o /tmp/bin/pcli ; cd ..
       - run:

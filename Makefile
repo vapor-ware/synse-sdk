@@ -1,6 +1,9 @@
 
 SDK_VERSION := $(shell cat sdk/version.go | grep 'const SDKVersion' | awk '{print $$4}')
 
+HAS_LINT := $(shell command -v gometalinter)
+HAS_DEP  := $(shell command -v dep)
+
 
 .PHONY: build
 build:  ## Build the SDK locally
@@ -24,8 +27,10 @@ cover:  ## Run tests and open the coverage report
 
 .PHONY: dep
 dep:  ## Ensure and prune dependencies
-	dep ensure -v --vendor-only
-	# Prune is done automatically by dep ensure now.
+ifndef HAS_DEP
+	go get -u github.com/golang/dep/cmd/dep
+endif
+	dep ensure -v
 
 .PHONY: examples
 examples:  ## Build the examples
@@ -42,9 +47,14 @@ fmt:  ## Run goimports on all go files
 
 .PHONY: lint
 lint:  ## Lint project source files
+ifndef HAS_LINT
+	go get -u github.com/alecthomas/gometalinter
+	gometalinter --install
+endif
+	@ # disable gotype: https://github.com/alecthomas/gometalinter/issues/40
 	gometalinter ./... --vendor --tests --deadline=5m \
 		--exclude='(sdk\/sdktest\.go)' \
-		--disable=gas --disable=errcheck --disable=gocyclo
+		--disable=gas --disable=errcheck --disable=gocyclo --disable=gotype
 
 .PHONY: setup
 setup:  ## Install the build and development dependencies
