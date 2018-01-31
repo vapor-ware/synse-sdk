@@ -32,6 +32,14 @@ ifndef HAS_DEP
 endif
 	dep ensure -v
 
+
+.PHONY: docs
+docs:  ## Build the docs (via Slate)
+	docker build -f docs/build/Dockerfile -t vaporio/slate-docs docs/build
+	docker run --name slate-docs -v `pwd`/docs/build/src:/source vaporio/slate-docs
+	docker cp slate-docs:/slate/build/. docs
+	docker rm slate-docs
+
 .PHONY: examples
 examples:  ## Build the examples
 	@for d in examples/*/ ; do \
