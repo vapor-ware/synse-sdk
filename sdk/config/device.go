@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -38,6 +39,7 @@ func (l *Location) Encode() *synse.MetaLocation {
 // ParseDeviceConfig parses the YAML files found in the device instance
 // configuration directory, if any are found, into DeviceConfig structs.
 func ParseDeviceConfig() ([]*DeviceConfig, error) {
+	logger.Debug("ParseDeviceConfig start")
 	var cfgs []*DeviceConfig
 
 	path := os.Getenv(EnvDeviceConfig)
@@ -50,32 +52,39 @@ func ParseDeviceConfig() ([]*DeviceConfig, error) {
 		}
 	}
 
+	logger.Debug("ParseDeviceConfig 2")
 	_, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Debug("ParseDeviceConfig 3")
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Debugf("ParseDeviceConfig 4. files: %v", files)
 	for _, f := range files {
+		logger.Debug("ParseDeviceConfig 5")
 		if isValidConfig(f) {
 			// Get the file contents
 			fpath := filepath.Join(path, f.Name())
+			logger.Debugf("ParseDeviceConfig reading file %v", fpath)
 			yml, err := ioutil.ReadFile(fpath)
 			if err != nil {
 				return nil, err
 			}
 
 			// Get the version of the configuration file
+			logger.Debug("ParseDeviceConfig 6")
 			ver, err := getConfigVersion(fpath, yml)
 			if err != nil {
 				return nil, err
 			}
 
 			// Get the handler for the given configuration version
+			logger.Debug("ParseDeviceConfig 7")
 			cfgHandler, err := getDeviceConfigVersionHandler(ver)
 			if err != nil {
 				return nil, err
@@ -83,13 +92,17 @@ func ParseDeviceConfig() ([]*DeviceConfig, error) {
 
 			// Process the configuration files with the specific handler
 			// for the version of that config file.
+			logger.Debug("ParseDeviceConfig 8")
 			c, err := cfgHandler.processDeviceConfig(yml)
 			if err != nil {
 				return nil, err
 			}
 
+			logger.Debug("ParseDeviceConfig 9")
 			cfgs = append(cfgs, c...)
 		}
 	}
+
+	logger.Debug("ParseDeviceConfig 10")
 	return cfgs, nil
 }
