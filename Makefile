@@ -1,8 +1,8 @@
 
 SDK_VERSION := $(shell cat sdk/version.go | grep 'const SDKVersion' | awk '{print $$4}')
 
-HAS_LINT := $(shell command -v gometalinter)
-HAS_DEP  := $(shell command -v dep)
+HAS_LINT := $(shell which gometalinter)
+HAS_DEP  := $(shell which dep)
 
 
 .PHONY: build
