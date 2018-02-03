@@ -163,9 +163,10 @@ func (d *Device) encode() *synse.MetainfoResponse {
 // are specified.
 func devicesFromConfig() ([]*config.DeviceConfig, error) {
 	var configs []*config.DeviceConfig
-
+	logger.Debug("devicesFromConfig start")
 	deviceConfig, err := config.ParseDeviceConfig()
 	if err != nil {
+		logger.Errorf("devicesFromConfig. error from ParseDeviceConfig %v", err)
 		return nil, err
 	}
 	configs = append(configs, deviceConfig...)

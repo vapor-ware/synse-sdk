@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
 )
 
@@ -54,12 +55,18 @@ func (h *v1DeviceConfigHandler) processPrototypeConfig(yml []byte) ([]*Prototype
 	return cfgs, nil
 }
 
+// This function parses out the devices from the device configuration in the yaml file.
 func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig, error) {
+	// TODO: Fix these traces. Get something.
+	logger.Debugf("processDeviceConfig start. yml: %+v", yml)
+	logger.Debugf("processDeviceConfig start. yml: %+v", string(yml[:])) // had \n for newlines.
+	logger.Debugf("processDeviceConfig start. yml: %v", string(yml[:]))
 	var cfgs []*DeviceConfig
 	var scheme v1deviceConfig
 
 	err := yaml.Unmarshal(yml, &scheme)
 	if err != nil {
+		logger.Error("Failed to unmarshal yaml. %v", err)
 		return nil, err
 	}
 
@@ -78,8 +85,10 @@ func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig
 				Location: location,
 				Data:     i,
 			}
+			logger.Debugf("processDeviceConfig adding cfg: %+v", cfg)
 			cfgs = append(cfgs, &cfg)
 		}
 	}
+	logger.Debugf("processDeviceConfig returning: %+v", cfgs)
 	return cfgs, nil
 }

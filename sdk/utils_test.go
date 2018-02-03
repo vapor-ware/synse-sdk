@@ -98,7 +98,7 @@ func TestSetupSocket(t *testing.T) {
 
 // setup the socket when the path and socket already exist.
 func TestSetupSocket2(t *testing.T) {
-	_ = os.MkdirAll("/synse/procs", os.ModePerm)
+	_ = os.MkdirAll("/tmp/synse/procs", os.ModePerm)
 
 	filename := "/tmp/synse/procs/test.sock"
 	_, err := os.Create(filename)

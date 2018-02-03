@@ -303,7 +303,7 @@ func makeAPIClient() {
 	var err error
 
 	if socketName != "" {
-		socket := fmt.Sprintf("/synse/procs/%s.sock", socketName)
+		socket := fmt.Sprintf("/tmp/synse/procs/%s.sock", socketName)
 		grpcConn, err = grpc.Dial(
 			socket,
 			grpc.WithInsecure(),
