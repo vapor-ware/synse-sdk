@@ -57,10 +57,9 @@ func (h *v1DeviceConfigHandler) processPrototypeConfig(yml []byte) ([]*Prototype
 
 // This function parses out the devices from the device configuration in the yaml file.
 func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig, error) {
-	// TODO: Fix these traces. Get something.
-	logger.Debugf("processDeviceConfig start. yml: %+v", yml)
-	logger.Debugf("processDeviceConfig start. yml: %+v", string(yml[:])) // had \n for newlines.
-	logger.Debugf("processDeviceConfig start. yml: %v", string(yml[:]))
+	// Logging the yml so that we can debug this with the log.
+	logger.InfoMultiline(string(yml[:]))
+
 	var cfgs []*DeviceConfig
 	var scheme v1deviceConfig
 

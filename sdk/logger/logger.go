@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"strings"
+
 	"github.com/Sirupsen/logrus"
 )
 
@@ -72,4 +74,16 @@ func Debug(args ...interface{}) {
 // Debugf is a wrapper around logger.Debugf.
 func Debugf(format string, args ...interface{}) {
 	logger.Debugf(format, args...)
+}
+
+// InfoMultiline logs a multi-line string at the debug level.
+// logrus emits a newline as a literal \n which isn't always desirable.
+// This function is useful for logging configuration files so that we can:
+// - Spot a syntax error.
+// - Determine the configuration from a log file.
+func InfoMultiline(toLog string) {
+	lines := strings.Split(toLog, "\n")
+	for line := 0; line < len(lines); line++ {
+		logger.Infof("Line %04d: %v", line, lines[line])
+	}
 }
