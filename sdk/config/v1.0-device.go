@@ -57,12 +57,7 @@ func (h *v1DeviceConfigHandler) processPrototypeConfig(yml []byte) ([]*Prototype
 
 // This function parses out the devices from the device configuration in the yaml file.
 func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig, error) {
-	// TODO: Fix these traces. Get something.
-	//logger.Debugf("processDeviceConfig start. yml: %+v", yml)
-
-	// Logging the yml is a bit tricky since logrus emits a literal "\n" character
-	// rather than a newline. We want something that is human readable when
-	// logging the configuration.
+	// Logging the yml so that we can debug this with the log.
 	logger.InfoMultiline(string(yml[:]))
 
 	var cfgs []*DeviceConfig
