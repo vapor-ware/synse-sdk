@@ -61,16 +61,10 @@ func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig
 	//logger.Debugf("processDeviceConfig start. yml: %+v", yml)
 
 	// Logging the yml is a bit tricky since logrus emits a literal "\n" character
-	// rather than a newline. We want something that is human readable.
-	// TODO: Put this in the logger file.
-	ymlString := string(yml[:])
-	//ymlString = strings.Replace(ymlString, "\\n", "\n", -1)
-	logger.InfoMultiline(ymlString)
+	// rather than a newline. We want something that is human readable when
+	// logging the configuration.
+	logger.InfoMultiline(string(yml[:]))
 
-	//logger.Debugf("processDeviceConfig start. yml: %+v", string(yml[:])) // had \n for newlines.
-	//logger.Debugf("processDeviceConfig start. yml: %v", string(yml[:]))
-	logger.Debugf("processDeviceConfig start. yml: %+v", ymlString) // had \n for newlines.
-	logger.Debugf("processDeviceConfig start. yml: %v", ymlString)
 	var cfgs []*DeviceConfig
 	var scheme v1deviceConfig
 

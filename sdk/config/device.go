@@ -58,7 +58,7 @@ func ParseDeviceConfig() ([]*DeviceConfig, error) {
 		return nil, err
 	}
 
-	logger.Debug("ParseDeviceConfig 3")
+	logger.Debugf("ParseDeviceConfig 3. path: %v", path)
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return nil, err
