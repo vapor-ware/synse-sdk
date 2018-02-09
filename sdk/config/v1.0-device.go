@@ -65,7 +65,7 @@ func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig
 
 	err := yaml.Unmarshal(yml, &scheme)
 	if err != nil {
-		logger.Error("Failed to unmarshal yaml. %v", err)
+		logger.Errorf("Failed to unmarshal yaml. %v", err)
 		return nil, err
 	}
 
