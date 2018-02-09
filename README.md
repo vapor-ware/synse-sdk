@@ -101,7 +101,7 @@ golint sdk/...
 ```
 
 For convenience, this can all be done via make, where linting will also include go
-source files in the `client` and `examples` directory.
+source files in the `examples` directory.
 ```
 make lint
 ```
