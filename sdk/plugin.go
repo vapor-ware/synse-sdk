@@ -232,7 +232,10 @@ func (p *Plugin) setup() error {
 	// be done prior to running the plugin, as opposed to on initialization
 	// of the Plugin struct, because their configuration is configuration
 	// dependent. The Plugin should be configured prior to running.
-	p.server = NewServer(p)
+	p.server, err = NewServer(p)
+	if err != nil {
+		return err
+	}
 	p.dataManager = NewDataManager(p)
 
 	return nil

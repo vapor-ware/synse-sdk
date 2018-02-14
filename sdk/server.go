@@ -16,10 +16,14 @@ type Server struct {
 }
 
 // NewServer creates a new instance of a Server.
-func NewServer(plugin *Plugin) *Server {
-	return &Server{
+func NewServer(plugin *Plugin) (*Server, error) {
+	if plugin == nil {
+		return nil, invalidArgumentErr("plugin parameter must not be nil")
+	}
+	server := &Server{
 		plugin: plugin,
 	}
+	return server, nil
 }
 
 // setup gets the network and address string which are used as parameters
