@@ -17,14 +17,14 @@ type deviceAction func(p *Plugin, d *Device) error
 type Plugin struct {
 	Config      *config.PluginConfig // See config.PluginConfig for comments.
 	server      *Server              // The gRPC server.
-	handlers    *Handlers            // Docs to handlers? What is allowed here?
-	dataManager *DataManager         // TODO: Doc
+	handlers    *Handlers            // See sdk.handlers.go for comments.
+	dataManager *DataManager         // Manages device reads and writes. Accesses cached read data.
 	versionInfo *VersionInfo         // Version tracking information.
 
-	deviceHandlers  []*DeviceHandler          // TODO: Simple comment here.
-	preRunActions   []pluginAction            // Array of pluginAction to execute before the main plugin loop.
-	postRunActions  []pluginAction            // Array of pluginAction to execute after the main plugin loop.
-	devSetupActions map[string][]deviceAction // TODO: This is a map of strings? What does it do? What purpose does it serve?
+	deviceHandlers     []*DeviceHandler          // TODO: Simple comment here.
+	preRunActions      []pluginAction            // Array of pluginAction to execute before the main plugin loop.
+	postRunActions     []pluginAction            // Array of pluginAction to execute after the main plugin loop.
+	deviceSetupActions map[string][]deviceAction // See comments for RegisterDeviceSetupActions.
 }
 
 // NewPlugin creates a new Plugin instance. This is the preferred way of
@@ -144,13 +144,13 @@ func (p *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 // the format "key=value,key=value". "type=temperature,model=ABC123" would only
 // match devices whose type was temperature and model was ABC123.
 func (p *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
-	if p.devSetupActions == nil {
-		p.devSetupActions = make(map[string][]deviceAction)
+	if p.deviceSetupActions == nil {
+		p.deviceSetupActions = make(map[string][]deviceAction)
 	}
-	if _, exists := p.devSetupActions[filter]; exists {
-		p.devSetupActions[filter] = append(p.devSetupActions[filter], actions...)
+	if _, exists := p.deviceSetupActions[filter]; exists {
+		p.deviceSetupActions[filter] = append(p.deviceSetupActions[filter], actions...)
 	} else {
-		p.devSetupActions[filter] = actions
+		p.deviceSetupActions[filter] = actions
 	}
 }
 
@@ -179,9 +179,9 @@ func (p *Plugin) Run() error {
 	// With a complete view of the plugin, devices, and configuration, we can
 	// now process any device setup actions prior to reading to/writing from
 	// the device(s).
-	if len(p.devSetupActions) > 0 {
+	if len(p.deviceSetupActions) > 0 {
 		logger.Debug("Executing Device Setup Actions:")
-		for filter, actions := range p.devSetupActions {
+		for filter, actions := range p.deviceSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
 				return err

@@ -6,7 +6,8 @@ import (
 
 // DeviceIdentifier gets the protocol-specific pieces of information
 // that make a device instance unique. This value (or joined set of values)
-// will be used as a component when creating the device UID.
+// will be used as a component when creating the device UID which shows up
+// in a scan.
 type DeviceIdentifier func(map[string]string) string
 
 // DeviceEnumerator defines how the plugin can auto-enumerate the devices
@@ -16,7 +17,7 @@ type DeviceIdentifier func(map[string]string) string
 // configurations, but are discovered or created dynamically based on the
 // capabilities of the plugin's protocol. For example, IPMI can enumerate
 // devices by scanning the SDR and using those entries to make DeviceConfig
-// records.
+// records. SNMP will also dynamically discover devices.
 //
 // Note that device auto-enumeration should only create device instance
 // configurations. The device prototype configurations should still be
@@ -24,7 +25,8 @@ type DeviceIdentifier func(map[string]string) string
 // configured at runtime.
 type DeviceEnumerator func(map[string]interface{}) ([]*config.DeviceConfig, error)
 
-// Handlers contains the user-defined handlers for a Plugin instance.
+// Handlers is a struct that holds plugin-specific function handlers for
+// performing SDK actions that are specific to the plugin. There are two such handlers.
 type Handlers struct {
 	DeviceIdentifier
 	DeviceEnumerator
