@@ -42,12 +42,6 @@
   revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
 
 [[projects]]
-  name = "github.com/inconshreveable/mousetrap"
-  packages = ["."]
-  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
-  version = "v1.0"
-
-[[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
   revision = "d419a98cdbed11a922bf76f257b7c4be79b50e73"
@@ -94,12 +88,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/spf13/cobra"
-  packages = ["."]
-  revision = "2da4a54c5ceefcee7ca5dd0eea1e18a3b6366489"
-
-[[projects]]
-  branch = "master"
   name = "github.com/spf13/jwalterweatherman"
   packages = ["."]
   revision = "7c0cea34c8ece3fbeb2b27ab9b59511d360fb394"
@@ -115,18 +103,6 @@
   packages = ["."]
   revision = "25b30aa063fc18e48662b86996252eabdcf2f0c7"
   version = "v1.0.0"
-
-[[projects]]
-  name = "github.com/vapor-ware/synse-sdk"
-  packages = [
-    "examples/multi_device_plugin/devices",
-    "examples/pre_run_actions/devices",
-    "sdk",
-    "sdk/config",
-    "sdk/logger"
-  ]
-  revision = "ab976e58b07762b4088e25e01424aac6a4e1379f"
-  version = "0.3.2"
 
 [[projects]]
   branch = "master"
@@ -223,6 +199,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4bd212e0a4dc4b40c108351ad7199e36979886087a5d0047dbcdfcd9abfaec7d"
+  inputs-digest = "8407e3b34ae85aea184dfbf720a48315af8af1270eb30e602a4d6791371a1930"
   solver-name = "gps-cdcl"
   solver-version = 1

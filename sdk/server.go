@@ -73,7 +73,7 @@ func (s *Server) serve() error {
 
 // Read is the handler for gRPC Read requests.
 func (s *Server) Read(req *synse.ReadRequest, stream synse.InternalApi_ReadServer) error {
-	responses, err := s.plugin.dm.Read(req)
+	responses, err := s.plugin.dataManager.Read(req)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (s *Server) Read(req *synse.ReadRequest, stream synse.InternalApi_ReadServe
 
 // Write is the handler for gRPC Write requests.
 func (s *Server) Write(ctx context.Context, req *synse.WriteRequest) (*synse.Transactions, error) {
-	transactions, err := s.plugin.dm.Write(req)
+	transactions, err := s.plugin.dataManager.Write(req)
 	if err != nil {
 		return nil, err
 	}

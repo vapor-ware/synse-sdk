@@ -15,16 +15,16 @@ type deviceAction func(p *Plugin, d *Device) error
 // and definable handlers, it contains a gRPC server to handle the plugin
 // requests.
 type Plugin struct {
-	Config   *config.PluginConfig
-	server   *Server
-	handlers *Handlers
-	dm       *DataManager
-	v        *VersionInfo
+	Config      *config.PluginConfig // see config.PluginConfig for comments.
+	server      *Server              // The gRPC server.
+	handlers    *Handlers            // Docs to handlers? What is allowed here?
+	dataManager *DataManager         // TODO: Doc
+	versionInfo *VersionInfo         // Version tracking information.
 
 	deviceHandlers  []*DeviceHandler
-	preRunActions   []pluginAction
-	postRunActions  []pluginAction
-	devSetupActions map[string][]deviceAction
+	preRunActions   []pluginAction            // Array of pluginAction to execute before the main plugin loop.
+	postRunActions  []pluginAction            // Array of pluginAction to Execute after the main plugin loop.
+	devSetupActions map[string][]deviceAction // TODO: This is a map of strings? What does it do? What purpose does it serve?
 }
 
 // NewPlugin creates a new Plugin instance. This is the preferred way of
@@ -32,7 +32,7 @@ type Plugin struct {
 func NewPlugin() *Plugin {
 	p := &Plugin{}
 	p.handlers = &Handlers{}
-	p.v = emptyVersionInfo()
+	p.versionInfo = emptyVersionInfo()
 	return p
 }
 
@@ -43,6 +43,7 @@ func (p *Plugin) RegisterHandlers(handlers *Handlers) {
 
 // RegisterDeviceIdentifier sets the given identifier function as the DeviceIdentifier
 // handler for the plugin.
+// TODO: What does this mean? Sets the GUID/UUID for the device that shows up on a scan???
 func (p *Plugin) RegisterDeviceIdentifier(identifier DeviceIdentifier) {
 	p.handlers.DeviceIdentifier = identifier
 }
@@ -64,8 +65,9 @@ func (p *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 }
 
 // SetVersion sets the VersionInfo for the Plugin.
+// Merges the info parameter with the existing versionInfo.
 func (p *Plugin) SetVersion(info VersionInfo) {
-	p.v.Merge(&info)
+	p.versionInfo.Merge(&info)
 }
 
 // SetConfig manually sets the configuration of the Plugin.
@@ -198,8 +200,8 @@ func (p *Plugin) Run() error {
 
 	// Start the go routines to poll devices and to update internal state
 	// with those readings.
-	p.dm.goPollData()
-	p.dm.goUpdateData()
+	p.dataManager.goPollData()
+	p.dataManager.goUpdateData()
 
 	// Start the gRPC server
 	return p.server.serve()
@@ -232,7 +234,7 @@ func (p *Plugin) setup() error {
 	// of the Plugin struct, because their configuration is configuration
 	// dependent. The Plugin should be configured prior to running.
 	p.server = NewServer(p)
-	p.dm = NewDataManager(p)
+	p.dataManager = NewDataManager(p)
 
 	return nil
 }
@@ -242,12 +244,12 @@ func (p *Plugin) setup() error {
 func (p *Plugin) logInfo() {
 	logger.Info("Plugin Info:")
 	logger.Infof(" Name:        %s", p.Config.Name)
-	logger.Infof(" Version:     %s", p.v.VersionString)
+	logger.Infof(" Version:     %s", p.versionInfo.VersionString)
 	logger.Infof(" SDK Version: %s", SDKVersion)
-	logger.Infof(" Git Commit:  %s", p.v.GitCommit)
-	logger.Infof(" Git Tag:     %s", p.v.GitTag)
-	logger.Infof(" Go Version:  %s", p.v.GoVersion)
-	logger.Infof(" Build Date:  %s", p.v.BuildDate)
+	logger.Infof(" Git Commit:  %s", p.versionInfo.GitCommit)
+	logger.Infof(" Git Tag:     %s", p.versionInfo.GitTag)
+	logger.Infof(" Go Version:  %s", p.versionInfo.GoVersion)
+	logger.Infof(" Build Date:  %s", p.versionInfo.BuildDate)
 	logger.Infof(" OS:          %s", runtime.GOOS)
 	logger.Infof(" Arch:        %s", runtime.GOARCH)
 	logger.Debug("Plugin Config:")
