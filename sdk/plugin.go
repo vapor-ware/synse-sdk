@@ -15,16 +15,16 @@ type deviceAction func(p *Plugin, d *Device) error
 // and definable handlers, it contains a gRPC server to handle the plugin
 // requests.
 type Plugin struct {
-	Config   *config.PluginConfig
-	server   *Server
-	handlers *Handlers
-	dm       *DataManager
-	v        *VersionInfo
+	Config      *config.PluginConfig // See config.PluginConfig for comments.
+	server      *Server              // InternalApiServer for fulfilling gRPC requests.
+	handlers    *Handlers            // See sdk.handlers.go for comments.
+	dataManager *DataManager         // Manages device reads and writes. Accesses cached read data.
+	versionInfo *VersionInfo         // Version tracking information.
 
-	deviceHandlers  []*DeviceHandler
-	preRunActions   []pluginAction
-	postRunActions  []pluginAction
-	devSetupActions map[string][]deviceAction
+	deviceHandlers     []*DeviceHandler          // Plugin-specific read and write functions for the devices supported by the plugin.
+	preRunActions      []pluginAction            // Array of pluginAction to execute before the main plugin loop.
+	postRunActions     []pluginAction            // Array of pluginAction to execute after the main plugin loop.
+	deviceSetupActions map[string][]deviceAction // See comments for RegisterDeviceSetupActions.
 }
 
 // NewPlugin creates a new Plugin instance. This is the preferred way of
@@ -32,7 +32,7 @@ type Plugin struct {
 func NewPlugin() *Plugin {
 	p := &Plugin{}
 	p.handlers = &Handlers{}
-	p.v = emptyVersionInfo()
+	p.versionInfo = emptyVersionInfo()
 	return p
 }
 
@@ -42,7 +42,7 @@ func (p *Plugin) RegisterHandlers(handlers *Handlers) {
 }
 
 // RegisterDeviceIdentifier sets the given identifier function as the DeviceIdentifier
-// handler for the plugin.
+// handler for the plugin. This function helps generate the device UID that shows up in a scan.
 func (p *Plugin) RegisterDeviceIdentifier(identifier DeviceIdentifier) {
 	p.handlers.DeviceIdentifier = identifier
 }
@@ -64,8 +64,9 @@ func (p *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 }
 
 // SetVersion sets the VersionInfo for the Plugin.
+// Merges the info parameter with the existing versionInfo.
 func (p *Plugin) SetVersion(info VersionInfo) {
-	p.v.Merge(&info)
+	p.versionInfo.Merge(&info)
 }
 
 // SetConfig manually sets the configuration of the Plugin.
@@ -142,13 +143,13 @@ func (p *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 // the format "key=value,key=value". "type=temperature,model=ABC123" would only
 // match devices whose type was temperature and model was ABC123.
 func (p *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
-	if p.devSetupActions == nil {
-		p.devSetupActions = make(map[string][]deviceAction)
+	if p.deviceSetupActions == nil {
+		p.deviceSetupActions = make(map[string][]deviceAction)
 	}
-	if _, exists := p.devSetupActions[filter]; exists {
-		p.devSetupActions[filter] = append(p.devSetupActions[filter], actions...)
+	if _, exists := p.deviceSetupActions[filter]; exists {
+		p.deviceSetupActions[filter] = append(p.deviceSetupActions[filter], actions...)
 	} else {
-		p.devSetupActions[filter] = actions
+		p.deviceSetupActions[filter] = actions
 	}
 }
 
@@ -177,9 +178,9 @@ func (p *Plugin) Run() error {
 	// With a complete view of the plugin, devices, and configuration, we can
 	// now process any device setup actions prior to reading to/writing from
 	// the device(s).
-	if len(p.devSetupActions) > 0 {
+	if len(p.deviceSetupActions) > 0 {
 		logger.Debug("Executing Device Setup Actions:")
-		for filter, actions := range p.devSetupActions {
+		for filter, actions := range p.deviceSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
 				return err
@@ -198,8 +199,8 @@ func (p *Plugin) Run() error {
 
 	// Start the go routines to poll devices and to update internal state
 	// with those readings.
-	p.dm.goPollData()
-	p.dm.goUpdateData()
+	p.dataManager.goPollData()
+	p.dataManager.goUpdateData()
 
 	// Start the gRPC server
 	return p.server.serve()
@@ -232,7 +233,7 @@ func (p *Plugin) setup() error {
 	// of the Plugin struct, because their configuration is configuration
 	// dependent. The Plugin should be configured prior to running.
 	p.server = NewServer(p)
-	p.dm = NewDataManager(p)
+	p.dataManager = NewDataManager(p)
 
 	return nil
 }
@@ -242,12 +243,12 @@ func (p *Plugin) setup() error {
 func (p *Plugin) logInfo() {
 	logger.Info("Plugin Info:")
 	logger.Infof(" Name:        %s", p.Config.Name)
-	logger.Infof(" Version:     %s", p.v.VersionString)
+	logger.Infof(" Version:     %s", p.versionInfo.VersionString)
 	logger.Infof(" SDK Version: %s", SDKVersion)
-	logger.Infof(" Git Commit:  %s", p.v.GitCommit)
-	logger.Infof(" Git Tag:     %s", p.v.GitTag)
-	logger.Infof(" Go Version:  %s", p.v.GoVersion)
-	logger.Infof(" Build Date:  %s", p.v.BuildDate)
+	logger.Infof(" Git Commit:  %s", p.versionInfo.GitCommit)
+	logger.Infof(" Git Tag:     %s", p.versionInfo.GitTag)
+	logger.Infof(" Go Version:  %s", p.versionInfo.GoVersion)
+	logger.Infof(" Build Date:  %s", p.versionInfo.BuildDate)
 	logger.Infof(" OS:          %s", runtime.GOOS)
 	logger.Infof(" Arch:        %s", runtime.GOARCH)
 	logger.Debug("Plugin Config:")

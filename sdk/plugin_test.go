@@ -19,7 +19,7 @@ func TestNewPlugin(t *testing.T) {
 	if p.handlers.DeviceIdentifier != nil {
 		t.Error("device identifier handler did not match expected")
 	}
-	if p.dm != nil {
+	if p.dataManager != nil {
 		t.Error("plugin data manager should not be initialized with new plugin")
 	}
 	if p.Config != nil {
@@ -130,7 +130,7 @@ func TestPlugin_setup(t *testing.T) {
 	if p.server == nil {
 		t.Error("upon setup, plugin server should be initialized")
 	}
-	if p.dm == nil {
+	if p.dataManager == nil {
 		t.Error("upon setup, plugin device manager should be initialized")
 	}
 }

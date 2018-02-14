@@ -26,12 +26,18 @@ cover:  ## Run tests and open the coverage report
 	rm coverage.txt && rm coverage_config.txt
 
 .PHONY: dep
-dep:  ## Ensure and prune dependencies
+dep:  ## Ensure and prune dependencies. Do not update existing dependencies.
 ifndef HAS_DEP
 	go get -u github.com/golang/dep/cmd/dep
 endif
 	dep ensure -v
 
+.PHONY: dep-update
+dep-update:  ## Ensure and prune dependencies. Update existing dependencies.
+ifndef HAS_DEP
+	go get -u github.com/golang/dep/cmd/dep
+endif
+	dep ensure -v -update
 
 .PHONY: docs
 docs:  ## Build the docs (via Slate)
