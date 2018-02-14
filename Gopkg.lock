@@ -4,8 +4,8 @@
 [[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
-  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
-  version = "v1.0.3"
+  revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
+  version = "v1.0.4"
 
 [[projects]]
   name = "github.com/fsnotify/fsnotify"
@@ -14,7 +14,6 @@
   version = "v1.4.7"
 
 [[projects]]
-  branch = "master"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -23,7 +22,8 @@
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
+  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -44,14 +44,14 @@
 [[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
-  revision = "d419a98cdbed11a922bf76f257b7c4be79b50e73"
-  version = "v1.7.4"
+  revision = "a8e9fa9ffe534206df1daaa7e9d5e82ca23db7e0"
+  version = "v1.7.5"
 
 [[projects]]
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "b4575eea38cca1123ec2dc90c26529b5c5acfcff"
+  revision = "a4e142e9c047c904fa2f1e144d9a84e6133024bc"
 
 [[projects]]
   name = "github.com/patrickmn/go-cache"
@@ -114,7 +114,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd"
+  revision = "650f4a345ab4e5b245a3034b110ebc7299e68186"
 
 [[projects]]
   branch = "master"
@@ -128,7 +128,7 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "a337091b0525af65de94df2eb7e98bd9962dcbe2"
+  revision = "f5dfe339be1d06f81b22525fe34671ee7d2c8904"
 
 [[projects]]
   branch = "master"
@@ -137,7 +137,7 @@
     "unix",
     "windows"
   ]
-  revision = "4b45465282a4624cf39876842a017334f13b8aff"
+  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
 
 [[projects]]
   branch = "master"
@@ -158,22 +158,25 @@
     "unicode/norm",
     "unicode/rangetable"
   ]
-  revision = "88f656faf3f37f690df1a32515b479415e1a6769"
+  revision = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "11c7f9e547da6db876260ce49ea7536985904c9b"
+  revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7"
 
 [[projects]]
   name = "google.golang.org/grpc"
   packages = [
     ".",
     "balancer",
+    "balancer/base",
+    "balancer/roundrobin",
     "codes",
     "connectivity",
     "credentials",
+    "encoding",
     "grpclb/grpc_lb_v1/messages",
     "grpclog",
     "internal",
@@ -182,19 +185,21 @@
     "naming",
     "peer",
     "resolver",
+    "resolver/dns",
+    "resolver/passthrough",
     "stats",
     "status",
     "tap",
     "transport"
   ]
-  revision = "5ffe3083946d5603a0578721101dc8165b1d5b5f"
-  version = "v1.7.2"
+  revision = "6b51017f791ae1cfbec89c52efdf444b13b550ef"
+  version = "v1.9.2"
 
 [[projects]]
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
+  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
 
 [solve-meta]
   analyzer-name = "dep"

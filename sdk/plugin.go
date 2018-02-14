@@ -15,15 +15,15 @@ type deviceAction func(p *Plugin, d *Device) error
 // and definable handlers, it contains a gRPC server to handle the plugin
 // requests.
 type Plugin struct {
-	Config      *config.PluginConfig // see config.PluginConfig for comments.
+	Config      *config.PluginConfig // See config.PluginConfig for comments.
 	server      *Server              // The gRPC server.
 	handlers    *Handlers            // Docs to handlers? What is allowed here?
 	dataManager *DataManager         // TODO: Doc
 	versionInfo *VersionInfo         // Version tracking information.
 
-	deviceHandlers  []*DeviceHandler
+	deviceHandlers  []*DeviceHandler          // TODO: Simple comment here.
 	preRunActions   []pluginAction            // Array of pluginAction to execute before the main plugin loop.
-	postRunActions  []pluginAction            // Array of pluginAction to Execute after the main plugin loop.
+	postRunActions  []pluginAction            // Array of pluginAction to execute after the main plugin loop.
 	devSetupActions map[string][]deviceAction // TODO: This is a map of strings? What does it do? What purpose does it serve?
 }
 

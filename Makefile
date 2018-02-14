@@ -30,7 +30,7 @@ dep:  ## Ensure and prune dependencies
 ifndef HAS_DEP
 	go get -u github.com/golang/dep/cmd/dep
 endif
-	dep ensure -v
+	dep ensure -v -update
 
 
 .PHONY: docs
