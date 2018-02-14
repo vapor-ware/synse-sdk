@@ -42,7 +42,7 @@ func (p *Plugin) RegisterHandlers(handlers *Handlers) {
 }
 
 // RegisterDeviceIdentifier sets the given identifier function as the DeviceIdentifier
-// handler for the plugin. This function generates for the device UID that shows up in a scan.
+// handler for the plugin. This function generates the device UID that shows up in a scan.
 func (p *Plugin) RegisterDeviceIdentifier(identifier DeviceIdentifier) {
 	p.handlers.DeviceIdentifier = identifier
 }
