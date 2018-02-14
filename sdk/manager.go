@@ -10,20 +10,23 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
+// TODO: Rename file prior to release: https://github.com/vapor-ware/synse-sdk/issues/119
+
 // DataManager handles the reading from and writing to configured devices.
 type DataManager struct {
-	readChannel  chan *ReadContext
-	writeChannel chan *WriteContext
-	readings     map[string][]*Reading
-	lock         *sync.Mutex
-	handlers     *Handlers
-	config       *config.PluginConfig
+	readChannel  chan *ReadContext     // Channel to get data from the goroutine that reads from devices.
+	writeChannel chan *WriteContext    // Channel to pass data to the goroutine that writes to devices.
+	readings     map[string][]*Reading // Map of readings as strings. Key is the device UID.
+	lock         *sync.Mutex           // Lock around asynch reads and writes.
+	handlers     *Handlers             // See sdk/handlers.go.
+	config       *config.PluginConfig  // See config.PluginConfig.
 }
 
-// NewDataManager creates a new instance of the DataManager. It initializes
-// its fields appropriately, based on the current plugin configuration settings.
+// NewDataManager creates a new instance of the DataManager using the existing
+// configurations and handlers registered with the plugin.
 func NewDataManager(plugin *Plugin) *DataManager {
 	return &DataManager{
+		// TODO: https://github.com/vapor-ware/synse-sdk/issues/118
 		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.BufferSize),
 		writeChannel: make(chan *WriteContext, plugin.Config.Settings.Write.BufferSize),
 		readings:     make(map[string][]*Reading),
@@ -33,25 +36,22 @@ func NewDataManager(plugin *Plugin) *DataManager {
 	}
 }
 
-// writesEnabled checks to see whether writing is enable based on the configuration.
-// If the PerLoop setting is set to 0, we will never be able to write, so we consider
+// writesEnabled checks to see whether writing is enableds based on the configuration.
+// If the PerLoop setting is <= 0, we will never be able to write, so we consider
 // writing to be disabled.
-func (d *DataManager) writesEnabled() (string, bool) {
-	if d.config.Settings.Write.PerLoop <= 0 {
-		return "PerLoop setting <= 0", false
-	}
-	return "", true
+func (d *DataManager) writesEnabled() bool {
+	return d.config.Settings.Write.PerLoop > 0
 }
 
 // goPollData starts a go routine which acts as the read-write loop. It first
 // attempts to fulfill any pending write requests, then performs reads on all
 // of the configured devices.
 func (d *DataManager) goPollData() {
-	logger.Debug("starting read-write poller")
+	logger.Info("starting read-write poller")
 	go func() {
 		delay := d.config.Settings.LoopDelay
 		for {
-			if _, ok := d.writesEnabled(); ok {
+			if ok := d.writesEnabled(); ok {
 				d.pollWrite()
 			}
 			d.pollRead()
@@ -69,7 +69,8 @@ func (d *DataManager) pollWrite() {
 	for i := 0; i < d.config.Settings.Write.PerLoop; i++ {
 		select {
 		case w := <-d.writeChannel:
-			logger.Debugf("writing for %v (transaction: %v)", w.device, w.transaction.id)
+			// If this is too chatty we can change back to logger.Debugf.
+			logger.Infof("writing for %v (transaction: %v)", w.device, w.transaction.id)
 			w.transaction.setStatusWriting()
 
 			device := deviceMap[w.ID()]
@@ -97,6 +98,8 @@ func (d *DataManager) pollWrite() {
 
 // pollRead reads from every configured device.
 func (d *DataManager) pollRead() {
+	// deviceMap is a non-nil global in sdk/devices.go containing a single Device
+	// struct instance per configured device.
 	for _, dev := range deviceMap {
 		resp, err := dev.Read()
 		if err != nil {
@@ -110,7 +113,7 @@ func (d *DataManager) pollRead() {
 // goUpdateData updates the DeviceManager's readings state with the latest
 // values that were read for each device.
 func (d *DataManager) goUpdateData() {
-	logger.Debug("starting data updater")
+	logger.Info("starting data updater")
 	go func() {
 		for {
 			reading := <-d.readChannel
@@ -121,7 +124,10 @@ func (d *DataManager) goUpdateData() {
 	}()
 }
 
-// getReadings safely gets a reading value from the DataManager readings field.
+// getReadings safely gets a reading value from the DataManager readings field by
+// accessing the readings for the specified device within a lock context. Since the
+// readings map is updated in a separate goroutine, we want to lock access around the
+// map to prevent simultaneous access collisions.
 func (d *DataManager) getReadings(device string) []*Reading {
 	var r []*Reading
 
@@ -134,22 +140,26 @@ func (d *DataManager) getReadings(device string) []*Reading {
 // Read fulfills a Read request by providing the latest data read from a device
 // and framing it up for the gRPC response.
 func (d *DataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse, error) {
+	// Parameter check.
 	err := validateReadRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
+	// Create the id for the device.
 	deviceID := makeIDString(req.Rack, req.Board, req.Device)
 	err = validateForRead(deviceID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Get the readings for the device.
 	readings := d.getReadings(deviceID)
 	if readings == nil {
 		return nil, notFoundErr("no readings found for device: %s", deviceID)
 	}
 
+	// Create the response containing the device readings.
 	var resp []*synse.ReadResponse
 	for _, r := range readings {
 		reading := &synse.ReadResponse{
@@ -165,21 +175,25 @@ func (d *DataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse, error
 // Write fulfills a Write request by queuing up the write transaction and framing
 // up the corresponding gRPC response.
 func (d *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteData, error) {
+	// Parameter check.
 	err := validateWriteRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
+	// Create the id for the device.
 	deviceID := makeIDString(req.Rack, req.Board, req.Device)
 	err = validateForWrite(deviceID)
 	if err != nil {
 		return nil, err
 	}
 
-	if ctx, enabled := d.writesEnabled(); !enabled {
-		return nil, fmt.Errorf("writing is not enabled (%v)", ctx)
+	// Ensure writes are enabled.
+	if enabled := d.writesEnabled(); !enabled {
+		return nil, fmt.Errorf("writing is not enabled")
 	}
 
+	// Perform the write and build the response.
 	var resp = make(map[string]*synse.WriteData)
 	for _, data := range req.Data {
 		t := NewTransaction()
