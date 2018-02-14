@@ -10,15 +10,14 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// Please tell me why this file is called manager.go and not dataManger.go
-// or DataManager.go. We can call it anything.
+// TODO: Rename file prior to release: https://github.com/vapor-ware/synse-sdk/issues/119
 
 // DataManager handles the reading from and writing to configured devices.
 type DataManager struct {
-	readChannel  chan *ReadContext     // How to read data from a device.
-	writeChannel chan *WriteContext    // How to write to a device.
-	readings     map[string][]*Reading // Map of readings as strings.
-	lock         *sync.Mutex           // Lock around reads and writes.
+	readChannel  chan *ReadContext     // Channel to get data from the goroutine that reads from devices.
+	writeChannel chan *WriteContext    // Channel to pass data to the goroutine that writes to devices.
+	readings     map[string][]*Reading // Map of readings as strings. Key is the device UID.
+	lock         *sync.Mutex           // Lock around asynch reads and writes.
 	handlers     *Handlers             // See sdk/handlers.go.
 	config       *config.PluginConfig  // See config.PluginConfig.
 }
@@ -27,9 +26,7 @@ type DataManager struct {
 // configurations and handlers registered with the plugin.
 func NewDataManager(plugin *Plugin) *DataManager {
 	return &DataManager{
-		// TODO: There absolutely has to be bugs in here.
-		// Pointers are derefenced without checks and golang does not typically throw.
-		// Solution is to check parameters and fail appropriately. (Log the error for starters.)
+		// TODO: https://github.com/vapor-ware/synse-sdk/issues/118
 		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.BufferSize),
 		writeChannel: make(chan *WriteContext, plugin.Config.Settings.Write.BufferSize),
 		readings:     make(map[string][]*Reading),

@@ -16,7 +16,7 @@ type deviceAction func(p *Plugin, d *Device) error
 // requests.
 type Plugin struct {
 	Config      *config.PluginConfig // See config.PluginConfig for comments.
-	server      *Server              // The gRPC server.
+	server      *Server              // InternalApiServer for fulfilling gRPC requests.
 	handlers    *Handlers            // See sdk.handlers.go for comments.
 	dataManager *DataManager         // Manages device reads and writes. Accesses cached read data.
 	versionInfo *VersionInfo         // Version tracking information.
@@ -42,8 +42,7 @@ func (p *Plugin) RegisterHandlers(handlers *Handlers) {
 }
 
 // RegisterDeviceIdentifier sets the given identifier function as the DeviceIdentifier
-// handler for the plugin.
-// TODO: What does this mean? Sets the GUID/UUID for the device that shows up on a scan???
+// handler for the plugin. This function generates for the device UID that shows up in a scan.
 func (p *Plugin) RegisterDeviceIdentifier(identifier DeviceIdentifier) {
 	p.handlers.DeviceIdentifier = identifier
 }
