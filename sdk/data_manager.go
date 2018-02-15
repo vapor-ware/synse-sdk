@@ -210,7 +210,10 @@ func (d *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteDat
 	// Perform the write and build the response.
 	var resp = make(map[string]*synse.WriteData)
 	for _, data := range req.Data {
-		t := NewTransaction()
+		t, err := NewTransaction()
+		if err != nil {
+			return nil, err
+		}
 		t.setStatusPending()
 
 		resp[t.id] = data

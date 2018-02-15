@@ -112,7 +112,10 @@ func (s *Server) Metainfo(req *synse.MetainfoRequest, stream synse.InternalApi_M
 
 // TransactionCheck is the handler for gRPC TransactionCheck requests.
 func (s *Server) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
-	transaction := GetTransaction(in.Id)
+	transaction, err := GetTransaction(in.Id)
+	if err == nil {
+		return nil, err
+	}
 	if transaction == nil {
 		return nil, notFoundErr("transaction not found: %v", in.Id)
 	}
