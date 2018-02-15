@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
@@ -30,11 +29,12 @@ var temperatureHandler = sdk.DeviceHandler{
 		}
 
 		value := cRead(id, device.Model)
-		return []*sdk.Reading{{
-			Timestamp: time.Now().String(),
-			Type:      device.Type,
-			Value:     value,
-		}}, nil
+		return []*sdk.Reading{
+			sdk.NewReading(
+				device.Type,
+				value,
+			),
+		}, nil
 	},
 }
 

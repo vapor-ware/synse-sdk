@@ -4,11 +4,23 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// Reading describes a single device reading with a timestamp.
+// Reading describes a single device reading with a timestamp. The timestamp
+// should be formatted with the RFC3339Nano layout (e.g. time.RFC3339Nano).
 type Reading struct {
 	Timestamp string
 	Type      string
 	Value     string
+}
+
+// NewReading creates a new instance of a Reading. It uses the current time
+// (time.Now) to fill in the Timestamp field, formatted with the RFC3339Nano
+// layout. This is the preferred method for creating new Reading instances.
+func NewReading(readingType, readingValue string) *Reading {
+	return &Reading{
+		Timestamp: GetCurrentTime(),
+		Type:      readingType,
+		Value:     readingValue,
+	}
 }
 
 // ReadContext provides the context for a device reading. This context
