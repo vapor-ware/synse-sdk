@@ -10,7 +10,7 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// TODO: Rename file prior to release: https://github.com/vapor-ware/synse-sdk/issues/119
+// TODO: Rename file prior to release. MISSED THE TEST FILE: https://github.com/vapor-ware/synse-sdk/issues/119
 
 // DataManager handles the reading from and writing to configured devices.
 type DataManager struct {
@@ -24,7 +24,21 @@ type DataManager struct {
 
 // NewDataManager creates a new instance of the DataManager using the existing
 // configurations and handlers registered with the plugin.
-func NewDataManager(plugin *Plugin) *DataManager {
+func NewDataManager(plugin *Plugin) (*DataManager, error) {
+	// Nil check the parameter and all pointers we dereference here for now.
+	// FUTURE: Check in the plugin config constructor.
+	if plugin == nil {
+		return nil, invalidArgumentErr("plugin parameter must not be nil")
+	}
+
+	if plugin.handlers == nil {
+		return nil, invalidArgumentErr("plugin.handlers in parameter must not be nil")
+	}
+
+	if plugin.Config == nil {
+		return nil, invalidArgumentErr("plugin.Config in parameter must not be nil")
+	}
+
 	return &DataManager{
 		// TODO: https://github.com/vapor-ware/synse-sdk/issues/118
 		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.BufferSize),
@@ -33,7 +47,7 @@ func NewDataManager(plugin *Plugin) *DataManager {
 		lock:         &sync.Mutex{},
 		handlers:     plugin.handlers,
 		config:       plugin.Config,
-	}
+	}, nil
 }
 
 // writesEnabled checks to see whether writing is enabled based on the configuration.

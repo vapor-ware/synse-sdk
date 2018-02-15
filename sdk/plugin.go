@@ -236,9 +236,10 @@ func (p *Plugin) setup() error {
 	if err != nil {
 		return err
 	}
-	p.dataManager = NewDataManager(p)
 
-	return nil
+	// Create the DataManager
+	p.dataManager, err = NewDataManager(p)
+	return err
 }
 
 // logInfo logs out the information about the plugin. This is called just before the

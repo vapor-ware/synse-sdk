@@ -26,7 +26,10 @@ func TestNewDataManager(t *testing.T) {
 		t.Error(err)
 	}
 
-	d := NewDataManager(&p)
+	d, err := NewDataManager(&p)
+	if err != nil {
+		t.Errorf("Error creating DataManager: %v", err)
+	}
 
 	if cap(d.writeChannel) != 200 {
 		t.Errorf("write channel should be of size 200 but is %v", len(d.writeChannel))
@@ -56,7 +59,11 @@ func TestNewDataManager2(t *testing.T) {
 	p := Plugin{handlers: h}
 	p.SetConfig(c)
 
-	d := NewDataManager(&p)
+	// Create the DataManager
+	d, err := NewDataManager(&p)
+	if err != nil {
+		t.Errorf("Error creating DataManager: %v", err)
+	}
 
 	if cap(d.writeChannel) != 500 {
 		t.Errorf("write channel should be of size 500 but is %v", len(d.writeChannel))
