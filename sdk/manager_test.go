@@ -6,8 +6,19 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
+// DeviceID gets the unique identifiers out of the plugin-specific
+// configuration to be used in UID generation. Required to construct Handlers.
+func DeviceID(data map[string]string) string {
+	return data["id"]
+}
+
 func TestNewDataManager(t *testing.T) {
-	h := &Handlers{}
+	// Create handlers.
+	h, err := NewHandlers(DeviceID, nil)
+	if err != nil {
+		t.Errorf("TestNewDataManager. Error creating handlers: %v", err)
+	}
+
 	c := config.PluginConfig{
 		Name:    "test",
 		Version: "test",
@@ -21,7 +32,7 @@ func TestNewDataManager(t *testing.T) {
 		},
 	}
 	p := Plugin{handlers: h}
-	err := p.SetConfig(&c)
+	err = p.SetConfig(&c)
 	if err != nil {
 		t.Error(err)
 	}
@@ -43,7 +54,12 @@ func TestNewDataManager(t *testing.T) {
 }
 
 func TestNewDataManager2(t *testing.T) {
-	h := &Handlers{}
+	// Create handlers.
+	h, err := NewHandlers(DeviceID, nil)
+	if err != nil {
+		t.Errorf("TestNewDataManager2. Error creating handlers: %v", err)
+	}
+
 	c := &config.PluginConfig{
 		Name:    "test",
 		Version: "test",

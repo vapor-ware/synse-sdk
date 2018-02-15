@@ -102,10 +102,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	plugin.RegisterHandlers(&sdk.Handlers{
-		DeviceIdentifier: ProtocolIdentifier,
-		DeviceEnumerator: EnumerateDevices,
-	})
+	// Create handlers for the plugin and register them.
+	handlers, err := sdk.NewHandlers(ProtocolIdentifier, EnumerateDevices)
+	if err != nil {
+		log.Fatal(err)
+	}
+	plugin.RegisterHandlers(handlers)
 
 	plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
