@@ -96,10 +96,15 @@ func TestEncodeDevice(t *testing.T) {
 }
 
 func TestNewDevice(t *testing.T) {
+	// Create Handlers.
+	handlers, err := NewHandlers(testDeviceIdentifier, nil)
+	if err != nil {
+		t.Errorf("TestNewDevice expected no error, got: %v", err)
+	}
+
+	// Initialize Plugin with handlers.
 	p := Plugin{
-		handlers: &Handlers{
-			DeviceIdentifier: testDeviceIdentifier,
-		},
+		handlers: handlers,
 	}
 
 	protoConfig := makePrototypeConfig()
@@ -166,17 +171,21 @@ func TestNewDevice2(t *testing.T) {
 }
 
 func TestNewDevice3(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(testDeviceIdentifier, nil)
+	if err != nil {
+		t.Errorf("TestNewDevice3 expected no error, got: %v", err)
+	}
+	// Initialize plugin with handlers.
 	p := Plugin{
-		handlers: &Handlers{
-			DeviceIdentifier: testDeviceIdentifier,
-		},
+		handlers: handlers,
 	}
 
 	protoConfig := makePrototypeConfig()
 	deviceConfig := makeDeviceConfig()
 	deviceConfig.Type = "foo"
 
-	_, err := NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
+	_, err = NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
 	if err == nil {
 		t.Error("NewDevice -> expected validation error, but got no error")
 	}

@@ -33,9 +33,12 @@ type Handlers struct {
 }
 
 // NewHandlers creates a new instance of Handlers.
-func NewHandlers(id DeviceIdentifier, enum DeviceEnumerator) *Handlers {
+func NewHandlers(id DeviceIdentifier, enum DeviceEnumerator) (*Handlers, error) {
+	if id == nil {
+		return nil, invalidArgumentErr("id parameter must not be nil")
+	}
 	return &Handlers{
 		DeviceIdentifier: id,
 		DeviceEnumerator: enum,
-	}
+	}, nil
 }
