@@ -14,7 +14,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -31,11 +30,12 @@ var (
 
 // Read defines the behavior for device reads in this example plugin.
 func Read(device *sdk.Device) ([]*sdk.Reading, error) {
-	return []*sdk.Reading{{
-		Timestamp: time.Now().String(),
-		Type:      device.Type,
-		Value:     strconv.Itoa(rand.Int()),
-	}}, nil
+	return []*sdk.Reading{
+		sdk.NewReading(
+			device.Type,
+			strconv.Itoa(rand.Int()),
+		),
+	}, nil
 }
 
 // Write defines the behavior for device writes in this example plugin.

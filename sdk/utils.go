@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"time"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
@@ -145,4 +147,11 @@ func filterDevices(filter string) ([]*Device, error) {
 		devices = devices[:i]
 	}
 	return devices, nil
+}
+
+// GetCurrentTime return the current time (time.Now()) as a string formatted
+// with the RFC3339Nano layout. This should be the format of all timestamps
+// returned by the SDK.
+func GetCurrentTime() string {
+	return time.Now().Format(time.RFC3339Nano)
 }
