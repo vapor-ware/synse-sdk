@@ -5,6 +5,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -22,8 +23,12 @@ const (
 // is used to track the asynchronous write transactions as they are processed.
 var transactionCache *cache.Cache
 
-// SetupTransactionCache creates the transaction cache with the configured TTL.
+// SetupTransactionCache creates the transaction cache with the configured TTL
+// in seconds. Any existing cache is invalidated.
 func SetupTransactionCache(ttl int) {
+	if transactionCache != nil {
+		logger.Warn("Resetting existing transaction cache.")
+	}
 	transactionCache = cache.New(
 		time.Duration(ttl)*time.Second,
 		time.Duration(ttl)*2*time.Second,
@@ -42,6 +47,10 @@ func NewTransaction() *Transaction {
 		created: now,
 		updated: now,
 		message: "",
+	}
+	// If we have no transaction cache, set up one withe the default of 600 seconds.
+	if transactionCache == nil {
+		SetupTransactionCache(600)
 	}
 	transactionCache.Set(id, &transaction, cache.DefaultExpiration)
 	return &transaction
