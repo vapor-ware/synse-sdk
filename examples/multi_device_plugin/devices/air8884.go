@@ -1,8 +1,6 @@
 package devices
 
 import (
-	"time"
-
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
@@ -12,10 +10,11 @@ var Air8884 = sdk.DeviceHandler{
 	Model: "air8884",
 
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-		return []*sdk.Reading{{
-			Timestamp: time.Now().String(),
-			Type:      device.Type,
-			Value:     "100",
-		}}, nil
+		return []*sdk.Reading{
+			sdk.NewReading(
+				device.Type,
+				"100",
+			),
+		}, nil
 	},
 }

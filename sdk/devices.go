@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -146,7 +145,7 @@ func (d *Device) encode() *synse.MetainfoResponse {
 	}
 
 	return &synse.MetainfoResponse{
-		Timestamp:    time.Now().String(),
+		Timestamp:    GetCurrentTime(),
 		Uid:          d.ID(),
 		Type:         d.Type,
 		Model:        d.Model,

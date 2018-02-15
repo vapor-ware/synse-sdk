@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -28,11 +27,12 @@ var temperatureHandler = sdk.DeviceHandler{
 	Model: "temp2010",
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
 		value := strconv.Itoa(rand.Int())
-		return []*sdk.Reading{{
-			Timestamp: time.Now().String(),
-			Type:      device.Type,
-			Value:     value,
-		}}, nil
+		return []*sdk.Reading{
+			sdk.NewReading(
+				device.Type,
+				value,
+			),
+		}, nil
 	},
 }
 

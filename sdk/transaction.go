@@ -34,7 +34,7 @@ func SetupTransactionCache(ttl int) {
 // Transaction is given a unique ID and is added to the transaction cache.
 func NewTransaction() *Transaction {
 	id := xid.New().String()
-	now := time.Now().String()
+	now := GetCurrentTime()
 	transaction := Transaction{
 		id:      id,
 		status:  statusUnknown,
@@ -83,6 +83,7 @@ func (t *Transaction) encode() *synse.WriteResponse {
 // to this struct is stored in the cache, and update here should update the
 // in-memory cache as well.
 func (t *Transaction) setStateOk() {
+	t.updated = GetCurrentTime()
 	t.state = stateOk
 }
 
@@ -90,6 +91,7 @@ func (t *Transaction) setStateOk() {
 // pointer to this struct is stored in the cache, and update here should
 // update the in-memory cache as well.
 func (t *Transaction) setStateError() {
+	t.updated = GetCurrentTime()
 	t.state = stateError
 }
 
@@ -97,6 +99,7 @@ func (t *Transaction) setStateError() {
 // pointer to this struct is stored in the cache, and update here should
 // update the in-memory cache as well.
 func (t *Transaction) setStatusUnknown() {
+	t.updated = GetCurrentTime()
 	t.status = statusUnknown
 }
 
@@ -104,6 +107,7 @@ func (t *Transaction) setStatusUnknown() {
 // pointer to this struct is stored in the cache, and update here should
 // update the in-memory cache as well.
 func (t *Transaction) setStatusPending() {
+	t.updated = GetCurrentTime()
 	t.status = statusPending
 }
 
@@ -111,6 +115,7 @@ func (t *Transaction) setStatusPending() {
 // pointer to this struct is stored in the cache, and update here should
 // update the in-memory cache as well.
 func (t *Transaction) setStatusWriting() {
+	t.updated = GetCurrentTime()
 	t.status = statusWriting
 }
 
@@ -118,5 +123,6 @@ func (t *Transaction) setStatusWriting() {
 // to this struct is stored in the cache, and update here should update
 // the in-memory cache as well.
 func (t *Transaction) setStatusDone() {
+	t.updated = GetCurrentTime()
 	t.status = statusDone
 }
