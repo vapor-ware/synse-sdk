@@ -6,6 +6,9 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
 	"github.com/vapor-ware/synse-server-grpc/go"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -22,17 +25,46 @@ const (
 // is used to track the asynchronous write transactions as they are processed.
 var transactionCache *cache.Cache
 
-// SetupTransactionCache creates the transaction cache with the configured TTL.
-func SetupTransactionCache(ttl int) {
+// InvalidateTransactionCache is a Test mechanism to invalidate the transaction
+// cache. Returns an error if there is no transaction cache.
+func InvalidateTransactionCache() (err error) {
+	err = nil
+	if transactionCache == nil {
+		err = status.Errorf(codes.FailedPrecondition,
+			"transactionCache not initialized.")
+	} else {
+		transactionCache = nil
+	}
+	return err
+}
+
+// SetupTransactionCache creates the transaction cache with the TTL in seconds.
+// This needs to be called in order to have transactions.
+// If this is called more than once, the cache is reinitialized and an error is
+// returned. The caller may choose to ignore the error.
+func SetupTransactionCache(ttl int) (err error) {
+	err = nil
+	if transactionCache != nil {
+		err = status.Errorf(codes.AlreadyExists,
+			"transactionCache already initialized.")
+	}
+
 	transactionCache = cache.New(
 		time.Duration(ttl)*time.Second,
 		time.Duration(ttl)*2*time.Second,
 	)
+	return err
 }
 
 // NewTransaction creates a new Transaction instance. Upon creation, the
 // Transaction is given a unique ID and is added to the transaction cache.
-func NewTransaction() *Transaction {
+// This call will fail if the transaction cache is not initialized.
+func NewTransaction() (*Transaction, error) {
+	if transactionCache == nil {
+		return nil, status.Errorf(codes.FailedPrecondition,
+			"transactionCache not initialized. Call SetupTransactionCache.")
+	}
+
 	id := xid.New().String()
 	now := GetCurrentTime()
 	transaction := Transaction{
@@ -44,17 +76,23 @@ func NewTransaction() *Transaction {
 		message: "",
 	}
 	transactionCache.Set(id, &transaction, cache.DefaultExpiration)
-	return &transaction
+	return &transaction, nil
 }
 
 // GetTransaction looks up the given transaction ID in the cache. If it exists,
 // that Transaction is returned; otherwise nil is returned.
-func GetTransaction(id string) *Transaction {
+// This call will fail if the transaction cache is not initialized.
+func GetTransaction(id string) (*Transaction, error) {
+	if transactionCache == nil {
+		return nil, status.Errorf(codes.FailedPrecondition,
+			"transactionCache not initialized. Call SetupTransactionCache.")
+	}
+
 	transaction, found := transactionCache.Get(id)
 	if found {
-		return transaction.(*Transaction)
+		return transaction.(*Transaction), nil
 	}
-	return nil
+	return nil, nil
 }
 
 // Transaction represents an asynchronous write transaction for the Plugin. It
