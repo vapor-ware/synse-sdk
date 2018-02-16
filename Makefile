@@ -51,7 +51,7 @@ examples:  ## Build the examples
 	@for d in examples/*/ ; do \
 		echo "\n\033[32m$$d\033[0m" ; \
 		cd $$d ; \
-		go build -v -o plugin ; \
+		go build -v -o plugin || exit ; \
 		cd ../.. ; \
 	done
 
