@@ -57,14 +57,19 @@ func main() {
 	// the plugin can be run from within this directory.
 	os.Setenv("PLUGIN_DEVICE_CONFIG", "./config")
 
-	// Create a new Plugin and configure it.
-	plugin := sdk.NewPlugin()
-	err := plugin.Configure()
+	// Create handlers for the Plugin.
+	handlers, err := sdk.NewHandlers(ProtocolIdentifier, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	plugin.RegisterDeviceIdentifier(ProtocolIdentifier)
+	// Create a new Plugin and configure it.
+	// The configuration comes from the environment settings above.
+	plugin, err := sdk.NewPlugin(handlers, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	plugin.RegisterDeviceHandlers(
 		&devices.Air8884,
 		&devices.Temp2010,

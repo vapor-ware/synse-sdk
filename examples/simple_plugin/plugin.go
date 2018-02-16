@@ -119,6 +119,12 @@ func main() {
 	os.Setenv("PLUGIN_DEVICE_PATH", "./config/device")
 	os.Setenv("PLUGIN_PROTO_PATH", "./config/proto")
 
+	// Create handlers for the plugin.
+	handlers, err := sdk.NewHandlers(GetProtocolIdentifiers, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Configuration for the Simple Plugin.
 	cfg := config.PluginConfig{
 		Name:    "simple-plugin",
@@ -134,13 +140,11 @@ func main() {
 	}
 
 	// Create a new Plugin and configure it.
-	plugin := sdk.NewPlugin()
-	err := plugin.SetConfig(&cfg)
+	plugin, err := sdk.NewPlugin(handlers, &cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	plugin.RegisterDeviceIdentifier(GetProtocolIdentifiers)
 	plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
 		&ledHandler,

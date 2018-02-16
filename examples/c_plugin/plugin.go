@@ -52,14 +52,18 @@ func main() {
 	// the plugin can be run from within this directory.
 	os.Setenv("PLUGIN_DEVICE_CONFIG", "./config")
 
-	// Create a new Plugin and configure it.
-	plugin := sdk.NewPlugin()
-	err := plugin.Configure()
+	// Create handlers for the plugin.
+	handlers, err := sdk.NewHandlers(ProtocolIdentifier, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	plugin.RegisterDeviceIdentifier(ProtocolIdentifier)
+	// The configuration comes from the files in the environment path.
+	plugin, err := sdk.NewPlugin(handlers, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
 	)

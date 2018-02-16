@@ -7,8 +7,39 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
+// File level global test configuration.
+var testConfig = config.PluginConfig{
+	Name:    "test config",
+	Version: "test config v1",
+	Network: config.NetworkSettings{
+		Type:    "tcp",
+		Address: "test_config",
+	},
+	Settings: config.Settings{
+		Read:  config.ReadSettings{BufferSize: 1024},
+		Write: config.WriteSettings{BufferSize: 1024},
+	},
+}
+
+func TestNewPluginNilHandlers(t *testing.T) {
+	_, err := NewPlugin(nil, &testConfig)
+	if err == nil {
+		t.Error("Expected error, got nil")
+	}
+}
+
 func TestNewPlugin(t *testing.T) {
-	p := NewPlugin()
+	// Create valid handlers for the Plugin.
+	h, err := NewHandlers(testDeviceIdentifier, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Create the plugin.
+	p, err := NewPlugin(h, &testConfig)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if p.server != nil {
 		t.Error("plugin server should not be initialized with new plugin")
@@ -16,20 +47,25 @@ func TestNewPlugin(t *testing.T) {
 	if p.handlers.DeviceEnumerator != nil {
 		t.Error("device enumerator handler did not match expected")
 	}
-	if p.handlers.DeviceIdentifier != nil {
+	if &p.handlers.DeviceIdentifier != &h.DeviceIdentifier {
 		t.Error("device identifier handler did not match expected")
 	}
 	if p.dataManager != nil {
 		t.Error("plugin data manager should not be initialized with new plugin")
 	}
-	if p.Config != nil {
-		t.Error("plugin should not be configured on initialization")
+	if p.Config == nil {
+		t.Error("plugin should be configured on initialization")
 	}
 }
 
 func TestPlugin_SetConfig(t *testing.T) {
-	p := NewPlugin()
+	// Create valid handlers for the Plugin.
+	h, err := NewHandlers(testDeviceIdentifier, nil)
+	if err != nil {
+		t.Error(err)
+	}
 
+	// Create a configuration for the Plugin.
 	c := config.PluginConfig{
 		Name:    "test-plugin",
 		Version: "1.0",
@@ -39,7 +75,8 @@ func TestPlugin_SetConfig(t *testing.T) {
 		},
 	}
 
-	err := p.SetConfig(&c)
+	// Create the plugin.
+	p, err := NewPlugin(h, &c)
 	if err != nil {
 		t.Error(err)
 	}
@@ -51,7 +88,11 @@ func TestPlugin_SetConfig(t *testing.T) {
 
 func TestPlugin_SetConfig2(t *testing.T) {
 	// test passing a bad configuration
-	p := NewPlugin()
+	// Create valid handlers for the Plugin.
+	h, err := NewHandlers(testDeviceIdentifier, nil)
+	if err != nil {
+		t.Error(err)
+	}
 
 	// socket spec missing but required
 	c := config.PluginConfig{
@@ -59,15 +100,16 @@ func TestPlugin_SetConfig2(t *testing.T) {
 		Version: "1.0",
 	}
 
-	err := p.SetConfig(&c)
-	if err == nil {
+	// Create the plugin.
+	_, err = NewPlugin(h, &c)
+	if err != nil {
 		t.Error("expected error when setting config, but got none")
 	}
 }
 
 func TestPlugin_Configure(t *testing.T) {
 	// test configuring using ENV
-	cfgFile := "tmp/config.yml"
+	cfgFilePath := "tmp/config.yml"
 	cfg := `name: test-plugin
 version: 1.0.0
 debug: true
@@ -84,7 +126,7 @@ settings:
   transaction:
     ttl: 600`
 
-	err := writeConfigFile(cfgFile, cfg)
+	err := writeConfigFile(cfgFilePath, cfg)
 	if err != nil {
 		t.Error(err)
 	}
@@ -96,9 +138,14 @@ settings:
 	}()
 
 	os.Setenv("PLUGIN_CONFIG", "tmp")
-	p := Plugin{}
+	// Create valid handlers for the Plugin.
+	h, err := NewHandlers(testDeviceIdentifier, nil)
+	if err != nil {
+		t.Error(err)
+	}
 
-	err = p.Configure()
+	// Create the plugin.
+	p, err := NewPlugin(h, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -114,15 +161,20 @@ settings:
 
 func TestPlugin_setup(t *testing.T) {
 	// setup and validation is good
-	h := Handlers{
-		DeviceIdentifier: testDeviceIdentifier,
-		DeviceEnumerator: testDeviceEnumerator,
+	// Create valid handlers for the Plugin.
+	h, err := NewHandlers(testDeviceIdentifier, testDeviceEnumerator)
+	if err != nil {
+		t.Error(err)
 	}
-	p := NewPlugin()
-	p.RegisterHandlers(&h)
-	p.Config = &config.PluginConfig{}
 
-	err := p.setup()
+	// Create the plugin.
+	p, err := NewPlugin(h, &testConfig)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// CONSIDER: Can we move setup functionality to the constructor?
+	err = p.setup()
 	if err != nil {
 		t.Error(err)
 	}
@@ -138,27 +190,34 @@ func TestPlugin_setup(t *testing.T) {
 func TestPlugin_setup2(t *testing.T) {
 	// validate handlers gives error
 	h := Handlers{}
-	p := NewPlugin()
-	p.RegisterHandlers(&h)
+	p, err := NewPlugin(&h, &testConfig)
+	if err != nil {
+		t.Error(err)
+	}
 	p.Config = &config.PluginConfig{}
 
-	err := p.setup()
+	err = p.setup()
 	if err == nil {
 		t.Error("expected error due to bad handlers, but got no error")
 	}
 }
 
 func TestPlugin_setup3(t *testing.T) {
-	// plugin not yet configured
-	h := Handlers{
-		DeviceIdentifier: testDeviceIdentifier,
-		DeviceEnumerator: testDeviceEnumerator,
+	// Was plugin not yet configured, but now it is configured.
+	// Create valid handlers for the Plugin.
+	h, err := NewHandlers(testDeviceIdentifier, testDeviceEnumerator)
+	if err != nil {
+		t.Error(err)
 	}
-	p := NewPlugin()
-	p.RegisterHandlers(&h)
 
-	err := p.setup()
-	if err == nil {
-		t.Error("expected error due to plugin not being configured, but got no error")
+	// Create the plugin.
+	p, err := NewPlugin(h, &testConfig)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = p.setup()
+	if err != nil {
+		t.Error("Expected no error. Plugin configured by NewPlugin.")
 	}
 }

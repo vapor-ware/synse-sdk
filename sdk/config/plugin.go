@@ -10,8 +10,9 @@ import (
 
 const (
 	defaultConfigPath = "/etc/synse/plugin"
-	homeConfigPath    = "$HOME/.synse/plugin"
 )
+
+var homeConfigPath = os.Getenv("HOME") + "/.synse/plugin"
 
 // PluginConfig specifies the configuration options for the plugin.
 type PluginConfig struct {
@@ -125,12 +126,19 @@ func setLookupInfo(v *viper.Viper) {
 	//  * the default configuration location
 	//  * a configuration directory in $HOME
 	//  * the current working directory
+	var configPaths []string
 	configPath := os.Getenv(EnvPluginConfig)
 	if configPath != "" {
-		v.AddConfigPath(configPath)
+		configPaths = append(configPaths, configPath)
 	} else {
-		v.AddConfigPath(defaultConfigPath)
-		v.AddConfigPath(homeConfigPath)
-		v.AddConfigPath(".")
+		configPaths = append(configPaths, defaultConfigPath)
+		configPaths = append(configPaths, homeConfigPath)
+		configPaths = append(configPaths, ".")
+	}
+
+	// Logging out the config paths here since it may help with debugging.
+	for _, path := range configPaths {
+		logger.Infof("Adding configuration path: %v", path)
+		v.AddConfigPath(path)
 	}
 }
