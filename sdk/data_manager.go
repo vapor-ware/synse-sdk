@@ -10,8 +10,6 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// TODO: Rename file prior to release. MISSED THE TEST FILE: https://github.com/vapor-ware/synse-sdk/issues/119
-
 // DataManager handles the reading from and writing to configured devices.
 type DataManager struct {
 	readChannel  chan *ReadContext     // Channel to get data from the goroutine that reads from devices.
