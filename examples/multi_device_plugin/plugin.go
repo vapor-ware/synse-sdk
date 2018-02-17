@@ -32,13 +32,19 @@ func main() {
 	os.Setenv("PLUGIN_DEVICE_PATH", "./config/device")
 	os.Setenv("PLUGIN_PROTO_PATH", "./config/proto")
 
-	plugin := sdk.NewPlugin()
-	err := plugin.Configure()
+	// Create handlers for the plugin.
+	handlers, err := sdk.NewHandlers(ProtocolIdentifier, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	plugin.RegisterDeviceIdentifier(ProtocolIdentifier)
+	// Create the plugin.
+	// The configuration comes from the environment set above.
+	plugin, err := sdk.NewPlugin(handlers, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	plugin.RegisterDeviceHandlers(
 		&devices.Temp2010,
 		&devices.Air8884,

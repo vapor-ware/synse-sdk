@@ -92,23 +92,23 @@ func main() {
 	// Set the prototype and device instance config paths to be relative to the
 	// current working directory instead of using the default location. This way
 	// the plugin can be run from within this directory.
+	// TODO: https://github.com/vapor-ware/synse-sdk/issues/125
 	os.Setenv("PLUGIN_DEVICE_PATH", "./config/device")
 	os.Setenv("PLUGIN_PROTO_PATH", "./config/proto")
 
-	// Create a new Plugin and configure it.
-	plugin := sdk.NewPlugin()
-	err := plugin.Configure()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create handlers for the plugin and register them.
+	// Create handlers for the plugin.
 	handlers, err := sdk.NewHandlers(ProtocolIdentifier, EnumerateDevices)
 	if err != nil {
 		log.Fatal(err)
 	}
-	plugin.RegisterHandlers(handlers)
 
+	// Create the plugin. The configuration comes from the paths set above.
+	plugin, err := sdk.NewPlugin(handlers, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Register handlers for our devices.
 	plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
 	)

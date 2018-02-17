@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 
@@ -29,11 +30,40 @@ type Plugin struct {
 
 // NewPlugin creates a new Plugin instance. This is the preferred way of
 // initializing a new Plugin instance.
-func NewPlugin() *Plugin {
+// handlers is required non-nil.
+// If pluginConfig is non-nil use the given config.
+// If nil load the config from files in /etc/synse/plugin, $HOME/.synse/plugin, and $PWD.
+func NewPlugin(handlers *Handlers, pluginConfig *config.PluginConfig) (*Plugin, error) {
+	logger.SetLogLevel(true)
+
+	// Paramter checks.
+	if handlers == nil {
+		return nil, invalidArgumentErr("handlers parameter must not be nil")
+	}
+	// PluginConfig may be nil.
+
+	// Create the Plugin.
 	p := &Plugin{}
-	p.handlers = &Handlers{}
+	p.handlers = handlers
 	p.versionInfo = emptyVersionInfo()
-	return p
+
+	// If a configuration is passed in, use it.
+	// If not, default to finding the config in files.
+	if pluginConfig != nil {
+		logger.Info("Loading PluginConfig from parameter")
+		p.Config = pluginConfig
+	} else {
+		logger.Info("Loading default PluginConfig")
+		cfg, err := config.NewPluginConfig()
+		if err != nil {
+			return nil, err
+		}
+		p.Config = cfg
+	}
+	// Set logging level from the config now that we have a config.
+	logger.SetLogLevel(p.Config.Debug)
+
+	return p, nil
 }
 
 // RegisterHandlers registers device handlers for the plugin.
@@ -77,17 +107,6 @@ func (p *Plugin) SetConfig(config *config.PluginConfig) error {
 	}
 	p.Config = config
 
-	logger.SetLogLevel(p.Config.Debug)
-	return nil
-}
-
-// Configure reads in the config file and uses it to set the Plugin configuration.
-func (p *Plugin) Configure() error {
-	cfg, err := config.NewPluginConfig()
-	if err != nil {
-		return err
-	}
-	p.Config = cfg
 	logger.SetLogLevel(p.Config.Debug)
 	return nil
 }
@@ -255,8 +274,9 @@ func (p *Plugin) logInfo() {
 	logger.Infof(" Build Date:  %s", p.versionInfo.BuildDate)
 	logger.Infof(" OS:          %s", runtime.GOOS)
 	logger.Infof(" Arch:        %s", runtime.GOARCH)
-	logger.Debug("Plugin Config:")
-	logger.Debugf(" %#v", p.Config) // FIXME - is there a nice way to print this info?
+	logger.Infof("Plugin Config:")
+	s, _ := json.MarshalIndent(p.Config, "", "  ")
+	logger.Infof(string(s))
 	logger.Info("Registered Devices:")
 	for id, dev := range deviceMap {
 		logger.Infof(" %v (%v)", id, dev.Model)
