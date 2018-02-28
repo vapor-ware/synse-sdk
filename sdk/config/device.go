@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,14 +25,72 @@ type DeviceConfig struct {
 
 // Location represents a location of a device instance.
 type Location struct {
-	Rack  string `yaml:"rack"`
-	Board string `yaml:"board"`
+	Rack  interface{} `yaml:"rack"`
+	Board string      `yaml:"board"`
+
+	// internal field to hold the resolved rack value
+	rack string
+}
+
+// GetRack gets the resolved string value of the Rack field of the
+// Location. If the Rack field cannot resolve, an error is returned.
+func (l *Location) GetRack() (string, error) {
+	if l.rack == "" {
+		err := l.Validate()
+		if err != nil {
+			return "", err
+		}
+	}
+	return l.rack, nil
+}
+
+// Validate validates the contents of the Rack interface, and if it
+// is correct, it will populate the internal `rack` field with that
+// value. Otherwise, it will return an error.
+func (l *Location) Validate() error {
+	switch l.Rack.(type) {
+	// In this case, this is just the Rack defined directly.
+	case string:
+		l.rack = l.Rack.(string)
+		return nil
+
+	// In this case, we have a map - the only key we expect are the
+	// string "from_env" with a string value.
+	case map[interface{}]interface{}:
+		stringMap := make(map[string]string)
+		for k, v := range l.Rack.(map[interface{}]interface{}) {
+			keyString, ok := k.(string)
+			if !ok {
+				return fmt.Errorf("location rack map key is not a string: %v", k)
+			}
+			valueString, ok := v.(string)
+			if !ok {
+				return fmt.Errorf("location rack map value is not a string: %v", v)
+			}
+			stringMap[keyString] = valueString
+		}
+
+		// Check for the "from_env" key
+		fromEnv := stringMap["from_env"]
+		if fromEnv == "" {
+			return fmt.Errorf("location rack is a map, but no supported keys were found in it")
+		}
+		envValue, ok := os.LookupEnv(fromEnv)
+		if !ok {
+			return fmt.Errorf("location rack set to use key %v, but no env value found", fromEnv)
+		}
+		l.rack = envValue
+		return nil
+
+	default:
+		return fmt.Errorf("failed to resolve location rack (type: %T): %v", l.Rack, l.Rack)
+	}
 }
 
 // Encode translates the Location to a corresponding gRPC MetaLocation.
 func (l *Location) Encode() *synse.MetaLocation {
 	return &synse.MetaLocation{
-		Rack:  l.Rack,
+		Rack:  l.rack,
 		Board: l.Board,
 	}
 }

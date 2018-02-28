@@ -61,6 +61,16 @@ func EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error
 	for i := 0; i < 3; i++ {
 		devAddr := fmt.Sprintf("%v-%v", baseAddr, i)
 
+		// validate the location
+		location := config.Location{
+			Rack:  "rack-1",
+			Board: "board-1",
+		}
+		err := location.Validate()
+		if err != nil {
+			return nil, err
+		}
+
 		// create a new device - here, we are using the base address and appending
 		// index of the loop to create the id of the device. we are hardcoding in
 		// the type and model as temperature and temp2010, respectively, because
@@ -69,13 +79,10 @@ func EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error
 		// should be gathered from whatever the real source of auto-enumeration is,
 		// e.g. for IPMI - the SDR records.
 		d := config.DeviceConfig{
-			Version: "1.0",
-			Type:    "temperature",
-			Model:   "temp2010",
-			Location: config.Location{
-				Rack:  "rack-1",
-				Board: "board-1",
-			},
+			Version:  "1.0",
+			Type:     "temperature",
+			Model:    "temp2010",
+			Location: location,
 			// we want to have "id" in the map because our `GetProtocolIdentifiers"
 			// uses the "id" field here to create the internal device uid.
 			Data: map[string]string{
