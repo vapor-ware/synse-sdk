@@ -88,10 +88,15 @@ func (d *Device) Read() (*ReadContext, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		rack, err := d.Location.GetRack()
+		if err != nil {
+			return nil, err
+		}
 		return &ReadContext{
 			Device:  d.ID(),
 			Board:   d.Location.Board,
-			Rack:    d.Location.Rack,
+			Rack:    rack,
 			Reading: readings,
 		}, nil
 
@@ -133,7 +138,8 @@ func (d *Device) ID() string {
 // GUID generates a globally unique ID string by creating a composite
 // string from the rack, board, and device UID.
 func (d *Device) GUID() string {
-	return makeIDString(d.Location.Rack, d.Location.Board, d.ID())
+	rack, _ := d.Location.GetRack()
+	return makeIDString(rack, d.Location.Board, d.ID())
 }
 
 // encode translates the Device to a corresponding gRPC MetainfoResponse.

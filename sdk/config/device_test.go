@@ -47,6 +47,10 @@ var locationEncodeTestTable = []struct {
 
 func TestLocation_Encode(t *testing.T) {
 	for _, tc := range locationEncodeTestTable {
+		err := tc.in.Validate()
+		if err != nil {
+			t.Errorf("failed to validate location %v", tc.in)
+		}
 		r := tc.in.Encode()
 		if *r != tc.out {
 			t.Errorf("%v.Encode() => %v, want %v", tc.in, r, tc.out)
@@ -316,5 +320,94 @@ devices:
 	}
 	if len(res) != 1 {
 		t.Errorf("expected 1 device configuration, but got %v", len(res))
+	}
+}
+
+// process everything successfully using 'from_env' rack value
+func TestParseDeviceConfig10(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	os.Setenv(EnvDevicePath, tmpdir)
+	defer os.Unsetenv(EnvDevicePath)
+
+	os.Setenv("SYNSE_ENV_TEST", "test-rack")
+	defer os.Unsetenv("SYNSE_ENV_TEST")
+
+	data := `version: 1.0
+locations:
+  r1b1:
+    rack:
+      from_env: SYNSE_ENV_TEST
+    board: board-1
+devices:
+  - type: airflow
+    model: air8884
+    instances:
+      - id: 1
+        location: r1b1
+        comment: first emulated airflow device`
+
+	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
+	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
+	if err != nil {
+		t.Error(err)
+	}
+
+	res, err := ParseDeviceConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(res) != 1 {
+		t.Errorf("expected 1 device configuration, but got %v", len(res))
+	}
+
+	config := res[0]
+	rack, err := config.Location.GetRack()
+	if err != nil {
+		t.Errorf("error when getting location info: %v", err)
+	}
+	if rack != "test-rack" {
+		t.Errorf("expected location rack to be 'test-rack' from env, but was not.")
+	}
+}
+
+// process unsuccessfully specifying 'from_env', but not having the env set
+func TestParseDeviceConfig11(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	os.Setenv(EnvDevicePath, tmpdir)
+	defer os.Unsetenv(EnvDevicePath)
+
+	data := `version: 1.0
+locations:
+  r1b1:
+    rack:
+      from_env: SYNSE_ENV_TEST
+    board: board-1
+devices:
+  - type: airflow
+    model: air8884
+    instances:
+      - id: 1
+        location: r1b1
+        comment: first emulated airflow device`
+
+	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
+	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = ParseDeviceConfig()
+	if err == nil {
+		t.Error("expected error: should fail if location rack env doesn't resolve")
 	}
 }

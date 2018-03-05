@@ -76,6 +76,10 @@ func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig
 				return nil, fmt.Errorf("no location defined for device: %#v", device)
 			}
 			location := scheme.Locations[locationTag]
+			err := location.Validate()
+			if err != nil {
+				return nil, err
+			}
 
 			cfg := DeviceConfig{
 				Version:  scheme.Version,

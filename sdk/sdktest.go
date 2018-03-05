@@ -38,15 +38,17 @@ var testDeviceHandler = DeviceHandler{
 // == Utility Functions ==
 
 func makeDeviceConfig() *config.DeviceConfig {
+	location := config.Location{
+		Rack:  "TestRack",
+		Board: "TestBoard",
+	}
+	location.Validate()
 	return &config.DeviceConfig{
-		Version: "1.0",
-		Type:    "TestDevice",
-		Model:   "TestModel",
-		Location: config.Location{
-			Rack:  "TestRack",
-			Board: "TestBoard",
-		},
-		Data: map[string]string{"testKey": "testValue"},
+		Version:  "1.0",
+		Type:     "TestDevice",
+		Model:    "TestModel",
+		Location: location,
+		Data:     map[string]string{"testKey": "testValue"},
 	}
 }
 
