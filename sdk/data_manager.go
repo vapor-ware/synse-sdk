@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"context"
+
+	"golang.org/x/time/rate"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -32,6 +35,12 @@ type DataManager struct {
 	// Lock around async reads and writes.
 	rwLock *sync.Mutex
 
+	// Rate limiter for reading and writing to devices. This is used to
+	// provide rate limiting to read and write requests, if configured.
+	// This can be useful if the device being read from can only accept
+	// a given number of requests within a given time frame.
+	limiter *rate.Limiter
+
 	// The plugin's device handlers. See sdk/handlers.go.
 	handlers *Handlers
 
@@ -59,6 +68,12 @@ func NewDataManager(plugin *Plugin) (*DataManager, error) {
 		return nil, invalidArgumentErr("plugin.Config in parameter must not be nil")
 	}
 
+	// Create a new limiter based on the plugin configuration.
+	limiter := rate.NewLimiter(
+		rate.Inf,  // TODO get these from config
+		0,
+	)
+
 	return &DataManager{
 		// TODO: https://github.com/vapor-ware/synse-sdk/issues/118
 		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.Buffer),
@@ -66,6 +81,7 @@ func NewDataManager(plugin *Plugin) (*DataManager, error) {
 		readings:     make(map[string][]*Reading),
 		dataLock:     &sync.Mutex{},
 		rwLock:       &sync.Mutex{},
+		limiter:      limiter,
 		handlers:     plugin.handlers,
 		config:       plugin.Config,
 	}, nil
@@ -124,7 +140,20 @@ func (manager *DataManager) read() {
 	// configured with the Plugin. Here, we issue a read for each known device.
 	// TODO - if in parallel mode, should we perform device reads simultaneously?
 	// or does "parallel" just mean that the read + write loop do not lock?
+	//  ** to the above: yes. if we are in parallel mode, we should be fine
+	//  ** hitting all reads and writes in parallel, not just running the
+	//  ** read and write loop simultaneously.. TBD of the best way to do this..
+	//  ** my guess is that we will need to have separate functions for serial/parallel.
 	for _, dev := range deviceMap {
+
+		// Rate limiting
+		if manager.config.Limiter != nil {
+			err := manager.config.Limiter.Wait(context.Background())
+			if err != nil {
+				logger.Errorf("error from limiter: %v", err)
+			}
+		}
+
 		resp, err := dev.Read()
 		if err != nil {
 			logger.Errorf("failed to read from device %v: %v", dev.GUID(), err)
@@ -170,6 +199,15 @@ func (manager *DataManager) write() {
 	for i := 0; i < manager.config.Settings.Write.Max; i++ {
 		select {
 		case w := <-manager.writeChannel:
+
+			// Rate limiting
+			if manager.config.Limiter != nil {
+				err := manager.config.Limiter.Wait(context.Background())
+				if err != nil {
+					logger.Errorf("error from limiter: %v", err)
+				}
+			}
+
 			logger.Debugf("writing for %v (transaction %v)", w.device, w.transaction.id)
 			w.transaction.setStatusWriting()
 

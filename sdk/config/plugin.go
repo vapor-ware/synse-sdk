@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -25,6 +26,7 @@ type PluginConfig struct {
 	Network       NetworkSettings
 	AutoEnumerate []map[string]interface{}
 	Context       map[string]interface{}
+	Limiter       *rate.Limiter
 }
 
 // NetworkSettings specifies the configuration options surrounding the

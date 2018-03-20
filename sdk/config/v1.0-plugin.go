@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/spf13/viper"
+	"golang.org/x/time/rate"
 )
 
 type v1PluginConfigHandler struct{}
@@ -21,6 +22,36 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 	ctx, err := toStringMapI(v.Get("context"))
 	if err != nil {
 		return nil, err
+	}
+
+	// Create the limiter, if it is configured. If it is not configured,
+	// then we will set the Limiter as nil
+	var limiter *rate.Limiter
+	if v.IsSet("limiter") {
+		limitRate := v.GetFloat64("limiter.rate")
+		limitBurst := v.GetInt("limiter.burst")
+
+		var r rate.Limit
+		// It the rate is specified as zero, we take that to mean that the
+		// rate should be infinite. While zero is a valid case for the limiter,
+		// it would allow no events, so for our purposes we will just use 0
+		// to define "infinite".
+		if limitRate == 0 {
+			r = rate.Inf
+		} else {
+			r = rate.Limit(limitRate)
+		}
+
+		// If the burst (e.g. bucket size) is set to 0, no events are allowed.
+		// We don't ever want that when a limiter is configured, so here we
+		// default to have the burst size be the same as the rate limit.
+		if limitBurst == 0 {
+			limitBurst = int(r)
+		}
+		limiter = rate.NewLimiter(r, limitBurst)
+
+	} else {
+		limiter = nil
 	}
 
 	// Create a new PluginConfig instance
@@ -51,6 +82,7 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 		},
 		AutoEnumerate: autoEnum,
 		Context:       ctx,
+		Limiter:       limiter,
 	}
 
 	// Validate that the PluginConfig has all of its required fields
