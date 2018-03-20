@@ -42,7 +42,7 @@ func InvalidateTransactionCache() (err error) {
 // This needs to be called in order to have transactions.
 // If this is called more than once, the cache is reinitialized and an error is
 // returned. The caller may choose to ignore the error.
-func SetupTransactionCache(ttl int) (err error) {
+func SetupTransactionCache(ttl time.Duration) (err error) {
 	err = nil
 	if transactionCache != nil {
 		err = status.Errorf(codes.AlreadyExists,
@@ -50,8 +50,8 @@ func SetupTransactionCache(ttl int) (err error) {
 	}
 
 	transactionCache = cache.New(
-		time.Duration(ttl)*time.Second,
-		time.Duration(ttl)*2*time.Second,
+		ttl,
+		ttl*2,
 	)
 	return err
 }

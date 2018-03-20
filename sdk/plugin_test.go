@@ -16,8 +16,9 @@ var testConfig = config.PluginConfig{
 		Address: "test_config",
 	},
 	Settings: config.Settings{
-		Read:  config.ReadSettings{BufferSize: 1024},
-		Write: config.WriteSettings{BufferSize: 1024},
+		Read:        config.ReadSettings{Buffer: 1024},
+		Write:       config.WriteSettings{Buffer: 1024},
+		Transaction: config.TransactionSettings{TTL: "2s"},
 	},
 }
 
@@ -124,7 +125,7 @@ settings:
     buffer_size: 150
     per_loop: 4
   transaction:
-    ttl: 600`
+    ttl: 600s`
 
 	err := writeConfigFile(cfgFilePath, cfg)
 	if err != nil {

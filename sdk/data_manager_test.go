@@ -27,8 +27,9 @@ func TestNewDataManager(t *testing.T) {
 			Address: "test",
 		},
 		Settings: config.Settings{
-			Read:  config.ReadSettings{BufferSize: 200},
-			Write: config.WriteSettings{BufferSize: 200},
+			Read:        config.ReadSettings{Buffer: 200},
+			Write:       config.WriteSettings{Buffer: 200},
+			Transaction: config.TransactionSettings{TTL: "2s"},
 		},
 	}
 	p := Plugin{handlers: h}
@@ -68,8 +69,9 @@ func TestNewDataManager2(t *testing.T) {
 			Address: "test",
 		},
 		Settings: config.Settings{
-			Read:  config.ReadSettings{BufferSize: 500},
-			Write: config.WriteSettings{BufferSize: 500},
+			Read:        config.ReadSettings{Buffer: 500},
+			Write:       config.WriteSettings{Buffer: 500},
+			Transaction: config.TransactionSettings{TTL: "2s"},
 		},
 	}
 	p := Plugin{handlers: h}

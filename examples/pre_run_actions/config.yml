@@ -5,11 +5,11 @@ network:
   type: unix
   address: example-plugin.sock
 settings:
-  loop_delay: 100
   read:
-    buffer_size: 150
+    interval: 100s
+    buffer: 150
   write:
-    buffer_size: 150
-    per_loop: 4
+    interval: 100s
+    buffer: 150
   transaction:
-    ttl: 600
+    ttl: 600s

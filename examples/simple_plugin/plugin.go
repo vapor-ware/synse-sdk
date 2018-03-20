@@ -135,7 +135,15 @@ func main() {
 			Address: "simple-plugin.sock",
 		},
 		Settings: config.Settings{
-			LoopDelay: 500,
+			Read: config.ReadSettings{
+				Interval: "500s",
+			},
+			Write: config.WriteSettings{
+				Interval: "60s",
+			},
+			Transaction: config.TransactionSettings{
+				TTL: "500m",
+			},
 		},
 	}
 

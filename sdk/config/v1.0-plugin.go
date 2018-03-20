@@ -33,16 +33,20 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 			Address: v.GetString("network.address"),
 		},
 		Settings: Settings{
-			LoopDelay: v.GetInt("settings.loop_delay"),
+			Mode: v.GetString("settings.mode"),
 			Read: ReadSettings{
-				BufferSize: v.GetInt("settings.read.buffer_size"),
+				Enabled:  v.GetBool("settings.read.enabled"),
+				Interval: v.GetString("settings.read.interval"),
+				Buffer:   v.GetInt("settings.read.buffer"),
 			},
 			Write: WriteSettings{
-				BufferSize: v.GetInt("settings.write.buffer_size"),
-				PerLoop:    v.GetInt("settings.write.per_loop"),
+				Enabled:  v.GetBool("settings.write.enabled"),
+				Interval: v.GetString("settings.write.interval"),
+				Buffer:   v.GetInt("settings.write.buffer"),
+				Max:      v.GetInt("settings.write.max"),
 			},
 			Transaction: TransactionSettings{
-				TTL: v.GetInt("settings.transaction.ttl"),
+				TTL: v.GetString("settings.transaction.ttl"),
 			},
 		},
 		AutoEnumerate: autoEnum,
@@ -66,11 +70,15 @@ func setV1Defaults(v *viper.Viper) {
 	v.SetDefault("debug", false)
 
 	// settings
-	v.SetDefault("settings.loop_delay", 0)
-	v.SetDefault("settings.read.buffer_size", 100)
-	v.SetDefault("settings.write.buffer_size", 100)
-	v.SetDefault("settings.write.per_loop", 5)
-	v.SetDefault("settings.transaction.ttl", 60*5) // five minutes
+	v.SetDefault("settings.mode", "serial")
+	v.SetDefault("settings.read.interval", "1s")
+	v.SetDefault("settings.read.buffer", 100)
+	v.SetDefault("settings.read.enabled", true)
+	v.SetDefault("settings.write.interval", "1s")
+	v.SetDefault("settings.write.buffer", 100)
+	v.SetDefault("settings.write.max", 100) // default is same as buffer size
+	v.SetDefault("settings.write.enabled", true)
+	v.SetDefault("settings.transaction.ttl", "5m") // five minutes
 
 	// auto-enumerate
 	v.SetDefault("auto_enumerate", []map[string]interface{}{})
