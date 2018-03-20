@@ -119,49 +119,70 @@ func (manager *DataManager) goRead() {
 		for {
 			// Perform the reads. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
-			manager.read()
+			switch mode := manager.config.Settings.Mode; mode {
+			case "serial":
+				// Get device readings in serial
+				manager.serialRead()
+			case "parallel":
+				// Get device readings in parallel
+				manager.parallelRead()
+			default:
+				logger.Errorf("exiting read loop: unsupported plugin run mode: %s", mode)
+				return
+			}
+
 			time.Sleep(interval)
 		}
 	}()
 }
 
-// read implements the logic for reading from all devices that are configured
+// read implements the logic for reading from a device that is configured
 // with the Plugin.
-func (manager *DataManager) read() {
-
-	// If the plugin is a serial plugin, we will want to lock around reads
-	// and writes so the two operations do not stomp on one another.
-	if manager.config.Settings.IsSerial() {
-		manager.rwLock.Lock()
-		defer manager.rwLock.Unlock()
+func (manager *DataManager) read(device *Device) {
+	// Rate limiting, if configured
+	if manager.config.Limiter != nil {
+		err := manager.config.Limiter.Wait(context.Background())
+		if err != nil {
+			logger.Errorf("error from limiter: %v", err)
+		}
 	}
 
-	// deviceMap (defined in sdk/devices.go) accounts for all Device instances
-	// configured with the Plugin. Here, we issue a read for each known device.
-	// TODO - if in parallel mode, should we perform device reads simultaneously?
-	// or does "parallel" just mean that the read + write loop do not lock?
-	//  ** to the above: yes. if we are in parallel mode, we should be fine
-	//  ** hitting all reads and writes in parallel, not just running the
-	//  ** read and write loop simultaneously.. TBD of the best way to do this..
-	//  ** my guess is that we will need to have separate functions for serial/parallel.
-	for _, dev := range deviceMap {
-
-		// Rate limiting
-		if manager.config.Limiter != nil {
-			err := manager.config.Limiter.Wait(context.Background())
-			if err != nil {
-				logger.Errorf("error from limiter: %v", err)
-			}
-		}
-
-		resp, err := dev.Read()
-		if err != nil {
-			logger.Errorf("failed to read from device %v: %v", dev.GUID(), err)
-		} else {
-			manager.readChannel <- resp
-		}
+	// Read from the device
+	resp, err := device.Read()
+	if err != nil {
+		logger.Errorf("failed to read from device %v: %v", device.GUID(), err)
+	} else {
+		manager.readChannel <- resp
 	}
 }
+
+// serialRead reads all devices configured with the Plugin in serial.
+func (manager *DataManager) serialRead() {
+	manager.rwLock.Lock()
+	defer manager.rwLock.Unlock()
+
+	for _, dev := range deviceMap {
+		manager.read(dev)
+	}
+}
+
+// parallelRead reads all devices configured with the Plugin in parallel.
+func (manager *DataManager) parallelRead() {
+	var waitGroup sync.WaitGroup
+
+	for _, dev := range deviceMap {
+		// Increment the WaitGroup counter.
+		waitGroup.Add(1)
+
+		// Launch a goroutine to read from the device
+		go manager.read(dev)
+	}
+
+	// Wait for all device reads to complete.
+	waitGroup.Wait()
+
+}
+
 
 // goWrite starts the goroutine for writing to configured devices.
 func (manager *DataManager) goWrite() {
