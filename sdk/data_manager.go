@@ -1,10 +1,10 @@
 package sdk
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
-	"context"
 
 	"golang.org/x/time/rate"
 
@@ -70,7 +70,7 @@ func NewDataManager(plugin *Plugin) (*DataManager, error) {
 
 	// Create a new limiter based on the plugin configuration.
 	limiter := rate.NewLimiter(
-		rate.Inf,  // TODO get these from config
+		rate.Inf, // TODO get these from config
 		0,
 	)
 
@@ -158,6 +158,8 @@ func (manager *DataManager) read(device *Device) {
 
 // serialRead reads all devices configured with the Plugin in serial.
 func (manager *DataManager) serialRead() {
+	// If the plugin is a serial plugin, we want to lock around reads
+	// and writes so the two operations do not stomp on one another.
 	manager.rwLock.Lock()
 	defer manager.rwLock.Unlock()
 
@@ -183,7 +185,6 @@ func (manager *DataManager) parallelRead() {
 
 }
 
-
 // goWrite starts the goroutine for writing to configured devices.
 func (manager *DataManager) goWrite() {
 	// If writes are not enabled, there is nothing to do here.
@@ -198,61 +199,96 @@ func (manager *DataManager) goWrite() {
 		for {
 			// Perform the writes. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
-			manager.write()
+			switch mode := manager.config.Settings.Mode; mode {
+			case "serial":
+				// Write to devices in serial
+				manager.serialWrite()
+			case "parallel":
+				// Write to devices in parallel
+				manager.parallelWrite()
+			default:
+				logger.Errorf("exiting write loop: unsupported plugin run mode: %s", mode)
+				return
+			}
+
 			time.Sleep(interval)
 		}
 	}()
 }
 
-// write implements the logic for writing to all devices that are configured
-// with the Plugin.
-func (manager *DataManager) write() {
-
-	// If the plugin is a serial plugin, we will want to lock around reads
+func (manager *DataManager) serialWrite() {
+	// If the plugin is a serial plugin, we want to lock around reads
 	// and writes so the two operations do not stomp on one another.
-	if manager.config.Settings.IsSerial() {
-		manager.rwLock.Lock()
-		defer manager.rwLock.Unlock()
-	}
+	manager.rwLock.Lock()
+	defer manager.rwLock.Unlock()
 
 	// Check for any pending writes and, if any exist, attempt to fulfill
 	// the writes and update their transaction state accordingly.
 	for i := 0; i < manager.config.Settings.Write.Max; i++ {
 		select {
 		case w := <-manager.writeChannel:
-
-			// Rate limiting
-			if manager.config.Limiter != nil {
-				err := manager.config.Limiter.Wait(context.Background())
-				if err != nil {
-					logger.Errorf("error from limiter: %v", err)
-				}
-			}
-
-			logger.Debugf("writing for %v (transaction %v)", w.device, w.transaction.id)
-			w.transaction.setStatusWriting()
-
-			device := deviceMap[w.ID()]
-			if device == nil {
-				w.transaction.setStateError()
-				msg := "no device found with ID " + w.ID()
-				w.transaction.message = msg
-				logger.Error(msg)
-			}
-
-			data := decodeWriteData(w.data)
-			err := device.Write(data)
-			if err != nil {
-				w.transaction.setStateError()
-				w.transaction.message = err.Error()
-				logger.Errorf("failed to write to device %v: %v", w.device, err)
-			}
-			w.transaction.setStatusDone()
+			manager.write(w)
 
 		default:
 			// if there is nothing to write, do nothing
 		}
 	}
+}
+
+func (manager *DataManager) parallelWrite() {
+	var waitGroup sync.WaitGroup
+
+	// Check for any pending writes and, if any exist, attempt to fulfill
+	// the writes and update their transaction state accordingly.
+	for i := 0; i < manager.config.Settings.Write.Max; i++ {
+		select {
+		case w := <-manager.writeChannel:
+			// Increment the WaitGroup counter.
+			waitGroup.Add(1)
+
+			// Launch a goroutine to write to the device
+			go manager.write(w)
+
+		default:
+			// if there is nothing to write, do nothing
+		}
+	}
+
+	// Wait for all device reads to complete.
+	waitGroup.Wait()
+}
+
+// write implements the logic for writing to a devices that is configured
+// with the Plugin.
+func (manager *DataManager) write(w *WriteContext) {
+	// Rate limiting, if configured
+	if manager.config.Limiter != nil {
+		err := manager.config.Limiter.Wait(context.Background())
+		if err != nil {
+			logger.Errorf("error from limiter: %v", err)
+		}
+	}
+
+	// Write to the device
+	logger.Debugf("writing for %v (transaction %v)", w.device, w.transaction.id)
+	w.transaction.setStatusWriting()
+
+	device := deviceMap[w.ID()]
+	if device == nil {
+		w.transaction.setStateError()
+		msg := "no device found with ID " + w.ID()
+		w.transaction.message = msg
+		logger.Error(msg)
+	}
+
+	data := decodeWriteData(w.data)
+	err := device.Write(data)
+	if err != nil {
+		w.transaction.setStateError()
+		w.transaction.message = err.Error()
+		logger.Errorf("failed to write to device %v: %v", w.device, err)
+	}
+	w.transaction.setStatusDone()
 }
 
 // goUpdateData updates the DeviceManager's readings state with the latest
