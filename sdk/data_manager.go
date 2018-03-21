@@ -84,8 +84,7 @@ func (manager *DataManager) init() {
 }
 
 // writesEnabled checks to see whether writing is enabled for the plugin based on
-// the configuration. If the PerLoop setting is <= 0, we will never be able to
-// write, so we consider writing to be disabled.
+// the configuration.
 func (manager *DataManager) writesEnabled() bool {
 	return manager.config.Settings.Write.Enabled
 }
@@ -167,7 +166,6 @@ func (manager *DataManager) parallelRead() {
 
 	// Wait for all device reads to complete.
 	waitGroup.Wait()
-
 }
 
 // goWrite starts the goroutine for writing to configured devices.
