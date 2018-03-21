@@ -6,8 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/time/rate"
-
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
@@ -34,12 +32,6 @@ type DataManager struct {
 
 	// Lock around async reads and writes.
 	rwLock *sync.Mutex
-
-	// Rate limiter for reading and writing to devices. This is used to
-	// provide rate limiting to read and write requests, if configured.
-	// This can be useful if the device being read from can only accept
-	// a given number of requests within a given time frame.
-	limiter *rate.Limiter
 
 	// The plugin's device handlers. See sdk/handlers.go.
 	handlers *Handlers
@@ -68,12 +60,6 @@ func NewDataManager(plugin *Plugin) (*DataManager, error) {
 		return nil, invalidArgumentErr("plugin.Config in parameter must not be nil")
 	}
 
-	// Create a new limiter based on the plugin configuration.
-	limiter := rate.NewLimiter(
-		rate.Inf, // TODO get these from config
-		0,
-	)
-
 	return &DataManager{
 		// TODO: https://github.com/vapor-ware/synse-sdk/issues/118
 		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.Buffer),
@@ -81,7 +67,6 @@ func NewDataManager(plugin *Plugin) (*DataManager, error) {
 		readings:     make(map[string][]*Reading),
 		dataLock:     &sync.Mutex{},
 		rwLock:       &sync.Mutex{},
-		limiter:      limiter,
 		handlers:     plugin.handlers,
 		config:       plugin.Config,
 	}, nil
