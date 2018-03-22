@@ -28,7 +28,7 @@ type DataManager struct {
 	readings map[string][]*Reading
 
 	// Lock around access/update of the `readings` map data.
-	dataLock *sync.Mutex
+	dataLock *sync.RWMutex
 
 	// Lock around async reads and writes.
 	rwLock *sync.Mutex
@@ -65,7 +65,7 @@ func NewDataManager(plugin *Plugin) (*DataManager, error) {
 		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.Buffer),
 		writeChannel: make(chan *WriteContext, plugin.Config.Settings.Write.Buffer),
 		readings:     make(map[string][]*Reading),
-		dataLock:     &sync.Mutex{},
+		dataLock:     &sync.RWMutex{},
 		rwLock:       &sync.Mutex{},
 		handlers:     plugin.handlers,
 		config:       plugin.Config,
@@ -161,7 +161,10 @@ func (manager *DataManager) parallelRead() {
 		waitGroup.Add(1)
 
 		// Launch a goroutine to read from the device
-		go manager.read(dev)
+		go func(wg *sync.WaitGroup, device *Device) {
+			manager.read(device)
+			wg.Done()
+		}(&waitGroup, dev)
 	}
 
 	// Wait for all device reads to complete.
@@ -230,7 +233,10 @@ func (manager *DataManager) parallelWrite() {
 			waitGroup.Add(1)
 
 			// Launch a goroutine to write to the device
-			go manager.write(w)
+			go func(wg *sync.WaitGroup, writeContext *WriteContext) {
+				manager.write(writeContext)
+				wg.Done()
+			}(&waitGroup, w)
 
 		default:
 			// if there is nothing to write, do nothing
@@ -293,12 +299,10 @@ func (manager *DataManager) goUpdateData() {
 // readings map is updated in a separate goroutine, we want to lock access around the
 // map to prevent simultaneous access collisions.
 func (manager *DataManager) getReadings(device string) []*Reading {
-	var r []*Reading
+	manager.dataLock.RLock()
+	defer manager.dataLock.RUnlock()
 
-	manager.dataLock.Lock()
-	r = manager.readings[device]
-	manager.dataLock.Unlock()
-	return r
+	return manager.readings[device]
 }
 
 // Read fulfills a Read request by providing the latest data read from a device
