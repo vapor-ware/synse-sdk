@@ -16,14 +16,14 @@ network:
   type: unix
   address: example.sock
 settings:
-  loop_delay: 100
+  mode: serial
   read:
-    buffer_size: 150
+    buffer: 150
   write:
-    buffer_size: 150
-    per_loop: 4
+    buffer: 150
+    max: 4
   transaction:
-    ttl: 600`)
+    ttl: 600s`)
 
 	v := viper.New()
 	v.SetConfigType("yaml")
@@ -50,19 +50,19 @@ settings:
 	if cfg.Network.Address != "example.sock" {
 		t.Errorf("expected config 'network.address' to be 'example.sock', but was %v", cfg.Network.Address)
 	}
-	if cfg.Settings.LoopDelay != 100 {
-		t.Errorf("expected config 'settings.loop_delay' to be 100, but was %v", cfg.Settings.LoopDelay)
+	if cfg.Settings.Mode != "serial" {
+		t.Errorf("expected config 'settings.mode' to be 'serial', but was %v", cfg.Settings.Mode)
 	}
-	if cfg.Settings.Read.BufferSize != 150 {
-		t.Errorf("expected config 'settings.read.buffer_size' to be 150, but was %v", cfg.Settings.Read.BufferSize)
+	if cfg.Settings.Read.Buffer != 150 {
+		t.Errorf("expected config 'settings.read.buffer_size' to be 150, but was %v", cfg.Settings.Read.Buffer)
 	}
-	if cfg.Settings.Write.BufferSize != 150 {
-		t.Errorf("expected config 'settings.write.buffer_size' to be 150, but was %v", cfg.Settings.Write.BufferSize)
+	if cfg.Settings.Write.Buffer != 150 {
+		t.Errorf("expected config 'settings.write.buffer_size' to be 150, but was %v", cfg.Settings.Write.Buffer)
 	}
-	if cfg.Settings.Write.PerLoop != 4 {
-		t.Errorf("expected config 'settings.write.per_loop' to be 4, but was %v", cfg.Settings.Write.PerLoop)
+	if cfg.Settings.Write.Max != 4 {
+		t.Errorf("expected config 'settings.write.per_loop' to be 4, but was %v", cfg.Settings.Write.Max)
 	}
-	if cfg.Settings.Transaction.TTL != 600 {
+	if cfg.Settings.Transaction.TTL != "600s" {
 		t.Errorf("expected config 'settings.transaction.ttl' to be 600, but was %v", cfg.Settings.Transaction.TTL)
 	}
 }

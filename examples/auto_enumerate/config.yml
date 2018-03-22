@@ -5,14 +5,15 @@ network:
   type: unix
   address: auto-enum-plugin.sock
 settings:
-  loop_delay: 500
   read:
-    buffer_size: 150
+    interval: 500s
+    buffer: 150
   write:
-    buffer_size: 150
-    per_loop: 4
+    interval: 60s
+    buffer: 150
+    max: 50
   transaction:
-    ttl: 600
+    ttl: 600s
 
 # the configuration option for setting auto-enumeration. the presence
 # of this option will enable auto-enumeration processing on device

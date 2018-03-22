@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"time"
+
 	"github.com/spf13/viper"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -23,6 +26,7 @@ type PluginConfig struct {
 	Network       NetworkSettings
 	AutoEnumerate []map[string]interface{}
 	Context       map[string]interface{}
+	Limiter       *rate.Limiter
 }
 
 // NetworkSettings specifies the configuration options surrounding the
@@ -35,26 +39,55 @@ type NetworkSettings struct {
 // Settings specifies the configuration options that determine the
 // behavior of the plugin.
 type Settings struct {
-	LoopDelay   int
+	Mode        string
 	Read        ReadSettings
 	Write       WriteSettings
 	Transaction TransactionSettings
 }
 
+// IsSerial checks if Settings is configured with mode "serial".
+func (s *Settings) IsSerial() bool {
+	return s.Mode == "serial"
+}
+
+// IsParallel checks if Settings is configured with mode "parallel".
+func (s *Settings) IsParallel() bool {
+	return s.Mode == "parallel"
+}
+
 // ReadSettings provides configuration options for read operations.
 type ReadSettings struct {
-	BufferSize int
+	Enabled  bool
+	Interval string
+	Buffer   int
+}
+
+// GetInterval gets the ReadSettings interval as a Duration.
+func (setting *ReadSettings) GetInterval() (time.Duration, error) {
+	return time.ParseDuration(setting.Interval)
 }
 
 // WriteSettings provides configuration options for write operations.
 type WriteSettings struct {
-	BufferSize int
-	PerLoop    int
+	Enabled  bool
+	Interval string
+	Buffer   int
+	Max      int
+}
+
+// GetInterval gets the WriteSettings interval as a Duration.
+func (setting *WriteSettings) GetInterval() (time.Duration, error) {
+	return time.ParseDuration(setting.Interval)
 }
 
 // TransactionSettings provides configuration options for transaction operations.
 type TransactionSettings struct {
-	TTL int
+	TTL string
+}
+
+// GetTTL gets the TransactionSettings TTL as a Duration.
+func (setting *TransactionSettings) GetTTL() (time.Duration, error) {
+	return time.ParseDuration(setting.TTL)
 }
 
 // Validate checks the PluginConfig instance to make sure it has all of
@@ -78,26 +111,24 @@ func (c *PluginConfig) Validate() error {
 	}
 
 	// Config warnings
-	if c.Settings.Write.BufferSize == 0 {
+	if c.Settings.Write.Buffer == 0 {
 		logger.Warn("config validation warning: settings.write.buffer_size is 0, but must be " +
 			"greater than 0 to allow device writing")
 	}
 
-	if c.Settings.Write.PerLoop == 0 {
-		logger.Warn("config validation warning: settings.write.per_loop is 0, but must be " +
-			"greater than 0 to allow device writing")
-	}
-
-	if c.Settings.Read.BufferSize == 0 {
+	if c.Settings.Read.Buffer == 0 {
 		logger.Warn("config validation warning: settings.read.buffer_size is 0, but must be " +
 			"greater than 0 to allow device reading")
 	}
 
-	if c.Settings.Transaction.TTL == 0 {
+	ttl, err := c.Settings.Transaction.GetTTL()
+	if err != nil {
+		return err
+	}
+	if ttl.Nanoseconds() == 0 {
 		logger.Warn("config validation warning: settings.transaction.ttl is 0. transactions " +
 			"will not be cached and lookups for write status will fail")
 	}
-
 	return nil
 }
 
@@ -129,11 +160,13 @@ func setLookupInfo(v *viper.Viper) {
 	var configPaths []string
 	configPath := os.Getenv(EnvPluginConfig)
 	if configPath != "" {
-		configPaths = append(configPaths, configPath)
+		configPaths = []string{configPath}
 	} else {
-		configPaths = append(configPaths, defaultConfigPath)
-		configPaths = append(configPaths, homeConfigPath)
-		configPaths = append(configPaths, ".")
+		configPaths = []string{
+			defaultConfigPath,
+			homeConfigPath,
+			".",
+		}
 	}
 
 	// Logging out the config paths here since it may help with debugging.

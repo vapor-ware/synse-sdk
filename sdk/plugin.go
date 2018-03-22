@@ -216,10 +216,8 @@ func (p *Plugin) Run() error {
 		}
 	}
 
-	// Start the go routines to poll devices and to update internal state
-	// with those readings.
-	p.dataManager.goPollData()
-	p.dataManager.goUpdateData()
+	// Start the DataManager goroutines for reading and writing data.
+	p.dataManager.init()
 
 	// Start the gRPC server
 	return p.server.serve()
@@ -245,7 +243,11 @@ func (p *Plugin) setup() error {
 	p.registerDevices()
 
 	// Setup the transaction cache
-	SetupTransactionCache(p.Config.Settings.Transaction.TTL)
+	ttl, err := p.Config.Settings.Transaction.GetTTL()
+	if err != nil {
+		return err
+	}
+	SetupTransactionCache(ttl)
 
 	// Register a new Server and DataManager for the Plugin. This should
 	// be done prior to running the plugin, as opposed to on initialization

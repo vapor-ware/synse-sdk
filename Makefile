@@ -19,11 +19,8 @@ clean:  ## Remove temporary files
 
 .PHONY: cover
 cover:  ## Run tests and open the coverage report
-	go test -covermode=atomic -coverprofile=coverage.txt -v -race -timeout=30s ./sdk
-	go test -covermode=atomic -coverprofile=coverage_config.txt -v -race -timeout=30s ./sdk/config
+	./bin/coverage.sh
 	go tool cover -html=coverage.txt
-	go tool cover -html=coverage_config.txt
-	rm coverage.txt && rm coverage_config.txt
 
 .PHONY: dep
 dep:  ## Ensure and prune dependencies. Do not update existing dependencies.

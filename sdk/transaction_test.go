@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"testing"
+	"time"
 )
 
 // Helper method to call NewTransaction and fail the test if it does not
@@ -27,7 +28,7 @@ func GetTransactionHelper(t *testing.T, id string) *Transaction {
 func TestNewTransaction(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 
 	transaction := NewTransactionHelper(t)
 
@@ -59,7 +60,7 @@ func TestNewTransaction(t *testing.T) {
 func TestNewTransaction2(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 
 	t1 := NewTransactionHelper(t)
 	t2 := NewTransactionHelper(t)
@@ -100,7 +101,7 @@ func TestNewTransaction2(t *testing.T) {
 func TestGetTransaction(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 
 	cached := GetTransactionHelper(t, tr.id)
@@ -124,7 +125,7 @@ func TestGetTransaction2(t *testing.T) {
 func TestTransaction_setStateOk(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 
 	tr.state = stateError
@@ -141,7 +142,7 @@ func TestTransaction_setStateOk(t *testing.T) {
 func TestTransaction_setStateOkCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 	cached := GetTransactionHelper(t, tr.id)
 
@@ -162,7 +163,7 @@ func TestTransaction_setStateOkCached(t *testing.T) {
 func TestTransaction_setStateErr(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 
 	tr.state = stateOk
@@ -179,7 +180,7 @@ func TestTransaction_setStateErr(t *testing.T) {
 func TestTransaction_setStateErrCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 	cached := GetTransactionHelper(t, tr.id)
 
@@ -200,7 +201,7 @@ func TestTransaction_setStateErrCached(t *testing.T) {
 func TestTransaction_setStatusUnknown(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 
 	tr.status = statusDone
@@ -217,7 +218,7 @@ func TestTransaction_setStatusUnknown(t *testing.T) {
 func TestTransaction_setStatusUnknownCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 	cached := GetTransactionHelper(t, tr.id)
 
@@ -238,7 +239,7 @@ func TestTransaction_setStatusUnknownCached(t *testing.T) {
 func TestTransaction_setStatusPending(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 
 	tr.status = statusUnknown
@@ -255,7 +256,7 @@ func TestTransaction_setStatusPending(t *testing.T) {
 func TestTransaction_setStatusPendingCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 	cached := GetTransactionHelper(t, tr.id)
 
@@ -276,7 +277,7 @@ func TestTransaction_setStatusPendingCached(t *testing.T) {
 func TestTransaction_setStatusWriting(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 
 	tr.status = statusUnknown
@@ -311,7 +312,7 @@ func TestTransaction_setStatusWritingCached(t *testing.T) {
 func TestTransaction_setStatusDone(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 
 	tr.status = statusUnknown
@@ -328,7 +329,7 @@ func TestTransaction_setStatusDone(t *testing.T) {
 func TestTransaction_setStatusDoneCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 	cached := GetTransactionHelper(t, tr.id)
 
@@ -349,7 +350,7 @@ func TestTransaction_setStatusDoneCached(t *testing.T) {
 func TestTransaction_encode(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 	tr := NewTransactionHelper(t)
 	encoded := tr.encode()
 
@@ -376,7 +377,7 @@ func TestTransaction_encode(t *testing.T) {
 
 func TestTransactionCache(t *testing.T) {
 	// Setup the transaction cache without error checking so we know it is initialized.
-	SetupTransactionCache(600)
+	SetupTransactionCache(time.Duration(600) * time.Second)
 
 	// Invalidate the transaction cache. Error should be nil.
 	err := InvalidateTransactionCache()
@@ -406,13 +407,13 @@ func TestTransactionCache(t *testing.T) {
 	}
 
 	// Call SetupTransactionCache. Should not error.
-	err = SetupTransactionCache(600)
+	err = SetupTransactionCache(time.Duration(600) * time.Second)
 	if err != nil {
 		t.Errorf("SetupTransactionCache should not fail. err: %v", err)
 	}
 
 	// Call SetupTransactionCache again. Should error.
-	err = SetupTransactionCache(600)
+	err = SetupTransactionCache(time.Duration(600) * time.Second)
 	if err == nil {
 		t.Errorf("SetupTransactionCache should fail. err: %v", err)
 	}

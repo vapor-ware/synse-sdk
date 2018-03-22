@@ -20,7 +20,8 @@ func makeIDString(rack, board, device string) string {
 	return strings.Join([]string{rack, board, device}, "-")
 }
 
-// getHandlerForDevice
+// getHandlerForDevice gets the DeviceHandler for the device, based on its
+// Type and Model.
 func getHandlerForDevice(handlers []*DeviceHandler, device *config.DeviceConfig) (*DeviceHandler, error) {
 	for _, h := range handlers {
 		if device.Type == h.Type && device.Model == h.Model {

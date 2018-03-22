@@ -12,6 +12,11 @@ var pluginConfigValidateTestList = []PluginConfig{
 			Type:    "test",
 			Address: "test",
 		},
+		Settings: Settings{
+			Transaction: TransactionSettings{
+				TTL: "300s",
+			},
+		},
 	},
 	{
 		Name:    "1",
@@ -19,6 +24,11 @@ var pluginConfigValidateTestList = []PluginConfig{
 		Network: NetworkSettings{
 			Type:    "3",
 			Address: "4",
+		},
+		Settings: Settings{
+			Transaction: TransactionSettings{
+				TTL: "20m",
+			},
 		},
 	},
 }
@@ -39,6 +49,11 @@ var pluginConfigValidateErrorsTestList = []PluginConfig{
 			Type:    "test",
 			Address: "test",
 		},
+		Settings: Settings{
+			Transaction: TransactionSettings{
+				TTL: "2s",
+			},
+		},
 	},
 	{
 		Name: "test",
@@ -46,10 +61,20 @@ var pluginConfigValidateErrorsTestList = []PluginConfig{
 			Type:    "test",
 			Address: "test",
 		},
+		Settings: Settings{
+			Transaction: TransactionSettings{
+				TTL: "2s",
+			},
+		},
 	},
 	{
 		Name:    "test",
 		Version: "1",
+		Settings: Settings{
+			Transaction: TransactionSettings{
+				TTL: "2s",
+			},
+		},
 	},
 	{
 		Name:    "test",
@@ -57,12 +82,35 @@ var pluginConfigValidateErrorsTestList = []PluginConfig{
 		Network: NetworkSettings{
 			Address: "test",
 		},
+		Settings: Settings{
+			Transaction: TransactionSettings{
+				TTL: "2s",
+			},
+		},
 	},
 	{
 		Name:    "test",
 		Version: "1",
 		Network: NetworkSettings{
 			Type: "test",
+		},
+		Settings: Settings{
+			Transaction: TransactionSettings{
+				TTL: "2s",
+			},
+		},
+	},
+	{
+		Name:    "1",
+		Version: "2",
+		Network: NetworkSettings{
+			Type:    "3",
+			Address: "4",
+		},
+		Settings: Settings{
+			Transaction: TransactionSettings{
+				TTL: "not-a-duration",
+			},
 		},
 	},
 }
