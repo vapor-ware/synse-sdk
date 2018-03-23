@@ -7,6 +7,7 @@ import (
 	"github.com/rs/xid"
 	"github.com/vapor-ware/synse-server-grpc/go"
 
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,7 +44,10 @@ func InvalidateTransactionCache() (err error) {
 // If this is called more than once, the cache is reinitialized and an error is
 // returned. The caller may choose to ignore the error.
 func SetupTransactionCache(ttl time.Duration) (err error) {
-	err = nil
+	// FIXME -- if the cache is not nil, we will return an error, but
+	// in that same case, we will still create a new cache.. this seems
+	// weird. shouldn't we just return the error in this block and return
+	// nil at the end of the func?
 	if transactionCache != nil {
 		err = status.Errorf(codes.AlreadyExists,
 			"transactionCache already initialized.")
@@ -92,6 +96,7 @@ func GetTransaction(id string) (*Transaction, error) {
 	if found {
 		return transaction.(*Transaction), nil
 	}
+	logger.Info("Transaction %v not found", id)
 	return nil, nil
 }
 
@@ -121,6 +126,7 @@ func (t *Transaction) encode() *synse.WriteResponse {
 // to this struct is stored in the cache, and update here should update the
 // in-memory cache as well.
 func (t *Transaction) setStateOk() {
+	logger.Debugf("transaction %v: setting state to 'ok'", t.id)
 	t.updated = GetCurrentTime()
 	t.state = stateOk
 }
@@ -129,6 +135,7 @@ func (t *Transaction) setStateOk() {
 // pointer to this struct is stored in the cache, and update here should
 // update the in-memory cache as well.
 func (t *Transaction) setStateError() {
+	logger.Debugf("transaction %v: setting state to 'error'", t.id)
 	t.updated = GetCurrentTime()
 	t.state = stateError
 }
@@ -137,6 +144,7 @@ func (t *Transaction) setStateError() {
 // pointer to this struct is stored in the cache, and update here should
 // update the in-memory cache as well.
 func (t *Transaction) setStatusUnknown() {
+	logger.Debugf("transaction %v: setting status to 'unknown'", t.id)
 	t.updated = GetCurrentTime()
 	t.status = statusUnknown
 }
@@ -145,6 +153,7 @@ func (t *Transaction) setStatusUnknown() {
 // pointer to this struct is stored in the cache, and update here should
 // update the in-memory cache as well.
 func (t *Transaction) setStatusPending() {
+	logger.Debugf("transaction %v: setting status to 'pending'", t.id)
 	t.updated = GetCurrentTime()
 	t.status = statusPending
 }
@@ -153,6 +162,7 @@ func (t *Transaction) setStatusPending() {
 // pointer to this struct is stored in the cache, and update here should
 // update the in-memory cache as well.
 func (t *Transaction) setStatusWriting() {
+	logger.Debugf("transaction %v: setting status to 'writing'", t.id)
 	t.updated = GetCurrentTime()
 	t.status = statusWriting
 }
@@ -161,6 +171,7 @@ func (t *Transaction) setStatusWriting() {
 // to this struct is stored in the cache, and update here should update
 // the in-memory cache as well.
 func (t *Transaction) setStatusDone() {
+	logger.Debugf("transaction %v: setting status to 'done'", t.id)
 	t.updated = GetCurrentTime()
 	t.status = statusDone
 }

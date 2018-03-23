@@ -35,8 +35,9 @@ func getHandlerForDevice(handlers []*DeviceHandler, device *config.DeviceConfig)
 // into their corresponding structs, and generates Device instances with that
 // information.
 func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.PrototypeConfig, plugin *Plugin) ([]*Device, error) {
-	var devices []*Device
+	logger.Debugf("makeDevices start")
 
+	var devices []*Device
 	for _, dev := range deviceConfigs {
 		var protoconfig *config.PrototypeConfig
 		found := false
@@ -53,9 +54,11 @@ func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.Pr
 			logger.Warnf("Did not find prototype matching instance for %v-%v", dev.Type, dev.Model)
 			break
 		}
+		logger.Debugf("Found prototype matching instance config for %v %v", dev.Type, dev.Model)
 
 		handler, err := getHandlerForDevice(plugin.deviceHandlers, dev)
 		if err != nil {
+			logger.Errorf("found no handler for device %v: %v", dev, err)
 			return nil, err
 		}
 
@@ -66,10 +69,13 @@ func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.Pr
 			plugin,
 		)
 		if err != nil {
+			logger.Errorf("failed to create new device: %v", err)
 			return nil, err
 		}
 		devices = append(devices, d)
 	}
+
+	logger.Debugf("finished making devices: %v", devices)
 	return devices, nil
 }
 
@@ -86,10 +92,17 @@ func setupSocket(name string) (string, error) {
 				return "", err
 			}
 		} else {
+			logger.Errorf("failed to create socket path %v: %v", sockPath, err)
 			return "", err
 		}
 	} else {
-		_ = os.Remove(socket)
+		err = os.Remove(socket)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				logger.Errorf("failed to remove existing socket %v: %v", socket, err)
+				return "", err
+			}
+		}
 	}
 	return socket, nil
 }

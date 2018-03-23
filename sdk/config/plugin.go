@@ -123,6 +123,7 @@ func (c *PluginConfig) Validate() error {
 
 	ttl, err := c.Settings.Transaction.GetTTL()
 	if err != nil {
+		logger.Errorf("config validation failed: unable to parse transaction TTL as duration: %v", err)
 		return err
 	}
 	if ttl.Nanoseconds() == 0 {
@@ -137,7 +138,11 @@ func (c *PluginConfig) Validate() error {
 func NewPluginConfig() (*PluginConfig, error) {
 	v := viper.New()
 	setLookupInfo(v)
-	return parseVersionedPluginConfig(v)
+	cfg, err := parseVersionedPluginConfig(v)
+	if err != nil {
+		logger.Errorf("Failed to parse versioned plugin config: %v", err)
+	}
+	return cfg, err
 }
 
 // setLookupInfo sets the config name, environment prefix, and search

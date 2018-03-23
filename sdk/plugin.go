@@ -36,7 +36,7 @@ type Plugin struct {
 func NewPlugin(handlers *Handlers, pluginConfig *config.PluginConfig) (*Plugin, error) {
 	logger.SetLogLevel(true)
 
-	// Paramter checks.
+	// Parameter checks.
 	if handlers == nil {
 		return nil, invalidArgumentErr("handlers parameter must not be nil")
 	}
@@ -50,12 +50,13 @@ func NewPlugin(handlers *Handlers, pluginConfig *config.PluginConfig) (*Plugin, 
 	// If a configuration is passed in, use it.
 	// If not, default to finding the config in files.
 	if pluginConfig != nil {
-		logger.Info("Loading PluginConfig from parameter")
+		logger.Infof("Using plugin config from parameter: %v", pluginConfig)
 		p.Config = pluginConfig
 	} else {
-		logger.Info("Loading default PluginConfig")
+		logger.Info("Loading plugin config from file")
 		cfg, err := config.NewPluginConfig()
 		if err != nil {
+			logger.Errorf("Failed to load plugin config from file: %v", err)
 			return nil, err
 		}
 		p.Config = cfg
@@ -103,6 +104,7 @@ func (p *Plugin) SetVersion(info VersionInfo) {
 func (p *Plugin) SetConfig(config *config.PluginConfig) error {
 	err := config.Validate()
 	if err != nil {
+		logger.Errorf("Failed plugin config validation: %v", err)
 		return err
 	}
 	p.Config = config
@@ -118,12 +120,14 @@ func (p *Plugin) registerDevices() error {
 
 	cfgDevices, err := devicesFromConfig()
 	if err != nil {
+		logger.Errorf("Failed to register devices from files: %v", err)
 		return err
 	}
 	devices = append(devices, cfgDevices...)
 
 	enumDevices, err := devicesFromAutoEnum(p)
 	if err != nil {
+		logger.Errorf("Failed to register devices from auto-enum: %v", err)
 		return err
 	}
 	devices = append(devices, enumDevices...)
@@ -174,8 +178,10 @@ func (p *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceActi
 
 // Run starts the Plugin server which begins listening for gRPC requests.
 func (p *Plugin) Run() error {
+	logger.Info("Starting plugin run")
 	err := p.setup()
 	if err != nil {
+		logger.Errorf("Failed plugin run setup: %v", err)
 		return err
 	}
 	p.logInfo()
@@ -188,6 +194,7 @@ func (p *Plugin) Run() error {
 			logger.Debugf(" * %v", action)
 			err := action(p)
 			if err != nil {
+				logger.Errorf("Failed pre-run action %v: %v", action, err)
 				return err
 			}
 		}
@@ -202,6 +209,7 @@ func (p *Plugin) Run() error {
 		for filter, actions := range p.deviceSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
+				logger.Errorf("Failed to filter devices for setup actions: %v", err)
 				return err
 			}
 			logger.Debugf("* %v (%v devices match filter %v)", actions, len(devices), filter)
@@ -209,6 +217,7 @@ func (p *Plugin) Run() error {
 				for _, action := range actions {
 					err := action(p, d)
 					if err != nil {
+						logger.Errorf("Failed device setup action %v: %v", action, err)
 						return err
 					}
 				}
@@ -231,6 +240,7 @@ func (p *Plugin) setup() error {
 	// validate that handlers are set
 	err := validateHandlers(p.handlers)
 	if err != nil {
+		logger.Errorf("Failed plugin handler validation: %v", err)
 		return err
 	}
 
@@ -245,9 +255,14 @@ func (p *Plugin) setup() error {
 	// Setup the transaction cache
 	ttl, err := p.Config.Settings.Transaction.GetTTL()
 	if err != nil {
+		logger.Errorf("Bad transaction TTL config %v: %v", p.Config.Settings.Transaction.TTL, err)
 		return err
 	}
-	SetupTransactionCache(ttl)
+	err = SetupTransactionCache(ttl)
+	if err != nil {
+		logger.Errorf("Failed to setup transaction cache: %v", err)
+		return err
+	}
 
 	// Register a new Server and DataManager for the Plugin. This should
 	// be done prior to running the plugin, as opposed to on initialization
@@ -255,11 +270,15 @@ func (p *Plugin) setup() error {
 	// dependent. The Plugin should be configured prior to running.
 	p.server, err = NewServer(p)
 	if err != nil {
+		logger.Errorf("Failed to create new gRPC server: %v", err)
 		return err
 	}
 
 	// Create the DataManager
 	p.dataManager, err = NewDataManager(p)
+	if err != nil {
+		logger.Errorf("Failed to create plugin data manager: %v", err)
+	}
 	return err
 }
 

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -83,6 +84,7 @@ func (r *Range) Encode() *synse.MetaOutputRange {
 // ParsePrototypeConfig parses the YAML files found in the prototype configuration
 // directory, if any are found, into PrototypeConfig structs.
 func ParsePrototypeConfig() ([]*PrototypeConfig, error) {
+	logger.Debugf("ParsePrototypeConfig start")
 	var cfgs []*PrototypeConfig
 
 	path := os.Getenv(EnvDeviceConfig)
@@ -94,47 +96,66 @@ func ParsePrototypeConfig() ([]*PrototypeConfig, error) {
 			path = defaultProtoConfig
 		}
 	}
+	logger.Debugf("Searching %s for prototype configurations.", path)
 
 	_, err := os.Stat(path)
 	if err != nil {
+		logger.Errorf("Device prototype configuration path %s does not exist: %v", path, err)
 		return nil, err
 	}
 
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
+		logger.Errorf("Failed to read prototype configuration directory %s: %v", path, err)
 		return nil, err
 	}
 
+	logger.Debugf("Found configuration files: %v", files)
 	for _, f := range files {
 		if isValidConfig(f) {
-			// Get the file contents
 			fpath := filepath.Join(path, f.Name())
+			logger.Debugf("Reading file: %s", fpath)
+
+			// Get the file contents
 			yml, err := ioutil.ReadFile(fpath)
 			if err != nil {
+				logger.Errorf("Failed to read file %s: %v", fpath, err)
 				return nil, err
 			}
 
 			// Get the version of the configuration file
 			ver, err := getConfigVersion(fpath, yml)
 			if err != nil {
+				logger.Errorf("Failed to get configuration version for file %s: %v", fpath, err)
 				return nil, err
 			}
+			logger.Debugf("Got prototype configuration file version: %s", ver)
 
 			// Get the handler for the given configuration version
 			cfgHandler, err := getDeviceConfigVersionHandler(ver)
 			if err != nil {
+				logger.Errorf("Failed to get handler for device config version %s: %v", ver.ToString(), err)
 				return nil, err
 			}
+			logger.Debugf("Got prototype configuration handler: %v", cfgHandler)
 
 			// Process the configuration files with the specific handler
 			// for the version of that config file.
 			c, err := cfgHandler.processPrototypeConfig(yml)
 			if err != nil {
+				logger.Errorf("Failed to process prototype configuration for %s: %v", fpath, err)
 				return nil, err
 			}
+			logger.Debugf("Successfully processed prototype configuration in %s", fpath)
 
+			// Add the parsed configurations to the tracked prototype configs.
 			cfgs = append(cfgs, c...)
+
+		} else {
+			logger.Debugf("%s is not a valid config -- skipping", filepath.Join(path, f.Name()))
 		}
 	}
+
+	logger.Debugf("Finised parsing prototype configurations: %v", cfgs)
 	return cfgs, nil
 }

@@ -41,6 +41,7 @@ func (h *v1DeviceConfigHandler) processPrototypeConfig(yml []byte) ([]*Prototype
 
 	err := yaml.Unmarshal(yml, &scheme)
 	if err != nil {
+		logger.Errorf("Failed to Unmarshal prototype config yaml: %v", err)
 		return nil, err
 	}
 
@@ -78,6 +79,7 @@ func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig
 			location := scheme.Locations[locationTag]
 			err := location.Validate()
 			if err != nil {
+				logger.Errorf("Failed location validation for device config %v: %v", i, err)
 				return nil, err
 			}
 
@@ -92,6 +94,7 @@ func (h *v1DeviceConfigHandler) processDeviceConfig(yml []byte) ([]*DeviceConfig
 			cfgs = append(cfgs, &cfg)
 		}
 	}
-	logger.Debugf("processDeviceConfig returning: %+v", cfgs)
+
+	logger.Debugf("processDeviceConfig (scheme version 1) returning: %+v", cfgs)
 	return cfgs, nil
 }

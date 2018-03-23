@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
 )
 
@@ -40,10 +41,12 @@ func getConfigVersion(path string, data []byte) (*configVersion, error) {
 	version.cfgFile = path
 	err := yaml.Unmarshal(data, &version)
 	if err != nil {
+		logger.Errorf("Failed to Unmarshal config data for %s: %v", path, err)
 		return nil, err
 	}
 	v, err := version.toConfigVersion()
 	if err != nil {
+		logger.Errorf("Failed to create new configVersion for %s: %v", path, err)
 		return nil, err
 	}
 	return v, nil
@@ -195,28 +198,34 @@ func getPluginConfigVersionHandler(cv *configVersion) (pluginConfigVersionHandle
 // configuration appropriately based on the version number.
 func parseVersionedPluginConfig(v *viper.Viper) (*PluginConfig, error) {
 
+	configFile := v.ConfigFileUsed()
+
 	// Read in the configuration file
 	err := v.ReadInConfig()
 	if err != nil {
+		logger.Errorf("Failed to read in plugin config %s: %v", configFile, err)
 		return nil, err
 	}
 
 	// Get the plugin configuration version
-	cv := cfgVersion{v.GetString("version"), v.ConfigFileUsed()}
+	cv := cfgVersion{v.GetString("version"), configFile}
 	version, err := cv.toConfigVersion()
 	if err != nil {
+		logger.Errorf("Failed to get config version from %s: %v", configFile, err)
 		return nil, err
 	}
 
 	// Get the handler for the given configuration version.
 	cfgHandler, err := getPluginConfigVersionHandler(version)
 	if err != nil {
+		logger.Errorf("Failed to get the plugin config version handler for %s: %v", configFile, err)
 		return nil, err
 	}
 
 	// Parse the config with the versioned handler
 	c, err := cfgHandler.processPluginConfig(v)
 	if err != nil {
+		logger.Errorf("Failed to parse plugin config %s: %v", configFile, err)
 		return nil, err
 	}
 	return c, nil
