@@ -65,7 +65,7 @@ endif
 	@ # disable gotype: https://github.com/alecthomas/gometalinter/issues/40
 	gometalinter ./... --vendor --tests --deadline=5m \
 		--exclude='(sdk\/sdktest\.go)' \
-		--disable=gas --disable=errcheck --disable=gocyclo --disable=gotype
+		--disable=gas --disable=errcheck --disable=gocyclo --disable=gotype --disable=interfacer
 
 .PHONY: setup
 setup:  ## Install the build and development dependencies
