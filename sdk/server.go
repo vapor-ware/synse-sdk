@@ -126,7 +126,7 @@ func (s *Server) Metainfo(req *synse.MetainfoRequest, stream synse.InternalApi_M
 func (s *Server) TransactionCheck(ctx context.Context, in *synse.TransactionId) (*synse.WriteResponse, error) {
 	logger.Debugf("gRPC transaction check: %v", in)
 	transaction, err := GetTransaction(in.Id)
-	if err == nil {
+	if err != nil {
 		logger.Errorf("%v - gRPC transaction check error: %v", in, err)
 		return nil, err
 	}
