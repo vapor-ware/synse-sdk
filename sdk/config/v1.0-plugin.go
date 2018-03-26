@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/spf13/viper"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"golang.org/x/time/rate"
 )
 
@@ -15,12 +16,14 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 	// Cast the "auto_enumerate" field
 	autoEnum, err := toSliceStringMapI(v.Get("auto_enumerate"))
 	if err != nil {
+		logger.Errorf("Failed to cast plugin config 'auto_enumerate' field: %v", err)
 		return nil, err
 	}
 
 	// Cast the "context" field
 	ctx, err := toStringMapI(v.Get("context"))
 	if err != nil {
+		logger.Errorf("Failed to cast plugin config 'context' field: %v", err)
 		return nil, err
 	}
 
@@ -48,6 +51,8 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 		if limitBurst == 0 {
 			limitBurst = int(r)
 		}
+
+		logger.Debugf("plugin config - 'limiter' is set. using rate: %v, burst: %v", r, limitBurst)
 		limiter = rate.NewLimiter(r, limitBurst)
 
 	} else {
@@ -89,6 +94,7 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 	// populated.
 	err = p.Validate()
 	if err != nil {
+		logger.Errorf("Failed plugin configuration validation for %s: %v", v.ConfigFileUsed(), err)
 		return nil, err
 	}
 	return p, nil
@@ -96,6 +102,7 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 
 // setV1Defaults sets default v1 configuration values for a Viper instance.
 func setV1Defaults(v *viper.Viper) {
+	logger.Debugf("Setting v1 Plugin config defaults.")
 	// the "name", "version" and "network" fields are required, so they should
 	// not have any default values.
 

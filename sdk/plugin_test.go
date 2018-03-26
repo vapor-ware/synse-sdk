@@ -204,6 +204,11 @@ func TestPlugin_setup2(t *testing.T) {
 }
 
 func TestPlugin_setup3(t *testing.T) {
+	// Before we start, invalidate the transaction cache so we do not
+	// fail plugin setup (where we try and setup the transaction cache --
+	// see note in transaction.go relating to the SetupCache logic..)
+	_ = InvalidateTransactionCache()
+
 	// Was plugin not yet configured, but now it is configured.
 	// Create valid handlers for the Plugin.
 	h, err := NewHandlers(testDeviceIdentifier, testDeviceEnumerator)
@@ -219,6 +224,6 @@ func TestPlugin_setup3(t *testing.T) {
 
 	err = p.setup()
 	if err != nil {
-		t.Error("Expected no error. Plugin configured by NewPlugin.")
+		t.Errorf("Expected no error. Plugin configured by NewPlugin: %v", err)
 	}
 }

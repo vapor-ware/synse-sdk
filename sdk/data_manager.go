@@ -75,12 +75,16 @@ func NewDataManager(plugin *Plugin) (*DataManager, error) {
 // init initializes the goroutines for the DataManager so it can start reading
 // from and writing to the devices managed by the Plugin.
 func (manager *DataManager) init() {
+	logger.Info("Initializing DataManager goroutines..")
+
 	// Start the reader/writer
 	manager.goRead()
 	manager.goWrite()
 
 	// Update the manager readings state
 	manager.goUpdateData()
+
+	logger.Info("DataManager initialization complete.")
 }
 
 // writesEnabled checks to see whether writing is enabled for the plugin based on
@@ -127,7 +131,7 @@ func (manager *DataManager) read(device *Device) {
 	if manager.config.Limiter != nil {
 		err := manager.config.Limiter.Wait(context.Background())
 		if err != nil {
-			logger.Errorf("error from limiter: %v", err)
+			logger.Errorf("error from limiter when reading %v: %v", device.GUID(), err)
 		}
 	}
 
@@ -254,7 +258,7 @@ func (manager *DataManager) write(w *WriteContext) {
 	if manager.config.Limiter != nil {
 		err := manager.config.Limiter.Wait(context.Background())
 		if err != nil {
-			logger.Errorf("error from limiter: %v", err)
+			logger.Errorf("error from limiter when writing %v: %v", w, err)
 		}
 	}
 
@@ -311,6 +315,7 @@ func (manager *DataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse,
 	// Validate that the incoming request has the requisite fields populated.
 	err := validateReadRequest(req)
 	if err != nil {
+		logger.Errorf("Incoming read request failed validation %v: %v", req, err)
 		return nil, err
 	}
 
@@ -318,12 +323,14 @@ func (manager *DataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse,
 	deviceID := makeIDString(req.Rack, req.Board, req.Device)
 	err = validateForRead(deviceID)
 	if err != nil {
+		logger.Errorf("Unable to read device %s: %v", deviceID, err)
 		return nil, err
 	}
 
 	// Get the readings for the device.
 	readings := manager.getReadings(deviceID)
 	if readings == nil {
+		logger.Errorf("No readings found for device: %s", deviceID)
 		return nil, notFoundErr("no readings found for device: %s", deviceID)
 	}
 
@@ -346,6 +353,7 @@ func (manager *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.Wr
 	// Validate that the incoming request has the requisite fields populated.
 	err := validateWriteRequest(req)
 	if err != nil {
+		logger.Errorf("Incoming write request failed validation %v: %v", req, err)
 		return nil, err
 	}
 
@@ -353,6 +361,7 @@ func (manager *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.Wr
 	deviceID := makeIDString(req.Rack, req.Board, req.Device)
 	err = validateForWrite(deviceID)
 	if err != nil {
+		logger.Errorf("Unable to write to device %s: %v", deviceID, err)
 		return nil, err
 	}
 
