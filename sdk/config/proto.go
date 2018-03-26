@@ -110,7 +110,11 @@ func ParsePrototypeConfig() ([]*PrototypeConfig, error) {
 		return nil, err
 	}
 
-	logger.Debugf("Found configuration files: %v", files)
+	fnames := make([]string, len(files))
+	for i, file := range files {
+		fnames[i] = file.Name()
+	}
+	logger.Debugf("Found prototype configuration files: %v", fnames)
 	for _, f := range files {
 		if isValidConfig(f) {
 			fpath := filepath.Join(path, f.Name())
@@ -129,7 +133,7 @@ func ParsePrototypeConfig() ([]*PrototypeConfig, error) {
 				logger.Errorf("Failed to get configuration version for file %s: %v", fpath, err)
 				return nil, err
 			}
-			logger.Debugf("Got prototype configuration file version: %s", ver)
+			logger.Debugf("Got prototype configuration file version: %s", ver.ToString())
 
 			// Get the handler for the given configuration version
 			cfgHandler, err := getDeviceConfigVersionHandler(ver)
