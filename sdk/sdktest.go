@@ -39,7 +39,7 @@ var testDeviceHandler = DeviceHandler{
 
 func makeTestPlugin() *Plugin {
 	return &Plugin{
-		handlers: &testHandlers,
+		handlers:       &testHandlers,
 		deviceHandlers: testDevHandlers,
 	}
 }

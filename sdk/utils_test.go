@@ -6,10 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // TestMakeDevices tests making devices where two instances match one prototype.
@@ -155,7 +156,6 @@ func TestSetupSocket3(t *testing.T) {
 	_, err = os.Create(filename)
 	assert.NoError(t, err)
 
-
 	sock, err := setupSocket("test.sock")
 	if err != nil {
 		t.Error(err)
@@ -179,40 +179,40 @@ func TestSetupSocket3(t *testing.T) {
 // identifier components (rack, board, device).
 func TestMakeIDString(t *testing.T) {
 	var makeIDStringTestTable = []struct {
-		rack   string
-		board  string
-		device string
-		expected    string
+		rack     string
+		board    string
+		device   string
+		expected string
 	}{
 		{
-			rack:   "rack",
-			board:  "board",
-			device: "device",
-			expected:    "rack-board-device",
+			rack:     "rack",
+			board:    "board",
+			device:   "device",
+			expected: "rack-board-device",
 		},
 		{
-			rack:   "123",
-			board:  "456",
-			device: "789",
-			expected:    "123-456-789",
+			rack:     "123",
+			board:    "456",
+			device:   "789",
+			expected: "123-456-789",
 		},
 		{
-			rack:   "abc",
-			board:  "def",
-			device: "ghi",
-			expected:    "abc-def-ghi",
+			rack:     "abc",
+			board:    "def",
+			device:   "ghi",
+			expected: "abc-def-ghi",
 		},
 		{
-			rack:   "1234567890abcdefghi",
-			board:  "1",
-			device: "2",
-			expected:    "1234567890abcdefghi-1-2",
+			rack:     "1234567890abcdefghi",
+			board:    "1",
+			device:   "2",
+			expected: "1234567890abcdefghi-1-2",
 		},
 		{
-			rack:   "-----",
-			board:  "_____",
-			device: "+=+=&8^",
-			expected:    "------_____-+=+=&8^",
+			rack:     "-----",
+			board:    "_____",
+			device:   "+=+=&8^",
+			expected: "------_____-+=+=&8^",
 		},
 	}
 
@@ -225,38 +225,38 @@ func TestMakeIDString(t *testing.T) {
 // TestNewUID tests creating new device UIDs successfully.
 func TestNewUID(t *testing.T) {
 	var newUIDTestTable = []struct {
-		p   string
-		d   string
-		m   string
-		c   string
+		p        string
+		d        string
+		m        string
+		c        string
 		expected string
 	}{
 		{
-			p:   "test-protocol",
-			d:   "test-device",
-			m:   "test-model",
-			c:   "test-comp",
+			p:        "test-protocol",
+			d:        "test-device",
+			m:        "test-model",
+			c:        "test-comp",
 			expected: "732bb43a825b8330e6d50a6722a8e1f0",
 		},
 		{
-			p:   "i2c",
-			d:   "thermistor",
-			m:   "max116",
-			c:   "1",
+			p:        "i2c",
+			d:        "thermistor",
+			m:        "max116",
+			c:        "1",
 			expected: "019de8ff9de6aba9ddb9ebb6d5f5b5e0",
 		},
 		{
-			p:   "",
-			d:   "",
-			m:   "",
-			c:   "",
+			p:        "",
+			d:        "",
+			m:        "",
+			c:        "",
 			expected: "d41d8cd98f00b204e9800998ecf8427e",
 		},
 		{
-			p:   "?",
-			d:   "!",
-			m:   "%",
-			c:   "$",
+			p:        "?",
+			d:        "!",
+			m:        "%",
+			c:        "$",
 			expected: "65722f8565fb36c7a6da67bae4ee1f2d",
 		},
 	}
@@ -272,18 +272,18 @@ func TestNewUID(t *testing.T) {
 // and values.
 func TestFilterDevices(t *testing.T) {
 	dev1 := &Device{
-		Type: "temperature",
-		Model: "foo",
+		Type:    "temperature",
+		Model:   "foo",
 		Handler: &DeviceHandler{},
 	}
 	dev2 := &Device{
-		Type: "temperature",
-		Model: "bar",
+		Type:    "temperature",
+		Model:   "bar",
 		Handler: &DeviceHandler{},
 	}
 	dev3 := &Device{
-		Type: "pressure",
-		Model: "baz",
+		Type:    "pressure",
+		Model:   "baz",
 		Handler: &DeviceHandler{},
 	}
 
@@ -301,57 +301,57 @@ func TestFilterDevices(t *testing.T) {
 	}{
 		{
 			// devices with type temperature
-			filter: "type=temperature",
+			filter:   "type=temperature",
 			expected: []*Device{dev1, dev2},
 		},
 		{
 			// devices with type pressure
-			filter: "type=pressure",
+			filter:   "type=pressure",
 			expected: []*Device{dev3},
 		},
 		{
 			// devices with model baz
-			filter: "model=baz",
+			filter:   "model=baz",
 			expected: []*Device{dev3},
 		},
 		{
 			// devices with type pressure and type temperature (can't have two types)
-			filter: "type=pressure,type=temperature",
+			filter:   "type=pressure,type=temperature",
 			expected: []*Device{},
 		},
 		{
 			// devices with type none (should not match any)
-			filter: "type=none",
+			filter:   "type=none",
 			expected: []*Device{},
 		},
 		{
 			// devices with type temperature and model foo
-			filter: "type=temperature,model=foo",
+			filter:   "type=temperature,model=foo",
 			expected: []*Device{dev1},
 		},
 		{
 			// devices with type pressure and model foo
-			filter: "type=pressure,model=foo",
+			filter:   "type=pressure,model=foo",
 			expected: []*Device{},
 		},
 		{
 			// devices of any type
-			filter: "type=*",
+			filter:   "type=*",
 			expected: []*Device{dev1, dev2, dev3},
 		},
 		{
 			// devices of any model
-			filter: "model=*",
+			filter:   "model=*",
 			expected: []*Device{dev1, dev2, dev3},
 		},
 		{
 			// devices of any model with type temperature
-			filter: "type=temperature,model=*",
+			filter:   "type=temperature,model=*",
 			expected: []*Device{dev1, dev2},
 		},
 		{
 			// devices of any type with model baz
-			filter: "type=*,model=baz",
+			filter:   "type=*,model=baz",
 			expected: []*Device{dev3},
 		},
 	}
@@ -374,13 +374,13 @@ func TestFilterDevices(t *testing.T) {
 // string results in a filtering error.
 func TestFilterDevicesErr(t *testing.T) {
 	dev1 := &Device{
-		Type: "temperature",
-		Model: "foo",
+		Type:    "temperature",
+		Model:   "foo",
 		Handler: &DeviceHandler{},
 	}
 	dev2 := &Device{
-		Type: "temperature",
-		Model: "bar",
+		Type:    "temperature",
+		Model:   "bar",
 		Handler: &DeviceHandler{},
 	}
 
@@ -391,7 +391,7 @@ func TestFilterDevicesErr(t *testing.T) {
 	}
 
 	// Set up the test cases
-	var filterDevicesTestTable = []string {
+	var filterDevicesTestTable = []string{
 		// no filter - when filtering, we should always have a filter
 		// string specified when calling filterDevices
 		"",

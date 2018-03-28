@@ -12,8 +12,8 @@ import (
 func TestValidateReadRequest(t *testing.T) {
 	request := &synse.ReadRequest{
 		Device: "device",
-		Board: "board",
-		Rack: "rack",
+		Board:  "board",
+		Rack:   "rack",
 	}
 
 	err := validateReadRequest(request)
@@ -27,20 +27,20 @@ func TestValidateReadRequestErr(t *testing.T) {
 		{
 			// missing device
 			Board: "board",
-			Rack: "rack",
+			Rack:  "rack",
 		},
 		{
 			// missing board
 			Device: "device",
-			Rack: "rack",
+			Rack:   "rack",
 		},
 		{
 			// missing rack
 			Device: "device",
-			Board: "board",
+			Board:  "board",
 		},
 		{
-			// missing all
+		// missing all
 		},
 	}
 
@@ -54,8 +54,8 @@ func TestValidateReadRequestErr(t *testing.T) {
 func TestValidateWriteRequest(t *testing.T) {
 	request := &synse.WriteRequest{
 		Device: "device",
-		Board: "board",
-		Rack: "rack",
+		Board:  "board",
+		Rack:   "rack",
 	}
 
 	err := validateWriteRequest(request)
@@ -69,20 +69,20 @@ func TestValidateWriteRequestErr(t *testing.T) {
 		{
 			// missing device
 			Board: "board",
-			Rack: "rack",
+			Rack:  "rack",
 		},
 		{
 			// missing board
 			Device: "device",
-			Rack: "rack",
+			Rack:   "rack",
 		},
 		{
 			// missing rack
 			Device: "device",
-			Board: "board",
+			Board:  "board",
 		},
 		{
-			// missing all
+		// missing all
 		},
 	}
 
@@ -121,7 +121,7 @@ func TestValidateHandlersErr(t *testing.T) {
 			DeviceEnumerator: testDeviceEnumerator,
 		},
 		{
-			// no handlers defined (all nil)
+		// no handlers defined (all nil)
 		},
 	}
 

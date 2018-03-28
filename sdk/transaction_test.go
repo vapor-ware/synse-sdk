@@ -145,7 +145,6 @@ func TestTransaction_setStateErrCached(t *testing.T) {
 	assert.Equal(t, stateOk, cached.state)
 	assert.Equal(t, stateOk, tr.state)
 
-
 	cached.setStateError()
 	assert.Equal(t, stateError, cached.state)
 	assert.Equal(t, stateError, tr.state)
