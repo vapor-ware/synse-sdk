@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
@@ -22,41 +24,28 @@ var testConfig = config.PluginConfig{
 	},
 }
 
+// TestNewPluginNilHandlers tests creating a new Plugin with nil handlers
 func TestNewPluginNilHandlers(t *testing.T) {
 	_, err := NewPlugin(nil, &testConfig)
-	if err == nil {
-		t.Error("Expected error, got nil")
-	}
+	assert.Error(t, err)
 }
 
+// TestNewPlugin tests creating a new Plugin with the required handlers defined.
 func TestNewPlugin(t *testing.T) {
 	// Create valid handlers for the Plugin.
 	h, err := NewHandlers(testDeviceIdentifier, nil)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	// Create the plugin.
 	p, err := NewPlugin(h, &testConfig)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
-	if p.server != nil {
-		t.Error("plugin server should not be initialized with new plugin")
-	}
-	if p.handlers.DeviceEnumerator != nil {
-		t.Error("device enumerator handler did not match expected")
-	}
-	if &p.handlers.DeviceIdentifier != &h.DeviceIdentifier {
-		t.Error("device identifier handler did not match expected")
-	}
-	if p.dataManager != nil {
-		t.Error("plugin data manager should not be initialized with new plugin")
-	}
-	if p.Config == nil {
-		t.Error("plugin should be configured on initialization")
-	}
+	assert.Nil(t, p.server, "server should not be initialized with new plugin")
+	assert.Nil(t, p.dataManager, "data manager should not be initialized with new plugin")
+	assert.Nil(t, p.handlers.DeviceEnumerator)
+
+	assert.Equal(t, &h.DeviceIdentifier, &p.handlers.DeviceIdentifier)
+	assert.NotNil(t, p.Config, "plugin should be configured on init")
 }
 
 func TestPlugin_SetConfig(t *testing.T) {

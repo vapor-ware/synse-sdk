@@ -37,6 +37,13 @@ var testDeviceHandler = DeviceHandler{
 
 // == Utility Functions ==
 
+func makeTestPlugin() *Plugin {
+	return &Plugin{
+		handlers: &testHandlers,
+		deviceHandlers: testDevHandlers,
+	}
+}
+
 func makeDeviceConfig() *config.DeviceConfig {
 	location := config.Location{
 		Rack:  "TestRack",
