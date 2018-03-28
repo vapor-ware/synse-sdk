@@ -1,4 +1,6 @@
 [![CircleCI](https://circleci.com/gh/vapor-ware/synse-sdk.svg?style=svg&circle-token=a35e96598e3df84da3dc58a4f0f9dcc8632bfbd3)](https://circleci.com/gh/vapor-ware/synse-sdk)
+[![codecov](https://codecov.io/gh/vapor-ware/synse-sdk/branch/master/graph/badge.svg?token=K9qxpN6AE2)](https://codecov.io/gh/vapor-ware/synse-sdk)
+
 
 # Synse Plugin SDK for Go
 An SDK in the Go programming language for creating plugins for Vapor IO's
