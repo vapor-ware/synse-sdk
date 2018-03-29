@@ -77,3 +77,13 @@ func TestDecodeWriteData(t *testing.T) {
 		}
 	}
 }
+
+// TestNewReading tests creating a new Reading from the NewReading constructor.
+func TestNewReading(t *testing.T) {
+	r := NewReading("test", "value")
+
+	assert.IsType(t, Reading{}, *r)
+	assert.NotEqual(t, "", r.Timestamp)
+	assert.Equal(t, "test", r.Type)
+	assert.Equal(t, "value", r.Value)
+}
