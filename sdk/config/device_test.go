@@ -6,55 +6,56 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-var locationEncodeTestTable = []struct {
-	in  Location
-	out synse.MetaLocation
-}{
-	{
-		in: Location{
-			Rack:  "rack-1",
-			Board: "board-1",
-		},
-		out: synse.MetaLocation{
-			Rack:  "rack-1",
-			Board: "board-1",
-		},
-	},
-	{
-		in: Location{
-			Rack:  "1",
-			Board: "1",
-		},
-		out: synse.MetaLocation{
-			Rack:  "1",
-			Board: "1",
-		},
-	},
-	{
-		in: Location{
-			Rack:  "",
-			Board: "",
-		},
-		out: synse.MetaLocation{
-			Rack:  "",
-			Board: "",
-		},
-	},
-}
-
+// TestLocation_Encode tests encoding an SDK Location to the gRPC
+// MetaLocation model.
 func TestLocation_Encode(t *testing.T) {
-	for _, tc := range locationEncodeTestTable {
+	var cases = []struct {
+		in  Location
+		out synse.MetaLocation
+	}{
+		{
+			in: Location{
+				Rack:  "rack-1",
+				Board: "board-1",
+			},
+			out: synse.MetaLocation{
+				Rack:  "rack-1",
+				Board: "board-1",
+			},
+		},
+		{
+			in: Location{
+				Rack:  "1",
+				Board: "1",
+			},
+			out: synse.MetaLocation{
+				Rack:  "1",
+				Board: "1",
+			},
+		},
+		{
+			in: Location{
+				Rack:  "",
+				Board: "",
+			},
+			out: synse.MetaLocation{
+				Rack:  "",
+				Board: "",
+			},
+		},
+	}
+
+	for _, tc := range cases {
 		err := tc.in.Validate()
-		if err != nil {
-			t.Errorf("failed to validate location %v", tc.in)
-		}
+		assert.NoError(t, err)
+
 		r := tc.in.Encode()
-		if *r != tc.out {
-			t.Errorf("%v.Encode() => %v, want %v", tc.in, r, tc.out)
-		}
+		assert.Equal(t, tc.out, *r)
 	}
 }
 

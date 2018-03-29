@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"fmt"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
@@ -92,7 +95,7 @@ func TestNewDevice2(t *testing.T) {
 }
 
 // TestNewDevice3 tests creating a new device and getting an error on validation
-// of the device (instance-protocol mismatch).
+// of the device (instance-protocol mismatch on type).
 func TestNewDevice3(t *testing.T) {
 	// Create handlers.
 	handlers, err := NewHandlers(testDeviceIdentifier, nil)
@@ -109,4 +112,173 @@ func TestNewDevice3(t *testing.T) {
 
 	_, err = NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
 	assert.Error(t, err)
+}
+
+// TestNewDevice3 tests creating a new device and getting an error on validation
+// of the device (instance-protocol mismatch on model).
+func TestNewDevice4(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(testDeviceIdentifier, nil)
+	assert.NoError(t, err)
+
+	// Initialize plugin with handlers.
+	p := Plugin{
+		handlers: handlers,
+	}
+
+	protoConfig := makePrototypeConfig()
+	deviceConfig := makeDeviceConfig()
+	deviceConfig.Model = "foo"
+
+	_, err = NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
+	assert.Error(t, err)
+}
+
+// TestDeviceIsReadable tests whether a device is readable in the case
+// when it is readable.
+func TestDeviceIsReadable(t *testing.T) {
+	device := Device{
+		Handler: &DeviceHandler{
+			Read: func(device *Device) ([]*Reading, error) {
+				return []*Reading{}, nil
+			},
+		},
+	}
+
+	readable := device.IsReadable()
+	assert.True(t, readable)
+}
+
+// TestDeviceIsNotReadable tests whether a device is readable in the case
+// when it is not readable.
+func TestDeviceIsNotReadable(t *testing.T) {
+	device := Device{
+		Handler: &DeviceHandler{},
+	}
+
+	readable := device.IsReadable()
+	assert.False(t, readable)
+}
+
+// TestDeviceIsWritable tests whether a device is writable in the case
+// when it is writable.
+func TestDeviceIsWritable(t *testing.T) {
+	device := Device{
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+
+	writable := device.IsWritable()
+	assert.True(t, writable)
+}
+
+// TestDeviceIsNotWritable tests whether a device is writable in the case
+// when it is not writable.
+func TestDeviceIsNotWritable(t *testing.T) {
+	device := Device{
+		Handler: &DeviceHandler{},
+	}
+
+	writable := device.IsWritable()
+	assert.False(t, writable)
+}
+
+// TestDeviceReadNotReadable tests reading from a device when it is not
+// a readable device.
+func TestDeviceReadNotReadable(t *testing.T) {
+	device := makeTestDevice()
+
+	ctx, err := device.Read()
+	assert.Nil(t, ctx)
+	assert.Error(t, err)
+	assert.IsType(t, &UnsupportedCommandError{}, err)
+}
+
+// TestDeviceReadErr tests reading from a device when the device is readable,
+// but reading from it will return an error.
+func TestDeviceReadErr(t *testing.T) {
+	device := makeTestDevice()
+	device.Handler.Read = func(device *Device) ([]*Reading, error) {
+		return nil, fmt.Errorf("test error")
+	}
+
+	ctx, err := device.Read()
+	assert.Nil(t, ctx)
+	assert.Error(t, err)
+	assert.Equal(t, "test error", err.Error())
+}
+
+// TestDeviceReadErr2 tests reading from a device when the device is readable,
+// but the device rack specification is invalid.
+func TestDeviceReadErr2(t *testing.T) {
+	device := makeTestDevice()
+	device.Location = config.Location{
+		Rack:  map[string]string{"invalid-key": "invalid-value"},
+		Board: "TestBoard",
+	}
+	device.Handler.Read = func(device *Device) ([]*Reading, error) {
+		return []*Reading{NewReading("test", "value")}, nil
+	}
+
+	ctx, err := device.Read()
+	assert.Nil(t, ctx)
+	assert.Error(t, err)
+}
+
+// TestDeviceReadOk tests reading from a device when the device is readable,
+// and the device config is correct, so we get back a good reading.
+func TestDeviceReadOk(t *testing.T) {
+	device := makeTestDevice()
+	device.Handler.Read = func(device *Device) ([]*Reading, error) {
+		return []*Reading{NewReading("test", "value")}, nil
+	}
+
+	ctx, err := device.Read()
+
+	assert.NotNil(t, ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, device.Location.Rack, ctx.Rack)
+	assert.Equal(t, device.Location.Board, ctx.Board)
+	assert.Equal(t, device.ID(), ctx.Device)
+	assert.Equal(t, 1, len(ctx.Reading))
+	assert.Equal(t, "test", ctx.Reading[0].Type)
+	assert.Equal(t, "value", ctx.Reading[0].Value)
+}
+
+// TestDeviceWriteNotWritable tests writing to a device when it is not
+// a writable device.
+func TestDeviceWriteNotWritable(t *testing.T) {
+	device := makeTestDevice()
+
+	err := device.Write(&WriteData{Action: "test"})
+	assert.Error(t, err)
+	assert.IsType(t, &UnsupportedCommandError{}, err)
+}
+
+// TestDeviceWriteErr tests writing to a device when it is
+// a writable device, but the write returns an error.
+func TestDeviceWriteErr(t *testing.T) {
+	device := makeTestDevice()
+	device.Handler.Write = func(device *Device, data *WriteData) error {
+		return fmt.Errorf("test error")
+	}
+
+	err := device.Write(&WriteData{Action: "test"})
+	assert.Error(t, err)
+	assert.Equal(t, "test error", err.Error())
+}
+
+// TestDeviceWriteOk tests writing to a device when it is
+// a writable device.
+func TestDeviceWriteOk(t *testing.T) {
+	device := makeTestDevice()
+	device.Handler.Write = func(device *Device, data *WriteData) error {
+		return nil
+	}
+
+	err := device.Write(&WriteData{Action: "test"})
+	assert.NoError(t, err)
 }
