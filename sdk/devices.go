@@ -11,6 +11,10 @@ import (
 // The deviceMap holds all of the known devices configured for the plugin.
 var deviceMap = make(map[string]*Device)
 
+// deviceMapOrder holds all of the known deviceIds in the order of insertion.
+// This allows deviceMap iterations in insertion order.
+var deviceMapOrder = []string{}
+
 // DeviceRead is a function that defines the read behavior for a Device.
 type DeviceRead func(*Device) ([]*Reading, error)
 
@@ -228,6 +232,7 @@ func registerDevices(plugin *Plugin, deviceConfigs []*config.DeviceConfig) error
 
 	for _, device := range devices {
 		deviceMap[device.GUID()] = device
+		deviceMapOrder = append(deviceMapOrder, device.GUID())
 	}
 	logger.Debugf("finished registering devices")
 	return nil
