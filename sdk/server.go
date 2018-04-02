@@ -113,7 +113,10 @@ func (s *Server) Write(ctx context.Context, req *synse.WriteRequest) (*synse.Tra
 // Metainfo is the handler for gRPC Metainfo requests.
 func (s *Server) Metainfo(req *synse.MetainfoRequest, stream synse.InternalApi_MetainfoServer) error {
 	logger.Debugf("gRPC metainfo: %v", req)
-	for _, device := range deviceMap {
+	// Preserve device order in responses so that synse gets them in configuration order.
+	for i := 0; i < len(deviceMapOrder); i++ {
+		id := deviceMapOrder[i]
+		device := deviceMap[id]
 		if err := stream.Send(device.encode()); err != nil {
 			logger.Errorf("%v - gRPC metainfo error when sending response(s): %v", req, err)
 			return err

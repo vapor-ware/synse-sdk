@@ -297,7 +297,7 @@ func (p *Plugin) logInfo() {
 	logger.Infof(" Arch:        %s", runtime.GOARCH)
 	logger.Infof("Plugin Config:")
 	s, _ := json.MarshalIndent(p.Config, "", "  ")
-	logger.Infof(string(s))
+	logger.InfoMultiline(string(s))
 	logger.Info("Registered Devices:")
 	for id, dev := range deviceMap {
 		logger.Infof(" %v (%v)", id, dev.Model)
