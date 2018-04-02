@@ -2,30 +2,34 @@ package config
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
+// TestV1DeviceConfigHandlerProcessProtoConfig tests unsuccessfully processing
+// v1 prototype config due to invalid YAML.
 func TestV1DeviceConfigHandlerProcessProtoConfig(t *testing.T) {
 	data := `--~+::\n:-`
 
 	handler := v1DeviceConfigHandler{}
 
 	_, err := handler.processPrototypeConfig([]byte(data))
-	if err == nil {
-		t.Error("expected error: invalid YAML provided")
-	}
+	assert.Error(t, err)
 }
 
+// TestV1DeviceConfigHandlerProcessProtoConfig2 tests unsuccessfully processing
+// v1 prototype config due to a missing required field.
 func TestV1DeviceConfigHandlerProcessProtoConfig2(t *testing.T) {
 	data := `version: 1.0`
 
 	handler := v1DeviceConfigHandler{}
 
 	_, err := handler.processPrototypeConfig([]byte(data))
-	if err == nil {
-		t.Error("expected error: no 'prototypes' field present in config")
-	}
+	assert.Error(t, err)
 }
 
+// TestV1DeviceConfigHandlerProcessProtoConfig3 tests successfully processing
+// multiple v1 prototype configs.
 func TestV1DeviceConfigHandlerProcessProtoConfig3(t *testing.T) {
 	data := `version: 1.0
 prototypes:
@@ -61,26 +65,23 @@ prototypes:
 	handler := v1DeviceConfigHandler{}
 
 	c, err := handler.processPrototypeConfig([]byte(data))
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(c) != 2 {
-		t.Errorf("Expecting 2 prototypes, but got %v", len(c))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(c))
 }
 
+// TestV1DeviceConfigHandlerProcessDeviceConfig tests unsuccessfully processing
+// v1 device config due to invalid YAML.
 func TestV1DeviceConfigHandlerProcessDeviceConfig(t *testing.T) {
 	data := `--~+::\n:-`
 
 	handler := v1DeviceConfigHandler{}
 
 	_, err := handler.processDeviceConfig([]byte(data))
-	if err == nil {
-		t.Error("expected error: invalid YAML provided")
-	}
+	assert.Error(t, err)
 }
 
+// TestV1DeviceConfigHandlerProcessDeviceConfig2 tests unsuccessfully processing
+// v1 device config due to a missing required field.
 func TestV1DeviceConfigHandlerProcessDeviceConfig2(t *testing.T) {
 	data := `version: 1.0
 locations:
@@ -97,11 +98,11 @@ devices:
 	handler := v1DeviceConfigHandler{}
 
 	_, err := handler.processDeviceConfig([]byte(data))
-	if err == nil {
-		t.Error("expected error: no 'location' field present in config")
-	}
+	assert.Error(t, err)
 }
 
+// TestV1DeviceConfigHandlerProcessDeviceConfig3 tests successfully processing
+// multiple v1 device configs.
 func TestV1DeviceConfigHandlerProcessDeviceConfig3(t *testing.T) {
 	data := `version: 1.0
 locations:
@@ -131,11 +132,6 @@ devices:
 	handler := v1DeviceConfigHandler{}
 
 	c, err := handler.processDeviceConfig([]byte(data))
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(c) != 3 {
-		t.Errorf("Expecting 3 device configs, but got %v", len(c))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(c))
 }
