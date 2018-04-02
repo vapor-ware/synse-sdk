@@ -3,6 +3,8 @@ package sdk
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
@@ -12,12 +14,11 @@ func DeviceID(data map[string]string) string {
 	return data["id"]
 }
 
+// TestNewDataManager tests creating a new DataManager instance successfully.
 func TestNewDataManager(t *testing.T) {
 	// Create handlers.
 	h, err := NewHandlers(DeviceID, nil)
-	if err != nil {
-		t.Errorf("TestNewDataManager. Error creating handlers: %v", err)
-	}
+	assert.NoError(t, err)
 
 	c := config.PluginConfig{
 		Name:    "test",
@@ -34,32 +35,22 @@ func TestNewDataManager(t *testing.T) {
 	}
 	p := Plugin{handlers: h}
 	err = p.SetConfig(&c)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	d, err := NewDataManager(&p)
-	if err != nil {
-		t.Errorf("Error creating DataManager: %v", err)
-	}
+	assert.NoError(t, err)
 
-	if cap(d.writeChannel) != 200 {
-		t.Errorf("write channel should be of size 200 but is %v", len(d.writeChannel))
-	}
-	if cap(d.readChannel) != 200 {
-		t.Errorf("read channel should be of size 200 but is %v", len(d.readChannel))
-	}
-	if d.handlers != h {
-		t.Error("handler is not the expected handler instance")
-	}
+	assert.Equal(t, 200, cap(d.writeChannel))
+	assert.Equal(t, 200, cap(d.readChannel))
+	assert.Equal(t, h, d.handlers)
 }
 
+// TestNewDataManager2 tests creating a new DataManager instance successfully with
+// a different configuration.
 func TestNewDataManager2(t *testing.T) {
 	// Create handlers.
 	h, err := NewHandlers(DeviceID, nil)
-	if err != nil {
-		t.Errorf("TestNewDataManager2. Error creating handlers: %v", err)
-	}
+	assert.NoError(t, err)
 
 	c := &config.PluginConfig{
 		Name:    "test",
@@ -75,21 +66,14 @@ func TestNewDataManager2(t *testing.T) {
 		},
 	}
 	p := Plugin{handlers: h}
-	p.SetConfig(c)
+	err = p.SetConfig(c)
+	assert.NoError(t, err)
 
 	// Create the DataManager
 	d, err := NewDataManager(&p)
-	if err != nil {
-		t.Errorf("Error creating DataManager: %v", err)
-	}
+	assert.NoError(t, err)
 
-	if cap(d.writeChannel) != 500 {
-		t.Errorf("write channel should be of size 500 but is %v", len(d.writeChannel))
-	}
-	if cap(d.readChannel) != 500 {
-		t.Errorf("read channel should be of size 500 but is %v", len(d.readChannel))
-	}
-	if d.handlers != h {
-		t.Error("handler is not the expected handler instance")
-	}
+	assert.Equal(t, 500, cap(d.writeChannel))
+	assert.Equal(t, 500, cap(d.readChannel))
+	assert.Equal(t, h, d.handlers)
 }

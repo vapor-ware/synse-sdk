@@ -3,131 +3,158 @@ package sdk
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
+// TestValidateReadRequest tests validating a Read request successfully.
 func TestValidateReadRequest(t *testing.T) {
-	// everything is there
-	request := &synse.ReadRequest{Device: "device", Board: "board", Rack: "rack"}
+	request := &synse.ReadRequest{
+		Device: "device",
+		Board:  "board",
+		Rack:   "rack",
+	}
+
 	err := validateReadRequest(request)
-	if err != nil {
-		t.Errorf("validateReadRequest(%q) -> unexpected error: %q", request, err)
+	assert.NoError(t, err)
+}
+
+// TestValidateReadRequestErr tests validating a Read request when the validation
+// should fail and cause an error.
+func TestValidateReadRequestErr(t *testing.T) {
+	var cases = []synse.ReadRequest{
+		{
+			// missing device
+			Board: "board",
+			Rack:  "rack",
+		},
+		{
+			// missing board
+			Device: "device",
+			Rack:   "rack",
+		},
+		{
+			// missing rack
+			Device: "device",
+			Board:  "board",
+		},
+		{
+		// missing all
+		},
 	}
 
-	// missing device
-	request = &synse.ReadRequest{Board: "board", Rack: "rack"}
-	err = validateReadRequest(request)
-	if err == nil {
-		t.Error("validateReadRequest() -> expected error but got nil")
-	}
-
-	// missing board
-	request = &synse.ReadRequest{Device: "device", Rack: "rack"}
-	err = validateReadRequest(request)
-	if err == nil {
-		t.Error("validateReadRequest() -> expected error but got nil")
-	}
-
-	// missing rack
-	request = &synse.ReadRequest{Device: "device", Board: "board"}
-	err = validateReadRequest(request)
-	if err == nil {
-		t.Error("validateReadRequest() -> expected error but got nil")
+	for _, testCase := range cases {
+		err := validateReadRequest(&testCase)
+		assert.Error(t, err)
 	}
 }
 
+// TestValidateWriteRequest tests validating a Write request successfully.
 func TestValidateWriteRequest(t *testing.T) {
-	// everything is there
-	request := &synse.WriteRequest{Device: "device", Board: "board", Rack: "rack"}
+	request := &synse.WriteRequest{
+		Device: "device",
+		Board:  "board",
+		Rack:   "rack",
+	}
+
 	err := validateWriteRequest(request)
-	if err != nil {
-		t.Errorf("validateWriteRequest(%q) -> unexpected error: %q", request, err)
+	assert.NoError(t, err)
+}
+
+// TestValidateWriteRequestErr tests validating a Write request when the validation
+// should fail and cause an error.
+func TestValidateWriteRequestErr(t *testing.T) {
+	var cases = []synse.WriteRequest{
+		{
+			// missing device
+			Board: "board",
+			Rack:  "rack",
+		},
+		{
+			// missing board
+			Device: "device",
+			Rack:   "rack",
+		},
+		{
+			// missing rack
+			Device: "device",
+			Board:  "board",
+		},
+		{
+		// missing all
+		},
 	}
 
-	// missing device
-	request = &synse.WriteRequest{Board: "board", Rack: "rack"}
-	err = validateWriteRequest(request)
-	if err == nil {
-		t.Error("validateWriteRequest() -> expected error but got nil")
-	}
-
-	// missing board
-	request = &synse.WriteRequest{Device: "device", Rack: "rack"}
-	err = validateWriteRequest(request)
-	if err == nil {
-		t.Error("validateWriteRequest() -> expected error but got nil")
-	}
-
-	// missing rack
-	request = &synse.WriteRequest{Device: "device", Board: "board"}
-	err = validateWriteRequest(request)
-	if err == nil {
-		t.Error("validateWriteRequest() -> expected error but got nil")
+	for _, testCase := range cases {
+		err := validateWriteRequest(&testCase)
+		assert.Error(t, err)
 	}
 }
 
+// TestValidateHandlers tests validating a handlers struct successfully.
 func TestValidateHandlers(t *testing.T) {
-	// handlers is ok
-	h := &Handlers{
-		DeviceIdentifier: testDeviceIdentifier,
-		DeviceEnumerator: testDeviceEnumerator,
-	}
-	err := validateHandlers(h)
-	if err != nil {
-		t.Errorf("validateHandlers(%v) -> unexpected error: %q", h, err)
-	}
-
-	// handlers are ok
-	h = &Handlers{
-		DeviceIdentifier: testDeviceIdentifier,
-	}
-	err = validateHandlers(h)
-	if err != nil {
-		t.Errorf("validateHandlers(%v) -> unexpected error: %q", h, err)
+	var cases = []Handlers{
+		{
+			// identifier and enumerator defined
+			DeviceIdentifier: testDeviceIdentifier,
+			DeviceEnumerator: testDeviceEnumerator,
+		},
+		{
+			// enumerator not defined
+			DeviceIdentifier: testDeviceIdentifier,
+		},
 	}
 
-	// device identifier nil
-	h = &Handlers{
-		DeviceEnumerator: testDeviceEnumerator,
-	}
-	err = validateHandlers(h)
-	if err == nil {
-		t.Errorf("validateHandlers(%v) -> expected error but got nil", h)
-	}
-
-	// all device handlers nil
-	h = &Handlers{}
-	err = validateHandlers(h)
-	if err == nil {
-		t.Errorf("validateHandlers(%v) -> expected error but got nil", h)
+	for _, testCase := range cases {
+		err := validateHandlers(&testCase)
+		assert.NoError(t, err)
 	}
 }
 
+// TestValidateHandlersErr tests validating a handlers struct when the given
+// values should cause validation to fail and return an error.
+func TestValidateHandlersErr(t *testing.T) {
+	var cases = []Handlers{
+		{
+			// no device identifier
+			DeviceEnumerator: testDeviceEnumerator,
+		},
+		{
+		// no handlers defined (all nil)
+		},
+	}
+
+	for _, testCase := range cases {
+		err := validateHandlers(&testCase)
+		assert.Error(t, err)
+	}
+}
+
+// TestValidateForRead_1 tests validating a device for read, when the specified
+// device is not in the device map.
 func TestValidateForRead_1(t *testing.T) {
-	// the given ID is not in the device map
 	deviceMap = make(map[string]*Device)
 
 	err := validateForRead("foo")
-	if err == nil {
-		t.Errorf("validateForRead -> expected error but got nil")
-	}
+	assert.Error(t, err)
 }
 
+// TestValidateForRead_2 tests validating a device for read, when no read handler
+// is defined for the device.
 func TestValidateForRead_2(t *testing.T) {
-	// the given device is not readable
 	deviceMap = make(map[string]*Device)
 	deviceMap["abc"] = &Device{
 		Handler: &DeviceHandler{},
 	}
 
 	err := validateForRead("abc")
-	if err == nil {
-		t.Errorf("validateForRead -> expected error but got nil")
-	}
+	assert.Error(t, err)
 }
 
+// TestValidateForRead_3 tests validating a device for read, when it does exist
+// in the device map and does have a read handler defined.
 func TestValidateForRead_3(t *testing.T) {
-	// the given device is readable
 	deviceMap = make(map[string]*Device)
 	deviceMap["abc"] = &Device{
 		Handler: &DeviceHandler{
@@ -136,36 +163,33 @@ func TestValidateForRead_3(t *testing.T) {
 	}
 
 	err := validateForRead("abc")
-	if err != nil {
-		t.Errorf("validateForRead -> unexpected error: %v", err)
-	}
+	assert.NoError(t, err)
 }
 
+// TestValidateForWrite_1 tests validating a device for write, when the specified
+// device is not in the device map.
 func TestValidateForWrite_1(t *testing.T) {
-	// the given ID is not in the device map
 	deviceMap = make(map[string]*Device)
 
 	err := validateForWrite("foo")
-	if err == nil {
-		t.Errorf("validateForWrite -> expected error but got nil")
-	}
+	assert.Error(t, err)
 }
 
+// TestValidateForWrite_2 tests validating a device for write, when no write handler
+// is defined for the device.
 func TestValidateForWrite_2(t *testing.T) {
-	// the given device is not writable
 	deviceMap = make(map[string]*Device)
 	deviceMap["abc"] = &Device{
 		Handler: &DeviceHandler{},
 	}
 
 	err := validateForWrite("abc")
-	if err == nil {
-		t.Errorf("validateForWrite -> expected error but got nil")
-	}
+	assert.Error(t, err)
 }
 
+// TestValidateForWrite_3 tests validating a device for write, when it does exist
+// in the device map and does have a write handler defined.
 func TestValidateForWrite_3(t *testing.T) {
-	// the given device is writable
 	deviceMap = make(map[string]*Device)
 	deviceMap["abc"] = &Device{
 		Handler: &DeviceHandler{
@@ -174,7 +198,5 @@ func TestValidateForWrite_3(t *testing.T) {
 	}
 
 	err := validateForWrite("abc")
-	if err != nil {
-		t.Errorf("validateForWrite -> unexpected error: %v", err)
-	}
+	assert.NoError(t, err)
 }

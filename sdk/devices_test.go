@@ -2,105 +2,66 @@ package sdk
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"fmt"
+
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
-func TestDevice_Type(t *testing.T) {
-	testDevice := makeTestDevice()
+// testDeviceFields is a test helper function to check the Device
+// fields against the specified prototype and device configs.
+func testDeviceFields(t *testing.T, dev *Device, proto *config.PrototypeConfig, deviceConfig *config.DeviceConfig) {
+	assert.Equal(t, proto.Type, dev.Type)
+	assert.Equal(t, proto.Model, dev.Model)
+	assert.Equal(t, proto.Manufacturer, dev.Manufacturer)
+	assert.Equal(t, proto.Protocol, dev.Protocol)
 
-	if testDevice.Type != testDevice.pconfig.Type {
-		t.Error("device Type does not match prototype config")
-	}
+	assert.Equal(t, deviceConfig.Location, dev.Location)
 
-	if testDevice.Model != testDevice.pconfig.Model {
-		t.Error("device Model does not match prototype config")
-	}
-
-	if testDevice.Manufacturer != testDevice.pconfig.Manufacturer {
-		t.Error("device Manufacturer does not match prototype config")
-	}
-
-	if testDevice.Protocol != testDevice.pconfig.Protocol {
-		t.Error("device Protocol does not match prototype config")
+	assert.Equal(t, len(proto.Output), len(dev.Output))
+	for i := 0; i < len(dev.Output); i++ {
+		assert.Equal(t, proto.Output[i], dev.Output[i])
 	}
 
-	if testDevice.ID() != "664f6cfa51c9bef163682bd2a766613b" {
-		t.Errorf("device ID %q does not match expected ID", testDevice.ID())
-	}
-
-	if testDevice.GUID() != "TestRack-TestBoard-664f6cfa51c9bef163682bd2a766613b" {
-		t.Errorf("device GUID %q does not match expected GUID", testDevice.GUID())
-	}
-
-	if len(testDevice.Output) != len(testDevice.pconfig.Output) {
-		t.Error("device Output length does not match expected")
-	}
-	for i := 0; i < len(testDevice.Output); i++ {
-		if testDevice.Output[i] != testDevice.pconfig.Output[i] {
-			t.Error("device Output does not match prototype config")
-		}
-	}
-
-	if testDevice.Location != testDevice.dconfig.Location {
-		t.Error("device Location does not match instance config")
-	}
-
-	if len(testDevice.Data) != len(testDevice.dconfig.Data) {
-		t.Error("device Data length does not match expected")
-	}
-	for k, v := range testDevice.Data {
-		if testDevice.dconfig.Data[k] != v {
-			t.Error("device Data key/value mismatch")
-		}
+	assert.Equal(t, deviceConfig.Data, dev.Data)
+	for k, v := range dev.Data {
+		assert.Equal(t, deviceConfig.Data[k], v)
 	}
 }
 
+// TestDeviceFields tests that the Device instance fields match up with
+// the expected configuration fields from which they should originate.
+func TestDeviceFields(t *testing.T) {
+	testDevice := makeTestDevice()
+
+	testDeviceFields(t, testDevice, testDevice.pconfig, testDevice.dconfig)
+	assert.Equal(t, "664f6cfa51c9bef163682bd2a766613b", testDevice.ID())
+	assert.Equal(t, "TestRack-TestBoard-664f6cfa51c9bef163682bd2a766613b", testDevice.GUID())
+}
+
+// TestEncodeDevice tests encoding the SDK Device to the gRPC MetainfoResponse model.
 func TestEncodeDevice(t *testing.T) {
 	testDevice := makeTestDevice()
 	encoded := testDevice.encode()
 
-	if encoded.Uid != testDevice.ID() {
-		t.Error("Device.encode() -> Uid incorrect")
-	}
-
-	if encoded.Type != testDevice.Type {
-		t.Error("Device.encode() -> Type incorrect")
-	}
-
-	if encoded.Model != testDevice.Model {
-		t.Error("Device.encode() -> Model incorrect")
-	}
-
-	if encoded.Manufacturer != testDevice.Manufacturer {
-		t.Error("Device.encode() -> Manufacturer incorrect")
-	}
-
-	if encoded.Protocol != testDevice.Protocol {
-		t.Error("Device.encode() -> Protocol incorrect")
-	}
-
-	if encoded.Info != "" {
-		t.Error("Device.encode() -> Info incorrect")
-	}
-
-	if encoded.Comment != "" {
-		t.Error("Device.encode() -> Comment incorrect")
-	}
-
-	if encoded.Location.Rack != testDevice.Location.Rack {
-		t.Error("Device.encode() -> Location.Rack incorrect")
-	}
-
-	if encoded.Location.Board != testDevice.Location.Board {
-		t.Error("Device.encode() -> Location.Board incorrect")
-	}
+	assert.Equal(t, testDevice.ID(), encoded.Uid)
+	assert.Equal(t, testDevice.Type, encoded.Type)
+	assert.Equal(t, testDevice.Model, encoded.Model)
+	assert.Equal(t, testDevice.Manufacturer, encoded.Manufacturer)
+	assert.Equal(t, testDevice.Protocol, encoded.Protocol)
+	assert.Equal(t, "", encoded.Info)
+	assert.Equal(t, "", encoded.Comment)
+	assert.Equal(t, testDevice.Location.Rack, encoded.Location.Rack)
+	assert.Equal(t, testDevice.Location.Board, encoded.Location.Board)
 }
 
+// TestNewDevice tests creating a new device and validating its fields.
 func TestNewDevice(t *testing.T) {
 	// Create Handlers.
 	handlers, err := NewHandlers(testDeviceIdentifier, nil)
-	if err != nil {
-		t.Errorf("TestNewDevice expected no error, got: %v", err)
-	}
+	assert.NoError(t, err)
 
 	// Initialize Plugin with handlers.
 	p := Plugin{
@@ -111,51 +72,16 @@ func TestNewDevice(t *testing.T) {
 	deviceConfig := makeDeviceConfig()
 
 	d, err := NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
-	if d.Type != protoConfig.Type {
-		t.Errorf("device Type does not match expected")
-	}
-
-	if d.Model != protoConfig.Model {
-		t.Errorf("device Model does not match expected")
-	}
-
-	if d.Manufacturer != protoConfig.Manufacturer {
-		t.Errorf("device Manufacturer does not match expected")
-	}
-
-	if d.Protocol != protoConfig.Protocol {
-		t.Errorf("device Protocol does not match expected")
-	}
-
-	if len(d.Output) != len(protoConfig.Output) {
-		t.Errorf("device Output length does not match expected")
-	}
-
-	if d.Location != deviceConfig.Location {
-		t.Errorf("device Location does not match expected")
-	}
-
-	if len(d.Data) != len(deviceConfig.Data) {
-		t.Errorf("device Data length does not match expected")
-	}
-
-	if d.Handler != &testDeviceHandler {
-		t.Errorf("device Handler does not match expected")
-	}
-
-	if d.dconfig != deviceConfig {
-		t.Errorf("device instance config does not match expected")
-	}
-
-	if d.pconfig != protoConfig {
-		t.Errorf("device prototype config does not match expected")
-	}
+	testDeviceFields(t, d, protoConfig, deviceConfig)
+	assert.Equal(t, &testDeviceHandler, d.Handler)
+	assert.Equal(t, deviceConfig, d.dconfig)
+	assert.Equal(t, protoConfig, d.pconfig)
 }
 
+// TestNewDevice2 tests creating a new device and getting a error on validation
+// of the device (invalid handlers).
 func TestNewDevice2(t *testing.T) {
 	p := Plugin{
 		handlers: &Handlers{},
@@ -165,17 +91,16 @@ func TestNewDevice2(t *testing.T) {
 	deviceConfig := makeDeviceConfig()
 
 	_, err := NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
-	if err == nil {
-		t.Error("NewDevice -> expected validation error, but got no error")
-	}
+	assert.Error(t, err)
 }
 
+// TestNewDevice3 tests creating a new device and getting an error on validation
+// of the device (instance-protocol mismatch on type).
 func TestNewDevice3(t *testing.T) {
 	// Create handlers.
 	handlers, err := NewHandlers(testDeviceIdentifier, nil)
-	if err != nil {
-		t.Errorf("TestNewDevice3 expected no error, got: %v", err)
-	}
+	assert.NoError(t, err)
+
 	// Initialize plugin with handlers.
 	p := Plugin{
 		handlers: handlers,
@@ -186,24 +111,174 @@ func TestNewDevice3(t *testing.T) {
 	deviceConfig.Type = "foo"
 
 	_, err = NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
-	if err == nil {
-		t.Error("NewDevice -> expected validation error, but got no error")
-	}
+	assert.Error(t, err)
 }
 
+// TestNewDevice3 tests creating a new device and getting an error on validation
+// of the device (instance-protocol mismatch on model).
 func TestNewDevice4(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(testDeviceIdentifier, nil)
+	assert.NoError(t, err)
+
+	// Initialize plugin with handlers.
 	p := Plugin{
-		handlers: &Handlers{
-			DeviceIdentifier: testDeviceIdentifier,
-		},
+		handlers: handlers,
 	}
 
 	protoConfig := makePrototypeConfig()
 	deviceConfig := makeDeviceConfig()
-	deviceConfig.Type = "foo"
+	deviceConfig.Model = "foo"
 
-	_, err := NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
-	if err == nil {
-		t.Error("NewDevice -> expected validation error, but got no error")
+	_, err = NewDevice(protoConfig, deviceConfig, &testDeviceHandler, &p)
+	assert.Error(t, err)
+}
+
+// TestDeviceIsReadable tests whether a device is readable in the case
+// when it is readable.
+func TestDeviceIsReadable(t *testing.T) {
+	device := Device{
+		Handler: &DeviceHandler{
+			Read: func(device *Device) ([]*Reading, error) {
+				return []*Reading{}, nil
+			},
+		},
 	}
+
+	readable := device.IsReadable()
+	assert.True(t, readable)
+}
+
+// TestDeviceIsNotReadable tests whether a device is readable in the case
+// when it is not readable.
+func TestDeviceIsNotReadable(t *testing.T) {
+	device := Device{
+		Handler: &DeviceHandler{},
+	}
+
+	readable := device.IsReadable()
+	assert.False(t, readable)
+}
+
+// TestDeviceIsWritable tests whether a device is writable in the case
+// when it is writable.
+func TestDeviceIsWritable(t *testing.T) {
+	device := Device{
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+
+	writable := device.IsWritable()
+	assert.True(t, writable)
+}
+
+// TestDeviceIsNotWritable tests whether a device is writable in the case
+// when it is not writable.
+func TestDeviceIsNotWritable(t *testing.T) {
+	device := Device{
+		Handler: &DeviceHandler{},
+	}
+
+	writable := device.IsWritable()
+	assert.False(t, writable)
+}
+
+// TestDeviceReadNotReadable tests reading from a device when it is not
+// a readable device.
+func TestDeviceReadNotReadable(t *testing.T) {
+	device := makeTestDevice()
+
+	ctx, err := device.Read()
+	assert.Nil(t, ctx)
+	assert.Error(t, err)
+	assert.IsType(t, &UnsupportedCommandError{}, err)
+}
+
+// TestDeviceReadErr tests reading from a device when the device is readable,
+// but reading from it will return an error.
+func TestDeviceReadErr(t *testing.T) {
+	device := makeTestDevice()
+	device.Handler.Read = func(device *Device) ([]*Reading, error) {
+		return nil, fmt.Errorf("test error")
+	}
+
+	ctx, err := device.Read()
+	assert.Nil(t, ctx)
+	assert.Error(t, err)
+	assert.Equal(t, "test error", err.Error())
+}
+
+// TestDeviceReadErr2 tests reading from a device when the device is readable,
+// but the device rack specification is invalid.
+func TestDeviceReadErr2(t *testing.T) {
+	device := makeTestDevice()
+	device.Location = config.Location{
+		Rack:  map[string]string{"invalid-key": "invalid-value"},
+		Board: "TestBoard",
+	}
+	device.Handler.Read = func(device *Device) ([]*Reading, error) {
+		return []*Reading{NewReading("test", "value")}, nil
+	}
+
+	ctx, err := device.Read()
+	assert.Nil(t, ctx)
+	assert.Error(t, err)
+}
+
+// TestDeviceReadOk tests reading from a device when the device is readable,
+// and the device config is correct, so we get back a good reading.
+func TestDeviceReadOk(t *testing.T) {
+	device := makeTestDevice()
+	device.Handler.Read = func(device *Device) ([]*Reading, error) {
+		return []*Reading{NewReading("test", "value")}, nil
+	}
+
+	ctx, err := device.Read()
+
+	assert.NotNil(t, ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, device.Location.Rack, ctx.Rack)
+	assert.Equal(t, device.Location.Board, ctx.Board)
+	assert.Equal(t, device.ID(), ctx.Device)
+	assert.Equal(t, 1, len(ctx.Reading))
+	assert.Equal(t, "test", ctx.Reading[0].Type)
+	assert.Equal(t, "value", ctx.Reading[0].Value)
+}
+
+// TestDeviceWriteNotWritable tests writing to a device when it is not
+// a writable device.
+func TestDeviceWriteNotWritable(t *testing.T) {
+	device := makeTestDevice()
+
+	err := device.Write(&WriteData{Action: "test"})
+	assert.Error(t, err)
+	assert.IsType(t, &UnsupportedCommandError{}, err)
+}
+
+// TestDeviceWriteErr tests writing to a device when it is
+// a writable device, but the write returns an error.
+func TestDeviceWriteErr(t *testing.T) {
+	device := makeTestDevice()
+	device.Handler.Write = func(device *Device, data *WriteData) error {
+		return fmt.Errorf("test error")
+	}
+
+	err := device.Write(&WriteData{Action: "test"})
+	assert.Error(t, err)
+	assert.Equal(t, "test error", err.Error())
+}
+
+// TestDeviceWriteOk tests writing to a device when it is
+// a writable device.
+func TestDeviceWriteOk(t *testing.T) {
+	device := makeTestDevice()
+	device.Handler.Write = func(device *Device, data *WriteData) error {
+		return nil
+	}
+
+	err := device.Write(&WriteData{Action: "test"})
+	assert.NoError(t, err)
 }

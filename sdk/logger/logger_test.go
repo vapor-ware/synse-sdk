@@ -4,21 +4,17 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
+// TestSetLogLevel tests setting the logging level for the SDK logger.
 func TestSetLogLevel(t *testing.T) {
 	// the default logger level is info, so it should start at info.
-	if logger.Level != logrus.InfoLevel {
-		t.Error("Logger did not start at log level INFO")
-	}
+	assert.Equal(t, logrus.InfoLevel, logger.Level)
 
 	SetLogLevel(true)
-	if logger.Level != logrus.DebugLevel {
-		t.Error("Failed to set log level to DEBUG")
-	}
+	assert.Equal(t, logrus.DebugLevel, logger.Level)
 
 	SetLogLevel(false)
-	if logger.Level != logrus.InfoLevel {
-		t.Error("Failed to set log level back to INFO")
-	}
+	assert.Equal(t, logrus.InfoLevel, logger.Level)
 }

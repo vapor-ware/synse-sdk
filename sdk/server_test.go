@@ -3,9 +3,12 @@ package sdk
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// Test that a Server is returned when the constructor is called.
+// TestNewServer tests that a Server is returned when the constructor
+// is called.
 func TestNewServer(t *testing.T) {
 	s, err := NewServer(&Plugin{})
 	if err != nil {
@@ -16,10 +19,9 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
-// Test the NewServer function with a nil plugin parameter.
+// TestNewServerNilPlugin tests the NewServer function with a nil
+// plugin parameter.
 func TestNewServerNilPlugin(t *testing.T) {
 	_, err := NewServer(nil)
-	if err == nil {
-		t.Error("NewServer should return non-nil error with a nil plugin parameter")
-	}
+	assert.Error(t, err)
 }
