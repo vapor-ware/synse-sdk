@@ -59,58 +59,251 @@ func TestLocation_Encode(t *testing.T) {
 	}
 }
 
-// config file doesn't exist
-func TestParseDeviceConfig(t *testing.T) {
-	// the default directory path shouldn't exist when running tests
-	_, err := ParseDeviceConfig()
-	if err == nil {
-		t.Error("expected error: config directory should not exist")
+// TestLocation_GetRack tests getting the rack info for a Location successfully.
+func TestLocation_GetRack(t *testing.T) {
+	var cases = []struct {
+		in  Location
+		out string
+	}{
+		{
+			in: Location{
+				Rack:  "rack-1",
+				Board: "board-1",
+			},
+			out: "rack-1",
+		},
+		{
+			in: Location{
+				Rack:  "1",
+				Board: "1",
+			},
+			out: "1",
+		},
+		{
+			in: Location{
+				Rack:  "",
+				Board: "",
+			},
+			out: "",
+		},
+		{
+			in: Location{
+				Rack: map[interface{}]interface{}{
+					"from_env": "TEST_RACK_ENV",
+				},
+				Board: "board-1",
+			},
+			out: "rack-env",
+		},
+	}
+
+	// Set the env variable for the test
+	os.Setenv("TEST_RACK_ENV", "rack-env")
+	defer os.Unsetenv("TEST_RACK_ENV")
+
+	for _, tc := range cases {
+		rack, err := tc.in.GetRack()
+		assert.NoError(t, err)
+		assert.Equal(t, tc.out, rack)
 	}
 }
 
-// config directory is not a directory
+// TestLocation_GetRackErr tests getting the rack info for a Location unsuccessfully.
+func TestLocation_GetRackErr(t *testing.T) {
+	var cases = []struct {
+		in  Location
+		out string
+	}{
+		{
+			in: Location{
+				Rack:  1,
+				Board: "board-1",
+			},
+			out: "rack-1",
+		},
+		{
+			in: Location{
+				Rack:  true,
+				Board: "1",
+			},
+			out: "1",
+		},
+		{
+			in: Location{
+				Rack: map[interface{}]interface{}{
+					"invalid_key": "TEST_RACK_ENV",
+				},
+				Board: "board-1",
+			},
+		},
+		{
+			in: Location{
+				Rack: map[interface{}]interface{}{
+					"from_env": "TEST_RACK_ENV_EMPTY",
+				},
+				Board: "board-1",
+			},
+			out: "",
+		},
+	}
+
+	for _, tc := range cases {
+		rack, err := tc.in.GetRack()
+		assert.Empty(t, rack)
+		assert.Error(t, err)
+	}
+}
+
+// TestLocation_Validate tests validating a Location successfully.
+func TestLocation_Validate(t *testing.T) {
+	var cases = []Location{
+		// Location with rack as string
+		{
+			Rack:  "rack",
+			Board: "board",
+		},
+		// Location with rack as correct mapping
+		{
+			Rack: map[interface{}]interface{}{
+				"from_env": "TEST_RACK_ENV",
+			},
+			Board: "board",
+		},
+	}
+
+	// Set the env variable for the test
+	os.Setenv("TEST_RACK_ENV", "rack-env")
+	defer os.Unsetenv("TEST_RACK_ENV")
+
+	for _, testCase := range cases {
+		err := testCase.Validate()
+		assert.NoError(t, err)
+	}
+}
+
+// TestLocation_ValidateErr tests validating a Location unsuccessfully.
+func TestLocation_ValidateErr(t *testing.T) {
+	var cases = []Location{
+		// Empty Location
+		{},
+		// Location with rack as invalid type (int)
+		{
+			Rack:  2,
+			Board: "board",
+		},
+		// Location with rack as invalid type (list)
+		{
+			Rack:  []interface{}{1, 2},
+			Board: "board",
+		},
+		// Location with rack as invalid type (bool)
+		{
+			Rack:  false,
+			Board: "board",
+		},
+		// Location with rack as invalid type (nil)
+		{
+			Rack:  nil,
+			Board: "board",
+		},
+		// Location with rack as interface mapping, but
+		// invalid map key type (int)
+		{
+			Rack: map[interface{}]interface{}{
+				2: "TEST_RACK_ENV",
+			},
+			Board: "board",
+		},
+		// Location with rack as interface mapping, but
+		// invalid map key type (bool)
+		{
+			Rack: map[interface{}]interface{}{
+				true: "TEST_RACK_ENV",
+			},
+			Board: "board",
+		},
+		// Location with rack as interface mapping, but
+		// invalid map value type (int)
+		{
+			Rack: map[interface{}]interface{}{
+				"from_env": 2,
+			},
+			Board: "board",
+		},
+		// Location with rack as interface mapping, but
+		// invalid map value type (bool)
+		{
+			Rack: map[interface{}]interface{}{
+				"from_env": true,
+			},
+			Board: "board",
+		},
+		// Location with rack as interface mapping, but
+		// unsupported key
+		{
+			Rack: map[interface{}]interface{}{
+				"not_supported": "value",
+			},
+			Board: "board",
+		},
+		// Location with rack as interface mapping, but
+		// the specified env variable doesn't exist
+		{
+			Rack: map[interface{}]interface{}{
+				"from_env": "TEST_INVALID_ENV_VALUE",
+			},
+			Board: "board",
+		},
+	}
+
+	for _, testCase := range cases {
+		err := testCase.Validate()
+		assert.Error(t, err)
+	}
+}
+
+// TestParseDeviceConfig tests parsing a device config when the config
+// file does not exist.
+func TestParseDeviceConfig(t *testing.T) {
+	// the default directory path shouldn't exist when running tests
+	_, err := ParseDeviceConfig()
+	assert.Error(t, err)
+}
+
+// TestParseDeviceConfig2 tests parsing device config when the config directory
+// is not a directory.
 func TestParseDeviceConfig2(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	os.Setenv(EnvDevicePath, tmpfile.Name())
 	defer os.Unsetenv(EnvDevicePath)
 
 	_, err = ParseDeviceConfig()
-	if err == nil {
-		t.Error("expected error: config directory should not be a directory")
-	}
+	assert.Error(t, err)
 }
 
-// no valid configs in directory
+// TestParseDeviceConfig3 tests parsing device config when no valid configs are
+// in the device config directory.
 func TestParseDeviceConfig3(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDevicePath, tmpdir)
 	defer os.Unsetenv(EnvDevicePath)
 
 	res, err := ParseDeviceConfig()
-	if err != nil {
-		t.Error(err)
-	}
-	if len(res) > 0 {
-		t.Errorf("expected 0 results, but got %v instead", len(res))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(res))
 }
 
-// no config version specified
+// TestParseDeviceConfig4 tests parsing device config when no config version
+// is specified in the device config file.
 func TestParseDeviceConfig4(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDevicePath, tmpdir)
@@ -130,22 +323,17 @@ devices:
 
 	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
 	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	_, err = ParseDeviceConfig()
-	if err == nil {
-		t.Error("expected error: configuration version not set")
-	}
+	assert.Error(t, err)
 }
 
-// no handler for the specified config version
+// TestParseDeviceConfig5 tests parsing device config when there is no handler
+// defined for the specified config version.
 func TestParseDeviceConfig5(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDevicePath, tmpdir)
@@ -166,22 +354,17 @@ devices:
 
 	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
 	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	_, err = ParseDeviceConfig()
-	if err == nil {
-		t.Error("expected error: no handler for the given version")
-	}
+	assert.Error(t, err)
 }
 
-// unable to process the config via handler
+// TestParseDeviceConfig6 tests parsing device config when unable to
+// process the config via handler.
 func TestParseDeviceConfig6(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDevicePath, tmpdir)
@@ -197,22 +380,16 @@ devices:
 
 	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
 	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	_, err = ParseDeviceConfig()
-	if err == nil {
-		t.Error("expected error: invalid config for given version")
-	}
+	assert.Error(t, err)
 }
 
-// process everything successfully
+// TestParseDeviceConfig7 tests parsing device configs successfully.
 func TestParseDeviceConfig7(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDevicePath, tmpdir)
@@ -233,25 +410,18 @@ devices:
 
 	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
 	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	res, err := ParseDeviceConfig()
-	if err != nil {
-		t.Error(err)
-	}
-	if len(res) != 1 {
-		t.Errorf("expected 1 device configuration, but got %v", len(res))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(res))
 }
 
-// process unsuccessfully using env for root config dir
+// TestParseDeviceConfig8 tests parsing device configs unsuccessfully using
+// an environment variable to specify the root config directory.
 func TestParseDeviceConfig8(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDeviceConfig, tmpdir)
@@ -272,29 +442,25 @@ devices:
 
 	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
 	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	_, err = ParseDeviceConfig()
-	if err == nil {
-		t.Error("expected error: PLUGIN_DEVICE_CONFIG path does not contain 'device' subdir")
-	}
+	assert.Error(t, err)
 }
 
-// process successfully using env for root config dir
+// TestParseDeviceConfig9 tests parsing device configs successfully using
+// an environment variable to specify the root config directory.
 func TestParseDeviceConfig9(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDeviceConfig, tmpdir)
 	defer os.Unsetenv(EnvDeviceConfig)
 
 	deviceDir := filepath.Join(tmpdir, "device")
-	os.Mkdir(deviceDir, 0700)
+	err = os.Mkdir(deviceDir, 0700)
+	assert.NoError(t, err)
 
 	data := `version: 1.0
 locations:
@@ -311,25 +477,18 @@ devices:
 
 	tmpf := filepath.Join(deviceDir, "tmpfile.yml")
 	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	res, err := ParseDeviceConfig()
-	if err != nil {
-		t.Error(err)
-	}
-	if len(res) != 1 {
-		t.Errorf("expected 1 device configuration, but got %v", len(res))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(res))
 }
 
-// process everything successfully using 'from_env' rack value
+// TestParseDeviceConfig10 tests parsing device configs successfully using
+// 'from_env' as the rack value.
 func TestParseDeviceConfig10(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDevicePath, tmpdir)
@@ -354,34 +513,23 @@ devices:
 
 	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
 	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	res, err := ParseDeviceConfig()
-	if err != nil {
-		t.Error(err)
-	}
-	if len(res) != 1 {
-		t.Errorf("expected 1 device configuration, but got %v", len(res))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(res))
 
 	config := res[0]
 	rack, err := config.Location.GetRack()
-	if err != nil {
-		t.Errorf("error when getting location info: %v", err)
-	}
-	if rack != "test-rack" {
-		t.Errorf("expected location rack to be 'test-rack' from env, but was not.")
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "test-rack", rack)
 }
 
-// process unsuccessfully specifying 'from_env', but not having the env set
+// TestParseDeviceConfig11 tests parsing device configs unsuccessfully specifying
+// 'from_env' as the rack value, but not having the environment variable set.
 func TestParseDeviceConfig11(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	os.Setenv(EnvDevicePath, tmpdir)
@@ -403,12 +551,8 @@ devices:
 
 	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
 	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	_, err = ParseDeviceConfig()
-	if err == nil {
-		t.Error("expected error: should fail if location rack env doesn't resolve")
-	}
+	assert.Error(t, err)
 }
