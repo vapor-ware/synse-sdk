@@ -1,122 +1,93 @@
-[![CircleCI](https://circleci.com/gh/vapor-ware/synse-sdk.svg?style=svg&circle-token=a35e96598e3df84da3dc58a4f0f9dcc8632bfbd3)](https://circleci.com/gh/vapor-ware/synse-sdk)
-[![codecov](https://codecov.io/gh/vapor-ware/synse-sdk/branch/master/graph/badge.svg?token=K9qxpN6AE2)](https://codecov.io/gh/vapor-ware/synse-sdk)
+<p align="center"><a href="https://www.vapor.io/"><img src="docs/assets/logo.png" width="360"></a></p>
+<p align="center">
+    <a href="https://circleci.com/gh/vapor-ware/synse-sdk"><img src="https://circleci.com/gh/vapor-ware/synse-sdk.svg?style=shield&circle-token=a35e96598e3df84da3dc58a4f0f9dcc8632bfbd3"></a>
+    <a href="https://codecov.io/gh/vapor-ware/synse-sdk"><img src="https://codecov.io/gh/vapor-ware/synse-sdk/branch/master/graph/badge.svg?token=K9qxpN6AE2" /></a>
+
+<h1 align="center">Synse Plugin SDK</h1>
+</p>
+
+<p align="center">A Golang SDK for creating plugins for Synse Server</p>
 
 
-# Synse Plugin SDK for Go
-An SDK in the Go programming language for creating plugins for Vapor IO's
-[Synse Server][synse-server].
+[Synse Server][synse-server] provides an HTTP API for monitoring and controlling physical
+and virtual devices; Synse Plugins provide the backend support for all the devices Synse
+Server exposes. This repo contains the official Synse Plugin SDK (written in [Go][go-install])
+that can be used to create plugin backends for Synse Server.
 
-This SDK handles most of the common functionality needed for Synse Server plugins,
-such as configuration parsing, background reading, asynchronous writing, generation
-and tracking of transaction ids, handling metainfo, etc.
-
-In most cases, a plugin author will only need to write the plugin-specific read and
-write functionality as well as plugin-specific configuration parsing.
+The SDK handles most of the common functionality needed for plugins, such as configuration
+parsing, background read/write, transaction generation and tracking, meta-info caching, and more.
+This means the plugin author should only need to worry about the plugin-specific device support.
+See the [SDK Documentation][sdk-docs] for more info.
 
 
-## Setting up the golang environment on a mac using homebrew.
-brew install golang
+## The Synse Ecosystem
+The Synse SDK is one component of the greater Synse Ecosystem.
 
-### Setup .bashrc
-GOPATH is the path to your workspace. It is required to be set and has no default.
-Just leave it at $HOME/go and everything works. Non-default GOPATH is a major headache.
+- [**vapor-ware/synse-server**][synse-server]: An HTTP server providing a uniform API to interact
+  with physical and virtual devices via plugin backends. This can be thought of as a 'front end'
+  for Synse Plugins.
 
-GOROOT is the path to where the Go standard library is located on your local filesystem.
+- [**vapor-ware/synse-server-grpc**][synse-grpc]: The internal gRPC API that connects Synse
+  Server and the Synse Plugins.
 
-GOBIN is the path to where your Go binaries are installed from running go install.
+- [**vapor-ware/synse-emulator-plugin**][synse-emulator]: A simple plugin with no hardware
+  dependencies that can serve as a plugin backend for Synse Server for development,
+  testing, and just getting familiar with how Synse Server works or how plugins can be
+  written.
 
-Sample .bashrc:
-```
-export GOPATH=$HOME/go
-export GOROOT=/usr/local/opt/go/libexec
-export GOBIN=$HOME/go/bin
-export PATH=$PATH:$GOPATH/bin
-export PATH=$PATH:$GOROOT/bin
-export PATH=$PATH:$GOBIN
-```
+- [**vapor-ware/synse-cli**][synse-cli]: A CLI that allows you to easily interact with
+  Synse Server (via HTTP) and Plugins (via gRPC) directly from the command line.
 
-Clone all vapor-ware git repos from the local ${HOME}/go/src/git@github.com/vapor-ware directory.
-Things just work this way.
+- [**vapor-ware/synse-graphql**][synse-graphql]: A GraphQL wrapper around Synse Server's
+  HTTP API that provides a powerful query language enabling simple aggregations and
+  operations over multiple devices.
 
-## Installing
+
+## Getting Started
+It is strongly recommended that you use a [release][releases] version of the SDK if you are
+vendoring dependencies, e.g. with [dep][dep]. The SDK can be installed with:
+
 ```
 go get -u github.com/vapor-ware/synse-sdk/sdk
 ```
 
-
-## Reference
-
-### Examples
-
-Before getting started with the SDK, check out the [examples][examples] directory.
-It contains various example plugins written using the SDK ranging in complexity.
-These examples should give you a good idea on how to start writing your own plugin(s).
-
-### Documentation
-
-TODO: link to documentation
-
-## Development
-
-### Setting up the project
-```
-make setup
-```
-
-### Dependencies
-[`go dep`](https://github.com/golang/dep) is used for dependency management. After cloning the repo, you can install `dep` with:
-
-```shell
-go get -u github.com/golang/dep/cmd/dep
-```
-
-To download the dependencies (or update them in the future) you can run:
-
-```shell
-dep ensure -v --vendor-only
-```
-
-### Testing
-Tests for the Synse Plugin SDK are run in CI, the status of which is shown by the
-badge at the top of this README. Tests can be run locally with:
-
-```
-go test -v ./sdk
-```
-
-for convenience, this can also be done via make.
-
-```
-make test
-```
-
-### Linting
-Linting is performed as a step in CI. A failure to lint should cause a CI build failure.
-The SDK source can also be linted locally using `golint`. To get `golint`,
-```
-go get -u github.com/golang/lint/golint
-```
-
-then, the source can be linted with
-```
-golint sdk/...
-```
-
-For convenience, this can all be done via make, where linting will also include go
-source files in the `examples` directory.
-```
-make lint
-```
-
-## Ensuring local changes pass in ci.
-```
-make ci
-```
-
-## License
-This SDK is licensed under GPLv2. See [LICENSE](LICENSE) for more information.
+From there, it is easy to start building your own plugin. The [SDK Documentation][sdk-docs]
+provides some useful information on writing plugins. You can also check out the [examples](examples)
+directory which contains various example plugins using this SDK. The examples, in conjunction
+with the documentation, should get you well on your way to start writing your own plugin(s).
 
 
+### Developing
+If you wish to develop the SDK, see the Developing section in the [SDK Documentation][sdk-docs].
 
+
+## Sharing Plugins
+Have you written a plugin and want to share it with the Synse community? Let us know!
+There currently is not a tool or site to search for plugins, so we will maintain a list
+here. You can also add the [`synse-plugin`][synse-plugin-tag] tag to your plugin's GitHub repo.
+
+## Feedback
+Feedback for the Synse Plugin SDK, or any component of the Synse ecosystem, is greatly appreciated!
+If you experience any issues, find the documentation unclear, have requests for features,
+or just have questions about it, we'd love to know. Feel free to open an issue for any
+feedback you may have.
+
+## Contributing
+We welcome contributions to the project. The project maintainers actively manage the issues
+and pull requests. If you choose to contribute, we ask that you either comment on an existing
+issue or open a new one. This project follows the typical [GitHub Workflow][gh-workflow].
+
+The Synse Plugin SDK is released under the [GPL-2.0](LICENSE) license.
+
+
+[go-install]: https://golang.org/doc/install
+[releases]: https://github.com/vapor-ware/synse-sdk/releases
+[dep]: https://github.com/golang/dep
+[sdk-docs]: https://vapor-ware.github.io/synse-sdk/
 [synse-server]: https://github.com/vapor-ware/synse-server
-[examples]: https://github.com/vapor-ware/synse-sdk/tree/master/examples
+[synse-cli]: https://github.com/vapor-ware/synse-cli
+[synse-emulator]: https://github.com/vapor-ware/synse-emulator-plugin
+[synse-graphql]: https://github.com/vapor-ware/synse-graphql
+[synse-grpc]: https://github.com/vapor-ware/synse-server-grpc
+[gh-workflow]: https://guides.github.com/introduction/flow/
+[synse-plugin-tag]: https://github.com/topics/synse-plugin
