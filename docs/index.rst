@@ -28,6 +28,7 @@ you should be able to make the most out of the Plugin SDK.
 
    user/basics
    user/advanced
+   user/configuration
    user/tutorial
 
 
