@@ -1,4 +1,4 @@
-<p align="center"><a href="https://www.vapor.io/"><img src="docs/assets/logo.png" width="360"></a></p>
+<p align="center"><a href="https://www.vapor.io/"><img src="docs/_static/logo.png" width="360"></a></p>
 <p align="center">
     <a href="https://circleci.com/gh/vapor-ware/synse-sdk"><img src="https://circleci.com/gh/vapor-ware/synse-sdk.svg?style=shield&circle-token=a35e96598e3df84da3dc58a4f0f9dcc8632bfbd3"></a>
     <a href="https://codecov.io/gh/vapor-ware/synse-sdk"><img src="https://codecov.io/gh/vapor-ware/synse-sdk/branch/master/graph/badge.svg?token=K9qxpN6AE2" /></a>
