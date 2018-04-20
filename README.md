@@ -85,7 +85,7 @@ The Synse Plugin SDK is released under the [GPL-2.0](LICENSE) license.
 [go-install]: https://golang.org/doc/install
 [releases]: https://github.com/vapor-ware/synse-sdk/releases
 [dep]: https://github.com/golang/dep
-[sdk-docs]: https://vapor-ware.github.io/synse-sdk/
+[sdk-docs]: http://synse-sdk.readthedocs.io/en/latest/
 [synse-server]: https://github.com/vapor-ware/synse-server
 [synse-cli]: https://github.com/vapor-ware/synse-cli
 [synse-emulator]: https://github.com/vapor-ware/synse-emulator-plugin
