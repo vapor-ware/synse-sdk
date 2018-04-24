@@ -20,4 +20,7 @@ coverage.txt
 # Dep vendor packages
 vendor
 
+# Documentation
+docs/_build
+
 .DS_Store

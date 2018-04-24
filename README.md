@@ -1,7 +1,9 @@
-<p align="center"><a href="https://www.vapor.io/"><img src="docs/assets/logo.png" width="360"></a></p>
+<p align="center"><a href="https://www.vapor.io/"><img src="docs/_static/logo.png" width="360"></a></p>
 <p align="center">
     <a href="https://circleci.com/gh/vapor-ware/synse-sdk"><img src="https://circleci.com/gh/vapor-ware/synse-sdk.svg?style=shield&circle-token=a35e96598e3df84da3dc58a4f0f9dcc8632bfbd3"></a>
     <a href="https://codecov.io/gh/vapor-ware/synse-sdk"><img src="https://codecov.io/gh/vapor-ware/synse-sdk/branch/master/graph/badge.svg?token=K9qxpN6AE2" /></a>
+    <a href="https://godoc.org/github.com/vapor-ware/synse-sdk/sdk"><img src="https://godoc.org/github.com/vapor-ware/synse-sdk/sdk?status.svg"></a>
+    <a href="https://goreportcard.com/report/github.com/vapor-ware/synse-sdk"><img src="https://goreportcard.com/badge/github.com/vapor-ware/synse-sdk"></a>
 
 <h1 align="center">Synse Plugin SDK</h1>
 </p>
@@ -83,7 +85,7 @@ The Synse Plugin SDK is released under the [GPL-2.0](LICENSE) license.
 [go-install]: https://golang.org/doc/install
 [releases]: https://github.com/vapor-ware/synse-sdk/releases
 [dep]: https://github.com/golang/dep
-[sdk-docs]: https://vapor-ware.github.io/synse-sdk/
+[sdk-docs]: http://synse-sdk.readthedocs.io/en/latest/
 [synse-server]: https://github.com/vapor-ware/synse-server
 [synse-cli]: https://github.com/vapor-ware/synse-cli
 [synse-emulator]: https://github.com/vapor-ware/synse-emulator-plugin
