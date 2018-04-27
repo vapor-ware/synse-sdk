@@ -5,8 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 const (
@@ -83,7 +84,7 @@ func (r *Range) Encode() *synse.MetaOutputRange {
 
 // ParsePrototypeConfig parses the YAML files found in the prototype configuration
 // directory, if any are found, into PrototypeConfig structs.
-func ParsePrototypeConfig() ([]*PrototypeConfig, error) {
+func ParsePrototypeConfig() ([]*PrototypeConfig, error) { // nolint: gocyclo
 	logger.Debugf("ParsePrototypeConfig start")
 	var cfgs []*PrototypeConfig
 

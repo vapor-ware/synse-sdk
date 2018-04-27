@@ -7,8 +7,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"github.com/vapor-ware/synse-server-grpc/go"
+
+	"github.com/vapor-ware/synse-sdk/internal/test"
 )
 
 // TestDeviceOutput_Encode tests encoding an SDK DeviceOutput to
@@ -177,10 +178,14 @@ func TestParseProtoConfig(t *testing.T) {
 func TestParseProtoConfig2(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "test")
 	assert.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		test.CheckErr(t, os.Remove(tmpfile.Name()))
+	}()
 
-	os.Setenv(EnvProtoPath, tmpfile.Name())
-	defer os.Unsetenv(EnvProtoPath)
+	test.CheckErr(t, os.Setenv(EnvProtoPath, tmpfile.Name()))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvProtoPath))
+	}()
 
 	_, err = ParsePrototypeConfig()
 	assert.Error(t, err)
@@ -191,10 +196,14 @@ func TestParseProtoConfig2(t *testing.T) {
 func TestParseProtoConfig3(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvProtoPath, tmpdir)
-	defer os.Unsetenv(EnvProtoPath)
+	test.CheckErr(t, os.Setenv(EnvProtoPath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvProtoPath))
+	}()
 
 	res, err := ParsePrototypeConfig()
 	assert.NoError(t, err)
@@ -206,10 +215,14 @@ func TestParseProtoConfig3(t *testing.T) {
 func TestParseProtoConfig4(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvProtoPath, tmpdir)
-	defer os.Unsetenv(EnvProtoPath)
+	test.CheckErr(t, os.Setenv(EnvProtoPath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvProtoPath))
+	}()
 
 	data := `prototypes:
   - type: airflow
@@ -240,10 +253,14 @@ func TestParseProtoConfig4(t *testing.T) {
 func TestParseProtoConfig5(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvProtoPath, tmpdir)
-	defer os.Unsetenv(EnvProtoPath)
+	test.CheckErr(t, os.Setenv(EnvProtoPath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvProtoPath))
+	}()
 
 	data := `version: 9999.9999
 prototypes:
@@ -275,10 +292,14 @@ prototypes:
 func TestParseProtoConfig6(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvProtoPath, tmpdir)
-	defer os.Unsetenv(EnvProtoPath)
+	test.CheckErr(t, os.Setenv(EnvProtoPath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvProtoPath))
+	}()
 
 	data := `version: 1.0`
 
@@ -294,10 +315,14 @@ func TestParseProtoConfig6(t *testing.T) {
 func TestParseProtoConfig7(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvProtoPath, tmpdir)
-	defer os.Unsetenv(EnvProtoPath)
+	test.CheckErr(t, os.Setenv(EnvProtoPath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvProtoPath))
+	}()
 
 	data := `version: 1.0
 prototypes:
@@ -330,10 +355,14 @@ prototypes:
 func TestParseProtoConfig8(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDeviceConfig, tmpdir)
-	defer os.Unsetenv(EnvDeviceConfig)
+	test.CheckErr(t, os.Setenv(EnvDeviceConfig, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDeviceConfig))
+	}()
 
 	data := `version: 1.0
 prototypes:
@@ -367,13 +396,17 @@ prototypes:
 func TestParseProtoConfig9(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDeviceConfig, tmpdir)
-	defer os.Unsetenv(EnvDeviceConfig)
+	test.CheckErr(t, os.Setenv(EnvDeviceConfig, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDeviceConfig))
+	}()
 
 	protoDir := filepath.Join(tmpdir, "proto")
-	os.Mkdir(protoDir, 0700)
+	test.CheckErr(t, os.Mkdir(protoDir, 0700))
 
 	data := `version: 1.0
 prototypes:

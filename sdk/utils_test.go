@@ -1,15 +1,15 @@
 package sdk
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"io/ioutil"
-	"path/filepath"
-	"sort"
-
+	"github.com/vapor-ware/synse-sdk/internal/test"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
@@ -97,7 +97,9 @@ func TestSetupSocket(t *testing.T) {
 	// Set up a temporary directory for testing
 	dir, err := ioutil.TempDir("", "testing")
 	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(dir))
+	}()
 
 	// Set the socket path to the temp dir for the test
 	sockPath = dir
@@ -122,7 +124,7 @@ func TestSetupSocket2(t *testing.T) {
 	dir, err := ioutil.TempDir("", "testing")
 	assert.NoError(t, err)
 	// remove the temp dir now - it shouldn't exist when we set up the socket
-	os.RemoveAll(dir)
+	test.CheckErr(t, os.RemoveAll(dir))
 
 	// Set the socket path to the temp dir for the test
 	sockPath = dir
@@ -146,7 +148,9 @@ func TestSetupSocket3(t *testing.T) {
 	// Set up a temporary directory for testing
 	dir, err := ioutil.TempDir("", "testing")
 	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(dir))
+	}()
 
 	// Set the socket path to the temp dir for the test
 	sockPath = dir

@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vapor-ware/synse-server-grpc/go"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
-	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // DataManager handles the reading from and writing to configured devices.

@@ -3,10 +3,11 @@ package sdk
 import (
 	"net"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 // Server is the the Plugin's server component. It acts as the InternalApiServer

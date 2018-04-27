@@ -3,12 +3,12 @@ package config
 import (
 	"fmt"
 	"os"
-
 	"time"
 
 	"github.com/spf13/viper"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"golang.org/x/time/rate"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 const (

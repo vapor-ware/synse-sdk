@@ -33,7 +33,7 @@ func Read(device *sdk.Device) ([]*sdk.Reading, error) {
 	return []*sdk.Reading{
 		sdk.NewReading(
 			device.Type,
-			strconv.Itoa(rand.Int()),
+			strconv.Itoa(rand.Int()), // nolint: gas
 		),
 	}, nil
 }
@@ -104,6 +104,14 @@ func GetProtocolIdentifiers(data map[string]string) string {
 	return data["id"]
 }
 
+// checkErr is a helper used in the main function to check errors. If any errors
+// are present, this will exit with log.Fatal.
+func checkErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 // The Main Function
 //   This is the entry point for the plugin. With both handlers defined,
 //   all that is left to do is create a new PluginServer instance and
@@ -116,14 +124,12 @@ func main() {
 	// Set the prototype and device instance config paths to be relative to the
 	// current working directory instead of using the default location. This way
 	// the plugin can be run from within this directory.
-	os.Setenv("PLUGIN_DEVICE_PATH", "./config/device")
-	os.Setenv("PLUGIN_PROTO_PATH", "./config/proto")
+	checkErr(os.Setenv("PLUGIN_DEVICE_PATH", "./config/device"))
+	checkErr(os.Setenv("PLUGIN_PROTO_PATH", "./config/proto"))
 
 	// Create handlers for the plugin.
 	handlers, err := sdk.NewHandlers(GetProtocolIdentifiers, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	// Configuration for the Simple Plugin.
 	cfg := config.PluginConfig{
@@ -149,9 +155,7 @@ func main() {
 
 	// Create a new Plugin and configure it.
 	plugin, err := sdk.NewPlugin(handlers, &cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
@@ -168,8 +172,5 @@ func main() {
 	})
 
 	// Run the plugin.
-	err = plugin.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(plugin.Run())
 }

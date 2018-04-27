@@ -6,8 +6,9 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 // TODO - add in support for deprecated versions. this doesn't need to go

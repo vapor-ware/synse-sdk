@@ -7,8 +7,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"github.com/vapor-ware/synse-server-grpc/go"
+
+	"github.com/vapor-ware/synse-sdk/internal/test"
 )
 
 // TestLocation_Encode tests encoding an SDK Location to the gRPC
@@ -98,8 +99,10 @@ func TestLocation_GetRack(t *testing.T) {
 	}
 
 	// Set the env variable for the test
-	os.Setenv("TEST_RACK_ENV", "rack-env")
-	defer os.Unsetenv("TEST_RACK_ENV")
+	test.CheckErr(t, os.Setenv("TEST_RACK_ENV", "rack-env"))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv("TEST_RACK_ENV"))
+	}()
 
 	for _, tc := range cases {
 		rack, err := tc.in.GetRack()
@@ -172,8 +175,10 @@ func TestLocation_Validate(t *testing.T) {
 	}
 
 	// Set the env variable for the test
-	os.Setenv("TEST_RACK_ENV", "rack-env")
-	defer os.Unsetenv("TEST_RACK_ENV")
+	test.CheckErr(t, os.Setenv("TEST_RACK_ENV", "rack-env"))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv("TEST_RACK_ENV"))
+	}()
 
 	for _, testCase := range cases {
 		err := testCase.Validate()
@@ -275,10 +280,14 @@ func TestParseDeviceConfig(t *testing.T) {
 func TestParseDeviceConfig2(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "test")
 	assert.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		test.CheckErr(t, os.Remove(tmpfile.Name()))
+	}()
 
-	os.Setenv(EnvDevicePath, tmpfile.Name())
-	defer os.Unsetenv(EnvDevicePath)
+	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpfile.Name()))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
+	}()
 
 	_, err = ParseDeviceConfig()
 	assert.Error(t, err)
@@ -289,10 +298,14 @@ func TestParseDeviceConfig2(t *testing.T) {
 func TestParseDeviceConfig3(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDevicePath, tmpdir)
-	defer os.Unsetenv(EnvDevicePath)
+	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
+	}()
 
 	res, err := ParseDeviceConfig()
 	assert.NoError(t, err)
@@ -304,10 +317,14 @@ func TestParseDeviceConfig3(t *testing.T) {
 func TestParseDeviceConfig4(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDevicePath, tmpdir)
-	defer os.Unsetenv(EnvDevicePath)
+	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
+	}()
 
 	data := `locations:
   r1b1:
@@ -334,10 +351,14 @@ devices:
 func TestParseDeviceConfig5(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDevicePath, tmpdir)
-	defer os.Unsetenv(EnvDevicePath)
+	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
+	}()
 
 	data := `version: 9999.9999
 locations:
@@ -365,10 +386,14 @@ devices:
 func TestParseDeviceConfig6(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDevicePath, tmpdir)
-	defer os.Unsetenv(EnvDevicePath)
+	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
+	}()
 
 	data := `version: 1.0
 devices:
@@ -390,10 +415,14 @@ devices:
 func TestParseDeviceConfig7(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDevicePath, tmpdir)
-	defer os.Unsetenv(EnvDevicePath)
+	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
+	}()
 
 	data := `version: 1.0
 locations:
@@ -422,10 +451,14 @@ devices:
 func TestParseDeviceConfig8(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDeviceConfig, tmpdir)
-	defer os.Unsetenv(EnvDeviceConfig)
+	test.CheckErr(t, os.Setenv(EnvDeviceConfig, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDeviceConfig))
+	}()
 
 	data := `version: 1.0
 locations:
@@ -453,10 +486,14 @@ devices:
 func TestParseDeviceConfig9(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDeviceConfig, tmpdir)
-	defer os.Unsetenv(EnvDeviceConfig)
+	test.CheckErr(t, os.Setenv(EnvDeviceConfig, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDeviceConfig))
+	}()
 
 	deviceDir := filepath.Join(tmpdir, "device")
 	err = os.Mkdir(deviceDir, 0700)
@@ -489,13 +526,19 @@ devices:
 func TestParseDeviceConfig10(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDevicePath, tmpdir)
-	defer os.Unsetenv(EnvDevicePath)
+	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
+	}()
 
-	os.Setenv("SYNSE_ENV_TEST", "test-rack")
-	defer os.Unsetenv("SYNSE_ENV_TEST")
+	test.CheckErr(t, os.Setenv("SYNSE_ENV_TEST", "test-rack"))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv("SYNSE_ENV_TEST"))
+	}()
 
 	data := `version: 1.0
 locations:
@@ -530,10 +573,14 @@ devices:
 func TestParseDeviceConfig11(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "test")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		test.CheckErr(t, os.RemoveAll(tmpdir))
+	}()
 
-	os.Setenv(EnvDevicePath, tmpdir)
-	defer os.Unsetenv(EnvDevicePath)
+	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
+	defer func() {
+		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
+	}()
 
 	data := `version: 1.0
 locations:
