@@ -6,8 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 const (
@@ -100,7 +101,7 @@ func (l *Location) Encode() *synse.MetaLocation {
 
 // ParseDeviceConfig parses the YAML files found in the device instance
 // configuration directory, if any are found, into DeviceConfig structs.
-func ParseDeviceConfig() ([]*DeviceConfig, error) {
+func ParseDeviceConfig() ([]*DeviceConfig, error) { // nolint: gocyclo
 	logger.Debug("ParseDeviceConfig start")
 	var cfgs []*DeviceConfig
 

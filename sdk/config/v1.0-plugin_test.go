@@ -31,7 +31,8 @@ settings:
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.ReadConfig(bytes.NewBuffer(config))
+	err := v.ReadConfig(bytes.NewBuffer(config))
+	assert.NoError(t, err)
 
 	handler := v1PluginConfigHandler{}
 
@@ -76,7 +77,8 @@ auto_enumerate: invalid-value`)
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.ReadConfig(bytes.NewBuffer(config))
+	err := v.ReadConfig(bytes.NewBuffer(config))
+	assert.NoError(t, err)
 
 	handler := v1PluginConfigHandler{}
 
@@ -107,7 +109,8 @@ context: invalid-value`)
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.ReadConfig(bytes.NewBuffer(config))
+	err := v.ReadConfig(bytes.NewBuffer(config))
+	assert.NoError(t, err)
 
 	handler := v1PluginConfigHandler{}
 
@@ -130,7 +133,8 @@ limiter:
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.ReadConfig(bytes.NewBuffer(config))
+	err := v.ReadConfig(bytes.NewBuffer(config))
+	assert.NoError(t, err)
 
 	handler := v1PluginConfigHandler{}
 
@@ -159,7 +163,8 @@ limiter:
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.ReadConfig(bytes.NewBuffer(config))
+	err := v.ReadConfig(bytes.NewBuffer(config))
+	assert.NoError(t, err)
 
 	handler := v1PluginConfigHandler{}
 
@@ -188,7 +193,8 @@ limiter:
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.ReadConfig(bytes.NewBuffer(config))
+	err := v.ReadConfig(bytes.NewBuffer(config))
+	assert.NoError(t, err)
 
 	handler := v1PluginConfigHandler{}
 
@@ -213,7 +219,8 @@ network:
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.ReadConfig(bytes.NewBuffer(config))
+	err := v.ReadConfig(bytes.NewBuffer(config))
+	assert.NoError(t, err)
 
 	handler := v1PluginConfigHandler{}
 

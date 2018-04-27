@@ -49,26 +49,30 @@ func deviceSetupAction(p *sdk.Plugin, d *sdk.Device) error {
 	return nil
 }
 
+// checkErr is a helper used in the main function to check errors. If any errors
+// are present, this will exit with log.Fatal.
+func checkErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
 	// Set the prototype and device instance config paths to be relative to the
 	// current working directory instead of using the default location. This way
 	// the plugin can be run from within this directory.
-	os.Setenv("PLUGIN_DEVICE_CONFIG", "./config")
+	checkErr(os.Setenv("PLUGIN_DEVICE_CONFIG", "./config"))
 
 	// Create handlers for the Plugin.
 	handlers, err := sdk.NewHandlers(ProtocolIdentifier, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	// Create a new Plugin and configure it.
 	// The configuration comes from the environment settings above.
 	plugin, err := sdk.NewPlugin(handlers, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	plugin.RegisterDeviceHandlers(
 		&devices.Air8884,
@@ -104,8 +108,5 @@ func main() {
 	)
 
 	// Run the plugin.
-	err = plugin.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(plugin.Run())
 }

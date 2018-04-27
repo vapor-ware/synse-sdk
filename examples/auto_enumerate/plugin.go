@@ -26,7 +26,7 @@ var temperatureHandler = sdk.DeviceHandler{
 	Type:  "temperature",
 	Model: "temp2010",
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-		value := strconv.Itoa(rand.Int())
+		value := strconv.Itoa(rand.Int()) // nolint: gas
 		return []*sdk.Reading{
 			sdk.NewReading(
 				device.Type,
@@ -95,25 +95,29 @@ func EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error
 	return res, nil
 }
 
+// checkErr is a helper used in the main function to check errors. If any errors
+// are present, this will exit with log.Fatal.
+func checkErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	// Set the prototype and device instance config paths to be relative to the
 	// current working directory instead of using the default location. This way
 	// the plugin can be run from within this directory.
 	// TODO: https://github.com/vapor-ware/synse-sdk/issues/125
-	os.Setenv("PLUGIN_DEVICE_PATH", "./config/device")
-	os.Setenv("PLUGIN_PROTO_PATH", "./config/proto")
+	checkErr(os.Setenv("PLUGIN_DEVICE_PATH", "./config/device"))
+	checkErr(os.Setenv("PLUGIN_PROTO_PATH", "./config/proto"))
 
 	// Create handlers for the plugin.
 	handlers, err := sdk.NewHandlers(ProtocolIdentifier, EnumerateDevices)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	// Create the plugin. The configuration comes from the paths set above.
 	plugin, err := sdk.NewPlugin(handlers, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	// Register handlers for our devices.
 	plugin.RegisterDeviceHandlers(
@@ -130,8 +134,5 @@ func main() {
 	})
 
 	// Run the plugin.
-	err = plugin.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(plugin.Run())
 }

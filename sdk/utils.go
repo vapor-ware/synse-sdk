@@ -1,12 +1,11 @@
 package sdk
 
 import (
-	"crypto/md5"
+	"crypto/md5" // #nosec
 	"fmt"
 	"io"
 	"os"
 	"strings"
-
 	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -116,11 +115,11 @@ func setupSocket(name string) (string, error) {
 // These device IDs are not guaranteed to be globally unique, but they should
 // be unique to the board they reside on.
 func newUID(protocol, deviceType, model, protoComp string) string {
-	h := md5.New()
-	io.WriteString(h, protocol)
-	io.WriteString(h, deviceType)
-	io.WriteString(h, model)
-	io.WriteString(h, protoComp)
+	h := md5.New()                // nolint: gas
+	io.WriteString(h, protocol)   // nolint: errcheck
+	io.WriteString(h, deviceType) // nolint: errcheck
+	io.WriteString(h, model)      // nolint: errcheck
+	io.WriteString(h, protoComp)  // nolint: errcheck
 
 	return fmt.Sprintf("%x", h.Sum(nil))
 }

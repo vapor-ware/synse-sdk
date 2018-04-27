@@ -177,7 +177,7 @@ func (p *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceActi
 }
 
 // Run starts the Plugin server which begins listening for gRPC requests.
-func (p *Plugin) Run() error {
+func (p *Plugin) Run() error { // nolint: gocyclo
 	logger.Info("Starting plugin run")
 	err := p.setup()
 	if err != nil {
@@ -250,7 +250,12 @@ func (p *Plugin) setup() error {
 	}
 
 	// register configured devices with the plugin
-	p.registerDevices()
+	err = p.registerDevices()
+	if err != nil {
+		// we don't want to fail hard if registration fails, so just log out
+		// the registration error instead.
+		logger.Warnf("device registration failure: %v", err)
+	}
 
 	// Setup the transaction cache
 	ttl, err := p.Config.Settings.Transaction.GetTTL()

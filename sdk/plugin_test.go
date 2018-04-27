@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/vapor-ware/synse-sdk/internal/test"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
@@ -392,7 +393,7 @@ settings:
 		assert.NoError(t, err)
 	}()
 
-	os.Setenv("PLUGIN_CONFIG", "tmp")
+	test.CheckErr(t, os.Setenv("PLUGIN_CONFIG", "tmp"))
 
 	// Create valid handlers for the Plugin.
 	h, err := NewHandlers(testDeviceIdentifier, nil)

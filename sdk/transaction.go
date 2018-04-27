@@ -6,10 +6,10 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
 	"github.com/vapor-ware/synse-server-grpc/go"
-
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 const (

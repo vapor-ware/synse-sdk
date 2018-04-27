@@ -3,8 +3,9 @@ package config
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 // V1 Device Prototype

@@ -23,25 +23,22 @@ cover:  ## Run tests and open the coverage report
 	go tool cover -html=coverage.txt
 
 .PHONY: dep
-dep:  ## Ensure and prune dependencies. Do not update existing dependencies.
+dep:  ## Ensure and prune dependencies
 ifndef HAS_DEP
 	go get -u github.com/golang/dep/cmd/dep
 endif
 	dep ensure -v
 
 .PHONY: dep-update
-dep-update:  ## Ensure and prune dependencies. Update existing dependencies.
+dep-update:  ## Ensure, update, and prune dependencies
 ifndef HAS_DEP
 	go get -u github.com/golang/dep/cmd/dep
 endif
 	dep ensure -v -update
 
 .PHONY: docs
-docs:  ## Build the docs (via Slate)
-	docker build -f docs/build/Dockerfile -t vaporio/slate-docs docs/build
-	docker run --name slate-docs -v `pwd`/docs/build/src:/source vaporio/slate-docs
-	docker cp slate-docs:/slate/build/. docs
-	docker rm slate-docs
+docs:  ## Build the docs locally
+	(cd docs ; make html)
 
 .PHONY: examples
 examples:  ## Build the examples
@@ -65,7 +62,7 @@ endif
 	@ # disable gotype: https://github.com/alecthomas/gometalinter/issues/40
 	gometalinter ./... --vendor --tests --deadline=5m \
 		--exclude='(sdk\/sdktest\.go)' \
-		--disable=gas --disable=errcheck --disable=gocyclo --disable=gotype --disable=interfacer
+		--disable=gotype --disable=interfacer
 
 .PHONY: setup
 setup:  ## Install the build and development dependencies
@@ -77,7 +74,7 @@ setup:  ## Install the build and development dependencies
 
 .PHONY: test
 test:  ## Run all tests
-	go test -cover ./sdk/...
+	go test -race -cover ./sdk/...
 
 .PHONY: version
 version: ## Print the version of the SDK
