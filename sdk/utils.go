@@ -165,6 +165,9 @@ func filterDevices(filter string) ([]*Device, error) {
 // GetCurrentTime return the current time (time.Now()) as a string formatted
 // with the RFC3339Nano layout. This should be the format of all timestamps
 // returned by the SDK.
+//
+// The SDK uses this function to generate all of its timestamps. It is highly
+// recommended that plugins use this as well for timestamp generation.
 func GetCurrentTime() string {
 	return time.Now().Format(time.RFC3339Nano)
 }

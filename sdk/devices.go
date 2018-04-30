@@ -22,7 +22,7 @@ type DeviceRead func(*Device) ([]*Reading, error)
 // DeviceWrite is a function that defines the write behavior for a Device.
 type DeviceWrite func(*Device, *WriteData) error
 
-// DeviceHandler specifies the read and write handlers for a certain device
+// DeviceHandler specifies the read and write handlers for a Device
 // based on its type and model.
 type DeviceHandler struct {
 	Type  string
@@ -33,6 +33,11 @@ type DeviceHandler struct {
 }
 
 // NewDevice creates a new instance of a Device.
+//
+// A Device serves as the internal model for a single physical or virtual
+// device that a plugin manages, e.g. a temperature sensor. The Device
+// meta information is joined from the device's prototype config and its
+// instance config.
 func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandler, plugin *Plugin) (*Device, error) {
 	if plugin.handlers.DeviceIdentifier == nil {
 		return nil, fmt.Errorf("identifier function not defined for device")
@@ -62,11 +67,12 @@ func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandl
 	return &dev, nil
 }
 
-// Device is the internal model for a device (whether physical or virtual)
-// that a plugin can read to or write from.
+// Device is the internal model for a single device (physical or virtual) that
+// a plugin can read to or write from.
 type Device struct {
 	// prototype
 	pconfig      *config.PrototypeConfig
+
 	Type         string
 	Model        string
 	Manufacturer string
@@ -84,9 +90,9 @@ type Device struct {
 	id string
 }
 
-// Read performs the read action for the device, as set by its DeviceHandler
-// implementation. If reading is not supported on the device, an Unsupported
-// Command Error is returned.
+// Read performs the read action for the device, as set by its DeviceHandler.
+// If reading is not supported on the device, an UnsupportedCommandError is
+// returned.
 func (d *Device) Read() (*ReadContext, error) {
 	if d.IsReadable() {
 		readings, err := d.Handler.Read(d)
@@ -109,9 +115,9 @@ func (d *Device) Read() (*ReadContext, error) {
 	return nil, &UnsupportedCommandError{}
 }
 
-// Write performs the write action for the device, as set by its DeviceHandler
-// implementation. If writing is not supported on the device, an Unsupported
-// Command Error is returned.
+// Write performs the write action for the device, as set by its DeviceHandler.
+// If writing is not supported on the device, an UnsupportedCommandError is
+// returned.
 func (d *Device) Write(data *WriteData) error {
 	if d.IsWritable() {
 		return d.Handler.Write(d, data)
@@ -119,14 +125,14 @@ func (d *Device) Write(data *WriteData) error {
 	return &UnsupportedCommandError{}
 }
 
-// IsReadable checks if the Device is readable via the presence/absence of
-// a Read action defined in its DeviceHandler.
+// IsReadable checks if the Device is readable based on the presence/absence
+// of a Read action defined in its DeviceHandler.
 func (d *Device) IsReadable() bool {
 	return d.Handler.Read != nil
 }
 
-// IsWritable checks if the Device is writable via the presence/absence of
-// a Write action defined in its DeviceHandler.
+// IsWritable checks if the Device is writable based on the presence/absence
+// of a Write action defined in its DeviceHandler.
 func (d *Device) IsWritable() bool {
 	return d.Handler.Write != nil
 }

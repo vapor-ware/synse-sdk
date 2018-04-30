@@ -11,15 +11,16 @@ import (
 type DeviceIdentifier func(map[string]string) string
 
 // DeviceEnumerator defines how the plugin can auto-enumerate the devices
-// it manages. This will not be relevant for all plugins, so it is optional.
+// it manages. This will not be relevant for all plugins, so it is an
+// optional handler.
 //
 // Device enumeration is when devices are not defined directly in the YAML
-// configurations, but are discovered or created dynamically based on the
-// capabilities of the plugin's protocol. For example, IPMI can enumerate
+// instance configurations, but are discovered or created dynamically based
+// on the capabilities of the plugin's protocol. For example, IPMI can enumerate
 // devices by scanning the SDR and using those entries to make DeviceConfig
-// records. SNMP will also dynamically discover devices.
+// records.
 //
-// Note that device auto-enumeration should only create device instance
+// Note that device enumeration should only create device instance
 // configurations. The device prototype configurations should still be
 // defined ahead of time and packaged with the plugin - not created or
 // configured at runtime.
