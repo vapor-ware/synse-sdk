@@ -17,9 +17,9 @@ type deviceAction func(p *Plugin, d *Device) error
 // requests.
 type Plugin struct {
 	Config      *config.PluginConfig // See config.PluginConfig for comments.
-	server      *Server              // InternalApiServer for fulfilling gRPC requests.
+	server      *server              // InternalApiServer for fulfilling gRPC requests.
 	handlers    *Handlers            // See sdk.handlers.go for comments.
-	dataManager *DataManager         // Manages device reads and writes. Accesses cached read data.
+	dataManager *dataManager         // Manages device reads and writes. Accesses cached read data.
 	versionInfo *VersionInfo         // Version tracking information.
 
 	deviceHandlers     []*DeviceHandler          // Plugin-specific read and write functions for the devices supported by the plugin.
@@ -136,7 +136,7 @@ func (p *Plugin) registerDevices() error {
 }
 
 // RegisterPreRunActions registers functions with the plugin that will be called
-// before the gRPC server and DataManager are started. The functions here can be
+// before the gRPC server and dataManager are started. The functions here can be
 // used for plugin-wide setup actions.
 func (p *Plugin) RegisterPreRunActions(actions ...pluginAction) {
 	if p.preRunActions == nil {
@@ -147,7 +147,7 @@ func (p *Plugin) RegisterPreRunActions(actions ...pluginAction) {
 }
 
 // RegisterPostRunActions registers functions with the plugin that will be called
-// after the gRPC server and DataManager terminate running. The functions here can
+// after the gRPC server and dataManager terminate running. The functions here can
 // be used for plugin-wide teardown actions.
 func (p *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 	if p.postRunActions == nil {
@@ -186,7 +186,7 @@ func (p *Plugin) Run() error { // nolint: gocyclo
 	}
 	p.logInfo()
 
-	// Before we start the DataManager goroutines or the gRPC server, we
+	// Before we start the dataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
 	if len(p.preRunActions) > 0 {
 		logger.Debug("Executing Pre Run Actions:")
@@ -225,7 +225,7 @@ func (p *Plugin) Run() error { // nolint: gocyclo
 		}
 	}
 
-	// Start the DataManager goroutines for reading and writing data.
+	// Start the dataManager goroutines for reading and writing data.
 	p.dataManager.init()
 
 	// Start the gRPC server
@@ -263,24 +263,24 @@ func (p *Plugin) setup() error {
 		logger.Errorf("Bad transaction TTL config %v: %v", p.Config.Settings.Transaction.TTL, err)
 		return err
 	}
-	err = SetupTransactionCache(ttl)
+	err = setupTransactionCache(ttl)
 	if err != nil {
 		logger.Errorf("Failed to setup transaction cache: %v", err)
 		return err
 	}
 
-	// Register a new Server and DataManager for the Plugin. This should
+	// Register a new server and dataManager for the Plugin. This should
 	// be done prior to running the plugin, as opposed to on initialization
 	// of the Plugin struct, because their configuration is configuration
 	// dependent. The Plugin should be configured prior to running.
-	p.server, err = NewServer(p)
+	p.server, err = newServer(p)
 	if err != nil {
 		logger.Errorf("Failed to create new gRPC server: %v", err)
 		return err
 	}
 
-	// Create the DataManager
-	p.dataManager, err = NewDataManager(p)
+	// Create the dataManager
+	p.dataManager, err = newDataManager(p)
 	if err != nil {
 		logger.Errorf("Failed to create plugin data manager: %v", err)
 	}

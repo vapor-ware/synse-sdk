@@ -26,24 +26,11 @@ const (
 // is used to track the asynchronous write transactions as they are processed.
 var transactionCache *cache.Cache
 
-// InvalidateTransactionCache is a Test mechanism to invalidate the transaction
-// cache. Returns an error if there is no transaction cache.
-func InvalidateTransactionCache() (err error) {
-	err = nil
-	if transactionCache == nil {
-		err = status.Errorf(codes.FailedPrecondition,
-			"transactionCache not initialized.")
-	} else {
-		transactionCache = nil
-	}
-	return err
-}
-
-// SetupTransactionCache creates the transaction cache with the TTL in seconds.
+// setupTransactionCache creates the transaction cache with the TTL in seconds.
 // This needs to be called in order to have transactions.
 // If this is called more than once, the cache is reinitialized and an error is
 // returned. The caller may choose to ignore the error.
-func SetupTransactionCache(ttl time.Duration) (err error) {
+func setupTransactionCache(ttl time.Duration) (err error) {
 	// FIXME -- if the cache is not nil, we will return an error, but
 	// in that same case, we will still create a new cache.. this seems
 	// weird. shouldn't we just return the error in this block and return
@@ -66,7 +53,7 @@ func SetupTransactionCache(ttl time.Duration) (err error) {
 func NewTransaction() (*Transaction, error) {
 	if transactionCache == nil {
 		return nil, status.Errorf(codes.FailedPrecondition,
-			"transactionCache not initialized. Call SetupTransactionCache.")
+			"transactionCache not initialized. Call setupTransactionCache.")
 	}
 
 	id := xid.New().String()
@@ -89,7 +76,7 @@ func NewTransaction() (*Transaction, error) {
 func GetTransaction(id string) (*Transaction, error) {
 	if transactionCache == nil {
 		return nil, status.Errorf(codes.FailedPrecondition,
-			"transactionCache not initialized. Call SetupTransactionCache.")
+			"transactionCache not initialized. Call setupTransactionCache.")
 	}
 
 	transaction, found := transactionCache.Get(id)
