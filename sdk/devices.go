@@ -16,10 +16,14 @@ var deviceMap = make(map[string]*Device)
 // This allows deviceMap iterations in insertion order.
 var deviceMapOrder = []string{}
 
-// DeviceRead is a function that defines the read behavior for a Device.
+// DeviceRead is a function that defines the read behavior for a Device. It
+// is used by the DeviceHandler, and thus is used to handle reads for all device
+// instances of a given type and model.
 type DeviceRead func(*Device) ([]*Reading, error)
 
-// DeviceWrite is a function that defines the write behavior for a Device.
+// DeviceWrite is a function that defines the write behavior for a Device. It
+// is used by the DeviceHandler, and thus is used to handle writes for all device
+// instances of a given type and model.
 type DeviceWrite func(*Device, *WriteData) error
 
 // DeviceHandler specifies the read and write handlers for a Device
