@@ -53,6 +53,11 @@ examples:  ## Build the examples
 fmt:  ## Run goimports on all go files
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do goimports -w "$$file"; done
 
+.PHONY: godoc
+godoc:  ## Run godoc to get a local version of docs on port 8080
+	open http://localhost:8080/pkg/github.com/vapor-ware/synse-sdk/sdk/
+	godoc -http ":8080"
+
 .PHONY: lint
 lint:  ## Lint project source files
 ifndef HAS_LINT
