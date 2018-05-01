@@ -281,3 +281,74 @@ func TestDeviceWriteOk(t *testing.T) {
 	err := device.Write(&WriteData{Action: "test"})
 	assert.NoError(t, err)
 }
+
+// A device with a Read function defined in its DeviceHandler should
+// be readable.
+func ExampleDevice_IsReadable_true() {
+	device := Device{
+		Handler: &DeviceHandler{
+			Read: func(device *Device) ([]*Reading, error) {
+				return []*Reading{}, nil
+			},
+		},
+	}
+
+	readable := device.IsReadable()
+	fmt.Println(readable)
+	// Output: true
+}
+
+// A device without a Read function defined in its DeviceHandler should
+// not be readable.
+func ExampleDevice_IsReadable_false() {
+	device := Device{
+		Handler: &DeviceHandler{},
+	}
+
+	readable := device.IsReadable()
+	fmt.Println(readable)
+	// Output: false
+}
+
+// A device with a Write function defined in its DeviceHandler should
+// be writable.
+func ExampleDevice_IsWritable_true() {
+	device := Device{
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+
+	writable := device.IsWritable()
+	fmt.Println(writable)
+	// Output: true
+}
+
+// A device without a Write function defined in its DeviceHandler should
+// not be writable.
+func ExampleDevice_IsWritable_false() {
+	device := Device{
+		Handler: &DeviceHandler{},
+	}
+
+	writable := device.IsWritable()
+	fmt.Println(writable)
+	// Output: false
+}
+
+// Get the GUID of the device.
+func ExampleDevice_GUID() {
+	device := Device{
+		id: "baz",
+		Location: config.Location{
+			Rack:  "foo",
+			Board: "bar",
+		},
+	}
+
+	guid := device.GUID()
+	fmt.Println(guid)
+	// Output: foo-bar-baz
+}

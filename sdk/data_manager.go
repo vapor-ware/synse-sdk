@@ -12,8 +12,14 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
-// DataManager handles the reading from and writing to configured devices.
-type DataManager struct {
+// dataManager handles the reading from and writing to configured devices.
+// It executes the read and write goroutines and uses the channels between
+// those goroutines and its process to update the read and write state.
+//
+// If the plugin is configured to run in "serial" mode, the dataManager
+// also manages the locking around access to state across processes.
+type dataManager struct {
+
 	// readChannel is the channel that is used to get data from the
 	// device being read and update the `readings` field accordingly.
 	// Readings are sent to the channel by the `pollRead` function and
@@ -41,28 +47,25 @@ type DataManager struct {
 	config *config.PluginConfig
 }
 
-// NewDataManager creates a new instance of the DataManager using the existing
-// configurations and handlers registered with the plugin.
-func NewDataManager(plugin *Plugin) (*DataManager, error) {
+// newDataManager creates a new instance of the dataManager for a Plugin. For a
+// new dataManager to be created successfully, the given Plugin should be non-nil,
+// have non-nil Handlers defined, and have a non-nil config defined.
+func newDataManager(plugin *Plugin) (*dataManager, error) {
 	// Nil check the parameter and all pointers we dereference here for now.
 	// FUTURE: Check in the plugin config constructor.
-	// FIXME (etd) - I don't think we'd necessarily want invalidArgumentErr
-	// here -- that is used for gRPC errors. This is just a plugin error that
-	// should terminate the plugin (misconfigured/misconstructed).
 	if plugin == nil {
-		return nil, invalidArgumentErr("plugin parameter must not be nil")
+		return nil, fmt.Errorf("plugin parameter must not be nil")
 	}
 
 	if plugin.handlers == nil {
-		return nil, invalidArgumentErr("plugin.handlers in parameter must not be nil")
+		return nil, fmt.Errorf("plugin.handlers in parameter must not be nil")
 	}
 
 	if plugin.Config == nil {
-		return nil, invalidArgumentErr("plugin.Config in parameter must not be nil")
+		return nil, fmt.Errorf("plugin.Config in parameter must not be nil")
 	}
 
-	return &DataManager{
-		// TODO: https://github.com/vapor-ware/synse-sdk/issues/118
+	return &dataManager{
 		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.Buffer),
 		writeChannel: make(chan *WriteContext, plugin.Config.Settings.Write.Buffer),
 		readings:     make(map[string][]*Reading),
@@ -73,10 +76,10 @@ func NewDataManager(plugin *Plugin) (*DataManager, error) {
 	}, nil
 }
 
-// init initializes the goroutines for the DataManager so it can start reading
+// init initializes the goroutines for the dataManager so it can start reading
 // from and writing to the devices managed by the Plugin.
-func (manager *DataManager) init() {
-	logger.Info("Initializing DataManager goroutines..")
+func (manager *dataManager) init() {
+	logger.Info("Initializing dataManager goroutines..")
 
 	// Start the reader/writer
 	manager.goRead()
@@ -85,17 +88,17 @@ func (manager *DataManager) init() {
 	// Update the manager readings state
 	manager.goUpdateData()
 
-	logger.Info("DataManager initialization complete.")
+	logger.Info("dataManager initialization complete.")
 }
 
 // writesEnabled checks to see whether writing is enabled for the plugin based on
 // the configuration.
-func (manager *DataManager) writesEnabled() bool {
+func (manager *dataManager) writesEnabled() bool {
 	return manager.config.Settings.Write.Enabled
 }
 
 // goRead starts the goroutine for reading from configured devices.
-func (manager *DataManager) goRead() {
+func (manager *dataManager) goRead() {
 	// If reads are not enabled, there is nothing to do here.
 	if !manager.config.Settings.Read.Enabled {
 		logger.Info("plugin reads disabled in config - will not start the read goroutine")
@@ -127,7 +130,7 @@ func (manager *DataManager) goRead() {
 
 // read implements the logic for reading from a device that is configured
 // with the Plugin.
-func (manager *DataManager) read(device *Device) {
+func (manager *dataManager) read(device *Device) {
 	// Rate limiting, if configured
 	if manager.config.Limiter != nil {
 		err := manager.config.Limiter.Wait(context.Background())
@@ -146,7 +149,7 @@ func (manager *DataManager) read(device *Device) {
 }
 
 // serialRead reads all devices configured with the Plugin in serial.
-func (manager *DataManager) serialRead() {
+func (manager *dataManager) serialRead() {
 	// If the plugin is a serial plugin, we want to lock around reads
 	// and writes so the two operations do not stomp on one another.
 	manager.rwLock.Lock()
@@ -158,7 +161,7 @@ func (manager *DataManager) serialRead() {
 }
 
 // parallelRead reads all devices configured with the Plugin in parallel.
-func (manager *DataManager) parallelRead() {
+func (manager *dataManager) parallelRead() {
 	var waitGroup sync.WaitGroup
 
 	for _, dev := range deviceMap {
@@ -177,7 +180,7 @@ func (manager *DataManager) parallelRead() {
 }
 
 // goWrite starts the goroutine for writing to configured devices.
-func (manager *DataManager) goWrite() {
+func (manager *dataManager) goWrite() {
 	// If writes are not enabled, there is nothing to do here.
 	if !manager.config.Settings.Write.Enabled {
 		logger.Info("plugin writes disabled in config - will not start the write goroutine")
@@ -207,7 +210,7 @@ func (manager *DataManager) goWrite() {
 	}()
 }
 
-func (manager *DataManager) serialWrite() {
+func (manager *dataManager) serialWrite() {
 	// If the plugin is a serial plugin, we want to lock around reads
 	// and writes so the two operations do not stomp on one another.
 	manager.rwLock.Lock()
@@ -226,7 +229,7 @@ func (manager *DataManager) serialWrite() {
 	}
 }
 
-func (manager *DataManager) parallelWrite() {
+func (manager *dataManager) parallelWrite() {
 	var waitGroup sync.WaitGroup
 
 	// Check for any pending writes and, if any exist, attempt to fulfill
@@ -254,7 +257,7 @@ func (manager *DataManager) parallelWrite() {
 
 // write implements the logic for writing to a devices that is configured
 // with the Plugin.
-func (manager *DataManager) write(w *WriteContext) {
+func (manager *dataManager) write(w *WriteContext) {
 	// Rate limiting, if configured
 	if manager.config.Limiter != nil {
 		err := manager.config.Limiter.Wait(context.Background())
@@ -287,7 +290,7 @@ func (manager *DataManager) write(w *WriteContext) {
 
 // goUpdateData updates the DeviceManager's readings state with the latest
 // values that were read for each device.
-func (manager *DataManager) goUpdateData() {
+func (manager *dataManager) goUpdateData() {
 	logger.Info("starting data updater")
 	go func() {
 		for {
@@ -299,11 +302,11 @@ func (manager *DataManager) goUpdateData() {
 	}()
 }
 
-// getReadings safely gets a reading value from the DataManager readings field by
+// getReadings safely gets a reading value from the dataManager readings field by
 // accessing the readings for the specified device within a lock context. Since the
 // readings map is updated in a separate goroutine, we want to lock access around the
 // map to prevent simultaneous access collisions.
-func (manager *DataManager) getReadings(device string) []*Reading {
+func (manager *dataManager) getReadings(device string) []*Reading {
 	manager.dataLock.RLock()
 	defer manager.dataLock.RUnlock()
 
@@ -312,7 +315,7 @@ func (manager *DataManager) getReadings(device string) []*Reading {
 
 // Read fulfills a Read request by providing the latest data read from a device
 // and framing it up for the gRPC response.
-func (manager *DataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse, error) {
+func (manager *dataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse, error) {
 	// Validate that the incoming request has the requisite fields populated.
 	err := validateReadRequest(req)
 	if err != nil {
@@ -350,7 +353,7 @@ func (manager *DataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse,
 
 // Write fulfills a Write request by queuing up the write context and framing
 // up the corresponding gRPC response.
-func (manager *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteData, error) {
+func (manager *dataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteData, error) {
 	// Validate that the incoming request has the requisite fields populated.
 	err := validateWriteRequest(req)
 	if err != nil {
@@ -374,7 +377,7 @@ func (manager *DataManager) Write(req *synse.WriteRequest) (map[string]*synse.Wr
 	// Perform the write and build the response.
 	var resp = make(map[string]*synse.WriteData)
 	for _, data := range req.Data {
-		t, err := NewTransaction()
+		t, err := newTransaction()
 		if err != nil {
 			return nil, err
 		}

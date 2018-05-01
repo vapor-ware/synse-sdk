@@ -14,7 +14,7 @@ func DeviceID(data map[string]string) string {
 	return data["id"]
 }
 
-// TestNewDataManager tests creating a new DataManager instance successfully.
+// TestNewDataManager tests creating a new dataManager instance successfully.
 func TestNewDataManager(t *testing.T) {
 	// Create handlers.
 	h, err := NewHandlers(DeviceID, nil)
@@ -37,7 +37,7 @@ func TestNewDataManager(t *testing.T) {
 	err = p.SetConfig(&c)
 	assert.NoError(t, err)
 
-	d, err := NewDataManager(&p)
+	d, err := newDataManager(&p)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 200, cap(d.writeChannel))
@@ -45,7 +45,7 @@ func TestNewDataManager(t *testing.T) {
 	assert.Equal(t, h, d.handlers)
 }
 
-// TestNewDataManager2 tests creating a new DataManager instance successfully with
+// TestNewDataManager2 tests creating a new dataManager instance successfully with
 // a different configuration.
 func TestNewDataManager2(t *testing.T) {
 	// Create handlers.
@@ -69,8 +69,8 @@ func TestNewDataManager2(t *testing.T) {
 	err = p.SetConfig(c)
 	assert.NoError(t, err)
 
-	// Create the DataManager
-	d, err := NewDataManager(&p)
+	// Create the dataManager
+	d, err := newDataManager(&p)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 500, cap(d.writeChannel))

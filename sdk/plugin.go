@@ -17,9 +17,9 @@ type deviceAction func(p *Plugin, d *Device) error
 // requests.
 type Plugin struct {
 	Config      *config.PluginConfig // See config.PluginConfig for comments.
-	server      *Server              // InternalApiServer for fulfilling gRPC requests.
+	server      *server              // InternalApiServer for fulfilling gRPC requests.
 	handlers    *Handlers            // See sdk.handlers.go for comments.
-	dataManager *DataManager         // Manages device reads and writes. Accesses cached read data.
+	dataManager *dataManager         // Manages device reads and writes. Accesses cached read data.
 	versionInfo *VersionInfo         // Version tracking information.
 
 	deviceHandlers     []*DeviceHandler          // Plugin-specific read and write functions for the devices supported by the plugin.
@@ -30,9 +30,11 @@ type Plugin struct {
 
 // NewPlugin creates a new Plugin instance. This is the preferred way of
 // initializing a new Plugin instance.
-// handlers is required non-nil.
-// If pluginConfig is non-nil use the given config.
-// If nil load the config from files in /etc/synse/plugin, $HOME/.synse/plugin, and $PWD.
+//
+// The handlers parameter is required and must not be nil. The pluginConfig
+// parameter may be nil; if it is, the SDK will attempt to load the
+// configuration from file in: /etc/synse/plugin, $HOME/.synse/plugin,
+// and $PWD.
 func NewPlugin(handlers *Handlers, pluginConfig *config.PluginConfig) (*Plugin, error) {
 	logger.SetLogLevel(true)
 
@@ -73,7 +75,8 @@ func (p *Plugin) RegisterHandlers(handlers *Handlers) {
 }
 
 // RegisterDeviceIdentifier sets the given identifier function as the DeviceIdentifier
-// handler for the plugin. This function helps generate the device UID that shows up in a scan.
+// handler for the plugin. This function helps generate the device UID by letting the
+// SDK know which pieces of a Device instance's configuration are unique to that device.
 func (p *Plugin) RegisterDeviceIdentifier(identifier DeviceIdentifier) {
 	p.handlers.DeviceIdentifier = identifier
 }
@@ -84,8 +87,12 @@ func (p *Plugin) RegisterDeviceEnumerator(enumerator DeviceEnumerator) {
 	p.handlers.DeviceEnumerator = enumerator
 }
 
-// RegisterDeviceHandlers adds DeviceHandlers to the Plugin which will be registered
-// with the corresponding devices.
+// RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
+//
+// These DeviceHandlers are then matched with the Device instances
+// by their type/model and provide the read/write functionality for the
+// Devices. If a DeviceHandler for a Device is not registered here, the
+// Device will not be usable by the plugin.
 func (p *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 	if p.deviceHandlers == nil {
 		p.deviceHandlers = handlers
@@ -95,12 +102,16 @@ func (p *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 }
 
 // SetVersion sets the VersionInfo for the Plugin.
-// Merges the info parameter with the existing versionInfo.
+//
+// The given VersionParameter is merged into an empty VersionInfo.
+// This means that any fields not specified in the info parameter
+// will take the value "-".
 func (p *Plugin) SetVersion(info VersionInfo) {
 	p.versionInfo.Merge(&info)
 }
 
-// SetConfig manually sets the configuration of the Plugin.
+// SetConfig manually sets the configuration of the Plugin. This is
+// generally not the recommended way to configure a Plugin.
 func (p *Plugin) SetConfig(config *config.PluginConfig) error {
 	err := config.Validate()
 	if err != nil {
@@ -136,7 +147,7 @@ func (p *Plugin) registerDevices() error {
 }
 
 // RegisterPreRunActions registers functions with the plugin that will be called
-// before the gRPC server and DataManager are started. The functions here can be
+// before the gRPC server and dataManager are started. The functions here can be
 // used for plugin-wide setup actions.
 func (p *Plugin) RegisterPreRunActions(actions ...pluginAction) {
 	if p.preRunActions == nil {
@@ -147,8 +158,11 @@ func (p *Plugin) RegisterPreRunActions(actions ...pluginAction) {
 }
 
 // RegisterPostRunActions registers functions with the plugin that will be called
-// after the gRPC server and DataManager terminate running. The functions here can
+// after the gRPC server and dataManager terminate running. The functions here can
 // be used for plugin-wide teardown actions.
+//
+// NOTE: While post run actions can be defined for a Plugin, they are currently
+// not executed. See: https://github.com/vapor-ware/synse-sdk/issues/85
 func (p *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 	if p.postRunActions == nil {
 		p.postRunActions = actions
@@ -158,13 +172,14 @@ func (p *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 }
 
 // RegisterDeviceSetupActions registers functions with the plugin that will be
-// called on device initialization before it is read from / written to. The
+// called on device initialization before it is ever read from / written to. The
 // functions here can be used for device-specific setup actions.
 //
-// Filter should be the filter to apply to devices. Currently filtering is only
-// supported for device type and device model. Filter strings are specified by
-// the format "key=value,key=value". "type=temperature,model=ABC123" would only
-// match devices whose type was temperature and model was ABC123.
+// The filter parameter should be the filter to apply to devices. Currently
+// filtering is only supported for device type and device model. Filter strings
+// are specified by the format "key=value,key=value". The filter
+//     "type=temperature,model=ABC123"
+// would only match devices whose type was temperature and model was ABC123.
 func (p *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
 	if p.deviceSetupActions == nil {
 		p.deviceSetupActions = make(map[string][]deviceAction)
@@ -176,7 +191,11 @@ func (p *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceActi
 	}
 }
 
-// Run starts the Plugin server which begins listening for gRPC requests.
+// Run starts the Plugin.
+//
+// Before the gRPC server is started, and before the read and write goroutines
+// are started, Plugin setup and validation will happen. If successful, pre-run
+// actions are executed, and device setup actions are executed, if defined.
 func (p *Plugin) Run() error { // nolint: gocyclo
 	logger.Info("Starting plugin run")
 	err := p.setup()
@@ -186,7 +205,7 @@ func (p *Plugin) Run() error { // nolint: gocyclo
 	}
 	p.logInfo()
 
-	// Before we start the DataManager goroutines or the gRPC server, we
+	// Before we start the dataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
 	if len(p.preRunActions) > 0 {
 		logger.Debug("Executing Pre Run Actions:")
@@ -225,7 +244,7 @@ func (p *Plugin) Run() error { // nolint: gocyclo
 		}
 	}
 
-	// Start the DataManager goroutines for reading and writing data.
+	// Start the dataManager goroutines for reading and writing data.
 	p.dataManager.init()
 
 	// Start the gRPC server
@@ -263,24 +282,24 @@ func (p *Plugin) setup() error {
 		logger.Errorf("Bad transaction TTL config %v: %v", p.Config.Settings.Transaction.TTL, err)
 		return err
 	}
-	err = SetupTransactionCache(ttl)
+	err = setupTransactionCache(ttl)
 	if err != nil {
 		logger.Errorf("Failed to setup transaction cache: %v", err)
 		return err
 	}
 
-	// Register a new Server and DataManager for the Plugin. This should
+	// Register a new server and dataManager for the Plugin. This should
 	// be done prior to running the plugin, as opposed to on initialization
 	// of the Plugin struct, because their configuration is configuration
 	// dependent. The Plugin should be configured prior to running.
-	p.server, err = NewServer(p)
+	p.server, err = newServer(p)
 	if err != nil {
 		logger.Errorf("Failed to create new gRPC server: %v", err)
 		return err
 	}
 
-	// Create the DataManager
-	p.dataManager, err = NewDataManager(p)
+	// Create the dataManager
+	p.dataManager, err = newDataManager(p)
 	if err != nil {
 		logger.Errorf("Failed to create plugin data manager: %v", err)
 	}
