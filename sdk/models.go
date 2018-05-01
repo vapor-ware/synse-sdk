@@ -5,7 +5,7 @@ import (
 )
 
 // Reading describes a single device reading with a timestamp. The timestamp
-// should be formatted with the RFC3339Nano layout (e.g. time.RFC3339Nano).
+// should be formatted with the RFC3339Nano layout.
 type Reading struct {
 	Timestamp string
 	Type      string
@@ -48,7 +48,7 @@ func (ctx *ReadContext) ID() string {
 
 // WriteContext describes a single write transaction.
 type WriteContext struct {
-	transaction *Transaction
+	transaction *transaction
 	device      string
 	board       string
 	rack        string

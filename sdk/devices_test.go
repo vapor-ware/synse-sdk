@@ -343,7 +343,7 @@ func ExampleDevice_GUID() {
 	device := Device{
 		id: "baz",
 		Location: config.Location{
-			Rack: "foo",
+			Rack:  "foo",
 			Board: "bar",
 		},
 	}

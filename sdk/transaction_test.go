@@ -22,18 +22,18 @@ func InvalidateTransactionCache() (err error) {
 	return err
 }
 
-// NewTransactionHelper is a helper method to call NewTransaction and fail the
+// newTransactionHelper is a helper method to call newTransaction and fail the
 // test if it does not succeed. Returns the new transaction.
-func NewTransactionHelper(t *testing.T) *Transaction {
-	transaction, err := NewTransaction()
+func newTransactionHelper(t *testing.T) *transaction {
+	transaction, err := newTransaction()
 	assert.NoError(t, err)
 	return transaction
 }
 
-// GetTransactionHelper is a helper method to call GetTransaction and fail the
+// getTransactionHelper is a helper method to call getTransaction and fail the
 // test if it does not succeed. Returns the transaction retrieved.
-func GetTransactionHelper(t *testing.T, id string) *Transaction {
-	transaction, err := GetTransaction(id)
+func getTransactionHelper(t *testing.T, id string) *transaction {
+	transaction, err := getTransaction(id)
 	assert.NoError(t, err)
 	return transaction
 }
@@ -45,7 +45,7 @@ func TestNewTransaction(t *testing.T) {
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
 
-	transaction := NewTransactionHelper(t)
+	transaction := newTransactionHelper(t)
 
 	assert.Equal(t, statusUnknown, transaction.status)
 	assert.Equal(t, stateOk, transaction.state)
@@ -64,8 +64,8 @@ func TestNewTransaction2(t *testing.T) {
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
 
-	t1 := NewTransactionHelper(t)
-	t2 := NewTransactionHelper(t)
+	t1 := newTransactionHelper(t)
+	t2 := newTransactionHelper(t)
 
 	assert.NotEqual(t, t1.id, t2.id, "two transactions should not have the same id")
 
@@ -87,16 +87,16 @@ func TestGetTransaction(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
+	tr := newTransactionHelper(t)
 
-	cached := GetTransactionHelper(t, tr.id)
+	cached := getTransactionHelper(t, tr.id)
 	assert.Equal(t, tr, cached)
 }
 
 // TestGetTransaction2 tests getting a transaction from the cache
 // that does not exist in the cache.
 func TestGetTransaction2(t *testing.T) {
-	transaction, err := GetTransaction("123")
+	transaction, err := getTransaction("123")
 	assert.Nil(t, transaction)
 	assert.NoError(t, err)
 }
@@ -106,7 +106,7 @@ func TestTransaction_setStateOk(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
+	tr := newTransactionHelper(t)
 
 	tr.state = stateError
 	assert.Equal(t, stateError, tr.state)
@@ -121,8 +121,8 @@ func TestTransaction_setStateOkCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
-	cached := GetTransactionHelper(t, tr.id)
+	tr := newTransactionHelper(t)
+	cached := getTransactionHelper(t, tr.id)
 
 	cached.state = stateError
 	assert.Equal(t, stateError, cached.state)
@@ -138,7 +138,7 @@ func TestTransaction_setStateErr(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
+	tr := newTransactionHelper(t)
 
 	tr.state = stateOk
 	assert.Equal(t, stateOk, tr.state)
@@ -153,8 +153,8 @@ func TestTransaction_setStateErrCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
-	cached := GetTransactionHelper(t, tr.id)
+	tr := newTransactionHelper(t)
+	cached := getTransactionHelper(t, tr.id)
 
 	cached.state = stateOk
 	assert.Equal(t, stateOk, cached.state)
@@ -170,7 +170,7 @@ func TestTransaction_setStatusUnknown(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
+	tr := newTransactionHelper(t)
 
 	tr.status = statusDone
 	assert.Equal(t, statusDone, tr.status)
@@ -185,8 +185,8 @@ func TestTransaction_setStatusUnknownCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
-	cached := GetTransactionHelper(t, tr.id)
+	tr := newTransactionHelper(t)
+	cached := getTransactionHelper(t, tr.id)
 
 	cached.status = statusDone
 	assert.Equal(t, statusDone, cached.status)
@@ -202,7 +202,7 @@ func TestTransaction_setStatusPending(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
+	tr := newTransactionHelper(t)
 
 	tr.status = statusUnknown
 	assert.Equal(t, statusUnknown, tr.status)
@@ -217,8 +217,8 @@ func TestTransaction_setStatusPendingCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
-	cached := GetTransactionHelper(t, tr.id)
+	tr := newTransactionHelper(t)
+	cached := getTransactionHelper(t, tr.id)
 
 	cached.status = statusUnknown
 	assert.Equal(t, statusUnknown, cached.status)
@@ -234,7 +234,7 @@ func TestTransaction_setStatusWriting(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
+	tr := newTransactionHelper(t)
 
 	tr.status = statusUnknown
 	assert.Equal(t, statusUnknown, tr.status)
@@ -246,8 +246,8 @@ func TestTransaction_setStatusWriting(t *testing.T) {
 // TestTransaction_setStatusWritingCached tests setting the status of a cached
 // transaction to Writing.
 func TestTransaction_setStatusWritingCached(t *testing.T) {
-	tr := NewTransactionHelper(t)
-	cached := GetTransactionHelper(t, tr.id)
+	tr := newTransactionHelper(t)
+	cached := getTransactionHelper(t, tr.id)
 
 	cached.status = statusUnknown
 	assert.Equal(t, statusUnknown, cached.status)
@@ -263,7 +263,7 @@ func TestTransaction_setStatusDone(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
+	tr := newTransactionHelper(t)
 
 	tr.status = statusUnknown
 	assert.Equal(t, statusUnknown, tr.status)
@@ -278,8 +278,8 @@ func TestTransaction_setStatusDoneCached(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
-	cached := GetTransactionHelper(t, tr.id)
+	tr := newTransactionHelper(t)
+	cached := getTransactionHelper(t, tr.id)
 
 	cached.status = statusUnknown
 	assert.Equal(t, statusUnknown, cached.status)
@@ -296,7 +296,7 @@ func TestTransaction_encode(t *testing.T) {
 	// Setup the transaction cache so NewTransaction can succeed.
 	// Ignore any error since a previous test may have set it up.
 	_ = setupTransactionCache(time.Duration(600) * time.Second)
-	tr := NewTransactionHelper(t)
+	tr := newTransactionHelper(t)
 	encoded := tr.encode()
 
 	assert.Equal(t, tr.status, encoded.Status)
@@ -321,11 +321,11 @@ func TestTransactionCache(t *testing.T) {
 	assert.Error(t, err)
 
 	// Call NewTransaction. Should fail without the transaction cache.
-	_, err = NewTransaction()
+	_, err = newTransaction()
 	assert.Error(t, err)
 
 	// Call GetTransaction. Should fail without the transaction cache.
-	tr, err := GetTransaction("zzz")
+	tr, err := getTransaction("zzz")
 	assert.Nil(t, tr)
 	assert.Error(t, err)
 

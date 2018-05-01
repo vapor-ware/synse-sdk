@@ -75,7 +75,7 @@ func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandl
 // a plugin can read to or write from.
 type Device struct {
 	// prototype
-	pconfig      *config.PrototypeConfig
+	pconfig *config.PrototypeConfig
 
 	Type         string
 	Model        string

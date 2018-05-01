@@ -377,7 +377,7 @@ func (manager *dataManager) Write(req *synse.WriteRequest) (map[string]*synse.Wr
 	// Perform the write and build the response.
 	var resp = make(map[string]*synse.WriteData)
 	for _, data := range req.Data {
-		t, err := NewTransaction()
+		t, err := newTransaction()
 		if err != nil {
 			return nil, err
 		}
