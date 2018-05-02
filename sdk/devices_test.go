@@ -282,6 +282,188 @@ func TestDeviceWriteOk(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestDevicesFromAutoEnum_noConfig tests dynamically registering devices
+// when there is no config specified for auto-enumeration.
+func TestDevicesFromAutoEnum_noConfig(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(testDeviceIdentifier, nil)
+	assert.NoError(t, err)
+
+	// Initialize plugin with handlers.
+	p := Plugin{
+		Config: &config.PluginConfig{},
+		handlers: handlers,
+	}
+
+	devices, err := devicesFromAutoEnum(&p)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(devices))
+}
+
+// TestDevicesFromAutoEnum_noHandler tests dynamically registering devices
+// when there is config specified for auto-enumeration, but no enumeration handler.
+func TestDevicesFromAutoEnum_noHandler(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(testDeviceIdentifier, nil)
+	assert.NoError(t, err)
+
+	// Initialize plugin with handlers.
+	p := Plugin{
+		Config: &config.PluginConfig{
+			AutoEnumerate: []map[string]interface{}{
+				{
+					"foo": "bar",
+				},
+			},
+		},
+		handlers: handlers,
+	}
+
+	devices, err := devicesFromAutoEnum(&p)
+	assert.Error(t, err)
+	assert.Nil(t, devices)
+}
+
+// TestDevicesFromAutoEnum_errHandler tests dynamically registering devices
+// when there is config specified for auto-enumeration and the enumeration
+// handler always returns an error.
+func TestDevicesFromAutoEnum_errHandler(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(
+		testDeviceIdentifier,
+		func(i map[string]interface{}) ([]*config.DeviceConfig, error) {
+			// returns an error always
+			return nil, fmt.Errorf("enumerator error")
+		},
+	)
+	assert.NoError(t, err)
+
+	// Initialize plugin with handlers.
+	p := Plugin{
+		Config: &config.PluginConfig{
+			AutoEnumerate: []map[string]interface{}{
+				{
+					"foo": "bar",
+				},
+			},
+		},
+		handlers: handlers,
+	}
+
+	devices, err := devicesFromAutoEnum(&p)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(devices))
+}
+
+// TestDevicesFromAutoEnum_errHandler tests dynamically registering devices
+// when there are multiple configs specified for auto-enumeration and the
+// enumeration handler always returns an error.
+func TestDevicesFromAutoEnum_errHandler2(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(
+		testDeviceIdentifier,
+		func(i map[string]interface{}) ([]*config.DeviceConfig, error) {
+			// returns an error always
+			return nil, fmt.Errorf("enumerator error")
+		},
+	)
+	assert.NoError(t, err)
+
+	// Initialize plugin with handlers.
+	p := Plugin{
+		Config: &config.PluginConfig{
+			AutoEnumerate: []map[string]interface{}{
+				{
+					"foo": "bar",
+				},
+				{
+					"bar": "baz",
+				},
+				{
+					"baz": "foo",
+				},
+			},
+		},
+		handlers: handlers,
+	}
+
+	devices, err := devicesFromAutoEnum(&p)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(devices))
+}
+
+// TestDevicesFromAutoEnum_okHandler tests dynamically registering devices
+// when there is config specified for auto-enumeration and the enumeration
+// handler returns successfully.
+func TestDevicesFromAutoEnum_okHandler(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(
+		testDeviceIdentifier,
+		func(i map[string]interface{}) ([]*config.DeviceConfig, error) {
+			// returns a single device config
+			return []*config.DeviceConfig{{}}, nil
+		},
+	)
+	assert.NoError(t, err)
+
+	// Initialize plugin with handlers.
+	p := Plugin{
+		Config: &config.PluginConfig{
+			AutoEnumerate: []map[string]interface{}{
+				{
+					"foo": "bar",
+				},
+			},
+		},
+		handlers: handlers,
+	}
+
+	devices, err := devicesFromAutoEnum(&p)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(devices))
+}
+
+// TestDevicesFromAutoEnum_okHandler tests dynamically registering devices
+// when there are multiple configs specified for auto-enumeration and the
+// enumeration handler returns successfully.
+func TestDevicesFromAutoEnum_okHandler2(t *testing.T) {
+	// Create handlers.
+	handlers, err := NewHandlers(
+		testDeviceIdentifier,
+		func(i map[string]interface{}) ([]*config.DeviceConfig, error) {
+			// returns a single device config
+			return []*config.DeviceConfig{{}}, nil
+		},
+	)
+	assert.NoError(t, err)
+
+	// Initialize plugin with handlers.
+	p := Plugin{
+		Config: &config.PluginConfig{
+			AutoEnumerate: []map[string]interface{}{
+				{
+					"foo": "bar",
+				},
+				{
+					"bar": "baz",
+				},
+				{
+					"baz": "foo",
+				},
+			},
+		},
+		handlers: handlers,
+	}
+
+	devices, err := devicesFromAutoEnum(&p)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(devices))
+}
+
+// ----------
+// Examples
+// ----------
+
 // A device with a Read function defined in its DeviceHandler should
 // be readable.
 func ExampleDevice_IsReadable_true() {
