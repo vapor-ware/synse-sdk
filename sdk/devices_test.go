@@ -291,7 +291,7 @@ func TestDevicesFromAutoEnum_noConfig(t *testing.T) {
 
 	// Initialize plugin with handlers.
 	p := Plugin{
-		Config: &config.PluginConfig{},
+		Config:   &config.PluginConfig{},
 		handlers: handlers,
 	}
 
