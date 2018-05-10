@@ -142,7 +142,13 @@ func (manager *dataManager) read(device *Device) {
 	// Read from the device
 	resp, err := device.Read()
 	if err != nil {
-		logger.Errorf("failed to read from device %v: %v", device.GUID(), err)
+		// Check to see if the error is that of unsupported error. If it is, we
+		// do not want to log out here (low-interval read polling would cause this
+		// to pollute the logs for something that we should already know).
+		_, unsupported := err.(*UnsupportedCommandError)
+		if !unsupported {
+			logger.Errorf("failed to read from device %v: %v", device.GUID(), err)
+		}
 	} else {
 		manager.readChannel <- resp
 	}
