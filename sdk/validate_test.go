@@ -39,7 +39,7 @@ func TestValidateReadRequestErr(t *testing.T) {
 			Board:  "board",
 		},
 		{
-		// missing all
+			// missing all
 		},
 	}
 
@@ -81,7 +81,7 @@ func TestValidateWriteRequestErr(t *testing.T) {
 			Board:  "board",
 		},
 		{
-		// missing all
+			// missing all
 		},
 	}
 
@@ -120,7 +120,7 @@ func TestValidateHandlersErr(t *testing.T) {
 			DeviceEnumerator: testDeviceEnumerator,
 		},
 		{
-		// no handlers defined (all nil)
+			// no handlers defined (all nil)
 		},
 	}
 
