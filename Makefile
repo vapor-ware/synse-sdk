@@ -1,3 +1,6 @@
+#
+# Synse Plugin SDK
+#
 
 SDK_VERSION := $(shell cat sdk/version.go | grep 'const SDKVersion' | awk '{print $$4}')
 
@@ -53,6 +56,11 @@ examples:  ## Build the examples
 fmt:  ## Run goimports on all go files
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do goimports -w "$$file"; done
 
+.PHONY: github-tag
+github-tag:  ## Create and push a tag with the current version
+	git tag -a ${SDK_VERSION} -m "Synse SDK version ${SDK_VERSION}"
+	git push -u origin ${SDK_VERSION}
+
 .PHONY: godoc
 godoc:  ## Run godoc to get a local version of docs on port 8080
 	open http://localhost:8080/pkg/github.com/vapor-ware/synse-sdk/sdk/
@@ -65,9 +73,14 @@ ifndef HAS_LINT
 	gometalinter --install
 endif
 	@ # disable gotype: https://github.com/alecthomas/gometalinter/issues/40
-	gometalinter ./... --vendor --tests --deadline=5m \
+	gometalinter ./... \
+		--disable=gotype --disable=interfacer \
 		--exclude='(sdk\/sdktest\.go)' \
-		--disable=gotype --disable=interfacer
+		--tests \
+		--vendor \
+		--sort=severity \
+		--aggregate \
+		--deadline=5m
 
 .PHONY: setup
 setup:  ## Install the build and development dependencies
@@ -90,3 +103,12 @@ help:  ## Print usage information
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
 
 .DEFAULT_GOAL := help
+
+
+#
+# CI Targets
+#
+
+.PHONY: ci-check-version
+ci-check-version:
+	SDK_VERSION=$(SDK_VERSION) ./bin/ci/check_version.sh
