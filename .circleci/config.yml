@@ -102,7 +102,11 @@ jobs:
       - run:
           name: Create Release
           command: |
+            # ghr requires an asset, since we do not have any for this repo, we will
+            # create a build dir and upload the changelog as an asset.
             mkdir build
+            cp ./CHANGELOG.md build/CHANGELOG.md
+
             go get -v github.com/tcnksm/ghr
             if git describe --exact-match --tags HEAD; then
               CIRCLE_TAG=$(git describe --exact-match --tags HEAD)
