@@ -39,6 +39,21 @@ type ReadContext struct {
 	Reading []*Reading
 }
 
+// NewReadContext creates a new instance of a ReadContext from the given
+// device and corresponding readings.
+func NewReadContext(device *Device, readings []*Reading) (*ReadContext, error) {
+	rack, err := device.Location.GetRack()
+	if err != nil {
+		return nil, err
+	}
+	return &ReadContext{
+		Device:  device.ID(),
+		Board:   device.Location.Board,
+		Rack:    rack,
+		Reading: readings,
+	}, nil
+}
+
 // ID returns a compound string that can identify the resource by its
 // rack, board, and device. This ID should be globally unique. It simply follows
 // the pattern {rack}-{board}-{device}.

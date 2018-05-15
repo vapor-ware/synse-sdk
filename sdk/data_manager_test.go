@@ -147,7 +147,7 @@ func TestDataManager_WritesEnabled(t *testing.T) {
 
 // TestDataManager_readNoLimiter tests reading a device when a limiter is
 // not configured.
-func TestDataManager_readOkNoLimiter(t *testing.T) {
+func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 	// Create the plugin
 	p := Plugin{
 		Config: &config.PluginConfig{
@@ -179,7 +179,7 @@ func TestDataManager_readOkNoLimiter(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(d.readChannel))
-	d.read(device)
+	d.readOne(device)
 	assert.Equal(t, 1, len(d.readChannel))
 
 	reading := <-d.readChannel
@@ -190,7 +190,7 @@ func TestDataManager_readOkNoLimiter(t *testing.T) {
 
 // TestDataManager_readOkWithLimiter tests reading a device when a limiter is
 // configured.
-func TestDataManager_readOkWithLimiter(t *testing.T) {
+func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 	// Create the plugin
 	p := Plugin{
 		Config: &config.PluginConfig{
@@ -223,7 +223,7 @@ func TestDataManager_readOkWithLimiter(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(d.readChannel))
-	d.read(device)
+	d.readOne(device)
 	assert.Equal(t, 1, len(d.readChannel))
 
 	reading := <-d.readChannel
@@ -233,7 +233,7 @@ func TestDataManager_readOkWithLimiter(t *testing.T) {
 }
 
 // TestDataManager_readErr tests reading a device that results in error.
-func TestDataManager_readErr(t *testing.T) {
+func TestDataManager_readOneErr(t *testing.T) {
 	// Create the plugin
 	p := Plugin{
 		Config: &config.PluginConfig{
@@ -265,7 +265,7 @@ func TestDataManager_readErr(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(d.readChannel))
-	d.read(device)
+	d.readOne(device)
 	assert.Equal(t, 0, len(d.readChannel))
 }
 
