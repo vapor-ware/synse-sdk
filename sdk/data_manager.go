@@ -40,8 +40,12 @@ type dataManager struct {
 	// Lock around async reads and writes.
 	rwLock *sync.Mutex
 
-	// The plugin's device handlers. See sdk/handlers.go.
+	// The plugin's handlers. See sdk/handlers.go.
 	handlers *Handlers
+
+	// The plugin's device handlers. These are what handle the read
+	// and write functionality for all devices.
+	deviceHandlers []*DeviceHandler
 
 	// The plugin's configuration. See sdk.config.plugin.go.
 	config *config.PluginConfig
@@ -66,13 +70,14 @@ func newDataManager(plugin *Plugin) (*dataManager, error) {
 	}
 
 	return &dataManager{
-		readChannel:  make(chan *ReadContext, plugin.Config.Settings.Read.Buffer),
-		writeChannel: make(chan *WriteContext, plugin.Config.Settings.Write.Buffer),
-		readings:     make(map[string][]*Reading),
-		dataLock:     &sync.RWMutex{},
-		rwLock:       &sync.Mutex{},
-		handlers:     plugin.handlers,
-		config:       plugin.Config,
+		readChannel:    make(chan *ReadContext, plugin.Config.Settings.Read.Buffer),
+		writeChannel:   make(chan *WriteContext, plugin.Config.Settings.Write.Buffer),
+		readings:       make(map[string][]*Reading),
+		dataLock:       &sync.RWMutex{},
+		rwLock:         &sync.Mutex{},
+		handlers:       plugin.handlers,
+		deviceHandlers: plugin.deviceHandlers,
+		config:         plugin.Config,
 	}, nil
 }
 
@@ -130,7 +135,7 @@ func (manager *dataManager) goRead() {
 
 // read implements the logic for reading from a device that is configured
 // with the Plugin.
-func (manager *dataManager) read(device *Device) {
+func (manager *dataManager) readOne(device *Device) {
 	// Rate limiting, if configured
 	if manager.config.Limiter != nil {
 		err := manager.config.Limiter.Wait(context.Background())
@@ -139,18 +144,49 @@ func (manager *dataManager) read(device *Device) {
 		}
 	}
 
-	// Read from the device
-	resp, err := device.Read()
-	if err != nil {
-		// Check to see if the error is that of unsupported error. If it is, we
-		// do not want to log out here (low-interval read polling would cause this
-		// to pollute the logs for something that we should already know).
-		_, unsupported := err.(*UnsupportedCommandError)
-		if !unsupported {
-			logger.Errorf("failed to read from device %v: %v", device.GUID(), err)
+	// If the device does not get its readings from a bulk read operation,
+	// then it is read individually. If a device is read in bulk, it will
+	// not be read here; it will be read via the readBulk function.
+	if !device.bulkRead {
+		resp, err := device.Read()
+		if err != nil {
+			// Check to see if the error is that of unsupported error. If it is, we
+			// do not want to log out here (low-interval read polling would cause this
+			// to pollute the logs for something that we should already know).
+			_, unsupported := err.(*UnsupportedCommandError)
+			if !unsupported {
+				logger.Errorf("failed to read from device %v: %v", device.GUID(), err)
+			}
+		} else {
+			manager.readChannel <- resp
 		}
-	} else {
-		manager.readChannel <- resp
+	}
+}
+
+// readBulk will execute bulk reads on all device handlers that support
+// bulk reading. If a handler does not support bulk reading, it's devices
+// will be read individually via readOne instead.
+func (manager *dataManager) readBulk(handler *DeviceHandler) {
+	// Rate limiting, if configured
+	if manager.config.Limiter != nil {
+		err := manager.config.Limiter.Wait(context.Background())
+		if err != nil {
+			logger.Errorf("error from limiter when bulk reading with handler for %v: %v", handler.Model, err)
+		}
+	}
+
+	// If the handler supports bulk read, execute bulk read. Otherwise,
+	// do nothing. Individual reads are done via the readOne function.
+	if handler.doesBulkRead() {
+		devices := handler.getDevicesForHandler()
+		resp, err := handler.BulkRead(devices)
+		if err != nil {
+			logger.Errorf("failed to bulk read from device handler for: %v: %v", handler.Model, err)
+		} else {
+			for _, readCtx := range resp {
+				manager.readChannel <- readCtx
+			}
+		}
 	}
 }
 
@@ -162,7 +198,11 @@ func (manager *dataManager) serialRead() {
 	defer manager.rwLock.Unlock()
 
 	for _, dev := range deviceMap {
-		manager.read(dev)
+		manager.readOne(dev)
+	}
+
+	for _, handler := range manager.deviceHandlers {
+		manager.readBulk(handler)
 	}
 }
 
@@ -176,9 +216,20 @@ func (manager *dataManager) parallelRead() {
 
 		// Launch a goroutine to read from the device
 		go func(wg *sync.WaitGroup, device *Device) {
-			manager.read(device)
+			manager.readOne(device)
 			wg.Done()
 		}(&waitGroup, dev)
+	}
+
+	for _, handler := range manager.deviceHandlers {
+		// Increment the WaitGroup counter.
+		waitGroup.Add(1)
+
+		// Launch a goroutine to bulk read from the handler
+		go func(wg *sync.WaitGroup, handler *DeviceHandler) {
+			manager.readBulk(handler)
+			wg.Done()
+		}(&waitGroup, handler)
 	}
 
 	// Wait for all device reads to complete.

@@ -14,7 +14,7 @@ var deviceMap = make(map[string]*Device)
 
 // deviceMapOrder holds all of the known deviceIds in the order of insertion.
 // This allows deviceMap iterations in insertion order.
-var deviceMapOrder = []string{}
+var deviceMapOrder []string
 
 // DeviceRead is a function that defines the read behavior for a Device. It
 // is used by the DeviceHandler, and thus is used to handle reads for all device
@@ -34,6 +34,30 @@ type DeviceHandler struct {
 
 	Write DeviceWrite
 	Read  DeviceRead
+
+	BulkRead func([]*Device) ([]*ReadContext, error)
+}
+
+// getDevicesForHandler gets a list of all the devices which use the
+// DeviceHandler.
+func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
+	var devices []*Device
+
+	for _, v := range deviceMap {
+		if v.Handler == deviceHandler {
+			devices = append(devices, v)
+		}
+	}
+	return devices
+}
+
+// doesBulkRead checks if the handler does bulk reads for its Devices.
+//
+// If BulkRead is set for the device handler and Read is not, then
+// we will have enabled bulk reads. If both are defined, this will
+// not be set, so we will never bulk read.
+func (deviceHandler *DeviceHandler) doesBulkRead() bool {
+	return deviceHandler.Read == nil && deviceHandler.BulkRead != nil
 }
 
 // NewDevice creates a new instance of a Device.
@@ -67,6 +91,7 @@ func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandl
 		Identifier:   plugin.handlers.DeviceIdentifier,
 		pconfig:      p,
 		dconfig:      d,
+		bulkRead:     h.doesBulkRead(),
 	}
 	return &dev, nil
 }
@@ -91,6 +116,10 @@ type Device struct {
 	Handler    *DeviceHandler
 	Identifier DeviceIdentifier
 
+	// flag to determine whether this device is read in bulk
+	// or if it is read individually
+	bulkRead bool
+
 	id string
 }
 
@@ -104,17 +133,7 @@ func (d *Device) Read() (*ReadContext, error) {
 			return nil, err
 		}
 
-		rack, err := d.Location.GetRack()
-		if err != nil {
-			return nil, err
-		}
-		return &ReadContext{
-			Device:  d.ID(),
-			Board:   d.Location.Board,
-			Rack:    rack,
-			Reading: readings,
-		}, nil
-
+		return NewReadContext(d, readings)
 	}
 	return nil, &UnsupportedCommandError{}
 }
@@ -132,7 +151,7 @@ func (d *Device) Write(data *WriteData) error {
 // IsReadable checks if the Device is readable based on the presence/absence
 // of a Read action defined in its DeviceHandler.
 func (d *Device) IsReadable() bool {
-	return d.Handler.Read != nil
+	return d.Handler.Read != nil || d.Handler.BulkRead != nil
 }
 
 // IsWritable checks if the Device is writable based on the presence/absence
