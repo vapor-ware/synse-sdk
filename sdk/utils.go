@@ -51,7 +51,7 @@ func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.Pr
 
 		if !found {
 			logger.Warnf("Did not find prototype matching instance for %v-%v", dev.Type, dev.Model)
-			break
+			continue
 		}
 		logger.Debugf("Found prototype matching instance config for %v %v", dev.Type, dev.Model)
 
