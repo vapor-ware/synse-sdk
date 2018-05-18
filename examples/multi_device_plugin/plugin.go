@@ -8,15 +8,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
-// Build time variables for setting the version info of a Plugin.
-var (
-	BuildDate     string
-	GitCommit     string
-	GitTag        string
-	GoVersion     string
-	VersionString string
-)
-
 // ProtocolIdentifier gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
 func ProtocolIdentifier(data map[string]string) string {
@@ -54,15 +45,6 @@ func main() {
 		&devices.Air8884,
 		&devices.Volt1103,
 	)
-
-	// Set build-time version info
-	plugin.SetVersion(sdk.VersionInfo{
-		BuildDate:     BuildDate,
-		GitCommit:     GitCommit,
-		GitTag:        GitTag,
-		GoVersion:     GoVersion,
-		VersionString: VersionString,
-	})
 
 	// Run the plugin.
 	checkErr(plugin.Run())

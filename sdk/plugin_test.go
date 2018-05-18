@@ -172,47 +172,6 @@ func TestPlugin_RegisterDeviceHandlers2(t *testing.T) {
 	assert.Equal(t, 2, len(plugin.deviceHandlers))
 }
 
-// TestPlugin_SetVersion tests setting the version info for a plugin.
-func TestPlugin_SetVersion(t *testing.T) {
-	plugin := Plugin{}
-	plugin.versionInfo = &VersionInfo{}
-
-	plugin.SetVersion(VersionInfo{
-		BuildDate:     "today",
-		GitCommit:     "1234",
-		VersionString: "abcd",
-	})
-
-	assert.Equal(t, "today", plugin.versionInfo.BuildDate)
-	assert.Equal(t, "1234", plugin.versionInfo.GitCommit)
-	assert.Equal(t, "abcd", plugin.versionInfo.VersionString)
-	assert.Equal(t, "", plugin.versionInfo.GitTag)
-	assert.Equal(t, "", plugin.versionInfo.GoVersion)
-}
-
-// TestPlugin_SetVersion2 tests setting the version info for a plugin
-// when there is already some version info set.
-func TestPlugin_SetVersion2(t *testing.T) {
-	plugin := Plugin{}
-	plugin.versionInfo = &VersionInfo{
-		GoVersion:     "1.9",
-		GitTag:        "1.2.3",
-		VersionString: "xyz",
-	}
-
-	plugin.SetVersion(VersionInfo{
-		BuildDate:     "today",
-		GitCommit:     "1234",
-		VersionString: "abcd",
-	})
-
-	assert.Equal(t, "today", plugin.versionInfo.BuildDate)
-	assert.Equal(t, "1234", plugin.versionInfo.GitCommit)
-	assert.Equal(t, "abcd", plugin.versionInfo.VersionString)
-	assert.Equal(t, "1.2.3", plugin.versionInfo.GitTag)
-	assert.Equal(t, "1.9", plugin.versionInfo.GoVersion)
-}
-
 // TestPlugin_SetConfig tests manually setting the plugin configuration with
 // a valid configuration.
 func TestPlugin_SetConfig(t *testing.T) {

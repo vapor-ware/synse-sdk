@@ -19,15 +19,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
-// Build time variables for setting the version info of a Plugin.
-var (
-	BuildDate     string
-	GitCommit     string
-	GitTag        string
-	GoVersion     string
-	VersionString string
-)
-
 // Read defines the behavior for device reads in this example plugin.
 func Read(device *sdk.Device) ([]*sdk.Reading, error) {
 	return []*sdk.Reading{
@@ -161,15 +152,6 @@ func main() {
 		&temperatureHandler,
 		&ledHandler,
 	)
-
-	// Set build-time version info
-	plugin.SetVersion(sdk.VersionInfo{
-		BuildDate:     BuildDate,
-		GitCommit:     GitCommit,
-		GitTag:        GitTag,
-		GoVersion:     GoVersion,
-		VersionString: VersionString,
-	})
 
 	// Run the plugin.
 	checkErr(plugin.Run())
