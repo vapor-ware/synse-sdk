@@ -92,5 +92,5 @@ func TestCommand_Run4(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Equal(t, "", command.Stdout())
-	assert.Equal(t, "ls: abcdefghijklmnopqrstuvwxyz: No such file or directory\n", command.Stderr())
+	assert.True(t, strings.Contains(command.Stderr(), "No such file or directory"))
 }
