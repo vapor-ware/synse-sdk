@@ -3,7 +3,6 @@ package sdk
 import (
 	"encoding/json"
 	"fmt"
-	"runtime"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -20,7 +19,6 @@ type Plugin struct {
 	server      *server              // InternalApiServer for fulfilling gRPC requests.
 	handlers    *Handlers            // See sdk.handlers.go for comments.
 	dataManager *dataManager         // Manages device reads and writes. Accesses cached read data.
-	versionInfo *VersionInfo         // Version tracking information.
 
 	deviceHandlers     []*DeviceHandler          // Plugin-specific read and write functions for the devices supported by the plugin.
 	preRunActions      []pluginAction            // Array of pluginAction to execute before the main plugin loop.
@@ -47,7 +45,6 @@ func NewPlugin(handlers *Handlers, pluginConfig *config.PluginConfig) (*Plugin, 
 	// Create the Plugin.
 	p := &Plugin{}
 	p.handlers = handlers
-	p.versionInfo = emptyVersionInfo()
 
 	// If a configuration is passed in, use it.
 	// If not, default to finding the config in files.
@@ -99,15 +96,6 @@ func (p *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 	} else {
 		p.deviceHandlers = append(p.deviceHandlers, handlers...)
 	}
-}
-
-// SetVersion sets the VersionInfo for the Plugin.
-//
-// The given VersionParameter is merged into an empty VersionInfo.
-// This means that any fields not specified in the info parameter
-// will take the value "-".
-func (p *Plugin) SetVersion(info VersionInfo) {
-	p.versionInfo.Merge(&info)
 }
 
 // SetConfig manually sets the configuration of the Plugin. This is
@@ -309,16 +297,12 @@ func (p *Plugin) setup() error {
 // logInfo logs out the information about the plugin. This is called just before the
 // plugin begins running all of its components.
 func (p *Plugin) logInfo() {
-	logger.Info("Plugin Info:")
-	logger.Infof(" Name:        %s", p.Config.Name)
-	logger.Infof(" Version:     %s", p.versionInfo.VersionString)
-	logger.Infof(" SDK Version: %s", SDKVersion)
-	logger.Infof(" Git Commit:  %s", p.versionInfo.GitCommit)
-	logger.Infof(" Git Tag:     %s", p.versionInfo.GitTag)
-	logger.Infof(" Go Version:  %s", p.versionInfo.GoVersion)
-	logger.Infof(" Build Date:  %s", p.versionInfo.BuildDate)
-	logger.Infof(" OS:          %s", runtime.GOOS)
-	logger.Infof(" Arch:        %s", runtime.GOARCH)
+
+	// Log out the version info
+	versionInfo := GetVersion()
+	versionInfo.Log()
+
+	// Log out configuration info
 	logger.Infof("Plugin Config:")
 	s, _ := json.MarshalIndent(p.Config, "", "  ")
 	logger.InfoMultiline(string(s))
