@@ -1,5 +1,7 @@
 package types
 
+import "strings"
+
 // ReadingType provides information about the type of a device reading.
 type ReadingType struct {
 	// Name is the name of the reading type. Each reading type
@@ -28,6 +30,17 @@ type ReadingType struct {
 	// supported. This can be the value itself, e.g. "0.01", or
 	// a mathematical representation of the value, e.g. "1e-2".
 	ScalingFactor string
+}
+
+// Type gets the type of the reading. This is encoded in the ReadingType
+// name. If the ReadingType is namespaced, this will be the last element
+// of the namespace. If it is not namespaced, it will be the name itself.
+func (readingType *ReadingType) Type() string {
+	if strings.Contains(readingType.Name, ".") {
+		nameSpace := strings.Split(readingType.Name, ".")
+		return nameSpace[len(nameSpace)-1]
+	}
+	return readingType.Name
 }
 
 // ReadingUnit is the unit of measure for a device reading.
