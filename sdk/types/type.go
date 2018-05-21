@@ -1,6 +1,18 @@
 package types
 
-import "strings"
+import (
+	"strings"
+)
+
+/*
+TODO:
+- function(s) for proper type casting
+- function(s) for applying scaling factor
+- function for parsing scaling factor
+- function for applying precision
+- functionality for reading in from YAML
+ */
+
 
 // ReadingType provides information about the type of a device reading.
 type ReadingType struct {
