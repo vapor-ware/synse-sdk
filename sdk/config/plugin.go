@@ -19,7 +19,6 @@ var homeConfigPath = os.Getenv("HOME") + "/.synse/plugin"
 
 // PluginConfig specifies the configuration options for the plugin.
 type PluginConfig struct {
-	Name          string
 	Version       string
 	Debug         bool
 	Settings      Settings
@@ -94,10 +93,6 @@ func (setting *TransactionSettings) GetTTL() (time.Duration, error) {
 // the required fields populated.
 func (c *PluginConfig) Validate() error {
 	// Config errors
-	if c.Name == "" {
-		return fmt.Errorf("config validation failed: missing required field 'name'")
-	}
-
 	if c.Version == "" {
 		return fmt.Errorf("config validation failed: missing required field 'version'")
 	}

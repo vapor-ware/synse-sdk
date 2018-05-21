@@ -8,6 +8,12 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
+var (
+	pluginName       = "C Plugin"
+	pluginMaintainer = "Vapor IO"
+	pluginDesc       = "An example plugin that demonstrates C code integration"
+)
+
 // temperatureHandler defines the read/write behavior for the "temp2010"
 // temperature device.
 var temperatureHandler = sdk.DeviceHandler{
@@ -46,6 +52,14 @@ func checkErr(err error) {
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
+	// Set the metainfo for the plugin.
+	sdk.SetPluginMeta(
+		pluginName,
+		pluginMaintainer,
+		pluginDesc,
+		"",
+	)
+
 	// Set the prototype and device instance config paths to be relative to the
 	// current working directory instead of using the default location. This way
 	// the plugin can be run from within this directory.

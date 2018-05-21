@@ -12,7 +12,6 @@ import (
 
 // File level global test configuration.
 var testConfig = config.PluginConfig{
-	Name:    "test config",
 	Version: "test config v1",
 	Network: config.NetworkSettings{
 		Type:    "tcp",
@@ -58,7 +57,6 @@ func TestNewPluginWithConfig(t *testing.T) {
 
 	// Create a configuration for the Plugin.
 	c := config.PluginConfig{
-		Name:    "test-plugin",
 		Version: "1.0",
 		Network: config.NetworkSettings{
 			Type:    "tcp",
@@ -82,7 +80,6 @@ func TestNewPluginWithIncompleteConfig(t *testing.T) {
 
 	// network spec missing but required
 	c := config.PluginConfig{
-		Name:    "test-plugin",
 		Version: "1.0",
 	}
 
@@ -192,7 +189,7 @@ func TestPlugin_SetConfig2(t *testing.T) {
 	assert.Nil(t, plugin.Config)
 
 	// use an incomplete config
-	err := plugin.SetConfig(&config.PluginConfig{Name: "test", Version: "1"})
+	err := plugin.SetConfig(&config.PluginConfig{Version: "1"})
 	assert.Error(t, err)
 
 	assert.Nil(t, plugin.Config)
@@ -328,7 +325,7 @@ func TestPlugin_logInfo(t *testing.T) {
 // specified via environment variable.
 func TestPlugin_Configure(t *testing.T) {
 	cfgFilePath := "tmp/config.yml"
-	cfg := `name: test-plugin
+	cfg := `
 version: 1.0.0
 debug: true
 network:
@@ -363,7 +360,6 @@ settings:
 	assert.NoError(t, err)
 
 	assert.NotNil(t, p.Config, "plugin is not configured, but should be")
-	assert.Equal(t, "test-plugin", p.Config.Name)
 	assert.Equal(t, "1.0.0", p.Config.Version)
 }
 
