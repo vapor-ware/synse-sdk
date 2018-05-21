@@ -88,7 +88,6 @@ func TestNewPluginConfigErr(t *testing.T) {
 func TestPluginConfig_Validate(t *testing.T) {
 	var cases = []PluginConfig{
 		{
-			Name:    "test",
 			Version: "1",
 			Network: NetworkSettings{
 				Type:    "test",
@@ -101,7 +100,6 @@ func TestPluginConfig_Validate(t *testing.T) {
 			},
 		},
 		{
-			Name:    "1",
 			Version: "2",
 			Network: NetworkSettings{
 				Type:    "3",
@@ -114,7 +112,6 @@ func TestPluginConfig_Validate(t *testing.T) {
 			},
 		},
 		{
-			Name:    "test",
 			Version: "1",
 			Network: NetworkSettings{
 				Type:    "test",
@@ -138,7 +135,6 @@ func TestPluginConfig_Validate(t *testing.T) {
 func TestPluginConfig_ValidateErr(t *testing.T) {
 	var cases = []PluginConfig{
 		{
-			Version: "1",
 			Network: NetworkSettings{
 				Type:    "test",
 				Address: "test",
@@ -150,19 +146,6 @@ func TestPluginConfig_ValidateErr(t *testing.T) {
 			},
 		},
 		{
-			Name: "test",
-			Network: NetworkSettings{
-				Type:    "test",
-				Address: "test",
-			},
-			Settings: Settings{
-				Transaction: TransactionSettings{
-					TTL: "2s",
-				},
-			},
-		},
-		{
-			Name:    "test",
 			Version: "1",
 			Settings: Settings{
 				Transaction: TransactionSettings{
@@ -171,7 +154,6 @@ func TestPluginConfig_ValidateErr(t *testing.T) {
 			},
 		},
 		{
-			Name:    "test",
 			Version: "1",
 			Network: NetworkSettings{
 				Address: "test",
@@ -183,7 +165,6 @@ func TestPluginConfig_ValidateErr(t *testing.T) {
 			},
 		},
 		{
-			Name:    "test",
 			Version: "1",
 			Network: NetworkSettings{
 				Type: "test",
@@ -195,7 +176,6 @@ func TestPluginConfig_ValidateErr(t *testing.T) {
 			},
 		},
 		{
-			Name:    "1",
 			Version: "2",
 			Network: NetworkSettings{
 				Type:    "3",

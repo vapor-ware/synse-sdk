@@ -298,6 +298,9 @@ func (p *Plugin) setup() error {
 // plugin begins running all of its components.
 func (p *Plugin) logInfo() {
 
+	// Log out the plugin metainfo
+	metainfo.log()
+
 	// Log out the version info
 	versionInfo := GetVersion()
 	versionInfo.Log()

@@ -11,6 +11,12 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
+var (
+	pluginName       = "Dynamic Registration Plugin"
+	pluginMaintainer = "Vapor IO"
+	pluginDesc       = "An example plugin that demonstrates dynamically registering devices"
+)
+
 // temperatureHandler defines the read/write behavior for the "temp2010"
 // temperature device.
 var temperatureHandler = sdk.DeviceHandler{
@@ -95,6 +101,14 @@ func checkErr(err error) {
 }
 
 func main() {
+	// Set the metainfo for the plugin.
+	sdk.SetPluginMeta(
+		pluginName,
+		pluginMaintainer,
+		pluginDesc,
+		"",
+	)
+
 	// Set the prototype and device instance config paths to be relative to the
 	// current working directory instead of using the default location. This way
 	// the plugin can be run from within this directory.

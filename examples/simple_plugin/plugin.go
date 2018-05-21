@@ -19,6 +19,12 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
+var (
+	pluginName       = "Simple Plugin"
+	pluginMaintainer = "Vapor IO"
+	pluginDesc       = "A simple example plugin"
+)
+
 // Read defines the behavior for device reads in this example plugin.
 func Read(device *sdk.Device) ([]*sdk.Reading, error) {
 	return []*sdk.Reading{
@@ -112,6 +118,14 @@ func checkErr(err error) {
 //   the devices from config, start the read-write loop, and start the GRPC
 //   server.
 func main() {
+	// Set the metainfo for the plugin.
+	sdk.SetPluginMeta(
+		pluginName,
+		pluginMaintainer,
+		pluginDesc,
+		"",
+	)
+
 	// Set the prototype and device instance config paths to be relative to the
 	// current working directory instead of using the default location. This way
 	// the plugin can be run from within this directory.
@@ -124,7 +138,6 @@ func main() {
 
 	// Configuration for the Simple Plugin.
 	cfg := config.PluginConfig{
-		Name:    "simple-plugin",
 		Version: "1.0",
 		Debug:   true,
 		Network: config.NetworkSettings{

@@ -62,7 +62,6 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 
 	// Create a new PluginConfig instance
 	p := &PluginConfig{
-		Name:    v.GetString("name"),
 		Version: v.GetString("version"),
 		Debug:   v.GetBool("debug"),
 		Network: NetworkSettings{
@@ -104,7 +103,7 @@ func (h *v1PluginConfigHandler) processPluginConfig(v *viper.Viper) (*PluginConf
 // setV1Defaults sets default v1 configuration values for a Viper instance.
 func setV1Defaults(v *viper.Viper) {
 	logger.Debugf("Setting v1 Plugin config defaults.")
-	// the "name", "version" and "network" fields are required, so they should
+	// the "version" and "network" fields are required, so they should
 	// not have any default values.
 
 	v.SetDefault("debug", false)

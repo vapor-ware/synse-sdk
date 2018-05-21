@@ -13,8 +13,8 @@ import (
 // TestV1PluginConfigHandlerProcessPluginConfig tests successfully processing
 // a v1 plugin config.
 func TestV1PluginConfigHandlerProcessPluginConfig(t *testing.T) {
-	config := []byte(`version: 1
-name: example
+	config := []byte(`
+version: 1
 debug: true
 network:
   type: unix
@@ -40,7 +40,6 @@ settings:
 	assert.NoError(t, err)
 
 	assert.True(t, cfg.Debug)
-	assert.Equal(t, "example", cfg.Name)
 	assert.Equal(t, "unix", cfg.Network.Type)
 	assert.Equal(t, "example.sock", cfg.Network.Address)
 	assert.Equal(t, "serial", cfg.Settings.Mode)
@@ -58,8 +57,8 @@ settings:
 // TestV1PluginConfigHandlerProcessPluginConfig2 tests unsuccessfully processing
 // a v1 plugin config because the auto-enumerate field is incorrectly specified.
 func TestV1PluginConfigHandlerProcessPluginConfig2(t *testing.T) {
-	config := []byte(`version: 1
-name: example
+	config := []byte(`
+version: 1
 debug: true
 network:
   type: unix
@@ -90,8 +89,8 @@ auto_enumerate: invalid-value`)
 // TestV1PluginConfigHandlerProcessPluginConfig3 tests unsuccessfully processing
 // a v1 plugin config because the context field is incorrectly specified.
 func TestV1PluginConfigHandlerProcessPluginConfig3(t *testing.T) {
-	config := []byte(`version: 1
-name: example
+	config := []byte(`
+version: 1
 debug: true
 network:
   type: unix
@@ -122,8 +121,8 @@ context: invalid-value`)
 // TestV1PluginConfigHandlerProcessPluginConfig4 tests successfully processing
 // a v1 plugin config, when there is a limiter defined.
 func TestV1PluginConfigHandlerProcessPluginConfig4(t *testing.T) {
-	config := []byte(`version: 1
-name: example
+	config := []byte(`
+version: 1
 network:
   type: unix
   address: example.sock
@@ -142,7 +141,6 @@ limiter:
 	assert.NoError(t, err)
 
 	assert.False(t, cfg.Debug)
-	assert.Equal(t, "example", cfg.Name)
 	assert.Equal(t, "unix", cfg.Network.Type)
 	assert.Equal(t, "example.sock", cfg.Network.Address)
 	assert.Equal(t, 10, cfg.Limiter.Burst())
@@ -152,8 +150,8 @@ limiter:
 // TestV1PluginConfigHandlerProcessPluginConfig5 tests successfully processing
 // a v1 plugin config, when there is a limiter defined with a 0-valued rate.
 func TestV1PluginConfigHandlerProcessPluginConfig5(t *testing.T) {
-	config := []byte(`version: 1
-name: example
+	config := []byte(`
+version: 1
 network:
   type: unix
   address: example.sock
@@ -172,7 +170,6 @@ limiter:
 	assert.NoError(t, err)
 
 	assert.False(t, cfg.Debug)
-	assert.Equal(t, "example", cfg.Name)
 	assert.Equal(t, "unix", cfg.Network.Type)
 	assert.Equal(t, "example.sock", cfg.Network.Address)
 	assert.Equal(t, 10, cfg.Limiter.Burst())
@@ -182,8 +179,8 @@ limiter:
 // TestV1PluginConfigHandlerProcessPluginConfig6 tests successfully processing
 // a v1 plugin config, when there is a limiter defined with a 0-valued burst.
 func TestV1PluginConfigHandlerProcessPluginConfig6(t *testing.T) {
-	config := []byte(`version: 1
-name: example
+	config := []byte(`
+version: 1
 network:
   type: unix
   address: example.sock
@@ -202,7 +199,6 @@ limiter:
 	assert.NoError(t, err)
 
 	assert.False(t, cfg.Debug)
-	assert.Equal(t, "example", cfg.Name)
 	assert.Equal(t, "unix", cfg.Network.Type)
 	assert.Equal(t, "example.sock", cfg.Network.Address)
 	assert.Equal(t, 10, cfg.Limiter.Burst()) // this should take the value of the limit
@@ -210,9 +206,9 @@ limiter:
 }
 
 // TestV1PluginConfigHandlerProcessPluginConfig7 tests unsuccessfully processing
-// a v1 plugin config because of validation error on required fields (missing "name" field).
+// a v1 plugin config because of validation error on required fields (missing "version" field).
 func TestV1PluginConfigHandlerProcessPluginConfig7(t *testing.T) {
-	config := []byte(`version: 1
+	config := []byte(`
 network:
   type: unix
   address: example.sock`)

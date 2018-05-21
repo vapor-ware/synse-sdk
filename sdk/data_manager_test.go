@@ -24,7 +24,6 @@ func TestNewDataManager(t *testing.T) {
 	assert.NoError(t, err)
 
 	c := config.PluginConfig{
-		Name:    "test",
 		Version: "test",
 		Network: config.NetworkSettings{
 			Type:    "tcp",
@@ -56,7 +55,6 @@ func TestNewDataManager2(t *testing.T) {
 	assert.NoError(t, err)
 
 	c := &config.PluginConfig{
-		Name:    "test",
 		Version: "test",
 		Network: config.NetworkSettings{
 			Type:    "tcp",
@@ -118,7 +116,6 @@ func TestNewDataManager_NilPluginConfig(t *testing.T) {
 func TestDataManager_WritesEnabled(t *testing.T) {
 	// Create the plugin
 	c := config.PluginConfig{
-		Name:    "test",
 		Version: "test",
 		Network: config.NetworkSettings{
 			Type:    "tcp",
@@ -151,7 +148,6 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 	// Create the plugin
 	p := Plugin{
 		Config: &config.PluginConfig{
-			Name:    "test",
 			Version: "test",
 			Network: config.NetworkSettings{
 				Type:    "tcp",
@@ -194,7 +190,6 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 	// Create the plugin
 	p := Plugin{
 		Config: &config.PluginConfig{
-			Name:    "test",
 			Version: "test",
 			Network: config.NetworkSettings{
 				Type:    "tcp",
@@ -237,7 +232,6 @@ func TestDataManager_readOneErr(t *testing.T) {
 	// Create the plugin
 	p := Plugin{
 		Config: &config.PluginConfig{
-			Name:    "test",
 			Version: "test",
 			Network: config.NetworkSettings{
 				Type:    "tcp",
@@ -274,7 +268,6 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 	// Create the plugin
 	p := Plugin{
 		Config: &config.PluginConfig{
-			Name:    "test",
 			Version: "test",
 			Network: config.NetworkSettings{
 				Type:    "tcp",
@@ -321,7 +314,6 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 //	// Create the plugin
 //	p := Plugin{
 //		Config:   &config.PluginConfig{
-//			Name:    "test",
 //			Version: "test",
 //			Network: config.NetworkSettings{
 //				Type:    "tcp",
@@ -391,7 +383,6 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 	// Create the plugin
 	p := Plugin{
 		Config: &config.PluginConfig{
-			Name:    "test",
 			Version: "test",
 			Network: config.NetworkSettings{
 				Type:    "tcp",
@@ -438,7 +429,6 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 //	// Create the plugin
 //	p := Plugin{
 //		Config:   &config.PluginConfig{
-//			Name:    "test",
 //			Version: "test",
 //			Network: config.NetworkSettings{
 //				Type:    "tcp",

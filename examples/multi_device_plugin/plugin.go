@@ -8,6 +8,12 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
+var (
+	pluginName       = "Multi-Device Plugin"
+	pluginMaintainer = "Vapor IO"
+	pluginDesc       = "An example plugin that demonstrates registering multiple devices"
+)
+
 // ProtocolIdentifier gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
 func ProtocolIdentifier(data map[string]string) string {
@@ -25,6 +31,14 @@ func checkErr(err error) {
 // The main function - this is where we will configure, create, and run
 // the plugin.
 func main() {
+	// Set the metainfo for the plugin.
+	sdk.SetPluginMeta(
+		pluginName,
+		pluginMaintainer,
+		pluginDesc,
+		"",
+	)
+
 	// Set the prototype and device instance config paths to be relative to the
 	// current working directory instead of using the default location. This way
 	// the plugin can be run from within this directory.
