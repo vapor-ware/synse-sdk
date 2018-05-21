@@ -7,6 +7,21 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
+/*
+TODO: some things to do here
+- functionality to read in from file
+- functionality for default search paths.. '.', '/synse/etc/config', ...
+
+- error handling w/ context (pkg/errors)
+- more context w/ error messages (e.g. which file it came from)
+
+- for validation, consider completely validating before returning an error
+  so a user can get a list of all issues at once
+
+- for all structs, apply the yaml tag with omitempty? still a bit unclear
+  what omitempty does, but other projects seem to use it a lot.
+*/
+
 // DeviceConfig holds the configuration for the kinds of devices and the
 // instances of those kinds which a plugin will manage.
 type DeviceConfig struct {
@@ -20,6 +35,28 @@ type DeviceConfig struct {
 	Devices []DeviceKind
 }
 
+// Validate validates that the DeviceConfig has no configuration errors.
+//
+// This is called before Devices are created.
+func (deviceConfig *DeviceConfig) Validate() (err error) {
+	// Validate all of the Locations that the DeviceConfig contains.
+	for _, location := range deviceConfig.Locations {
+		err = location.Validate()
+		if err != nil {
+			return
+		}
+	}
+
+	// Validate all of the DeviceKinds that the DeviceConfig contains.
+	for _, deviceKind := range deviceConfig.Devices {
+		err = deviceKind.Validate()
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 // Location defines a location (rack, board) which will be associated with
 // DeviceInstances. The locational information defined here is used by Synse
 // Server to route commands to the proper device instance.
@@ -29,6 +66,24 @@ type Location struct {
 	Board LocationData
 }
 
+// Validate validates that the Location has no configuration errors.
+func (location *Location) Validate() (err error) {
+	// All locations must have a name.
+	if location.Name == "" {
+		return fmt.Errorf("location has no 'name' set, but is required")
+	}
+
+	err = location.Rack.Validate()
+	if err != nil {
+		return
+	}
+	err = location.Board.Validate()
+	if err != nil {
+		return
+	}
+	return
+}
+
 // LocationData defines the name of a locational routing component.
 //
 // The name of a Location component can either be defined directly via the
@@ -36,6 +91,22 @@ type Location struct {
 type LocationData struct {
 	Name    string `yaml:"name,omitempty"`
 	FromEnv string `yaml:"fromEnv,omitempty"`
+}
+
+// Validate validates that the LocationData has no configuration errors.
+func (locData *LocationData) Validate() error {
+	if locData.Name == "" || locData.FromEnv == "" {
+		return fmt.Errorf("location requires one of 'name' or 'fromEnv' to be specified, but found neither")
+	}
+	value, err := locData.Get()
+	if err != nil {
+		return err
+	}
+	if value == "" {
+		return fmt.Errorf("got empty location info, but location requires a value")
+	}
+
+	return nil
 }
 
 // Get returns the resolved location data.
@@ -99,6 +170,29 @@ type DeviceKind struct {
 	Outputs []DeviceOutput
 }
 
+func (deviceKind *DeviceKind) Validate() (err error) {
+	if deviceKind.Name == "" {
+		return fmt.Errorf("device kind requires 'name', but is empty")
+	}
+
+	// Validate all of the DeviceInstances that the DeviceKind contains.
+	for _, instance := range deviceKind.Instances {
+		err = instance.Validate()
+		if err != nil {
+			return
+		}
+	}
+
+	// Validate all of the DeviceOutputs that the DeviceKind contains.
+	for _, output := range deviceKind.Outputs {
+		err = output.Validate()
+		if err != nil {
+			return err
+		}
+	}
+	return
+}
+
 // DeviceInstance describes an individual instance of a given DeviceKind.
 type DeviceInstance struct {
 	// Info is a string that provides a short human-understandable label, description,
@@ -136,18 +230,33 @@ type DeviceInstance struct {
 	InheritKindOutputs bool
 }
 
+func (deviceInstance *DeviceInstance) Validate() (err error) {
+	if deviceInstance.Location == "" {
+		return fmt.Errorf("device kind requires 'location', but is empty")
+	}
+
+	// Validate all of the DeviceOutputs that the DeviceInstance contains.
+	for _, output := range deviceInstance.Outputs {
+		err = output.Validate()
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 // DeviceOutput describes a valid output for the DeviceInstance.
 type DeviceOutput struct {
+	// Type is the name of the ReadingType that describes the expected output format
+	// for this device output.
+	Type string
+
 	// Info is a string that provides a short human-understandable label, description,
 	// or summary of the device output.
 	//
 	// This is optional. If this is not set, the Info from its corresponding
 	// DeviceInstance is used.
 	Info string
-
-	// Type is the name of the ReadingType that describes the expected output format
-	// for this device output.
-	Type string
 
 	// Data contains any protocol/output specific configuration associated with
 	// the device output.
@@ -157,4 +266,11 @@ type DeviceOutput struct {
 	//
 	// It is the responsibility of the plugin to handle these values correctly.
 	Data map[string]interface{}
+}
+
+func (deviceOutput *DeviceOutput) Validate() error {
+	if deviceOutput.Type == "" {
+		return fmt.Errorf("device output requires 'type', but is empty")
+	}
+	return nil
 }
