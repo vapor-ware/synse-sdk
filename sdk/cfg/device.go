@@ -8,7 +8,8 @@ import (
 )
 
 /*
-TODO: some things to do here
+TODO:
+---------------
 - functionality to read in from file
 - functionality for default search paths.. '.', '/synse/etc/config', ...
 
@@ -18,11 +19,19 @@ TODO: some things to do here
 - for validation, consider completely validating before returning an error
   so a user can get a list of all issues at once
 
+- think about having some kind of ConfigContext struct that can be associated
+  with configs.
+	- could describe where the config came from (file, dynamic, env, ...)
+	- could provide info depending on where it came from (which env variable(s), which file, ...)
+
 */
 
 // DeviceConfig holds the configuration for the kinds of devices and the
 // instances of those kinds which a plugin will manage.
 type DeviceConfig struct {
+
+	// Version is the version of the configuration scheme.
+	Version ConfigVersion `yaml:"version,omitempty"`
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.
@@ -37,6 +46,11 @@ type DeviceConfig struct {
 //
 // This is called before Devices are created.
 func (deviceConfig *DeviceConfig) Validate() (err error) {
+	err = deviceConfig.Version.Validate()
+	if err != nil {
+		return
+	}
+
 	// Validate all of the Locations that the DeviceConfig contains.
 	for _, location := range deviceConfig.Locations {
 		err = location.Validate()
