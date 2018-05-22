@@ -18,8 +18,6 @@ TODO: some things to do here
 - for validation, consider completely validating before returning an error
   so a user can get a list of all issues at once
 
-- for all structs, apply the yaml tag with omitempty? still a bit unclear
-  what omitempty does, but other projects seem to use it a lot.
 */
 
 // DeviceConfig holds the configuration for the kinds of devices and the
@@ -28,11 +26,11 @@ type DeviceConfig struct {
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.
-	Locations []Location
+	Locations []Location `yaml:"locations,omitempty"`
 
 	// Devices are all of the DeviceKinds (and subsequently, all of the
 	// DeviceInstances) that are defined by the configuration.
-	Devices []DeviceKind
+	Devices []DeviceKind `yaml:"devices,omitempty"`
 }
 
 // Validate validates that the DeviceConfig has no configuration errors.
@@ -61,9 +59,9 @@ func (deviceConfig *DeviceConfig) Validate() (err error) {
 // DeviceInstances. The locational information defined here is used by Synse
 // Server to route commands to the proper device instance.
 type Location struct {
-	Name  string
-	Rack  LocationData
-	Board LocationData
+	Name  string       `yaml:"name,omitempty"`
+	Rack  LocationData `yaml:"rack,omitempty"`
+	Board LocationData `yaml:"board,omitempty"`
 }
 
 // Validate validates that the Location has no configuration errors.
@@ -149,17 +147,17 @@ type DeviceKind struct {
 	//
 	// There is no limit to the number of namespace elements. The terminating
 	// namespace element should always be the type.
-	Name string
+	Name string `yaml:"name,omitempty"`
 
 	// Metadata contains any metainformation provided for the device. Metadata
 	// does not need to be set for a device, but it is recommended, as it makes
 	// it easier to identify devices to plugin consumers.
 	//
 	// There is no restriction on what data can be supplied as metadata.
-	Metadata map[string]string
+	Metadata map[string]string `yaml:"metadata,omitempty"`
 
 	// Instances contains the configuration data for instances of this DeviceKind.
-	Instances []DeviceInstance
+	Instances []DeviceInstance `yaml:"instances,omitempty"`
 
 	// Outputs describes the reading type outputs provided by instances for this
 	// DeviceKind.
@@ -167,9 +165,10 @@ type DeviceKind struct {
 	// By default, all DeviceInstances for a DeviceKind will inherit these outputs.
 	// This behavior can be changed by setting the DeviceInstance.InheritKindOutputs
 	// flag to false.
-	Outputs []DeviceOutput
+	Outputs []DeviceOutput `yaml:"outputs,omitempty"`
 }
 
+// Validate validates that the DeviceKind has no configuration errors.
 func (deviceKind *DeviceKind) Validate() (err error) {
 	if deviceKind.Name == "" {
 		return fmt.Errorf("device kind requires 'name', but is empty")
@@ -197,7 +196,7 @@ func (deviceKind *DeviceKind) Validate() (err error) {
 type DeviceInstance struct {
 	// Info is a string that provides a short human-understandable label, description,
 	// or summary of the device instance.
-	Info string
+	Info string `yaml:"info,omitempty"`
 
 	// Location is a string that references a named location entry from the
 	// "locations" section of the config. It is required, as Synse Server,
@@ -206,16 +205,16 @@ type DeviceInstance struct {
 	//
 	// Note: In future versions of Synse, Location will be deprecated and
 	// replaced with a notion of "tags".
-	Location string
+	Location string `yaml:"location,omitempty"`
 
 	// Data contains any protocol/plugin specific configuration associated
 	// with the device instance.
 	//
 	// It is the responsibility of the plugin to handle these values correctly.
-	Data map[string]interface{}
+	Data map[string]interface{} `yaml:"data,omitempty"`
 
 	// Outputs describes the reading type output provided by this device instance.
-	Outputs []DeviceOutput
+	Outputs []DeviceOutput `yaml:"outputs,omitempty"`
 
 	// InheritKindOutputs determines whether the device instance should inherit
 	// the Outputs defined in it's DeviceKind. This should be true by default.
@@ -227,9 +226,10 @@ type DeviceInstance struct {
 	// it simply will not inherit anything.
 	//
 	// If false, this will not inherit any of the DeviceKind's outputs.
-	InheritKindOutputs bool
+	InheritKindOutputs bool `yaml:"inheritKindOutputs,omitempty"`
 }
 
+// Validate validates that the DeviceInstance has no configuration errors.
 func (deviceInstance *DeviceInstance) Validate() (err error) {
 	if deviceInstance.Location == "" {
 		return fmt.Errorf("device kind requires 'location', but is empty")
@@ -249,14 +249,14 @@ func (deviceInstance *DeviceInstance) Validate() (err error) {
 type DeviceOutput struct {
 	// Type is the name of the ReadingType that describes the expected output format
 	// for this device output.
-	Type string
+	Type string `yaml:"type,omitempty"`
 
 	// Info is a string that provides a short human-understandable label, description,
 	// or summary of the device output.
 	//
 	// This is optional. If this is not set, the Info from its corresponding
 	// DeviceInstance is used.
-	Info string
+	Info string `yaml:"info,omitempty"`
 
 	// Data contains any protocol/output specific configuration associated with
 	// the device output.
@@ -265,9 +265,10 @@ type DeviceOutput struct {
 	// will remain empty.
 	//
 	// It is the responsibility of the plugin to handle these values correctly.
-	Data map[string]interface{}
+	Data map[string]interface{} `yaml:"data,omitempty"`
 }
 
+// Validate validates that the DeviceOutput has no configuration errors.
 func (deviceOutput *DeviceOutput) Validate() error {
 	if deviceOutput.Type == "" {
 		return fmt.Errorf("device output requires 'type', but is empty")
