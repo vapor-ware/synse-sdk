@@ -107,7 +107,7 @@ type LocationData struct {
 
 // Validate validates that the LocationData has no configuration errors.
 func (locData *LocationData) Validate() error {
-	if locData.Name == "" || locData.FromEnv == "" {
+	if locData.Name == "" && locData.FromEnv == "" {
 		return fmt.Errorf("location requires one of 'name' or 'fromEnv' to be specified, but found neither")
 	}
 	value, err := locData.Get()
@@ -185,7 +185,8 @@ type DeviceKind struct {
 // Validate validates that the DeviceKind has no configuration errors.
 func (deviceKind *DeviceKind) Validate() (err error) {
 	if deviceKind.Name == "" {
-		return fmt.Errorf("device kind requires 'name', but is empty")
+		err = fmt.Errorf("device kind requires 'name', but is empty")
+		return
 	}
 
 	// Validate all of the DeviceInstances that the DeviceKind contains.
@@ -200,7 +201,7 @@ func (deviceKind *DeviceKind) Validate() (err error) {
 	for _, output := range deviceKind.Outputs {
 		err = output.Validate()
 		if err != nil {
-			return err
+			return
 		}
 	}
 	return
