@@ -13,6 +13,12 @@ TODO:
 - maintain context of what is being validated?
 	- e.g., for errors, we want to be able to say that X type of config is invalid in file Y
 - use sdk validation errors
+
+
+- We could make this scheme validation logic its own project. I haven't really
+  come across anything like this, and I think that its a pretty simple and decent
+  solution for what it tries to do.. definitely easier than managing external scheme
+  files or managing multiple versions of different structs, etc.
 */
 
 // SchemeValidator is used to validate the scheme of a config.
@@ -28,6 +34,18 @@ func NewSchemeValidator(version *SchemeVersion) *SchemeValidator {
 	}
 }
 
+// ValidateConfig validates a struct that holds configuration information. The
+// validation works by search all fields and nested fields for the "addedIn",
+// "deprecatedIn", and "removedIn" tags. It compares the versions specified in
+// those tags with the scheme version of the configuration itself.
+//
+// Validation will result in errors if a field has a value and the version of the
+// config scheme is out of bounds with the tags. A version could be out of bounds
+// if it is less than the "addedIn" tag, or greater than or equal to the "removedIn"
+// tag.
+//
+// Validation will log a warning if a field has a value and the version of the
+// config scheme is greater than or equal to the "deprecatedIn" flag.
 func (validator *SchemeValidator) ValidateConfig(config interface{}) error {
 	val := reflect.ValueOf(config)
 
@@ -43,6 +61,8 @@ func (validator *SchemeValidator) ValidateConfig(config interface{}) error {
 	return validator.walk(val)
 }
 
+// walk is in intermediary step in config validation that will attempt to
+// walk down into any nested fields/collections.
 func (validator *SchemeValidator) walk(v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Struct:
@@ -62,6 +82,11 @@ func (validator *SchemeValidator) walk(v reflect.Value) error {
 	return nil
 }
 
+// walkStructFields goes through all of the fields of a struct and validates
+// the fields. Only exported fields are validated.
+//
+// If the field is a nested struct or a collection of nested structs, it will
+// be validated as well.
 func (validator *SchemeValidator) walkStructFields(v reflect.Value) error {
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
@@ -90,6 +115,8 @@ func (validator *SchemeValidator) walkStructFields(v reflect.Value) error {
 	return nil
 }
 
+// validateField validates that a field of a struct is valid for the config's
+// version scheme.
 func (validator *SchemeValidator) validateField(field reflect.Value, structField reflect.StructField) error {
 	version := validator.Version
 
