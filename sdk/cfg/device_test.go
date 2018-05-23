@@ -16,22 +16,37 @@ func TestDeviceConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "DeviceConfig has valid version",
 			config: DeviceConfig{
-				Version: ConfigVersion{Version: "1.0"},
+				Version: &ConfigVersion{Version: "1.0"},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version and location",
 			config: DeviceConfig{
-				Version:   ConfigVersion{Version: "1.0"},
-				Locations: []Location{{Name: "test", Rack: LocationData{Name: "test"}, Board: LocationData{Name: "test"}}},
+				Version:   &ConfigVersion{Version: "1.0"},
+				Locations: []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version, location, and DeviceKind",
 			config: DeviceConfig{
-				Version:   ConfigVersion{Version: "1.0"},
-				Locations: []Location{{Name: "test", Rack: LocationData{Name: "test"}, Board: LocationData{Name: "test"}}},
-				Devices:   []DeviceKind{{Name: "test"}},
+				Version:   &ConfigVersion{Version: "1.0"},
+				Locations: []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Devices:   []*DeviceKind{{Name: "test"}},
+			},
+		},
+		{
+			desc: "DeviceConfig has valid version, invalid Locations (Locations not validated here)",
+			config: DeviceConfig{
+				Version:   &ConfigVersion{Version: "1.0"},
+				Locations: []*Location{{Name: ""}},
+			},
+		},
+		{
+			desc: "DeviceConfig has valid version and locations, invalid DeviceKinds (DeviceKinds not validated here)",
+			config: DeviceConfig{
+				Version:   &ConfigVersion{Version: "1.0"},
+				Locations: []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Devices:   []*DeviceKind{{Name: ""}},
 			},
 		},
 	}
@@ -51,22 +66,7 @@ func TestDeviceConfig_Validate_Error(t *testing.T) {
 		{
 			desc: "DeviceConfig has invalid version",
 			config: DeviceConfig{
-				Version: ConfigVersion{Version: "abc"},
-			},
-		},
-		{
-			desc: "DeviceConfig has invalid Locations",
-			config: DeviceConfig{
-				Version:   ConfigVersion{Version: "1.0"},
-				Locations: []Location{{Name: ""}},
-			},
-		},
-		{
-			desc: "DeviceConfig has invalid DeviceKinds",
-			config: DeviceConfig{
-				Version:   ConfigVersion{Version: "1.0"},
-				Locations: []Location{{Name: "test", Rack: LocationData{Name: "test"}, Board: LocationData{Name: "test"}}},
-				Devices:   []DeviceKind{{Name: ""}},
+				Version: &ConfigVersion{Version: "abc"},
 			},
 		},
 	}
@@ -87,8 +87,8 @@ func TestLocation_Validate_Ok(t *testing.T) {
 			desc: "Valid Location instance",
 			location: Location{
 				Name:  "test",
-				Rack:  LocationData{Name: "test"},
-				Board: LocationData{Name: "test"},
+				Rack:  &LocationData{Name: "test"},
+				Board: &LocationData{Name: "test"},
 			},
 		},
 	}
@@ -108,22 +108,22 @@ func TestLocation_Validate_Error(t *testing.T) {
 		{
 			desc: "Location requires a name, but has none",
 			location: Location{
-				Rack:  LocationData{Name: "test"},
-				Board: LocationData{Name: "test"},
+				Rack:  &LocationData{Name: "test"},
+				Board: &LocationData{Name: "test"},
 			},
 		},
 		{
 			desc: "Location requires a rack, but has none",
 			location: Location{
 				Name:  "test",
-				Board: LocationData{Name: "test"},
+				Board: &LocationData{Name: "test"},
 			},
 		},
 		{
 			desc: "Location requires a board, but has none",
 			location: Location{
 				Name: "test",
-				Rack: LocationData{Name: "test"},
+				Rack: &LocationData{Name: "test"},
 			},
 		},
 		{
@@ -135,15 +135,15 @@ func TestLocation_Validate_Error(t *testing.T) {
 		{
 			desc: "Location has an invalid rack",
 			location: Location{
-				Rack:  LocationData{Name: ""},
-				Board: LocationData{Name: "test"},
+				Rack:  &LocationData{Name: ""},
+				Board: &LocationData{Name: "test"},
 			},
 		},
 		{
 			desc: "Location has an invalid board",
 			location: Location{
-				Rack:  LocationData{Name: "test"},
-				Board: LocationData{Name: ""},
+				Rack:  &LocationData{Name: "test"},
+				Board: &LocationData{Name: ""},
 			},
 		},
 	}
@@ -295,15 +295,29 @@ func TestDeviceKind_Validate_Ok(t *testing.T) {
 			desc: "DeviceKind has a valid name and instances",
 			kind: DeviceKind{
 				Name:      "test",
-				Instances: []DeviceInstance{{Location: "test"}},
+				Instances: []*DeviceInstance{{Location: "test"}},
 			},
 		},
 		{
 			desc: "DeviceKind has a valid name, instances, and outputs",
 			kind: DeviceKind{
 				Name:      "test",
-				Instances: []DeviceInstance{{Location: "test"}},
-				Outputs:   []DeviceOutput{{Type: "test"}},
+				Instances: []*DeviceInstance{{Location: "test"}},
+				Outputs:   []*DeviceOutput{{Type: "test"}},
+			},
+		},
+		{
+			desc: "DeviceKind has valid name, invalid instances (DeviceInstance not validated here)",
+			kind: DeviceKind{
+				Name:      "test",
+				Instances: []*DeviceInstance{{Location: ""}},
+			},
+		},
+		{
+			desc: "DeviceKind has valid name, invalid outputs (DeviceOutputs not validated here)",
+			kind: DeviceKind{
+				Name:    "test",
+				Outputs: []*DeviceOutput{{Type: ""}},
 			},
 		},
 	}
@@ -323,20 +337,6 @@ func TestDeviceKind_Validate_Error(t *testing.T) {
 		{
 			desc: "DeviceKind has no name specified",
 			kind: DeviceKind{},
-		},
-		{
-			desc: "DeviceKind has invalid instances",
-			kind: DeviceKind{
-				Name:      "test",
-				Instances: []DeviceInstance{{Location: ""}},
-			},
-		},
-		{
-			desc: "DeviceKind has invalid outputs",
-			kind: DeviceKind{
-				Name:    "test",
-				Outputs: []DeviceOutput{{Type: ""}},
-			},
 		},
 	}
 
@@ -362,7 +362,14 @@ func TestDeviceInstance_Validate_Ok(t *testing.T) {
 			desc: "DeviceInstance has a valid location and outputs",
 			instance: DeviceInstance{
 				Location: "test",
-				Outputs:  []DeviceOutput{{Type: "test"}},
+				Outputs:  []*DeviceOutput{{Type: "test"}},
+			},
+		},
+		{
+			desc: "DeviceInstance has valid location, invalid outputs (DeviceOutputs not validated here)",
+			instance: DeviceInstance{
+				Location: "test",
+				Outputs:  []*DeviceOutput{{Type: ""}},
 			},
 		},
 	}
@@ -383,13 +390,6 @@ func TestDeviceInstance_Validate_Error(t *testing.T) {
 			desc: "DeviceInstance has a no location",
 			instance: DeviceInstance{
 				Location: "",
-			},
-		},
-		{
-			desc: "DeviceInstance has invalid outputs",
-			instance: DeviceInstance{
-				Location: "test",
-				Outputs:  []DeviceOutput{{Type: ""}},
 			},
 		},
 	}
