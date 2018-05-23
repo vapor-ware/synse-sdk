@@ -93,9 +93,6 @@ type ConfigVersion struct {
 	// Version is the config version scheme specified in the config file.
 	Version string
 
-	// file is the path of the file that the version was read from.
-	file string
-
 	// scheme is the SchemeVersion that represents the ConfigVersion's Version.
 	scheme *SchemeVersion
 }

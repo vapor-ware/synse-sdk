@@ -109,7 +109,7 @@ func (validator *SchemeValidator) walkStructFields(v reflect.Value) {
 
 // validateField validates that a field of a struct is valid for the config's
 // version scheme.
-func (validator *SchemeValidator) validateField(field reflect.Value, structField reflect.StructField) {
+func (validator *SchemeValidator) validateField(field reflect.Value, structField reflect.StructField) { // nolint: gocyclo
 	version := validator.Version
 
 	// We should only care about validation if the field is set.
