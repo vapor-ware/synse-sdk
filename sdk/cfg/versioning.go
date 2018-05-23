@@ -6,16 +6,6 @@ import (
 	"strings"
 )
 
-// Comparison is a type that represents the result of a comparison between
-// two SchemeVersions.
-type Comparison uint8
-
-const (
-	LessThan Comparison = iota
-	EqualTo
-	GreaterThan
-)
-
 const (
 	tagAddedIn      = "addedIn"
 	tagDeprecatedIn = "deprecatedIn"
@@ -67,28 +57,34 @@ func (schemeVersion *SchemeVersion) String() string {
 	return fmt.Sprintf("%d.%d", schemeVersion.Major, schemeVersion.Minor)
 }
 
-// Compare compares a SchemeVersion with another SchemeVersion.
-//
-// If this SchemeVersion has a greater version number than the provided
-// one, GreaterThan is returned. If they are equal versions, EqualTo is
-// returned. If it is a lower version, LessThan is returned.
-func (schemeVersion *SchemeVersion) Compare(other *SchemeVersion) Comparison {
-	if schemeVersion.Major > other.Major {
-		return GreaterThan
-	}
-
+// IsLessThan returns true if the SchemeVersion is less than the SchemeVersion
+// provided as a parameter.
+func (schemeVersion *SchemeVersion) IsLessThan(other *SchemeVersion) bool {
 	if schemeVersion.Major < other.Major {
-		return LessThan
+		return true
 	}
+	if schemeVersion.Major == other.Major && schemeVersion.Minor < other.Minor {
+		return true
+	}
+	return false
+}
 
-	if schemeVersion.Minor > other.Minor {
-		return GreaterThan
+// IsGreaterOrEqualTo returns true if the SchemeVersion is greater than or equal to
+// the SchemeVersion provided as a parameter.
+func (schemeVersion *SchemeVersion) IsGreaterOrEqualTo(other *SchemeVersion) bool {
+	if schemeVersion.Major > other.Major {
+		return true
 	}
+	if schemeVersion.Major == other.Major && schemeVersion.Minor >= other.Minor {
+		return true
+	}
+	return false
+}
 
-	if schemeVersion.Minor < other.Minor {
-		return LessThan
-	}
-	return EqualTo
+// IsEqual returns true if the SchemeVersion is equal to the SchemeVersion provided
+// as a parameter.
+func (schemeVersion *SchemeVersion) IsEqual(other *SchemeVersion) bool {
+	return schemeVersion.Major == other.Major && schemeVersion.Minor == other.Minor
 }
 
 // ConfigVersion is a struct that is used to extract the configuration

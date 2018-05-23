@@ -7,6 +7,14 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
+/*
+TODO:
+---------------
+- maintain context of what is being validated?
+	- e.g., for errors, we want to be able to say that X type of config is invalid in file Y
+- use sdk validation errors
+*/
+
 // SchemeValidator is used to validate the scheme of a config.
 type SchemeValidator struct {
 	Version *SchemeVersion
@@ -21,11 +29,18 @@ func NewSchemeValidator(version *SchemeVersion) *SchemeValidator {
 }
 
 func (validator *SchemeValidator) ValidateConfig(config interface{}) error {
-	cfg := reflect.ValueOf(config)
-	if cfg.Kind() != reflect.Ptr {
-		return fmt.Errorf("field validation: config stcut must be specified as a pointer")
+	val := reflect.ValueOf(config)
+
+	if val.Kind() == reflect.Int || val.Kind() == reflect.Ptr {
+		val = val.Elem()
 	}
-	return validator.walk(cfg.Elem())
+
+	// ValidateConfig can only be called on a struct representing a configuration
+	// component.
+	if val.Kind() != reflect.Struct {
+		return fmt.Errorf("config validation: only accepts structs, but got %s", val.Kind())
+	}
+	return validator.walk(val)
 }
 
 func (validator *SchemeValidator) walk(v reflect.Value) error {
@@ -53,6 +68,12 @@ func (validator *SchemeValidator) walkStructFields(v reflect.Value) error {
 		field := v.Field(i)
 		structField := t.Field(i)
 
+		// Ignore unexported fields
+		if structField.PkgPath != "" {
+			continue
+		}
+
+		// First, validate the field of the struct
 		err := validator.validateField(field, structField)
 		if err != nil {
 			return err
@@ -70,7 +91,6 @@ func (validator *SchemeValidator) walkStructFields(v reflect.Value) error {
 }
 
 func (validator *SchemeValidator) validateField(field reflect.Value, structField reflect.StructField) error {
-
 	version := validator.Version
 
 	// We should only care about validation if the field is set.
@@ -82,8 +102,7 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 			if err != nil {
 				return err
 			}
-			// FIXME - perhaps an IsLessThan() function would be better
-			if version.Compare(addedInScheme) == LessThan {
+			if version.IsLessThan(addedInScheme) {
 				return fmt.Errorf("field not supported: '%v'. added in: %v, config version: %v", structField.Name, addedInScheme.String(), version.String())
 			}
 		}
@@ -95,12 +114,11 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 			if err != nil {
 				return err
 			}
-			// FIXME - perhaps an IsGreaterOrEqaul() function would be better
-			cmp := version.Compare(deprecatedInScheme)
-			if cmp == GreaterThan || cmp == EqualTo {
-				// FIXME - this should be a warning. need to figure out how best to return
-				// all errors/all warnings for validation methods
-				return fmt.Errorf("field deprecated: '%v'. deprecated in: %v, config version: %v", structField.Name, deprecatedInScheme.String(), version.String())
+			if version.IsGreaterOrEqualTo(deprecatedInScheme) {
+				logger.Warnf(
+					"config field '%s' was deprecated in scheme version %s (current config scheme: %s)",
+					structField.Name, deprecatedInScheme.String(), version.String(),
+				)
 			}
 		}
 
@@ -111,11 +129,7 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 			if err != nil {
 				return err
 			}
-			// FIXME - perhaps an IsGreaterOrEqaul() function would be better
-			cmp := version.Compare(removedInScheme)
-			if cmp == GreaterThan || cmp == EqualTo {
-				// FIXME - this should be a warning. need to figure out how best to return
-				// all errors/all warnings for validation methods
+			if version.IsGreaterOrEqualTo(removedInScheme) {
 				return fmt.Errorf("field not supported: '%v'. removed in: %v, config version: %v", structField.Name, removedInScheme.String(), version.String())
 			}
 		}
