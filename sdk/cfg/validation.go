@@ -74,6 +74,15 @@ func (validator *SchemeValidator) walk(v reflect.Value) {
 	case reflect.Struct:
 		validator.walkStructFields(v)
 
+		// If the struct implements the ConfigComponent interface, validate the struct.
+		ifaceType := reflect.TypeOf((*ConfigComponent)(nil)).Elem()
+		if v.Type().Implements(ifaceType) {
+			err := v.Interface().(ConfigComponent).Validate()
+			if err != nil {
+				validator.errors.Add(err)
+			}
+		}
+
 	case reflect.Slice:
 		for i := 0; i < v.Len(); i++ {
 			validator.walk(v.Index(i))

@@ -41,69 +41,58 @@ TODO:
 type DeviceConfig struct {
 
 	// Version is the version of the configuration scheme.
-	Version ConfigVersion `yaml:"version,omitempty" addedIn:"1.0"`
+	Version *ConfigVersion `yaml:"version,omitempty" addedIn:"1.0"`
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.
-	Locations []Location `yaml:"locations,omitempty" addedIn:"1.0"`
+	Locations []*Location `yaml:"locations,omitempty" addedIn:"1.0"`
 
 	// Devices are all of the DeviceKinds (and subsequently, all of the
 	// DeviceInstances) that are defined by the configuration.
-	Devices []DeviceKind `yaml:"devices,omitempty" addedIn:"1.0"`
+	Devices []*DeviceKind `yaml:"devices,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the DeviceConfig has no configuration errors.
 //
 // This is called before Devices are created.
-func (deviceConfig *DeviceConfig) Validate() (err error) {
-	err = deviceConfig.Version.Validate()
-	if err != nil {
-		return
-	}
+func (deviceConfig DeviceConfig) Validate() error {
+	// A version must be specified and it must be of the correct format.
+	return deviceConfig.Version.Validate()
 
-	// Validate all of the Locations that the DeviceConfig contains.
-	for _, location := range deviceConfig.Locations {
-		err = location.Validate()
-		if err != nil {
-			return
-		}
-	}
-
-	// Validate all of the DeviceKinds that the DeviceConfig contains.
-	for _, deviceKind := range deviceConfig.Devices {
-		err = deviceKind.Validate()
-		if err != nil {
-			return
-		}
-	}
-	return
+	// Note: We should require >0 locations to be specified, since
+	// instances are required to reference a location. Its unclear if
+	// we want to enforce that here or at a higher level, since we should
+	// permit multiple device configs to be specified, where each could be
+	// a partial config (but the joined config should all be valid..)
+	// TODO: need to figure out how this all works still
 }
 
 // Location defines a location (rack, board) which will be associated with
 // DeviceInstances. The locational information defined here is used by Synse
 // Server to route commands to the proper device instance.
 type Location struct {
-	Name  string       `yaml:"name,omitempty" addedIn:"1.0"`
-	Rack  LocationData `yaml:"rack,omitempty" addedIn:"1.0"`
-	Board LocationData `yaml:"board,omitempty" addedIn:"1.0"`
+	Name  string        `yaml:"name,omitempty"  addedIn:"1.0"`
+	Rack  *LocationData `yaml:"rack,omitempty"  addedIn:"1.0"`
+	Board *LocationData `yaml:"board,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the Location has no configuration errors.
-func (location *Location) Validate() (err error) {
+func (location Location) Validate() error {
 	// All locations must have a name.
 	if location.Name == "" {
 		return fmt.Errorf("location has no 'name' set, but is required")
 	}
 
-	err = location.Rack.Validate()
-	if err != nil {
-		return
+	// Something must be specified for rack
+	if location.Rack == nil || *location.Rack == (LocationData{}) {
+		return fmt.Errorf("location has no 'rack' set, but is required")
 	}
-	err = location.Board.Validate()
-	if err != nil {
-		return
+
+	// Something must be specified for board
+	if location.Board == nil || *location.Board == (LocationData{}) {
+		return fmt.Errorf("location has no 'board' set, but is required")
 	}
-	return
+	return nil
 }
 
 // LocationData defines the name of a locational routing component.
@@ -111,12 +100,12 @@ func (location *Location) Validate() (err error) {
 // The name of a Location component can either be defined directly via the
 // Name field, or from the environment via the FromEnv field.
 type LocationData struct {
-	Name    string `yaml:"name,omitempty" addedIn:"1.0"`
+	Name    string `yaml:"name,omitempty"    addedIn:"1.0"`
 	FromEnv string `yaml:"fromEnv,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the LocationData has no configuration errors.
-func (locData *LocationData) Validate() error {
+func (locData LocationData) Validate() error {
 	if locData.Name == "" && locData.FromEnv == "" {
 		return fmt.Errorf("location requires one of 'name' or 'fromEnv' to be specified, but found neither")
 	}
@@ -181,7 +170,7 @@ type DeviceKind struct {
 	Metadata map[string]string `yaml:"metadata,omitempty" addedIn:"1.0"`
 
 	// Instances contains the configuration data for instances of this DeviceKind.
-	Instances []DeviceInstance `yaml:"instances,omitempty" addedIn:"1.0"`
+	Instances []*DeviceInstance `yaml:"instances,omitempty" addedIn:"1.0"`
 
 	// Outputs describes the reading type outputs provided by instances for this
 	// DeviceKind.
@@ -189,32 +178,15 @@ type DeviceKind struct {
 	// By default, all DeviceInstances for a DeviceKind will inherit these outputs.
 	// This behavior can be changed by setting the DeviceInstance.InheritKindOutputs
 	// flag to false.
-	Outputs []DeviceOutput `yaml:"outputs,omitempty" addedIn:"1.0"`
+	Outputs []*DeviceOutput `yaml:"outputs,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the DeviceKind has no configuration errors.
-func (deviceKind *DeviceKind) Validate() (err error) {
+func (deviceKind DeviceKind) Validate() error {
 	if deviceKind.Name == "" {
-		err = fmt.Errorf("device kind requires 'name', but is empty")
-		return
+		return fmt.Errorf("device kind requires 'name', but is empty")
 	}
-
-	// Validate all of the DeviceInstances that the DeviceKind contains.
-	for _, instance := range deviceKind.Instances {
-		err = instance.Validate()
-		if err != nil {
-			return
-		}
-	}
-
-	// Validate all of the DeviceOutputs that the DeviceKind contains.
-	for _, output := range deviceKind.Outputs {
-		err = output.Validate()
-		if err != nil {
-			return
-		}
-	}
-	return
+	return nil
 }
 
 // DeviceInstance describes an individual instance of a given DeviceKind.
@@ -239,7 +211,7 @@ type DeviceInstance struct {
 	Data map[string]interface{} `yaml:"data,omitempty" addedIn:"1.0"`
 
 	// Outputs describes the reading type output provided by this device instance.
-	Outputs []DeviceOutput `yaml:"outputs,omitempty" addedIn:"1.0"`
+	Outputs []*DeviceOutput `yaml:"outputs,omitempty" addedIn:"1.0"`
 
 	// InheritKindOutputs determines whether the device instance should inherit
 	// the Outputs defined in it's DeviceKind. This should be true by default.
@@ -255,19 +227,17 @@ type DeviceInstance struct {
 }
 
 // Validate validates that the DeviceInstance has no configuration errors.
-func (deviceInstance *DeviceInstance) Validate() (err error) {
+func (deviceInstance DeviceInstance) Validate() error {
+	// All device instances must be associated with a location
 	if deviceInstance.Location == "" {
 		return fmt.Errorf("device kind requires 'location', but is empty")
 	}
 
-	// Validate all of the DeviceOutputs that the DeviceInstance contains.
-	for _, output := range deviceInstance.Outputs {
-		err = output.Validate()
-		if err != nil {
-			return
-		}
-	}
-	return
+	// TODO: the locations here should be validated against the ones that are specified.
+	// There will likely need to be some higher-level validation happening as well, since
+	// the locations config is not in-scope here.
+
+	return nil
 }
 
 // DeviceOutput describes a valid output for the DeviceInstance.
@@ -294,7 +264,8 @@ type DeviceOutput struct {
 }
 
 // Validate validates that the DeviceOutput has no configuration errors.
-func (deviceOutput *DeviceOutput) Validate() error {
+func (deviceOutput DeviceOutput) Validate() error {
+	// All device outputs need to be associated with an output type.
 	if deviceOutput.Type == "" {
 		return fmt.Errorf("device output requires 'type', but is empty")
 	}
