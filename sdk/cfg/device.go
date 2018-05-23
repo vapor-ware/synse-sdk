@@ -10,8 +10,7 @@ import (
 /*
 TODO:
 ---------------
-- error handling w/ context (pkg/errors)
-- more context w/ error messages (e.g. which file it came from)
+- error handling w/ context? (pkg/errors)
 */
 
 // DeviceConfig holds the configuration for the kinds of devices and the
@@ -44,6 +43,7 @@ func (deviceConfig DeviceConfig) Validate() error {
 	// permit multiple device configs to be specified, where each could be
 	// a partial config (but the joined config should all be valid..)
 	// TODO: need to figure out how this all works still
+	// see: https://github.com/vapor-ware/synse-sdk/issues/217
 }
 
 // Location defines a location (rack, board) which will be associated with
