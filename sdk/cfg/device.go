@@ -18,6 +18,16 @@ TODO:
 
 - for validation, consider completely validating before returning an error
   so a user can get a list of all issues at once
+	- for this, consider: maybe config components shouldn't recursively validate.
+	  doing so isn't *bad*, but it begs the question of 'where does the multierror
+	  start from'. e.g., here it would be the DeviceConfig, but since these structs
+	  should reallly just be the config scheme and not much else (in terms of fields),
+	  I don't want to add a multierror field there.
+	- what we could do is have Validate only validate that instance (no nesting), e.g.
+	  'is this required field present?'. the Validate function could fulfill an interface.
+	  Then, a separate validator could walk the config and validate. when it comes across
+	  something that fulfills the interface, it validates that too. then the thing doing
+	  the walking can track the multierror.
 
 - think about having some kind of ConfigContext struct that can be associated
   with configs.

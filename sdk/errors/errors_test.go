@@ -3,26 +3,27 @@ package errors
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"fmt"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestNewMultiError tests creating a new instance of a MultiError.
 func TestNewMultiError(t *testing.T) {
-	var testTable = []struct{
-		desc string
+	var testTable = []struct {
+		desc   string
 		source string
 	}{
 		{
-			desc: "The source is unspecified",
+			desc:   "The source is unspecified",
 			source: "",
 		},
 		{
-			desc: "The source is a simple string",
+			desc:   "The source is a simple string",
 			source: "test",
 		},
 		{
-			desc: "The source is a long string",
+			desc:   "The source is a long string",
 			source: "a long and complex description of the error source",
 		},
 	}
@@ -37,20 +38,20 @@ func TestNewMultiError(t *testing.T) {
 
 // TestMultiError_Error tests getting the error string from a MultiError.
 func TestMultiError_Error(t *testing.T) {
-	var testTable = []struct{
-		desc string
-		source string
-		errs []error
+	var testTable = []struct {
+		desc     string
+		source   string
+		errs     []error
 		expected string
 	}{
 		{
-			desc: "MultiError has no errors",
-			source: "test",
-			errs: []error{},
+			desc:     "MultiError has no errors",
+			source:   "test",
+			errs:     []error{},
 			expected: "",
 		},
 		{
-			desc: "MultiError has 1 error, no source",
+			desc:   "MultiError has 1 error, no source",
 			source: "",
 			errs: []error{
 				fmt.Errorf("error 1"),
@@ -58,7 +59,7 @@ func TestMultiError_Error(t *testing.T) {
 			expected: "MultiError has 1 error(s) for source: unspecified\nerror 1\n",
 		},
 		{
-			desc: "MultiError has 1 error, with source",
+			desc:   "MultiError has 1 error, with source",
 			source: "test",
 			errs: []error{
 				fmt.Errorf("error 1"),
@@ -66,7 +67,7 @@ func TestMultiError_Error(t *testing.T) {
 			expected: "MultiError has 1 error(s) for source: test\nerror 1\n",
 		},
 		{
-			desc: "MultiError has multiple errors, no source",
+			desc:   "MultiError has multiple errors, no source",
 			source: "",
 			errs: []error{
 				fmt.Errorf("error 1"),
@@ -76,7 +77,7 @@ func TestMultiError_Error(t *testing.T) {
 			expected: "MultiError has 3 error(s) for source: unspecified\nerror 1\nerror 2\nerror 3\n",
 		},
 		{
-			desc: "MultiError has multiple errors, with source",
+			desc:   "MultiError has multiple errors, with source",
 			source: "test",
 			errs: []error{
 				fmt.Errorf("error 1"),
@@ -90,7 +91,7 @@ func TestMultiError_Error(t *testing.T) {
 	for _, testCase := range testTable {
 		merr := MultiError{
 			Errors: testCase.errs,
-			For: testCase.source,
+			For:    testCase.source,
 		}
 
 		errStr := merr.Error()
@@ -100,14 +101,14 @@ func TestMultiError_Error(t *testing.T) {
 
 // TestMultiError_Add tests adding errors to the MultiError
 func TestMultiError_Add(t *testing.T) {
-	var testTable = []struct{
-		desc string
-		toAdd []error
+	var testTable = []struct {
+		desc        string
+		toAdd       []error
 		expectedLen int
 	}{
 		{
-			desc: "Add no errors to a MultiError",
-			toAdd: []error{},
+			desc:        "Add no errors to a MultiError",
+			toAdd:       []error{},
 			expectedLen: 0,
 		},
 		{
@@ -136,5 +137,89 @@ func TestMultiError_Add(t *testing.T) {
 			merr.Add(e)
 		}
 		assert.Equal(t, testCase.expectedLen, len(merr.Errors), testCase.desc)
+	}
+}
+
+// TestMultiError_HasErrors tests checking whether or not a MultiError has errors specified.
+func TestMultiError_HasErrors(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		expected bool
+		errors   []error
+	}{
+		{
+			desc:     "No errors",
+			expected: false,
+			errors:   []error{},
+		},
+		{
+			desc:     "Has one error",
+			expected: true,
+			errors: []error{
+				fmt.Errorf("error 1"),
+			},
+		},
+		{
+			desc:     "Has multiple errors",
+			expected: true,
+			errors: []error{
+				fmt.Errorf("error 1"),
+				fmt.Errorf("error 2"),
+				fmt.Errorf("error 3"),
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := MultiError{
+			Errors: testCase.errors,
+		}
+		actual := merr.HasErrors()
+		assert.Equal(t, testCase.expected, actual, testCase.desc)
+	}
+}
+
+// TestMultiError_Err tests getting an error return from the MultiError.
+func TestMultiError_Err(t *testing.T) {
+	var testTable = []struct {
+		desc    string
+		isError bool
+		errors  []error
+	}{
+		{
+			desc:    "No errors, should return nil",
+			isError: false,
+			errors:  []error{},
+		},
+		{
+			desc:    "Has one error, should return MultiError",
+			isError: true,
+			errors: []error{
+				fmt.Errorf("error 1"),
+			},
+		},
+		{
+			desc:    "Has multiple errors, should return MultiError",
+			isError: true,
+			errors: []error{
+				fmt.Errorf("error 1"),
+				fmt.Errorf("error 2"),
+				fmt.Errorf("error 3"),
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := MultiError{
+			Errors: testCase.errors,
+		}
+		err := merr.Err()
+
+		if testCase.isError {
+			assert.Error(t, err, testCase.desc)
+			assert.IsType(t, &MultiError{}, err, testCase.desc)
+		} else {
+			assert.NoError(t, err, testCase.desc)
+		}
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
@@ -24,6 +25,8 @@ TODO:
 // SchemeValidator is used to validate the scheme of a config.
 type SchemeValidator struct {
 	Version *SchemeVersion
+
+	errors *errors.MultiError
 }
 
 // NewSchemeValidator creates a new instance of a SchemeValidator for the
@@ -31,6 +34,7 @@ type SchemeValidator struct {
 func NewSchemeValidator(version *SchemeVersion) *SchemeValidator {
 	return &SchemeValidator{
 		Version: version,
+		errors:  errors.NewMultiError("scheme validation"),
 	}
 }
 
@@ -58,28 +62,23 @@ func (validator *SchemeValidator) ValidateConfig(config interface{}) error {
 	if val.Kind() != reflect.Struct {
 		return fmt.Errorf("config validation: only accepts structs, but got %s", val.Kind())
 	}
-	return validator.walk(val)
+	validator.walk(val)
+
+	return validator.errors.Err()
 }
 
 // walk is in intermediary step in config validation that will attempt to
 // walk down into any nested fields/collections.
-func (validator *SchemeValidator) walk(v reflect.Value) error {
+func (validator *SchemeValidator) walk(v reflect.Value) {
 	switch v.Kind() {
 	case reflect.Struct:
-		err := validator.walkStructFields(v)
-		if err != nil {
-			return err
-		}
+		validator.walkStructFields(v)
 
 	case reflect.Slice:
 		for i := 0; i < v.Len(); i++ {
-			err := validator.walk(v.Index(i))
-			if err != nil {
-				return err
-			}
+			validator.walk(v.Index(i))
 		}
 	}
-	return nil
 }
 
 // walkStructFields goes through all of the fields of a struct and validates
@@ -87,7 +86,7 @@ func (validator *SchemeValidator) walk(v reflect.Value) error {
 //
 // If the field is a nested struct or a collection of nested structs, it will
 // be validated as well.
-func (validator *SchemeValidator) walkStructFields(v reflect.Value) error {
+func (validator *SchemeValidator) walkStructFields(v reflect.Value) {
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		field := v.Field(i)
@@ -99,25 +98,18 @@ func (validator *SchemeValidator) walkStructFields(v reflect.Value) error {
 		}
 
 		// First, validate the field of the struct
-		err := validator.validateField(field, structField)
-		if err != nil {
-			return err
-		}
+		validator.validateField(field, structField)
 
 		// Try to walk through this field. If it is any nested type,
 		// it will go through and validate, otherwise it will return
 		// with no error.
-		err = validator.walk(field)
-		if err != nil {
-			return err
-		}
+		validator.walk(field)
 	}
-	return nil
 }
 
 // validateField validates that a field of a struct is valid for the config's
 // version scheme.
-func (validator *SchemeValidator) validateField(field reflect.Value, structField reflect.StructField) error {
+func (validator *SchemeValidator) validateField(field reflect.Value, structField reflect.StructField) {
 	version := validator.Version
 
 	// We should only care about validation if the field is set.
@@ -127,10 +119,10 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 		if tag != "" {
 			addedInScheme, err := NewSchemeVersion(tag)
 			if err != nil {
-				return err
+				validator.errors.Add(err)
 			}
 			if version.IsLessThan(addedInScheme) {
-				return fmt.Errorf("field not supported: '%v'. added in: %v, config version: %v", structField.Name, addedInScheme.String(), version.String())
+				validator.errors.Add(fmt.Errorf("field not supported: '%v'. added in: %v, config version: %v", structField.Name, addedInScheme.String(), version.String()))
 			}
 		}
 
@@ -139,7 +131,7 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 		if tag != "" {
 			deprecatedInScheme, err := NewSchemeVersion(tag)
 			if err != nil {
-				return err
+				validator.errors.Add(err)
 			}
 			if version.IsGreaterOrEqualTo(deprecatedInScheme) {
 				logger.Warnf(
@@ -154,14 +146,13 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 		if tag != "" {
 			removedInScheme, err := NewSchemeVersion(tag)
 			if err != nil {
-				return err
+				validator.errors.Add(err)
 			}
 			if version.IsGreaterOrEqualTo(removedInScheme) {
-				return fmt.Errorf("field not supported: '%v'. removed in: %v, config version: %v", structField.Name, removedInScheme.String(), version.String())
+				validator.errors.Add(fmt.Errorf("field not supported: '%v'. removed in: %v, config version: %v", structField.Name, removedInScheme.String(), version.String()))
 			}
 		}
 	}
-	return nil
 }
 
 // isEmptyValue checks if a value is its empty type.

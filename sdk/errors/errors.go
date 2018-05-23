@@ -11,7 +11,6 @@ TODO:
 - add error types for validation errors
 */
 
-
 // MultiError is a collection of errors that also fulfills the error interface.
 //
 // It can be used to aggregate errors and then return them all at once.
@@ -28,8 +27,21 @@ type MultiError struct {
 func NewMultiError(source string) *MultiError {
 	return &MultiError{
 		Errors: []error{},
-		For: source,
+		For:    source,
 	}
+}
+
+// Err returns the MultiError if any errors exist. Otherwise, it returns nil.
+func (err *MultiError) Err() error {
+	if err.HasErrors() {
+		return err
+	}
+	return nil
+}
+
+// HasErrors checks to see if the MultiError is tracking any errors.
+func (err *MultiError) HasErrors() bool {
+	return len(err.Errors) != 0
 }
 
 // Add adds an error to the MultiError.
