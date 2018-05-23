@@ -16,37 +16,37 @@ func TestDeviceConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "DeviceConfig has valid version",
 			config: DeviceConfig{
-				Version: &ConfigVersion{Version: "1.0"},
+				ConfigVersion: ConfigVersion{Version: "1.0"},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version and location",
 			config: DeviceConfig{
-				Version:   &ConfigVersion{Version: "1.0"},
-				Locations: []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				ConfigVersion: ConfigVersion{Version: "1.0"},
+				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version, location, and DeviceKind",
 			config: DeviceConfig{
-				Version:   &ConfigVersion{Version: "1.0"},
-				Locations: []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
-				Devices:   []*DeviceKind{{Name: "test"}},
+				ConfigVersion: ConfigVersion{Version: "1.0"},
+				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Devices:       []*DeviceKind{{Name: "test"}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version, invalid Locations (Locations not validated here)",
 			config: DeviceConfig{
-				Version:   &ConfigVersion{Version: "1.0"},
-				Locations: []*Location{{Name: ""}},
+				ConfigVersion: ConfigVersion{Version: "1.0"},
+				Locations:     []*Location{{Name: ""}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version and locations, invalid DeviceKinds (DeviceKinds not validated here)",
 			config: DeviceConfig{
-				Version:   &ConfigVersion{Version: "1.0"},
-				Locations: []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
-				Devices:   []*DeviceKind{{Name: ""}},
+				ConfigVersion: ConfigVersion{Version: "1.0"},
+				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Devices:       []*DeviceKind{{Name: ""}},
 			},
 		},
 	}
@@ -66,7 +66,7 @@ func TestDeviceConfig_Validate_Error(t *testing.T) {
 		{
 			desc: "DeviceConfig has invalid version",
 			config: DeviceConfig{
-				Version: &ConfigVersion{Version: "abc"},
+				ConfigVersion: ConfigVersion{Version: "abc"},
 			},
 		},
 	}

@@ -10,38 +10,15 @@ import (
 /*
 TODO:
 ---------------
-- functionality to read in from file
-- functionality for default search paths.. '.', '/synse/etc/config', ...
-
-- error handling w/ context (pkg/errors)
-- more context w/ error messages (e.g. which file it came from)
-
-- for validation, consider completely validating before returning an error
-  so a user can get a list of all issues at once
-	- for this, consider: maybe config components shouldn't recursively validate.
-	  doing so isn't *bad*, but it begs the question of 'where does the multierror
-	  start from'. e.g., here it would be the DeviceConfig, but since these structs
-	  should reallly just be the config scheme and not much else (in terms of fields),
-	  I don't want to add a multierror field there.
-	- what we could do is have Validate only validate that instance (no nesting), e.g.
-	  'is this required field present?'. the Validate function could fulfill an interface.
-	  Then, a separate validator could walk the config and validate. when it comes across
-	  something that fulfills the interface, it validates that too. then the thing doing
-	  the walking can track the multierror.
-
-- think about having some kind of ConfigContext struct that can be associated
-  with configs.
-	- could describe where the config came from (file, dynamic, env, ...)
-	- could provide info depending on where it came from (which env variable(s), which file, ...)
-
+- error handling w/ context? (pkg/errors)
 */
 
 // DeviceConfig holds the configuration for the kinds of devices and the
 // instances of those kinds which a plugin will manage.
 type DeviceConfig struct {
 
-	// Version is the version of the configuration scheme.
-	Version *ConfigVersion `yaml:"version,omitempty" addedIn:"1.0"`
+	// ConfigVersion is the version of the configuration scheme.
+	ConfigVersion
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.
@@ -57,7 +34,8 @@ type DeviceConfig struct {
 // This is called before Devices are created.
 func (deviceConfig DeviceConfig) Validate() error {
 	// A version must be specified and it must be of the correct format.
-	return deviceConfig.Version.Validate()
+	_, err := deviceConfig.GetSchemeVersion()
+	return err
 
 	// Note: We should require >0 locations to be specified, since
 	// instances are required to reference a location. Its unclear if
@@ -65,6 +43,7 @@ func (deviceConfig DeviceConfig) Validate() error {
 	// permit multiple device configs to be specified, where each could be
 	// a partial config (but the joined config should all be valid..)
 	// TODO: need to figure out how this all works still
+	// see: https://github.com/vapor-ware/synse-sdk/issues/217
 }
 
 // Location defines a location (rack, board) which will be associated with

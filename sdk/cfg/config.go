@@ -9,6 +9,13 @@ type ConfigComponent interface {
 	Validate() error
 }
 
+// ConfigBase is an interface that the base configuration struct should
+// implement. This allows the SchemeValidator to get the SchemeVersion
+// for that given configuration.
+type ConfigBase interface {
+	GetSchemeVersion() (*SchemeVersion, error)
+}
+
 // ConfigContext is a structure that associates context with configuration info.
 //
 // The context around some bit of configuration is useful in logging/errors, as
@@ -17,12 +24,15 @@ type ConfigContext struct {
 	// Source is where the config came from.
 	Source string
 
-	// Config is the configuration itself.
-	Config interface{}
+	// Config is the configuration itself. This should be a configuration struct
+	// that implements ConfigBase. That is to say, the config held in this context
+	// should be the root config struct for that config type. This will allow us
+	// to get the scheme version of the configuration.
+	Config ConfigBase
 }
 
 // NewConfigContext creates a new ConfigContext instance.
-func NewConfigContext(source string, config interface{}) *ConfigContext {
+func NewConfigContext(source string, config ConfigBase) *ConfigContext {
 	return &ConfigContext{
 		Source: source,
 		Config: config,
@@ -32,6 +42,6 @@ func NewConfigContext(source string, config interface{}) *ConfigContext {
 // IsDeviceConfig checks whether the config in this context
 // is a DeviceConfig.
 func (ctx *ConfigContext) IsDeviceConfig() bool {
-	_, ok := ctx.Config.(DeviceConfig)
+	_, ok := ctx.Config.(*DeviceConfig)
 	return ok
 }

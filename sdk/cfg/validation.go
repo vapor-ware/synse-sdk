@@ -8,63 +8,92 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
-/*
-TODO:
----------------
-- maintain context of what is being validated?
-	- e.g., for errors, we want to be able to say that X type of config is invalid in file Y
-- use sdk validation errors
-
-
-- We could make this scheme validation logic its own project. I haven't really
-  come across anything like this, and I think that its a pretty simple and decent
-  solution for what it tries to do.. definitely easier than managing external scheme
-  files or managing multiple versions of different structs, etc.
-*/
+// Validator is the global SchemeValidator that is used to validate plugin
+// configuration files.
+var Validator = &SchemeValidator{}
 
 // SchemeValidator is used to validate the scheme of a config.
 type SchemeValidator struct {
-	Version *SchemeVersion
+	// context is the ConfigContext, which references the configuration
+	// currently being validated.
+	context *ConfigContext
 
+	// errors is the collection of errors that are found when validating.
 	errors *errors.MultiError
+
+	// version is the version of the scheme to validate configs with. This
+	// is taken from the configuration being validated.
+	version *SchemeVersion
 }
 
-// NewSchemeValidator creates a new instance of a SchemeValidator for the
-// specified SchemeVersion.
-func NewSchemeValidator(version *SchemeVersion) *SchemeValidator {
-	return &SchemeValidator{
-		Version: version,
-		errors:  errors.NewMultiError("scheme validation"),
+// Validate validates a struct that holds configuration information. There are
+// two kinds of validation that occur: field version validation, data validation.
+//
+// Field version validation is where we go through the config struct, and all
+// nested config structs, and look for the "addedIn", "deprecatedIn", and "removedIn"
+// tags. It compares the versions specified by those tags with the scheme version
+// of the configuration itself. This validation will result in errors if the field
+// has a value and the version of the config scheme is out of bounds (e.g. smaller
+// than the addedIn value, or greater than or equal to the removedIn value).
+// Warnings are logged if the config scheme is greater than or equal to the
+// deprecatedIn tag.
+//
+// Data validation is where the Validate() method is called a struct which implements
+// the ConfigComponent interface. Each struct should define its own validation. The
+// validation here is typically checking to make sure required values exist, or that
+// values are correct and can be parsed correctly.
+//
+// This function takes a ConfigContext, which provides both the SchemeVersion to
+// validate against, and the config to validate, and a "source", which is attributed
+// to the errors in the event that any are found.
+func (validator *SchemeValidator) Validate(context *ConfigContext, source string) error {
+	// Before we start, apply the state to the validator.
+	version, err := context.Config.GetSchemeVersion()
+	if err != nil {
+		return err
 	}
+	validator.context = context
+	validator.errors = errors.NewMultiError(source)
+	validator.version = version
+
+	// Once we're done validating, clear the state from this validation.
+	defer validator.clearState()
+
+	// Now, validate the configuration provided by the context.
+	validator.validate(context.Config)
+
+	// Return validation errors, if any were found.
+	return validator.errors.Err()
 }
 
-// ValidateConfig validates a struct that holds configuration information. The
-// validation works by search all fields and nested fields for the "addedIn",
-// "deprecatedIn", and "removedIn" tags. It compares the versions specified in
-// those tags with the scheme version of the configuration itself.
-//
-// Validation will result in errors if a field has a value and the version of the
-// config scheme is out of bounds with the tags. A version could be out of bounds
-// if it is less than the "addedIn" tag, or greater than or equal to the "removedIn"
-// tag.
-//
-// Validation will log a warning if a field has a value and the version of the
-// config scheme is greater than or equal to the "deprecatedIn" flag.
-func (validator *SchemeValidator) ValidateConfig(config interface{}) error {
+// clearState clears the state tracked for a single validation run.
+// TODO - make sure we can still return errors correctly with this.
+func (validator *SchemeValidator) clearState() {
+	validator.context = nil
+	validator.errors = nil
+	validator.version = nil
+}
+
+// validate is the entrypoint for validation.
+func (validator *SchemeValidator) validate(config interface{}) {
 	val := reflect.ValueOf(config)
 
-	if val.Kind() == reflect.Int || val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Interface || val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
 
-	// ValidateConfig can only be called on a struct representing a configuration
-	// component.
+	// ValidateConfig can only be called on a struct representing a
+	// configuration component.
 	if val.Kind() != reflect.Struct {
-		return fmt.Errorf("config validation: only accepts structs, but got %s", val.Kind())
+		validator.errors.Add(errors.NewValidationError(
+			validator.context.Source,
+			fmt.Sprintf("config validation: only accepts structs, but got %s", val.Kind()),
+		))
+		// Since we shouldn't be validating against anything else, there is
+		// no point in doing anything more here.
+		return
 	}
 	validator.walk(val)
-
-	return validator.errors.Err()
 }
 
 // walk is in intermediary step in config validation that will attempt to
@@ -79,7 +108,10 @@ func (validator *SchemeValidator) walk(v reflect.Value) {
 		if v.Type().Implements(ifaceType) {
 			err := v.Interface().(ConfigComponent).Validate()
 			if err != nil {
-				validator.errors.Add(err)
+				validator.errors.Add(errors.NewValidationError(
+					validator.context.Source,
+					err.Error(),
+				))
 			}
 		}
 
@@ -119,7 +151,7 @@ func (validator *SchemeValidator) walkStructFields(v reflect.Value) {
 // validateField validates that a field of a struct is valid for the config's
 // version scheme.
 func (validator *SchemeValidator) validateField(field reflect.Value, structField reflect.StructField) { // nolint: gocyclo
-	version := validator.Version
+	version := validator.version
 
 	// We should only care about validation if the field is set.
 	if !validator.isEmptyValue(field) {
@@ -131,7 +163,12 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 				validator.errors.Add(err)
 			}
 			if version.IsLessThan(addedInScheme) {
-				validator.errors.Add(fmt.Errorf("field not supported: '%v'. added in: %v, config version: %v", structField.Name, addedInScheme.String(), version.String()))
+				validator.errors.Add(errors.NewFieldNotSupportedError(
+					validator.context.Source,
+					structField.Name,
+					addedInScheme.String(),
+					version.String(),
+				))
 			}
 		}
 
@@ -158,7 +195,12 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 				validator.errors.Add(err)
 			}
 			if version.IsGreaterOrEqualTo(removedInScheme) {
-				validator.errors.Add(fmt.Errorf("field not supported: '%v'. removed in: %v, config version: %v", structField.Name, removedInScheme.String(), version.String()))
+				validator.errors.Add(errors.NewFieldRemovedError(
+					validator.context.Source,
+					structField.Name,
+					removedInScheme.String(),
+					version.String(),
+				))
 			}
 		}
 	}
