@@ -91,7 +91,7 @@ func (schemeVersion *SchemeVersion) IsEqual(other *SchemeVersion) bool {
 // scheme version from any config file.
 type ConfigVersion struct {
 	// Version is the config version scheme specified in the config file.
-	Version string
+	Version string `yaml:"version,omitempty" addedIn:"1.0"`
 
 	// scheme is the SchemeVersion that represents the ConfigVersion's Version.
 	scheme *SchemeVersion
@@ -127,16 +127,6 @@ func (configVersion *ConfigVersion) parseScheme() (err error) {
 		Major: maj,
 		Minor: min,
 	}
-	return nil
-}
-
-// Validate validates that the ConfigVersion has no configuration errors.
-func (configVersion *ConfigVersion) Validate() error {
-	v, err := NewSchemeVersion(configVersion.Version)
-	if err != nil {
-		return err
-	}
-	configVersion.scheme = v
 	return nil
 }
 
