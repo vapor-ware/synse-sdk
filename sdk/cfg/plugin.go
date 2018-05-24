@@ -3,80 +3,16 @@ package cfg
 import (
 	"time"
 
-	"os"
-
-	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/viper"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
 const (
 	modeSerial   = "serial"
 	modeParallel = "parallel"
+
+	networkTypeTCP  = "tcp"
+	networkTypeUnix = "unix"
 )
-
-// NewPluginConfig creates a new instance of PluginConfig, populated from
-// the configuration read in by Viper. This will include config options from
-// the command line and from file.
-func NewPluginConfig() (*PluginConfig, error) {
-	// First, we setup all the lookup info for the viper instance.
-	viper.SetConfigName("config")
-
-	// Set the environment variable lookup
-	viper.SetEnvPrefix("plugin")
-	viper.AutomaticEnv()
-
-	// If the PLUGIN_CONFIG environment variable is set, we will only search for
-	// the config in that specified path, as we should expect the user-specified
-	// value to be there. Otherwise, we will look through a set of pre-defined
-	// configuration locations (in order of search):
-	//  - current working directory
-	//  - local config directory
-	//  - the default config location in /etc
-	configPath := os.Getenv(EnvPluginConfig)
-	if configPath != "" {
-		viper.AddConfigPath(configPath)
-	} else {
-		for _, path := range pluginConfigSearchPaths {
-			viper.AddConfigPath(path)
-		}
-	}
-
-	// Set default values for the PluginConfig
-	SetDefaults()
-
-	// will be used for the ConfigContext
-	//configFile := viper.ConfigFileUsed()
-
-	// Read in the configuration
-	err := viper.ReadInConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	config := &PluginConfig{}
-	err = mapstructure.Decode(viper.AllSettings(), config)
-	if err != nil {
-		return nil, err
-	}
-
-	// FIXME: we should probably return a ConfigContext from this.
-	return config, nil
-}
-
-// SetDefaults sets the default values for the PluginConfig via Viper.
-func SetDefaults() {
-	viper.SetDefault("debug", false)
-	viper.SetDefault("settings.mode", modeSerial)
-	viper.SetDefault("settings.read.interval", "1s")
-	viper.SetDefault("settings.read.buffer", 100)
-	viper.SetDefault("settings.read.enabled", true)
-	viper.SetDefault("settings.write.interval", "1s")
-	viper.SetDefault("settings.write.buffer", 100)
-	viper.SetDefault("settings.write.max", 100)
-	viper.SetDefault("settings.write.enabled", true)
-	viper.SetDefault("settings.transaction.ttl", "5m")
-}
 
 // PluginConfig contains the configuration options for the plugin.
 type PluginConfig struct {
@@ -107,7 +43,7 @@ type PluginConfig struct {
 }
 
 // Validate validates that the PluginConfig has no configuration errors.
-func (config *PluginConfig) Validate(multiErr *errors.MultiError) {
+func (config PluginConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
 	_, err := config.GetSchemeVersion()
 	if err != nil {
@@ -143,7 +79,7 @@ type PluginSettings struct {
 }
 
 // Validate validates that the PluginSettings has no configuration errors.
-func (settings *PluginSettings) Validate(multiErr *errors.MultiError) {
+func (settings PluginSettings) Validate(multiErr *errors.MultiError) {
 	if settings.Mode != modeSerial && settings.Mode != modeParallel {
 		multiErr.Add(errors.NewInvalidValueError(
 			multiErr.Context["source"],
@@ -177,9 +113,17 @@ type NetworkSettings struct {
 }
 
 // Validate validates that the NetworkSettings has no configuration errors.
-func (settings *NetworkSettings) Validate(multiErr *errors.MultiError) {
+func (settings NetworkSettings) Validate(multiErr *errors.MultiError) {
 	if settings.Type == "" {
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network.type"))
+	} else {
+		if settings.Type != networkTypeTCP && settings.Type != networkTypeUnix {
+			multiErr.Add(errors.NewInvalidValueError(
+				multiErr.Context["source"],
+				"network.type",
+				"one of: unix, tcp",
+			))
+		}
 	}
 	if settings.Address == "" {
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network.address"))
@@ -192,7 +136,7 @@ type DynamicRegistrationSettings struct {
 }
 
 // Validate validates that the DynamicRegistrationSettings has no configuration errors.
-func (settings *DynamicRegistrationSettings) Validate(multiErr *errors.MultiError) {
+func (settings DynamicRegistrationSettings) Validate(multiErr *errors.MultiError) {
 	// todo
 }
 
@@ -210,8 +154,22 @@ type LimiterSettings struct {
 }
 
 // Validate validates that the LimiterSettings has no configuration errors.
-func (settings *LimiterSettings) Validate(multiErr *errors.MultiError) {
-	// Nothing to validate.
+func (settings LimiterSettings) Validate(multiErr *errors.MultiError) {
+	if settings.Rate < 0 {
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"limiter.rate",
+			"greater than or equal to 0",
+		))
+	}
+
+	if settings.Burst < 0 {
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"limiter.burst",
+			"greater than or equal to 0",
+		))
+	}
 }
 
 // ReadSettings provides configuration options for read operations.
@@ -230,7 +188,7 @@ type ReadSettings struct {
 }
 
 // Validate validates that the ReadSettings has no configuration errors.
-func (settings *ReadSettings) Validate(multiErr *errors.MultiError) {
+func (settings ReadSettings) Validate(multiErr *errors.MultiError) {
 	// Try parsing the interval to validate it is a correctly specified
 	// duration string.
 	_, err := settings.GetInterval()
@@ -277,7 +235,7 @@ type WriteSettings struct {
 }
 
 // Validate validates that the WriteSettings has no configuration errors.
-func (settings *WriteSettings) Validate(multiErr *errors.MultiError) {
+func (settings WriteSettings) Validate(multiErr *errors.MultiError) {
 	// Try parsing the interval to validate it is a correctly specified
 	// duration string.
 	_, err := settings.GetInterval()
@@ -307,7 +265,7 @@ func (settings *WriteSettings) Validate(multiErr *errors.MultiError) {
 
 // GetInterval gets the write interval as a duration. If the config
 // has been validated successfully, this should never return an error.
-func (settings *WriteSettings) GetInterval() (time.Duration, error) {
+func (settings WriteSettings) GetInterval() (time.Duration, error) {
 	return time.ParseDuration(settings.Interval)
 }
 
@@ -318,7 +276,7 @@ type TransactionSettings struct {
 }
 
 // Validate validates that the TransactionSettings has no configuration errors.
-func (settings *TransactionSettings) Validate(multiErr *errors.MultiError) {
+func (settings TransactionSettings) Validate(multiErr *errors.MultiError) {
 	// Try parsing the interval to validate it is a correctly specified
 	// duration string.
 	_, err := settings.GetTTL()
