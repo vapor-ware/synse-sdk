@@ -59,6 +59,8 @@ func NewPluginConfig() (*PluginConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// FIXME: we should probably return a ConfigContext from this.
 	return config, nil
 }
 
