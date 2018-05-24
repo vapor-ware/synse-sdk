@@ -11,10 +11,9 @@ import (
 )
 
 var (
-	// TODO: use this once plugin configs are added/updated
 	// pluginConfigSearchPaths define the search paths, in order of evaluation,
 	// that are used when looking for the plugin configuration file.
-	//pluginConfigSearchPaths = []string{".", "./config", "/etc/synse/plugin/config"}
+	pluginConfigSearchPaths = []string{".", "./config", "/etc/synse/plugin/config"}
 
 	// deviceConfigSearchPaths define the search paths, in order of evaluation,
 	// that are used when looking for device configuration files.

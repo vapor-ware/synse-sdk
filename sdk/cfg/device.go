@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 // DeviceConfig holds the configuration for the kinds of devices and the

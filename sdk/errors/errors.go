@@ -25,8 +25,8 @@ type MultiError struct {
 // NewMultiError creates a new instance of a MultiError.
 func NewMultiError(source string) *MultiError {
 	return &MultiError{
-		Errors: []error{},
-		For:    source,
+		Errors:  []error{},
+		For:     source,
 		Context: map[string]string{},
 	}
 }

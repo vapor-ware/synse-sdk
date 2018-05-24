@@ -3,13 +3,78 @@ package cfg
 import (
 	"time"
 
+	"os"
+
+	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/viper"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
 const (
-	modeSerial = "serial"
+	modeSerial   = "serial"
 	modeParallel = "parallel"
 )
+
+// NewPluginConfig creates a new instance of PluginConfig, populated from
+// the configuration read in by Viper. This will include config options from
+// the command line and from file.
+func NewPluginConfig() (*PluginConfig, error) {
+	// First, we setup all the lookup info for the viper instance.
+	viper.SetConfigName("config")
+
+	// Set the environment variable lookup
+	viper.SetEnvPrefix("plugin")
+	viper.AutomaticEnv()
+
+	// If the PLUGIN_CONFIG environment variable is set, we will only search for
+	// the config in that specified path, as we should expect the user-specified
+	// value to be there. Otherwise, we will look through a set of pre-defined
+	// configuration locations (in order of search):
+	//  - current working directory
+	//  - local config directory
+	//  - the default config location in /etc
+	configPath := os.Getenv(EnvPluginConfig)
+	if configPath != "" {
+		viper.AddConfigPath(configPath)
+	} else {
+		for _, path := range pluginConfigSearchPaths {
+			viper.AddConfigPath(path)
+		}
+	}
+
+	// Set default values for the PluginConfig
+	SetDefaults()
+
+	// will be used for the ConfigContext
+	//configFile := viper.ConfigFileUsed()
+
+	// Read in the configuration
+	err := viper.ReadInConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	config := &PluginConfig{}
+	err = mapstructure.Decode(viper.AllSettings(), config)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+// SetDefaults sets the default values for the PluginConfig via Viper.
+func SetDefaults() {
+	viper.SetDefault("debug", false)
+	viper.SetDefault("settings.mode", modeSerial)
+	viper.SetDefault("settings.read.interval", "1s")
+	viper.SetDefault("settings.read.buffer", 100)
+	viper.SetDefault("settings.read.enabled", true)
+	viper.SetDefault("settings.write.interval", "1s")
+	viper.SetDefault("settings.write.buffer", 100)
+	viper.SetDefault("settings.write.max", 100)
+	viper.SetDefault("settings.write.enabled", true)
+	viper.SetDefault("settings.transaction.ttl", "5m")
+}
 
 // PluginConfig contains the configuration options for the plugin.
 type PluginConfig struct {
@@ -44,6 +109,9 @@ func (config *PluginConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
 	_, err := config.GetSchemeVersion()
 	if err != nil {
+		// TODO -- using multiErr.Context["source"] assumes that all of the
+		// configs came from file. Need to see if there is a way to check
+		// viper for whether or not we know if the source is file or commandline.
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
 
