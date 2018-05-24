@@ -5,13 +5,8 @@ import (
 	"os"
 
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
-
-/*
-TODO:
----------------
-- error handling w/ context? (pkg/errors)
-*/
 
 // DeviceConfig holds the configuration for the kinds of devices and the
 // instances of those kinds which a plugin will manage.
@@ -32,10 +27,12 @@ type DeviceConfig struct {
 // Validate validates that the DeviceConfig has no configuration errors.
 //
 // This is called before Devices are created.
-func (deviceConfig DeviceConfig) Validate() error {
+func (deviceConfig DeviceConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
 	_, err := deviceConfig.GetSchemeVersion()
-	return err
+	if err != nil {
+		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
+	}
 
 	// Note: We should require >0 locations to be specified, since
 	// instances are required to reference a location. Its unclear if
@@ -56,22 +53,21 @@ type Location struct {
 }
 
 // Validate validates that the Location has no configuration errors.
-func (location Location) Validate() error {
+func (location Location) Validate(multiErr *errors.MultiError) {
 	// All locations must have a name.
 	if location.Name == "" {
-		return fmt.Errorf("location has no 'name' set, but is required")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "location.name"))
 	}
 
 	// Something must be specified for rack
 	if location.Rack == nil || *location.Rack == (LocationData{}) {
-		return fmt.Errorf("location has no 'rack' set, but is required")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "location.rack"))
 	}
 
 	// Something must be specified for board
 	if location.Board == nil || *location.Board == (LocationData{}) {
-		return fmt.Errorf("location has no 'board' set, but is required")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "location.board"))
 	}
-	return nil
 }
 
 // LocationData defines the name of a locational routing component.
@@ -84,19 +80,20 @@ type LocationData struct {
 }
 
 // Validate validates that the LocationData has no configuration errors.
-func (locData LocationData) Validate() error {
+func (locData LocationData) Validate(multiErr *errors.MultiError) {
 	if locData.Name == "" && locData.FromEnv == "" {
-		return fmt.Errorf("location requires one of 'name' or 'fromEnv' to be specified, but found neither")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "LocationDat.{type,fromEnv}"))
 	}
 	value, err := locData.Get()
 	if err != nil {
-		return err
+		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
 	if value == "" {
-		return fmt.Errorf("got empty location info, but location requires a value")
+		multiErr.Add(errors.NewValidationError(
+			multiErr.Context["source"],
+			"got empty location info, but location requires a value",
+		))
 	}
-
-	return nil
 }
 
 // Get returns the resolved location data.
@@ -161,11 +158,10 @@ type DeviceKind struct {
 }
 
 // Validate validates that the DeviceKind has no configuration errors.
-func (deviceKind DeviceKind) Validate() error {
+func (deviceKind DeviceKind) Validate(multiErr *errors.MultiError) {
 	if deviceKind.Name == "" {
-		return fmt.Errorf("device kind requires 'name', but is empty")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "deviceKind.name"))
 	}
-	return nil
 }
 
 // DeviceInstance describes an individual instance of a given DeviceKind.
@@ -206,17 +202,15 @@ type DeviceInstance struct {
 }
 
 // Validate validates that the DeviceInstance has no configuration errors.
-func (deviceInstance DeviceInstance) Validate() error {
+func (deviceInstance DeviceInstance) Validate(multiErr *errors.MultiError) {
 	// All device instances must be associated with a location
 	if deviceInstance.Location == "" {
-		return fmt.Errorf("device kind requires 'location', but is empty")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "deviceInstance.location"))
 	}
 
 	// TODO: the locations here should be validated against the ones that are specified.
 	// There will likely need to be some higher-level validation happening as well, since
 	// the locations config is not in-scope here.
-
-	return nil
 }
 
 // DeviceOutput describes a valid output for the DeviceInstance.
@@ -243,10 +237,9 @@ type DeviceOutput struct {
 }
 
 // Validate validates that the DeviceOutput has no configuration errors.
-func (deviceOutput DeviceOutput) Validate() error {
+func (deviceOutput DeviceOutput) Validate(multiErr *errors.MultiError) {
 	// All device outputs need to be associated with an output type.
 	if deviceOutput.Type == "" {
-		return fmt.Errorf("device output requires 'type', but is empty")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "deviceOutput.type"))
 	}
-	return nil
 }

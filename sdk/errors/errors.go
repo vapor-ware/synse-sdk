@@ -5,12 +5,6 @@ import (
 	"fmt"
 )
 
-/*
-TODO:
-----------------
-- add error types for validation errors
-*/
-
 // MultiError is a collection of errors that also fulfills the error interface.
 //
 // It can be used to aggregate errors and then return them all at once.
@@ -21,6 +15,11 @@ type MultiError struct {
 	// For is a string that describes the process/function that the MultiError
 	// is used for. This is optional.
 	For string
+
+	// Context is a general purpose mapping that can be used to store context
+	// information about errors, such as their source. This is useful when passing
+	// the MultiError across different scopes where not all info may be present.
+	Context map[string]string
 }
 
 // NewMultiError creates a new instance of a MultiError.
@@ -28,6 +27,7 @@ func NewMultiError(source string) *MultiError {
 	return &MultiError{
 		Errors: []error{},
 		For:    source,
+		Context: map[string]string{},
 	}
 }
 

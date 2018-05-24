@@ -46,15 +46,21 @@ type SchemeValidator struct {
 // This function takes a ConfigContext, which provides both the SchemeVersion to
 // validate against, and the config to validate, and a "source", which is attributed
 // to the errors in the event that any are found.
-func (validator *SchemeValidator) Validate(context *ConfigContext, source string) error {
+func (validator *SchemeValidator) Validate(context *ConfigContext, domain string) error {
 	// Before we start, apply the state to the validator.
 	version, err := context.Config.GetSchemeVersion()
 	if err != nil {
 		return err
 	}
 	validator.context = context
-	validator.errors = errors.NewMultiError(source)
+	validator.errors = errors.NewMultiError(domain)
 	validator.version = version
+
+	// We will also want to add to the MultiError context to specify the
+	// source of the config, e.g. which file this came from. This info
+	// can be used by the Validate() functions of ConfigComponents to
+	// generate descriptive errors.
+	validator.errors.Context["source"] = context.Source
 
 	// Once we're done validating, clear the state from this validation.
 	defer validator.clearState()
@@ -106,13 +112,7 @@ func (validator *SchemeValidator) walk(v reflect.Value) {
 		// If the struct implements the ConfigComponent interface, validate the struct.
 		ifaceType := reflect.TypeOf((*ConfigComponent)(nil)).Elem()
 		if v.Type().Implements(ifaceType) {
-			err := v.Interface().(ConfigComponent).Validate()
-			if err != nil {
-				validator.errors.Add(errors.NewValidationError(
-					validator.context.Source,
-					err.Error(),
-				))
-			}
+			v.Interface().(ConfigComponent).Validate(validator.errors)
 		}
 
 	case reflect.Slice:
