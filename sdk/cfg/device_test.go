@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
 // TestDeviceConfig_Validate_Ok tests validating a DeviceConfig with no errors.
@@ -52,19 +53,23 @@ func TestDeviceConfig_Validate_Ok(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.config.Validate()
-		assert.NoError(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
 // TestDeviceConfig_Validate_Error tests validating a DeviceConfig with errors.
 func TestDeviceConfig_Validate_Error(t *testing.T) {
 	var testTable = []struct {
-		desc   string
-		config DeviceConfig
+		desc     string
+		errCount int
+		config   DeviceConfig
 	}{
 		{
-			desc: "DeviceConfig has invalid version",
+			desc:     "DeviceConfig has invalid version",
+			errCount: 1,
 			config: DeviceConfig{
 				ConfigVersion: ConfigVersion{Version: "abc"},
 			},
@@ -72,8 +77,11 @@ func TestDeviceConfig_Validate_Error(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.config.Validate()
-		assert.Error(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }
 
@@ -94,8 +102,10 @@ func TestLocation_Validate_Ok(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.location.Validate()
-		assert.NoError(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.location.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
@@ -103,54 +113,71 @@ func TestLocation_Validate_Ok(t *testing.T) {
 func TestLocation_Validate_Error(t *testing.T) {
 	var testTable = []struct {
 		desc     string
+		errCount int
 		location Location
 	}{
 		{
-			desc: "Location requires a name, but has none",
+			desc:     "Location requires a name, but has none",
+			errCount: 1,
 			location: Location{
 				Rack:  &LocationData{Name: "test"},
 				Board: &LocationData{Name: "test"},
 			},
 		},
 		{
-			desc: "Location requires a rack, but has none",
+			desc:     "Location requires a rack, but has none",
+			errCount: 1,
 			location: Location{
 				Name:  "test",
 				Board: &LocationData{Name: "test"},
 			},
 		},
 		{
-			desc: "Location requires a board, but has none",
+			desc:     "Location requires a board, but has none",
+			errCount: 1,
 			location: Location{
 				Name: "test",
 				Rack: &LocationData{Name: "test"},
 			},
 		},
 		{
-			desc: "Location both rack and board, has neither",
+			desc:     "Location both rack and board, has neither",
+			errCount: 2,
 			location: Location{
 				Name: "test",
 			},
 		},
 		{
-			desc: "Location has an invalid rack",
+			desc:     "Location has an invalid rack",
+			errCount: 1,
 			location: Location{
+				Name:  "test",
 				Rack:  &LocationData{Name: ""},
 				Board: &LocationData{Name: "test"},
 			},
 		},
 		{
-			desc: "Location has an invalid board",
+			desc:     "Location has an invalid board",
+			errCount: 1,
 			location: Location{
+				Name:  "test",
 				Rack:  &LocationData{Name: "test"},
 				Board: &LocationData{Name: ""},
 			},
 		},
+		{
+			desc:     "Location missing all fields",
+			errCount: 3,
+			location: Location{},
+		},
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.location.Validate()
-		assert.Error(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.location.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }
 
@@ -186,8 +213,10 @@ func TestLocationData_Validate_Ok(t *testing.T) {
 	}()
 
 	for _, testCase := range testTable {
-		err := testCase.locationData.Validate()
-		assert.NoError(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.locationData.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
@@ -195,21 +224,27 @@ func TestLocationData_Validate_Ok(t *testing.T) {
 func TestLocationData_Validate_Error(t *testing.T) {
 	var testTable = []struct {
 		desc         string
+		errCount     int
 		locationData LocationData
 	}{
 		{
 			desc:         "LocationData has no fromEnv or name",
+			errCount:     2,
 			locationData: LocationData{},
 		},
 		{
 			desc:         "LocationData fromEnv does not resolve",
+			errCount:     2,
 			locationData: LocationData{FromEnv: "FOO_BAR_BAZ"},
 		},
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.locationData.Validate()
-		assert.Error(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.locationData.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }
 
@@ -323,26 +358,33 @@ func TestDeviceKind_Validate_Ok(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.kind.Validate()
-		assert.NoError(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.kind.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
 // TestDeviceKind_Validate_Error tests validating a DeviceKind with errors.
 func TestDeviceKind_Validate_Error(t *testing.T) {
 	var testTable = []struct {
-		desc string
-		kind DeviceKind
+		desc     string
+		errCount int
+		kind     DeviceKind
 	}{
 		{
-			desc: "DeviceKind has no name specified",
-			kind: DeviceKind{},
+			desc:     "DeviceKind has no name specified",
+			errCount: 1,
+			kind:     DeviceKind{},
 		},
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.kind.Validate()
-		assert.Error(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.kind.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }
 
@@ -375,8 +417,10 @@ func TestDeviceInstance_Validate_Ok(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.instance.Validate()
-		assert.NoError(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.instance.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
@@ -384,10 +428,12 @@ func TestDeviceInstance_Validate_Ok(t *testing.T) {
 func TestDeviceInstance_Validate_Error(t *testing.T) {
 	var testTable = []struct {
 		desc     string
+		errCount int
 		instance DeviceInstance
 	}{
 		{
-			desc: "DeviceInstance has a no location",
+			desc:     "DeviceInstance has a no location",
+			errCount: 1,
 			instance: DeviceInstance{
 				Location: "",
 			},
@@ -395,8 +441,11 @@ func TestDeviceInstance_Validate_Error(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.instance.Validate()
-		assert.Error(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.instance.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }
 
@@ -415,19 +464,23 @@ func TestDeviceOutput_Validate_Ok(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.output.Validate()
-		assert.NoError(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.output.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
 // TestDeviceOutput_Validate_Error tests validating a DeviceOutput with errors.
 func TestDeviceOutput_Validate_Error(t *testing.T) {
 	var testTable = []struct {
-		desc   string
-		output DeviceOutput
+		desc     string
+		errCount int
+		output   DeviceOutput
 	}{
 		{
-			desc: "DeviceOutput has no type",
+			desc:     "DeviceOutput has no type",
+			errCount: 1,
 			output: DeviceOutput{
 				Type: "",
 			},
@@ -435,7 +488,10 @@ func TestDeviceOutput_Validate_Error(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		err := testCase.output.Validate()
-		assert.Error(t, err, testCase.desc)
+		merr := errors.NewMultiError("test")
+
+		testCase.output.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }

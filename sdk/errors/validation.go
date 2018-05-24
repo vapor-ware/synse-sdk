@@ -23,7 +23,7 @@ func NewValidationError(source, msg string) *ValidationError {
 
 // Error returns the error string and fulfils the error interface.
 func (e *ValidationError) Error() string {
-	return fmt.Sprintf("validating %s: %s", e.source, e.msg)
+	return fmt.Sprintf("validating config %s: %s", e.source, e.msg)
 }
 
 // FieldNotSupported is an error returned when a configuration scheme version is
@@ -55,7 +55,7 @@ func NewFieldNotSupportedError(source, field, fieldVersion, configVersion string
 // Error returns the error string and fulfils the error interface.
 func (e *FieldNotSupported) Error() string {
 	return fmt.Sprintf(
-		"validating %s: field '%s' not supported in v%s (field added in v%s)",
+		"validating config %s: field '%s' not supported in v%s (field added in v%s)",
 		e.source, e.field, e.configVersion, e.fieldVersion,
 	)
 }
@@ -89,7 +89,61 @@ func NewFieldRemovedError(source, field, fieldVersion, configVersion string) *Fi
 // Error returns the error string and fulfils the error interface.
 func (e *FieldRemoved) Error() string {
 	return fmt.Sprintf(
-		"validating %s: field '%s' not supported in v%s (field removed in v%s)",
+		"validating config %s: field '%s' not supported in v%s (field removed in v%s)",
 		e.source, e.field, e.configVersion, e.fieldVersion,
+	)
+}
+
+// FieldRequired is an error returned when a configuration is being validated and
+// a field is not filled, but it is required.
+type FieldRequired struct {
+	// source is the source of the configuration which caused the validation error.
+	source string
+
+	// field is the field which is not supported
+	field string
+}
+
+// NewFieldRequiredError returns a new instance of a FieldRequired error.
+func NewFieldRequiredError(source, field string) *FieldRequired {
+	return &FieldRequired{
+		source: source,
+		field:  field,
+	}
+}
+
+func (e *FieldRequired) Error() string {
+	return fmt.Sprintf(
+		"validating config %s: missing required field '%s'",
+		e.source, e.field,
+	)
+}
+
+// InvalidValue is an error returned when a configuration is being validated and
+// a field does not contain the expected data.
+type InvalidValue struct {
+	// source is the source of the configuration which caused the validation error.
+	source string
+
+	// field is the field which is not supported
+	field string
+
+	// needs is a string that specifies what the field needs
+	needs string
+}
+
+// NewInvalidValueError returns a new instance of an InvalidValue error.
+func NewInvalidValueError(source, field, needs string) *InvalidValue {
+	return &InvalidValue{
+		source: source,
+		field:  field,
+		needs:  needs,
+	}
+}
+
+func (e *InvalidValue) Error() string {
+	return fmt.Sprintf(
+		"validating config %s: invalid value for field '%s'. must be %s",
+		e.source, e.field, e.needs,
 	)
 }

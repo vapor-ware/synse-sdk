@@ -1,12 +1,16 @@
 package cfg
 
+import (
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+)
+
 // ConfigComponent is an interface that all structs that define configuration
 // components should implement.
 //
 // This interface implements a Validate function which is used by the
 // SchemeValidator in order to validate each struct that makes up a configuration.
 type ConfigComponent interface {
-	Validate() error
+	Validate(*errors.MultiError)
 }
 
 // ConfigBase is an interface that the base configuration struct should
@@ -39,9 +43,14 @@ func NewConfigContext(source string, config ConfigBase) *ConfigContext {
 	}
 }
 
-// IsDeviceConfig checks whether the config in this context
-// is a DeviceConfig.
+// IsDeviceConfig checks whether the config in this context is a DeviceConfig.
 func (ctx *ConfigContext) IsDeviceConfig() bool {
 	_, ok := ctx.Config.(*DeviceConfig)
+	return ok
+}
+
+// IsPluginConfig checks whether the config in the context is a PluginConfig.
+func (ctx *ConfigContext) IsPluginConfig() bool {
+	_, ok := ctx.Config.(*PluginConfig)
 	return ok
 }
