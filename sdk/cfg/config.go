@@ -43,9 +43,14 @@ func NewConfigContext(source string, config ConfigBase) *ConfigContext {
 	}
 }
 
-// IsDeviceConfig checks whether the config in this context
-// is a DeviceConfig.
+// IsDeviceConfig checks whether the config in this context is a DeviceConfig.
 func (ctx *ConfigContext) IsDeviceConfig() bool {
 	_, ok := ctx.Config.(*DeviceConfig)
+	return ok
+}
+
+// IsPluginConfig checks whether the config in the context is a PluginConfig.
+func (ctx *ConfigContext) IsPluginConfig() bool {
+	_, ok := ctx.Config.(*PluginConfig)
 	return ok
 }
