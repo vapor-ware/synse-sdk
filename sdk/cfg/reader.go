@@ -189,6 +189,9 @@ func getConfigPathsFromDir(dirpath string) ([]string, error) {
 	return files, nil
 }
 
+// isValidConfig checks if the given FileInfo corresponds to a file that could be
+// a valid configuration file. It checks that it is actually a file (not a Dir)
+// and checks that its extension matches the supported extensions.
 func isValidConfig(f os.FileInfo) bool {
 	if !f.IsDir() {
 		fileExt := filepath.Ext(f.Name())
