@@ -29,13 +29,14 @@ func NewSchemeVersion(versionString string) (*SchemeVersion, error) {
 	}
 
 	s := strings.Split(versionString, ".")
-	if len(s) == 1 {
+	switch len(s) {
+	case 1:
 		maj, err = strconv.Atoi(s[0])
 		if err != nil {
 			return nil, err
 		}
 		min = 0
-	} else {
+	case 2:
 		maj, err = strconv.Atoi(s[0])
 		if err != nil {
 			return nil, err
@@ -44,6 +45,8 @@ func NewSchemeVersion(versionString string) (*SchemeVersion, error) {
 		if err != nil {
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("too many version components - should only have MAJOR[.MINOR]")
 	}
 
 	return &SchemeVersion{
@@ -98,35 +101,12 @@ type ConfigVersion struct {
 }
 
 // parseScheme parses the Version field into a SchemeVersion.
-func (configVersion *ConfigVersion) parseScheme() (err error) {
-	var min, maj int
-
-	if configVersion.Version == "" {
-		return fmt.Errorf("no version info found")
+func (configVersion *ConfigVersion) parseScheme() error {
+	scheme, err := NewSchemeVersion(configVersion.Version)
+	if err != nil {
+		return err
 	}
-
-	s := strings.Split(configVersion.Version, ".")
-	if len(s) == 1 {
-		maj, err = strconv.Atoi(s[0])
-		if err != nil {
-			return
-		}
-		min = 0
-	} else {
-		maj, err = strconv.Atoi(s[0])
-		if err != nil {
-			return
-		}
-		min, err = strconv.Atoi(s[1])
-		if err != nil {
-			return
-		}
-	}
-
-	configVersion.scheme = &SchemeVersion{
-		Major: maj,
-		Minor: min,
-	}
+	configVersion.scheme = scheme
 	return nil
 }
 

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/viper"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
 )
@@ -22,6 +24,69 @@ var (
 	// supportedExts are the extensions supported for configuration files.
 	supportedExts = []string{".yml", ".yaml"}
 )
+
+// NewPluginConfig creates a new instance of PluginConfig, populated from
+// the configuration read in by Viper. This will include config options from
+// the command line and from file.
+func NewPluginConfig() (*PluginConfig, error) {
+	// First, we setup all the lookup info for the viper instance.
+	viper.SetConfigName("config")
+
+	// Set the environment variable lookup
+	viper.SetEnvPrefix("plugin")
+	viper.AutomaticEnv()
+
+	// If the PLUGIN_CONFIG environment variable is set, we will only search for
+	// the config in that specified path, as we should expect the user-specified
+	// value to be there. Otherwise, we will look through a set of pre-defined
+	// configuration locations (in order of search):
+	//  - current working directory
+	//  - local config directory
+	//  - the default config location in /etc
+	configPath := os.Getenv(EnvPluginConfig)
+	if configPath != "" {
+		viper.AddConfigPath(configPath)
+	} else {
+		for _, path := range pluginConfigSearchPaths {
+			viper.AddConfigPath(path)
+		}
+	}
+
+	// Set default values for the PluginConfig
+	SetDefaults()
+
+	// will be used for the ConfigContext
+	//configFile := viper.ConfigFileUsed()
+
+	// Read in the configuration
+	err := viper.ReadInConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	config := &PluginConfig{}
+	err = mapstructure.Decode(viper.AllSettings(), config)
+	if err != nil {
+		return nil, err
+	}
+
+	// FIXME: we should probably return a ConfigContext from this.
+	return config, nil
+}
+
+// SetDefaults sets the default values for the PluginConfig via Viper.
+func SetDefaults() {
+	viper.SetDefault("debug", false)
+	viper.SetDefault("settings.mode", modeSerial)
+	viper.SetDefault("settings.read.interval", "1s")
+	viper.SetDefault("settings.read.buffer", 100)
+	viper.SetDefault("settings.read.enabled", true)
+	viper.SetDefault("settings.write.interval", "1s")
+	viper.SetDefault("settings.write.buffer", 100)
+	viper.SetDefault("settings.write.max", 100)
+	viper.SetDefault("settings.write.enabled", true)
+	viper.SetDefault("settings.transaction.ttl", "5m")
+}
 
 // getDeviceConfigFilePaths gets the file paths for device configuration files
 // by searching various config search paths.
@@ -124,6 +189,9 @@ func getConfigPathsFromDir(dirpath string) ([]string, error) {
 	return files, nil
 }
 
+// isValidConfig checks if the given FileInfo corresponds to a file that could be
+// a valid configuration file. It checks that it is actually a file (not a Dir)
+// and checks that its extension matches the supported extensions.
 func isValidConfig(f os.FileInfo) bool {
 	if !f.IsDir() {
 		fileExt := filepath.Ext(f.Name())

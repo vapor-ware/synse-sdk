@@ -46,14 +46,19 @@ type SchemeValidator struct {
 // This function takes a ConfigContext, which provides both the SchemeVersion to
 // validate against, and the config to validate, and a "source", which is attributed
 // to the errors in the event that any are found.
-func (validator *SchemeValidator) Validate(context *ConfigContext, domain string) error {
-	// Before we start, apply the state to the validator.
+func (validator *SchemeValidator) Validate(context *ConfigContext, domain string) *errors.MultiError {
+	// Once we're done validating, we'll want to clear the state from this validation.
+	defer validator.clearState()
+
+	// Before we start validating, apply the state to the validator.
+	validator.errors = errors.NewMultiError(domain)
+
 	version, err := context.Config.GetSchemeVersion()
 	if err != nil {
-		return err
+		validator.errors.Add(errors.NewValidationError(context.Source, err.Error()))
+		return validator.errors
 	}
 	validator.context = context
-	validator.errors = errors.NewMultiError(domain)
 	validator.version = version
 
 	// We will also want to add to the MultiError context to specify the
@@ -69,18 +74,17 @@ func (validator *SchemeValidator) Validate(context *ConfigContext, domain string
 	validator.validate(context.Config)
 
 	// Return validation errors, if any were found.
-	return validator.errors.Err()
+	return validator.errors
 }
 
 // clearState clears the state tracked for a single validation run.
-// TODO - make sure we can still return errors correctly with this.
 func (validator *SchemeValidator) clearState() {
 	validator.context = nil
 	validator.errors = nil
 	validator.version = nil
 }
 
-// validate is the entrypoint for validation.
+// validate is the entry point for validation.
 func (validator *SchemeValidator) validate(config interface{}) {
 	val := reflect.ValueOf(config)
 
@@ -110,7 +114,7 @@ func (validator *SchemeValidator) walk(v reflect.Value) {
 		validator.walkStructFields(v)
 
 		// If the struct implements the ConfigComponent interface, validate the struct.
-		ifaceType := reflect.TypeOf((*ConfigComponent)(nil)).Elem()
+		ifaceType := reflect.TypeOf(new(ConfigComponent)).Elem()
 		if v.Type().Implements(ifaceType) {
 			v.Interface().(ConfigComponent).Validate(validator.errors)
 		}
@@ -119,6 +123,9 @@ func (validator *SchemeValidator) walk(v reflect.Value) {
 		for i := 0; i < v.Len(); i++ {
 			validator.walk(v.Index(i))
 		}
+
+	case reflect.Ptr, reflect.Interface:
+		validator.walk(v.Elem())
 	}
 }
 
@@ -161,14 +168,15 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 			addedInScheme, err := NewSchemeVersion(tag)
 			if err != nil {
 				validator.errors.Add(err)
-			}
-			if version.IsLessThan(addedInScheme) {
-				validator.errors.Add(errors.NewFieldNotSupportedError(
-					validator.context.Source,
-					structField.Name,
-					addedInScheme.String(),
-					version.String(),
-				))
+			} else {
+				if version.IsLessThan(addedInScheme) {
+					validator.errors.Add(errors.NewFieldNotSupportedError(
+						validator.context.Source,
+						structField.Name,
+						addedInScheme.String(),
+						version.String(),
+					))
+				}
 			}
 		}
 
@@ -178,12 +186,13 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 			deprecatedInScheme, err := NewSchemeVersion(tag)
 			if err != nil {
 				validator.errors.Add(err)
-			}
-			if version.IsGreaterOrEqualTo(deprecatedInScheme) {
-				logger.Warnf(
-					"config field '%s' was deprecated in scheme version %s (current config scheme: %s)",
-					structField.Name, deprecatedInScheme.String(), version.String(),
-				)
+			} else {
+				if version.IsGreaterOrEqualTo(deprecatedInScheme) {
+					logger.Warnf(
+						"config field '%s' was deprecated in scheme version %s (current config scheme: %s)",
+						structField.Name, deprecatedInScheme.String(), version.String(),
+					)
+				}
 			}
 		}
 
@@ -193,21 +202,22 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 			removedInScheme, err := NewSchemeVersion(tag)
 			if err != nil {
 				validator.errors.Add(err)
-			}
-			if version.IsGreaterOrEqualTo(removedInScheme) {
-				validator.errors.Add(errors.NewFieldRemovedError(
-					validator.context.Source,
-					structField.Name,
-					removedInScheme.String(),
-					version.String(),
-				))
+			} else {
+				if version.IsGreaterOrEqualTo(removedInScheme) {
+					validator.errors.Add(errors.NewFieldRemovedError(
+						validator.context.Source,
+						structField.Name,
+						removedInScheme.String(),
+						version.String(),
+					))
+				}
 			}
 		}
 	}
 }
 
 // isEmptyValue checks if a value is its empty type.
-func (validator *SchemeValidator) isEmptyValue(v reflect.Value) bool {
+func (validator *SchemeValidator) isEmptyValue(v reflect.Value) bool { // nolint: gocyclo
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
 		return v.Len() == 0
@@ -221,8 +231,18 @@ func (validator *SchemeValidator) isEmptyValue(v reflect.Value) bool {
 		return v.Float() == 0
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			isEmpty := validator.isEmptyValue(v.Field(i))
+			if !isEmpty {
+				return false
+			}
+		}
+		// If we get here, then all fields of the struct are empty,
+		// so the struct is empty.
+		return true
 	default:
-		logger.Warn("No case for empty value check: %v", v.Kind())
+		logger.Warnf("No case for empty value check: %v", v.Kind())
 	}
 	return false
 }

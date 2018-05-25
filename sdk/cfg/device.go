@@ -13,7 +13,7 @@ import (
 type DeviceConfig struct {
 
 	// ConfigVersion is the version of the configuration scheme.
-	ConfigVersion
+	ConfigVersion `yaml:",inline"`
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.
@@ -27,9 +27,9 @@ type DeviceConfig struct {
 // Validate validates that the DeviceConfig has no configuration errors.
 //
 // This is called before Devices are created.
-func (deviceConfig DeviceConfig) Validate(multiErr *errors.MultiError) {
+func (config DeviceConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
-	_, err := deviceConfig.GetSchemeVersion()
+	_, err := config.GetSchemeVersion()
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
