@@ -4,12 +4,107 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"flag"
+	"os"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 type pluginAction func(p *Plugin) error
 type deviceAction func(p *Plugin, d *Device) error
+
+type NPlugin struct {
+}
+
+func (plugin *NPlugin) Run() {
+
+	// ** "Config" steps **
+
+	// Check for command line flags. If any flags are set that require an
+	// action, that action will be resolved here.
+	plugin.resolveFlags()
+
+	// Check for configuration policies. If no policy was set by the plugin,
+	// this will fall back on the default policies.
+	plugin.checkPolicies()
+
+	// Read in all configs and verify that they are correct.
+	plugin.processConfig()
+
+	// ** "Making" steps **
+
+	// FIXME: at this point, we will need to resolve dynamic registration stuff.
+	//   - if dynamic registration makes Devices, just add to the global map.
+	//   - if dynamic registration makes Config artifacts, add to the unified config.
+	// (or maybe this happens in th processConfig step, before unification?)
+
+	// Initialize Device instances for each of the devices configured with
+	// the plugin.
+	plugin.makeDevices()
+
+	// makeTransactionCache
+	// makeDataManager
+	// makeServer
+
+	// ** "Action" steps **
+
+	// preRunActions
+	// deviceSetupActions
+
+	// "Starting" steps **
+
+	// startDataManager
+	// startServer
+
+	// profit
+
+}
+
+// FIXME: its not clear that these private functions need to hang off the Plugin struct..
+
+// resolveFlags parses flags passed to the plugin.
+//
+// Not all flags will result in an action, so not all flags are checked
+// here. Only the flags that cause immediate actions will be processed here.
+// Only SDK supported flags are parsed here. If a plugin specifies additional
+// flags, they should be resolved in their own pre-run action.
+func (plugin *NPlugin) resolveFlags() {
+	flag.Parse()
+
+	// --help is already provided by the flag package, so we don't have
+	// to handle that here.
+
+	// Print out the version info for the plugin.
+	if flagVersion {
+		versionInfo := GetVersion()
+		fmt.Print(versionInfo.Format())
+		os.Exit(0)
+	}
+}
+
+// checkPolicies checks for policies registered with the plugin. If no policies
+// were set, the defaults will be used.
+func (plugin *NPlugin) checkPolicies() {
+	// TODO: implement config policies
+}
+
+// processConfig handles plugin configuration in a number of steps. The behavior
+// of config handling is dependent on the config policy that is set. If no config
+// policies are set, the plugin will terminate in error.
+//
+// There are four major steps to processing plugin configuration: reading in the
+// config, validating the config scheme, config unification, and verifying the
+// config data is correct. These steps should happen for all config types.
+func (plugin *NPlugin) processConfig() {
+	// TODO: implement config processing.. this can probably be done soon, since we have most of what we need.
+}
+
+// makeDevices converts the plugin configuration into the Device instances that
+// represent the physical/virtual devices that the plugin will manage.
+func (plugin *NPlugin) makeDevices() {
+	// TODO: implement
+}
 
 // Plugin represents an instance of a Synse plugin. Along with metadata
 // and definable handlers, it contains a gRPC server to handle the plugin
@@ -303,7 +398,7 @@ func (p *Plugin) logInfo() {
 
 	// Log out the version info
 	versionInfo := GetVersion()
-	versionInfo.Log()
+	logger.Info(versionInfo.Format())
 
 	// Log out configuration info
 	logger.Infof("Plugin Config:")
