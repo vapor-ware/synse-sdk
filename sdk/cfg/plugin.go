@@ -18,7 +18,7 @@ const (
 type PluginConfig struct {
 
 	// ConfigVersion is the version of the configuration scheme.
-	ConfigVersion
+	ConfigVersion `yaml:",inline" mapstructure:",squash"`
 
 	// Debug is a flag that determines whether the plugin should run
 	// with debug logging or not.

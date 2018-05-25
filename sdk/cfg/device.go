@@ -13,7 +13,7 @@ import (
 type DeviceConfig struct {
 
 	// ConfigVersion is the version of the configuration scheme.
-	ConfigVersion
+	ConfigVersion `yaml:",inline"`
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.

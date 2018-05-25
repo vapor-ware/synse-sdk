@@ -7,8 +7,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
-// FIXME -- some of this stuff could probably move to internal/test
-
 //
 // Test Structures / Type Definitions
 //

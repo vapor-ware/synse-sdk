@@ -78,14 +78,13 @@ func (validator *SchemeValidator) Validate(context *ConfigContext, domain string
 }
 
 // clearState clears the state tracked for a single validation run.
-// TODO - make sure we can still return errors correctly with this.
 func (validator *SchemeValidator) clearState() {
 	validator.context = nil
 	validator.errors = nil
 	validator.version = nil
 }
 
-// validate is the entrypoint for validation.
+// validate is the entry point for validation.
 func (validator *SchemeValidator) validate(config interface{}) {
 	val := reflect.ValueOf(config)
 
