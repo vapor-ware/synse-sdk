@@ -56,7 +56,7 @@ func (version *BinVersion) Format() string {
   OS/Arch:        {{.OS}}/{{.Arch}}`
 
 	t := template.Must(template.New("version").Parse(out))
-	t.Execute(&info, version)
+	_ = t.Execute(&info, version)
 
 	return info.String()
 }
