@@ -47,11 +47,12 @@ func TestGetVersion2(t *testing.T) {
 	assert.Equal(t, SDKVersion, version.SDKVersion)
 }
 
-// TestBinVersion_Log tests logging out the version info.
-func TestBinVersion_Log(t *testing.T) {
-	// TODO - for now, we just log to make sure nothing goes wrong. We should
-	// really get the logger output and compare to it.
-
+// TestBinVersion_Format tests printing out the version info string.
+func TestBinVersion_Format(t *testing.T) {
 	version := GetVersion()
-	version.Log()
+	versionStr := version.Format()
+
+	// the version string will be different depending on when/where the
+	// test is run, so just verify that the string isn't empty..
+	assert.NotEmpty(t, versionStr)
 }

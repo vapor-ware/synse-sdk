@@ -3,7 +3,8 @@ package sdk
 import (
 	"runtime"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"bytes"
+	"text/template"
 )
 
 // SDKVersion specifies the version of the Synse Plugin SDK.
@@ -42,16 +43,22 @@ type BinVersion struct {
 }
 
 // Log logs out the version information at INFO level.
-func (version *BinVersion) Log() {
-	logger.Info("Version Info:")
-	logger.Infof("  Plugin Version: %s", version.PluginVersion)
-	logger.Infof("  SDK Version:    %s", version.SDKVersion)
-	logger.Infof("  Git Commit:     %s", version.GitCommit)
-	logger.Infof("  Git Tag:        %s", version.GitTag)
-	logger.Infof("  Build Date:     %s", version.BuildDate)
-	logger.Infof("  Go Version:     %s", version.GoVersion)
-	logger.Infof("  OS:             %s", version.OS)
-	logger.Infof("  Arch:           %s", version.Arch)
+func (version *BinVersion) Format() string {
+	var info bytes.Buffer
+
+	out := `Version Info:
+  Plugin Version: {{.PluginVersion}}
+  SDK Version:    {{.SDKVersion}}
+  Git Commit:     {{.GitCommit}}
+  Git Tag:        {{.GitTag}}
+  Build Date:     {{.BuildDate}}
+  Go Version:     {{.GoVersion}}
+  OS/Arch:        {{.OS}}/{{.Arch}}`
+
+	t := template.Must(template.New("version").Parse(out))
+	_ = t.Execute(&info, version)
+
+	return info.String()
 }
 
 // GetVersion gets the version information for the plugin. It builds
