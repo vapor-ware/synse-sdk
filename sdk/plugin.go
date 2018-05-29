@@ -7,6 +7,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/vapor-ware/synse-sdk/sdk/cfg"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
@@ -60,10 +61,16 @@ func (plugin *NPlugin) Run() {
 	// preRunActions
 	// deviceSetupActions
 
-	// "Starting" steps **
+	// If the --dry-run flag is set, we will end here. The gRPC server and
+	// data manager do not get started up in the dry run.
+	if !flagDryRun {
 
-	// startDataManager
-	// startServer
+		// "Starting" steps **
+
+		// startDataManager
+		// startServer
+
+	}
 
 	// profit
 
@@ -114,7 +121,55 @@ func (plugin *NPlugin) checkPolicies() {
 // config, validating the config scheme, config unification, and verifying the
 // config data is correct. These steps should happen for all config types.
 func (plugin *NPlugin) processConfig() {
-	// TODO: implement config processing.. this can probably be done soon, since we have most of what we need.
+	// 1. Read in the configs. We have a few types of configs to read in.
+	//  a. Plugin Config
+	pluginCtx, err := cfg.GetPluginConfigFromFile()
+	if err != nil {
+		// what do we do when we error out here?
+	}
+
+	//  b. Device Config
+	deviceCtxs, err := cfg.GetDeviceConfigsFromFile()
+	if err != nil {
+		// what do we do when we error out here?
+	}
+
+	//  c. Type Config
+	// TODO
+
+	//  d. ... Other?
+	// TODO?
+
+	// 2. Validate Config Schemes
+	multiErr := cfg.Validator.Validate(pluginCtx, pluginCtx.Source)
+	if multiErr.HasErrors() {
+		// what to do here?
+	}
+
+	for _, ctx := range deviceCtxs {
+		multiErr = cfg.Validator.Validate(ctx, ctx.Source)
+		if multiErr.HasErrors() {
+			// what to do here?
+		}
+	}
+
+	// 3. Unify Configs
+	unifiedCtx, err := cfg.UnifyDeviceConfigs(deviceCtxs)
+	if err != nil {
+		// what to do here?
+	}
+
+	// 4. Verify
+	if !unifiedCtx.IsDeviceConfig() {
+		// ERROR
+	}
+	unifiedCfg := unifiedCtx.Config.(*cfg.DeviceConfig)
+	multiErr = cfg.VerifyConfigs(unifiedCfg)
+	if multiErr.HasErrors() {
+		// what to do here?
+	}
+
+	// TODO: once everything is done, what do we do with all the data?
 }
 
 // makeDevices converts the plugin configuration into the Device instances that
@@ -165,12 +220,12 @@ func NewPlugin(handlers *Handlers, pluginConfig *config.PluginConfig) (*Plugin, 
 		p.Config = pluginConfig
 	} else {
 		logger.Info("Loading plugin config from file")
-		cfg, err := config.NewPluginConfig()
+		cnfg, err := config.NewPluginConfig()
 		if err != nil {
 			logger.Errorf("Failed to load plugin config from file: %v", err)
 			return nil, err
 		}
-		p.Config = cfg
+		p.Config = cnfg
 	}
 	// Set logging level from the config now that we have a config.
 	logger.SetLogLevel(p.Config.Debug)
