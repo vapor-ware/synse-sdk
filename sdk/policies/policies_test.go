@@ -90,15 +90,15 @@ func TestPolicyManager_GetPluginConfigPolicy(t *testing.T) {
 
 // TestSet tests setting the global config policies.
 func TestSet(t *testing.T) {
-	var testTable = []struct{
-		desc string
-		policies []ConfigPolicy
+	var testTable = []struct {
+		desc                 string
+		policies             []ConfigPolicy
 		expectedPluginPolicy ConfigPolicy
 		expectedDevicePolicy ConfigPolicy
 	}{
 		{
-			desc: "No policies set",
-			policies: []ConfigPolicy{},
+			desc:                 "No policies set",
+			policies:             []ConfigPolicy{},
 			expectedPluginPolicy: 0,
 			expectedDevicePolicy: 0,
 		},

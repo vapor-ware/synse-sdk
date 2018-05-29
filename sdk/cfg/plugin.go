@@ -18,28 +18,28 @@ const (
 type PluginConfig struct {
 
 	// ConfigVersion is the version of the configuration scheme.
-	ConfigVersion `yaml:",inline" mapstructure:",squash"`
+	ConfigVersion `yaml:",inline"`
 
 	// Debug is a flag that determines whether the plugin should run
 	// with debug logging or not.
-	Debug bool `yaml:"debug,omitempty" addedIn:"1.0"`
+	Debug bool `default:"false" yaml:"debug,omitempty" addedIn:"1.0"`
 
 	// Settings provide specifications for how the plugin should run.
-	Settings *PluginSettings `yaml:"settings,omitempty" addedIn:"1.0"`
+	Settings *PluginSettings `default:"{}" yaml:"settings,omitempty" addedIn:"1.0"`
 
 	// Network specifies the networking configuration for the plugin.
-	Network *NetworkSettings `yaml:"network,omitempty" addedIn:"1.0"`
+	Network *NetworkSettings `default:"{}" yaml:"network,omitempty" addedIn:"1.0"`
 
 	// DynamicRegistration specifies configuration settings and data
 	// for how the plugin should handle dynamic device registration.
-	DynamicRegistration *DynamicRegistrationSettings `yaml:"dynamicRegistration,omitempty" addedIn:"1.0"`
+	DynamicRegistration *DynamicRegistrationSettings `default:"{}" yaml:"dynamicRegistration,omitempty" addedIn:"1.0"`
 
 	// Limiter specifies settings for a rate limiter for reads/writes.
-	Limiter *LimiterSettings `yaml:"limiter,omitempty" addedIn:"1.0"`
+	Limiter *LimiterSettings `default:"{}" yaml:"limiter,omitempty" addedIn:"1.0"`
 
 	// Context is a map that allows the plugin to specify any arbitrary
 	// data it may need.
-	Context map[string]interface{} `yaml:"context,omitempty" addedIn:"1.0"`
+	Context map[string]interface{} `default:"{}" yaml:"context,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the PluginConfig has no configuration errors.
@@ -65,17 +65,17 @@ func (config PluginConfig) Validate(multiErr *errors.MultiError) {
 type PluginSettings struct {
 	// Mode is the run mode of the read and write loops. This can either
 	// be "serial" or "parallel".
-	Mode string `yaml:"mode,omitempty" addedIn:"1.0"`
+	Mode string `default:"serial" yaml:"mode,omitempty" addedIn:"1.0"`
 
 	// Read contains the settings to configure read behavior.
-	Read ReadSettings `yaml:"read,omitempty" addedIn:"1.0"`
+	Read *ReadSettings `default:"{}" yaml:"read,omitempty" addedIn:"1.0"`
 
 	// Write contains the settings to configure write behavior.
-	Write WriteSettings `yaml:"write,omitempty" addedIn:"1.0"`
+	Write *WriteSettings `default:"{}" yaml:"write,omitempty" addedIn:"1.0"`
 
 	// Transaction contains the settings to configure transaction
 	// handling behavior.
-	Transaction TransactionSettings `yaml:"transaction,omitempty" addedIn:"1.0"`
+	Transaction *TransactionSettings `default:"{}" yaml:"transaction,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the PluginSettings has no configuration errors.
@@ -176,15 +176,15 @@ func (settings LimiterSettings) Validate(multiErr *errors.MultiError) {
 type ReadSettings struct {
 	// Enabled globally enables or disables reading for the plugin.
 	// By default, a plugin will have reading enabled.
-	Enabled bool `yaml:"enabled,omitempty" addedIn:"1.0"`
+	Enabled bool `default:"true" yaml:"enabled,omitempty" addedIn:"1.0"`
 
 	// Interval specifies the interval at which devices should be
 	// read from. This is 1s by default.
-	Interval string `yaml:"interval,omitempty" addedIn:"1.0"`
+	Interval string `default:"1s" yaml:"interval,omitempty" addedIn:"1.0"`
 
 	// Buffer defines the size of the read buffer. This will be
 	// the size of the channel that passes along read responses.
-	Buffer int `yaml:"buffer,omitempty" addedIn:"1.0"`
+	Buffer int `default:"100" yaml:"buffer,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the ReadSettings has no configuration errors.
@@ -218,20 +218,20 @@ func (settings *ReadSettings) GetInterval() (time.Duration, error) {
 type WriteSettings struct {
 	// Enabled globally enables or disables writing for the plugin.
 	// By default, a plugin will have writing enabled.
-	Enabled bool `yaml:"enabled,omitempty" addedIn:"1.0"`
+	Enabled bool `default:"true" yaml:"enabled,omitempty" addedIn:"1.0"`
 
 	// Interval specifies the interval at which devices should be
 	// written to. This is 1s by default.
-	Interval string `yaml:"interval,omitempty" addedIn:"1.0"`
+	Interval string `default:"1s" yaml:"interval,omitempty" addedIn:"1.0"`
 
 	// Buffer defines the size of the write buffer. This will be
 	// the size of the channel that passes along write requests.
-	Buffer int `yaml:"buffer,omitempty" addedIn:"1.0"`
+	Buffer int `default:"100" yaml:"buffer,omitempty" addedIn:"1.0"`
 
 	// Max is the maximum number of write transactions to process
 	// in a single batch. In general, this can tune performance when
 	// running in serial mode.
-	Max int `yaml:"max,omitempty" addedIn:"1.0"`
+	Max int `default:"100" yaml:"max,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the WriteSettings has no configuration errors.
@@ -272,7 +272,7 @@ func (settings WriteSettings) GetInterval() (time.Duration, error) {
 // TransactionSettings provides configuration options for transaction operations.
 type TransactionSettings struct {
 	// TTL is the time-to-live for a transaction in the transaction cache.
-	TTL string `yaml:"ttl,omitempty" addedIn:"1.0"`
+	TTL string `default:"5m" yaml:"ttl,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the TransactionSettings has no configuration errors.
