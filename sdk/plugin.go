@@ -9,12 +9,14 @@ import (
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
 type pluginAction func(p *Plugin) error
 type deviceAction func(p *Plugin, d *Device) error
 
 type NPlugin struct {
+	policies []policies.ConfigPolicy
 }
 
 func (plugin *NPlugin) Run() {
@@ -86,7 +88,16 @@ func (plugin *NPlugin) resolveFlags() {
 // checkPolicies checks for policies registered with the plugin. If no policies
 // were set, the defaults will be used.
 func (plugin *NPlugin) checkPolicies() {
-	// TODO: implement config policies
+	// Verify that the policies set for the plugin do not break any of the
+	// constraints set on the policies.
+	err := policies.CheckConstraints(plugin.policies)
+	if err.Err() != nil {
+		logger.Error("config policies set for the plugin are invalid")
+		logger.Fatal(err)
+	}
+
+	// If we passed constraint checking, we can use the given policies
+	policies.Set(plugin.policies)
 }
 
 // processConfig handles plugin configuration in a number of steps. The behavior
