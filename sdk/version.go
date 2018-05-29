@@ -42,7 +42,8 @@ type BinVersion struct {
 	SDKVersion    string
 }
 
-// Log logs out the version information at INFO level.
+// Format returns a formatted string with all of the BinVersion info.
+// This string can be logged or printed out.
 func (version *BinVersion) Format() string {
 	var info bytes.Buffer
 
@@ -56,7 +57,7 @@ func (version *BinVersion) Format() string {
   OS/Arch:        {{.OS}}/{{.Arch}}`
 
 	t := template.Must(template.New("version").Parse(out))
-	_ = t.Execute(&info, version)
+	_ = t.Execute(&info, version) // nolint
 
 	return info.String()
 }

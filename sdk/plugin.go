@@ -15,10 +15,16 @@ import (
 type pluginAction func(p *Plugin) error
 type deviceAction func(p *Plugin, d *Device) error
 
+// NPlugin is the New Plugin. This will replace Plugin once v1.0 work is completed.
 type NPlugin struct {
 	policies []policies.ConfigPolicy
 }
 
+// Run starts the Plugin.
+//
+// Before the gRPC server is started, and before the read and write goroutines
+// are started, Plugin setup and validation will happen. If successful, pre-run
+// actions are executed, and device setup actions are executed, if defined.
 func (plugin *NPlugin) Run() {
 
 	// ** "Config" steps **
