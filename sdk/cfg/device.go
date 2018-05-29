@@ -33,14 +33,6 @@ func (config DeviceConfig) Validate(multiErr *errors.MultiError) {
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
-
-	// Note: We should require >0 locations to be specified, since
-	// instances are required to reference a location. Its unclear if
-	// we want to enforce that here or at a higher level, since we should
-	// permit multiple device configs to be specified, where each could be
-	// a partial config (but the joined config should all be valid..)
-	// TODO: need to figure out how this all works still
-	// see: https://github.com/vapor-ware/synse-sdk/issues/217
 }
 
 // Location defines a location (rack, board) which will be associated with
@@ -207,10 +199,6 @@ func (deviceInstance DeviceInstance) Validate(multiErr *errors.MultiError) {
 	if deviceInstance.Location == "" {
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "deviceInstance.location"))
 	}
-
-	// TODO: the locations here should be validated against the ones that are specified.
-	// There will likely need to be some higher-level validation happening as well, since
-	// the locations config is not in-scope here.
 }
 
 // DeviceOutput describes a valid output for the DeviceInstance.
