@@ -5,11 +5,15 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/viper"
+	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
+)
+
+const (
+	pluginConfigFileName = "config"
 )
 
 var (
@@ -25,135 +29,120 @@ var (
 	supportedExts = []string{".yml", ".yaml"}
 )
 
-// NewPluginConfig creates a new instance of PluginConfig, populated from
-// the configuration read in by Viper. This will include config options from
-// the command line and from file.
-func NewPluginConfig() (*PluginConfig, error) {
-	// First, we setup all the lookup info for the viper instance.
-	viper.SetConfigName("config")
+// GetDeviceConfigsFromFile finds the files containing device configurations and
+// marshals them into a DeviceConfig struct. These DeviceConfigs are wrapped in a
+// ConfigContext which provides the source file for the configuration as well.
+//
+// All ConfigContexts returned by this function will have their IsDeviceConfig
+// function return true.
+func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
+	var cfgs []*ConfigContext
 
-	// Set the environment variable lookup
-	viper.SetEnvPrefix("plugin")
-	viper.AutomaticEnv()
-
-	// If the PLUGIN_CONFIG environment variable is set, we will only search for
-	// the config in that specified path, as we should expect the user-specified
-	// value to be there. Otherwise, we will look through a set of pre-defined
-	// configuration locations (in order of search):
-	//  - current working directory
-	//  - local config directory
-	//  - the default config location in /etc
-	configPath := os.Getenv(EnvPluginConfig)
-	if configPath != "" {
-		viper.AddConfigPath(configPath)
-	} else {
-		for _, path := range pluginConfigSearchPaths {
-			viper.AddConfigPath(path)
-		}
-	}
-
-	// Set default values for the PluginConfig
-	SetDefaults()
-
-	// will be used for the ConfigContext
-	//configFile := viper.ConfigFileUsed()
-
-	// Read in the configuration
-	err := viper.ReadInConfig()
+	// Search for device config files. No name is specified as an arg here because
+	// device config files do not require any particular name.
+	files, err := findConfigs(deviceConfigSearchPaths, EnvDeviceConfig, "")
 	if err != nil {
 		return nil, err
+	}
+
+	for _, file := range files {
+		config := &DeviceConfig{}
+		err := unmarshalConfigFile(file, config)
+		if err != nil {
+			return nil, err
+		}
+		cfgs = append(cfgs, NewConfigContext(file, config))
+	}
+
+	return cfgs, nil
+}
+
+// GetPluginConfigFromFile finds the plugin configuration file, resolves plugin
+// config defaults, and marshals the config data into a PluginConfig struct. The
+// PluginConfig is wrapped in a ConfigContext which provides the source file for
+// the configuration as well.
+//
+// The ConfigContext returned by this function will have its IsPluginConfig
+// function return true.
+func GetPluginConfigFromFile() (*ConfigContext, error) {
+	// Search for the plugin config file. It should have the name "config".
+	files, err := findConfigs(pluginConfigSearchPaths, EnvPluginConfig, pluginConfigFileName)
+	if err != nil {
+		return nil, err
+	}
+	if len(files) > 1 {
+		return nil, fmt.Errorf("only one plugin config should be defined, but found: %v", files)
 	}
 
 	config := &PluginConfig{}
-	err = mapstructure.Decode(viper.AllSettings(), config)
+	// Resolve the defaults for the config first
+	err = defaults.Set(config)
+	if err != nil {
+		return nil, err
+	}
+	// Unmarshal the config data
+	err = unmarshalConfigFile(files[0], config)
 	if err != nil {
 		return nil, err
 	}
 
-	// FIXME: we should probably return a ConfigContext from this.
-	return config, nil
+	return NewConfigContext(files[0], config), nil
 }
 
-// SetDefaults sets the default values for the PluginConfig via Viper.
-func SetDefaults() {
-	viper.SetDefault("debug", false)
-	viper.SetDefault("settings.mode", modeSerial)
-	viper.SetDefault("settings.read.interval", "1s")
-	viper.SetDefault("settings.read.buffer", 100)
-	viper.SetDefault("settings.read.enabled", true)
-	viper.SetDefault("settings.write.interval", "1s")
-	viper.SetDefault("settings.write.buffer", 100)
-	viper.SetDefault("settings.write.max", 100)
-	viper.SetDefault("settings.write.enabled", true)
-	viper.SetDefault("settings.transaction.ttl", "5m")
+// unmarshalConfigFile unmarshals the contents of the specified file into the
+// specified struct.
+func unmarshalConfigFile(filepath string, out interface{}) error {
+	// Read the file contents
+	contents, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return err
+	}
+
+	// Unmarshal into the given struct.
+	// Note: Right now, we only support YAML config files. If that changes,
+	// we'll need to update this to support different encodings.
+	return yaml.Unmarshal(contents, out)
 }
 
-// getDeviceConfigFilePaths gets the file paths for device configuration files
-// by searching various config search paths.
+// findConfigs gets the paths for configuration file(s) by searching through
+// any environment overrides and through the specified config search paths.
 //
 // If first attempts to resolve the environment override. If present, the
 // environment override will be used and the built-in search paths will be
-// ignored. A failure to resolve a user-specified override should fail the
+// ignored. A failure to resolve a user-specified override will fail the
 // configuration flow, so the user knows something is wrong.
-//
-// This does not check that any
-func getDeviceConfigFilePaths() ([]string, error) { // nolint: gocyclo
+func findConfigs(searchPaths []string, env, name string) (configs []string, err error) {
 	// First, we will check to see if an environment override is set.
 	//
 	// The environment override can specify either:
 	//  - a directory which contains multiple device configuration files
 	//  - the path to a single configuration file
-	override := os.Getenv(EnvDevicePath)
-	if override != "" {
-		logger.Debugf("getting device configs from ENV override: %s", override)
-		info, err := os.Stat(override)
-		if err != nil {
-			return nil, err
-		}
+	configs, err = searchEnv(env, name)
+	if err != nil {
+		return
+	}
 
-		// If the environment variable specifies a directory, get all valid
-		// config files from that directory. Otherwise, consider the override
-		// value to be a file.
-		if info.IsDir() {
-			configs, err := getConfigPathsFromDir(override)
-			if err != nil {
-				return nil, err
-			}
-			// If there were no config files in the override path, return an error.
-			// We expect and user-defined overrides to be correct.
-			if len(configs) == 0 {
-				return nil, fmt.Errorf("no valid config files found in override path: %s", override)
-			}
-			return configs, nil
-		}
-
-		// If we get here, the override is not a directory, so we will consider
-		// it to be a file. Check that the file is valid.
-		if !isValidConfig(info) {
-			return nil, fmt.Errorf("environment-specified config '%s' is not a valid config file", override)
-		}
-		logger.Debugf("found valid config file: %s", override)
-		return []string{override}, nil
+	// If we got any configs from searching via ENV, return those, otherwise
+	// we will keep looking.
+	if len(configs) > 0 {
+		return
 	}
 
 	// If no override is set, look through the known search paths.
 	// The first search path to contain files with the supported extensions
-	// will be the source of the configs. This does not guarantee that said
-	// files are actually device config files though -- that will be determined
+	// will be the source of the configs. This does not guarantee that those
+	// files are actually config files though -- that will be determined
 	// when marshaling the data into the appropriate structs.
-	var configs []string
-	var err error
+	for _, path := range searchPaths {
+		logger.Debugf("searching for configs in: %s", path)
 
-	for _, path := range deviceConfigSearchPaths {
-		logger.Debugf("searching for device configs in: %s", path)
-
-		configs, err = getConfigPathsFromDir(path)
+		configs, err = searchDir(path, name)
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		if len(configs) != 0 {
-			logger.Debugf("device configs found")
+			logger.Debugf("config(s) found")
 			break
 		}
 	}
@@ -163,15 +152,71 @@ func getDeviceConfigFilePaths() ([]string, error) { // nolint: gocyclo
 		// TODO: this should probably be a specific config error so we can
 		// catch it later on. When configuration policies are implemented, this
 		// error might be ignored.
-		return nil, fmt.Errorf("no device configuration files found")
+		return nil, fmt.Errorf("no configuration files found in: %v", searchPaths)
 	}
-	return configs, nil
+	return
 }
 
-// getConfigPathsFromDir gets the filepaths of all the valid configuration files
+// searchEnv searches for configuration files based on the value set for the
+// specified environment variable.
+//
+// The value specified by the environment variable can be either a directory
+// containing configuration files, or the fully qualified path to a single
+// configuration file.
+//
+// If a "name" is passed in as a parameter, the config file will only be valid
+// if it has that name and if its extension is in the list of supported extensions.
+// If it is not set, it will be considered valid if its extension is in the list
+// of supported extensions.
+func searchEnv(env, name string) (configs []string, err error) {
+	// If there is no ENV provided, there is nothing to search for.
+	if env == "" {
+		return
+	}
+
+	envValue := os.Getenv(env)
+
+	// If no value is set for the env, there is nothing to search for.
+	if envValue == "" {
+		return
+	}
+
+	info, err := os.Stat(envValue)
+	if err != nil {
+		return
+	}
+
+	// If the environment variable specifies a directory, get all the valid
+	// config files from that directory.
+	if info.IsDir() {
+		configs, err = searchDir(envValue, name)
+		if err != nil {
+			return
+		}
+
+		// Since the ENV is used for user-specified overrides, if we don't
+		// find anything here, we will return an error.
+		if len(configs) == 0 {
+			return configs, fmt.Errorf("no valid config files found in override path: %s", envValue)
+		}
+		return
+	}
+
+	// Otherwise, the environment variable specifies a file. Check that
+	// the file is valid.
+	if !isValidConfig(info, name) {
+		return configs, fmt.Errorf("environment-specified config '%s' is not a valid config file", envValue)
+	}
+
+	logger.Debugf("found valid config file: %s", envValue)
+	configs = append(configs, envValue)
+	return
+}
+
+// searchDir gets the filepaths of all the valid configuration files
 // from the specified directory. Configuration files are considered valid if they
 // have a supported configuration file extension.
-func getConfigPathsFromDir(dirpath string) ([]string, error) {
+func searchDir(dirpath, name string) ([]string, error) {
 	var files []string
 
 	contents, err := ioutil.ReadDir(dirpath)
@@ -180,7 +225,7 @@ func getConfigPathsFromDir(dirpath string) ([]string, error) {
 	}
 
 	for _, f := range contents {
-		if isValidConfig(f) {
+		if isValidConfig(f, name) {
 			name := filepath.Join(dirpath, f.Name())
 			logger.Debugf("found valid config file: %s", name)
 			files = append(files, name)
@@ -192,9 +237,19 @@ func getConfigPathsFromDir(dirpath string) ([]string, error) {
 // isValidConfig checks if the given FileInfo corresponds to a file that could be
 // a valid configuration file. It checks that it is actually a file (not a Dir)
 // and checks that its extension matches the supported extensions.
-func isValidConfig(f os.FileInfo) bool {
+func isValidConfig(f os.FileInfo, name string) bool {
 	if !f.IsDir() {
 		fileExt := filepath.Ext(f.Name())
+
+		// If a file name was give, check that the file matches that name
+		if name != "" {
+			fileName := strings.TrimRight(f.Name(), fileExt)
+			if fileName != name {
+				return false
+			}
+		}
+
+		// Check if the extension is supported
 		for _, ext := range supportedExts {
 			if fileExt == ext {
 				return true
@@ -202,45 +257,4 @@ func isValidConfig(f os.FileInfo) bool {
 		}
 	}
 	return false
-}
-
-// GetDeviceConfigsFromFile finds the files containing device configurations and
-// marshals them into a DeviceConfig struct. These DeviceConfigs are wrapped in a
-// ConfigContext which provides the source file for the configuration as well.
-//
-// All ConfigContexts returned by this function will have their IsDeviceConfig
-// function return true.
-func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
-	var cfgs []*ConfigContext
-
-	files, err := getDeviceConfigFilePaths()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, file := range files {
-		config := &DeviceConfig{}
-		err := UnmarshalConfigFile(file, config)
-		if err != nil {
-			return nil, err
-		}
-		cfgs = append(cfgs, NewConfigContext(file, config))
-	}
-
-	return cfgs, nil
-}
-
-// UnmarshalConfigFile unmarshals the contents of the specified file into the
-// specified struct.
-func UnmarshalConfigFile(filepath string, out interface{}) error {
-	// Read the file contents
-	contents, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return err
-	}
-
-	// Unmarshal into the given struct.
-	// Note: Right now, we only support YAML config files. If that changes,
-	// we'll need to update this to support different encodings.
-	return yaml.Unmarshal(contents, out)
 }

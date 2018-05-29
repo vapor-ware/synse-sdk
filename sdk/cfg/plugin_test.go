@@ -97,18 +97,18 @@ func TestPluginSettings_Validate_Ok(t *testing.T) {
 			desc: "PluginSettings has valid mode (serial)",
 			config: PluginSettings{
 				Mode:        "serial",
-				Read:        ReadSettings{},
-				Write:       WriteSettings{},
-				Transaction: TransactionSettings{},
+				Read:        &ReadSettings{},
+				Write:       &WriteSettings{},
+				Transaction: &TransactionSettings{},
 			},
 		},
 		{
 			desc: "PluginSettings has valid mode (parallel)",
 			config: PluginSettings{
 				Mode:        "parallel",
-				Read:        ReadSettings{},
-				Write:       WriteSettings{},
-				Transaction: TransactionSettings{},
+				Read:        &ReadSettings{},
+				Write:       &WriteSettings{},
+				Transaction: &TransactionSettings{},
 			},
 		},
 	}
@@ -138,9 +138,9 @@ func TestPluginSettings_Validate_Error(t *testing.T) {
 			errCount: 1,
 			config: PluginSettings{
 				Mode:        "bad mode",
-				Read:        ReadSettings{},
-				Write:       WriteSettings{},
-				Transaction: TransactionSettings{},
+				Read:        &ReadSettings{},
+				Write:       &WriteSettings{},
+				Transaction: &TransactionSettings{},
 			},
 		},
 	}
