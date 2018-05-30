@@ -1,8 +1,8 @@
 package sdk
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/vapor-ware/synse-sdk/sdk/cfg"
@@ -14,8 +14,8 @@ import (
 type Plugin struct {
 	policies []policies.ConfigPolicy
 
-	preRunActions []pluginAction
-	postRunActions []pluginAction
+	preRunActions      []pluginAction
+	postRunActions     []pluginAction
 	deviceSetupActions map[string][]deviceAction
 }
 
@@ -31,7 +31,6 @@ func NewPlugin() {
 func (plugin *Plugin) SetConfigPolicies(policies ...policies.ConfigPolicy) {
 	plugin.policies = policies
 }
-
 
 // RegisterPreRunActions registers functions with the plugin that will be called
 // before the gRPC server and dataManager are started. The functions here can be
@@ -77,7 +76,6 @@ func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...devic
 		plugin.deviceSetupActions[filter] = actions
 	}
 }
-
 
 // Run starts the Plugin.
 //
@@ -331,6 +329,7 @@ func (plugin *Plugin) logStartupInfo() {
 
 	logger.Info("--------------------------------")
 }
+
 //
 //// OPlugin represents an instance of a Synse plugin. Along with metadata
 //// and definable handlers, it contains a gRPC server to handle the plugin
