@@ -8,6 +8,12 @@
   version = "v1.0.5"
 
 [[projects]]
+  name = "github.com/creasty/defaults"
+  packages = ["."]
+  revision = "a7e48e2230891fc7456c8ab918c424c5b06c3192"
+  version = "v1.2.1"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -124,10 +130,10 @@
   version = "v1.2.1"
 
 [[projects]]
-  branch = "master"
+  branch = "sdk-1.0"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
-  revision = "fd81ba14a7fb8d8d1027ea868976948b5596a395"
+  revision = "c2fdeac370a306d849af80f0a0e331329d23a033"
 
 [[projects]]
   branch = "master"
@@ -231,6 +237,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4945848211437201b2de89edc071326efac5649e6533be8aefc9460385643ffe"
+  inputs-digest = "5a0ea62506e8f72529a921fbc6f197fbc70074868b53a916c7e2b8d8d31f4da3"
   solver-name = "gps-cdcl"
   solver-version = 1

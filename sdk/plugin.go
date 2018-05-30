@@ -226,7 +226,7 @@ func (plugin *NPlugin) registerDevices() {
 // requests.
 type Plugin struct {
 	Config      *config.PluginConfig // See config.PluginConfig for comments.
-	server      *server              // InternalApiServer for fulfilling gRPC requests.
+	server      *Server              // InternalApiServer for fulfilling gRPC requests.
 	handlers    *Handlers            // See sdk.handlers.go for comments.
 	dataManager *dataManager         // Manages device reads and writes. Accesses cached read data.
 
@@ -446,7 +446,7 @@ func (p *Plugin) Run() error { // nolint: gocyclo
 	p.dataManager.init()
 
 	// Start the gRPC server
-	return p.server.serve()
+	return p.server.Serve()
 
 	// TODO - figure out how to get post actions working correctly
 }
@@ -486,21 +486,26 @@ func (p *Plugin) setup() error {
 		return err
 	}
 
-	// Register a new server and dataManager for the Plugin. This should
-	// be done prior to running the plugin, as opposed to on initialization
-	// of the Plugin struct, because their configuration is configuration
-	// dependent. The Plugin should be configured prior to running.
-	p.server, err = newServer(p)
-	if err != nil {
-		logger.Errorf("Failed to create new gRPC server: %v", err)
-		return err
-	}
+	/*
+		FIXME
 
-	// Create the dataManager
-	p.dataManager, err = newDataManager(p)
-	if err != nil {
-		logger.Errorf("Failed to create plugin data manager: %v", err)
-	}
+		// Register a new server and dataManager for the Plugin. This should
+		// be done prior to running the plugin, as opposed to on initialization
+		// of the Plugin struct, because their configuration is configuration
+		// dependent. The Plugin should be configured prior to running.
+		p.server, err = newServer(p)
+		if err != nil {
+			logger.Errorf("Failed to create new gRPC server: %v", err)
+			return err
+		}
+
+		// Create the dataManager
+		p.dataManager, err = newDataManager(p)
+		if err != nil {
+			logger.Errorf("Failed to create plugin data manager: %v", err)
+		}
+
+	*/
 	return err
 }
 

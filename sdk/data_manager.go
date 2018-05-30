@@ -8,9 +8,11 @@ import (
 
 	"github.com/vapor-ware/synse-server-grpc/go"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
+
+// DataManager is the global data manager for the plugin.
+var DataManager = newDataManager()
 
 // dataManager handles the reading from and writing to configured devices.
 // It executes the read and write goroutines and uses the channels between
@@ -40,45 +42,32 @@ type dataManager struct {
 	// Lock around async reads and writes.
 	rwLock *sync.Mutex
 
-	// The plugin's handlers. See sdk/handlers.go.
-	handlers *Handlers
-
-	// The plugin's device handlers. These are what handle the read
-	// and write functionality for all devices.
-	deviceHandlers []*DeviceHandler
-
-	// The plugin's configuration. See sdk.config.plugin.go.
-	config *config.PluginConfig
+	//// The plugin's handlers. See sdk/handlers.go.
+	//handlers *Handlers
+	//
+	//// The plugin's device handlers. These are what handle the read
+	//// and write functionality for all devices.
+	//deviceHandlers []*DeviceHandler
+	//
+	//// The plugin's configuration. See sdk.config.plugin.go.
+	//config *config.PluginConfig
 }
 
 // newDataManager creates a new instance of the dataManager for a Plugin. For a
 // new dataManager to be created successfully, the given Plugin should be non-nil,
 // have non-nil Handlers defined, and have a non-nil config defined.
-func newDataManager(plugin *Plugin) (*dataManager, error) {
-	// Nil check the parameter and all pointers we dereference here for now.
-	// FUTURE: Check in the plugin config constructor.
-	if plugin == nil {
-		return nil, fmt.Errorf("plugin parameter must not be nil")
-	}
-
-	if plugin.handlers == nil {
-		return nil, fmt.Errorf("plugin.handlers in parameter must not be nil")
-	}
-
-	if plugin.Config == nil {
-		return nil, fmt.Errorf("plugin.Config in parameter must not be nil")
+func newDataManager() *dataManager {
+	if !IsConfigured() {
+		logger.Fatal("unable to create data manager - plugin must be configured first")
 	}
 
 	return &dataManager{
-		readChannel:    make(chan *ReadContext, plugin.Config.Settings.Read.Buffer),
-		writeChannel:   make(chan *WriteContext, plugin.Config.Settings.Write.Buffer),
-		readings:       make(map[string][]*Reading),
-		dataLock:       &sync.RWMutex{},
-		rwLock:         &sync.Mutex{},
-		handlers:       plugin.handlers,
-		deviceHandlers: plugin.deviceHandlers,
-		config:         plugin.Config,
-	}, nil
+		readChannel:  make(chan *ReadContext, PluginConfig.Settings.Read.Buffer),
+		writeChannel: make(chan *WriteContext, PluginConfig.Settings.Write.Buffer),
+		readings:     make(map[string][]*Reading),
+		dataLock:     &sync.RWMutex{},
+		rwLock:       &sync.Mutex{},
+	}
 }
 
 // init initializes the goroutines for the dataManager so it can start reading
