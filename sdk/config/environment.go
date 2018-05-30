@@ -1,4 +1,4 @@
-package cfg
+package config
 
 // TODO: update these based on the new config pieces, added these in here
 // mostly as placeholders as the config reading logic is implemented.
