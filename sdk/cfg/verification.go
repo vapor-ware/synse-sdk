@@ -75,7 +75,12 @@ func verifyDeviceConfigLocations(deviceConfig *DeviceConfig, multiErr *errors.Mu
 		// If we already have the location cached, make sure that this Location
 		// is the same as the existing one. If not, we have a conflict.
 		if loc != location {
-			multiErr.Add(fmt.Errorf("conflict: differing Location config with the same name: %s", loc.Name))
+			multiErr.Add(
+				errors.NewVerificationConflictError(
+					"device",
+					fmt.Sprintf("differing Location config with the same name: %s", loc.Name),
+				),
+			)
 		}
 	}
 }
@@ -93,7 +98,12 @@ func verifyDeviceConfigDeviceKinds(deviceConfig *DeviceConfig, multiErr *errors.
 		}
 
 		// If it is already specified, this is a conflict.
-		multiErr.Add(fmt.Errorf("conflict: found duplicate DeviceKind name: %s", kind.Name))
+		multiErr.Add(
+			errors.NewVerificationConflictError(
+				"device",
+				fmt.Sprintf("found duplicate DeviceKind name: %s", kind.Name),
+			),
+		)
 	}
 }
 
@@ -104,13 +114,23 @@ func verifyDeviceConfigInstances(deviceConfig *DeviceConfig, multiErr *errors.Mu
 	for _, device := range deviceConfig.Devices {
 		for _, instance := range device.Instances {
 			if instance.Location == "" {
-				multiErr.Add(fmt.Errorf("invalid: device instance needs a location specified, but is empty"))
+				multiErr.Add(
+					errors.NewVerificationInvalidError(
+						"device",
+						"device instance needs a location specified, but is empty",
+					),
+				)
 				continue
 			}
 
 			_, hasLocation := deviceConfigLocations[instance.Location]
 			if !hasLocation {
-				multiErr.Add(fmt.Errorf("invalid: unknown device instance location specified: %s", instance.Location))
+				multiErr.Add(
+					errors.NewVerificationInvalidError(
+						"device",
+						fmt.Sprintf("unknown device instance location specified: %s", instance.Location),
+					),
+				)
 				continue
 			}
 
@@ -126,7 +146,12 @@ func verifyDeviceConfigOutputs(deviceConfig *DeviceConfig, multiErr *errors.Mult
 		for _, output := range device.Outputs {
 			_, hasOutput := outputTypes[output.Type]
 			if !hasOutput {
-				multiErr.Add(fmt.Errorf("invalid: unknown output type specified: %s", output.Type))
+				multiErr.Add(
+					errors.NewVerificationInvalidError(
+						"device",
+						fmt.Sprintf("unknown output type specified: %s", output.Type),
+					),
+				)
 				continue
 			}
 		}
@@ -134,7 +159,12 @@ func verifyDeviceConfigOutputs(deviceConfig *DeviceConfig, multiErr *errors.Mult
 		// Check the instance-level outputs
 		for _, instance := range device.Instances {
 			for _, output := range instance.Outputs {
-				multiErr.Add(fmt.Errorf("invalid: unknown output type specified: %s", output.Type))
+				multiErr.Add(
+					errors.NewVerificationInvalidError(
+						"device",
+						fmt.Sprintf("unknown output type specified: %s", output.Type),
+					),
+				)
 				continue
 			}
 		}

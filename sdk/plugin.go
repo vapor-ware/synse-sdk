@@ -7,6 +7,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/vapor-ware/synse-sdk/sdk/cfg"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
@@ -15,10 +16,25 @@ import (
 type pluginAction func(p *Plugin) error
 type deviceAction func(p *Plugin, d *Device) error
 
+// NPlugin is the New Plugin. This will replace Plugin once v1.0 work is completed.
 type NPlugin struct {
 	policies []policies.ConfigPolicy
 }
 
+// SetConfigPolicies sets the config policies for the plugin. Config policies will
+// determine how the plugin behaves when reading in configurations.
+//
+// If no config policies are set, default policies will be used. Policy validation
+// does not happen in this function. Config policies are validated on plugin Run.
+func (plugin *NPlugin) SetConfigPolicies(policies ...policies.ConfigPolicy) {
+	plugin.policies = policies
+}
+
+// Run starts the Plugin.
+//
+// Before the gRPC server is started, and before the read and write goroutines
+// are started, Plugin setup and validation will happen. If successful, pre-run
+// actions are executed, and device setup actions are executed, if defined.
 func (plugin *NPlugin) Run() {
 
 	// ** "Config" steps **
@@ -34,16 +50,17 @@ func (plugin *NPlugin) Run() {
 	// Read in all configs and verify that they are correct.
 	plugin.processConfig()
 
-	// ** "Making" steps **
+	// ** "Registration" steps **
 
 	// FIXME: at this point, we will need to resolve dynamic registration stuff.
 	//   - if dynamic registration makes Devices, just add to the global map.
 	//   - if dynamic registration makes Config artifacts, add to the unified config.
-	// (or maybe this happens in th processConfig step, before unification?)
-
+	//     (or maybe this happens in th processConfig step, before unification?)
 	// Initialize Device instances for each of the devices configured with
 	// the plugin.
-	plugin.makeDevices()
+	plugin.registerDevices()
+
+	// ** "Making" steps **
 
 	// makeTransactionCache
 	// makeDataManager
@@ -54,10 +71,16 @@ func (plugin *NPlugin) Run() {
 	// preRunActions
 	// deviceSetupActions
 
-	// "Starting" steps **
+	// If the --dry-run flag is set, we will end here. The gRPC server and
+	// data manager do not get started up in the dry run.
+	if !flagDryRun {
 
-	// startDataManager
-	// startServer
+		// "Starting" steps **
+
+		// startDataManager
+		// startServer
+
+	}
 
 	// profit
 
@@ -108,13 +131,94 @@ func (plugin *NPlugin) checkPolicies() {
 // config, validating the config scheme, config unification, and verifying the
 // config data is correct. These steps should happen for all config types.
 func (plugin *NPlugin) processConfig() {
-	// TODO: implement config processing.. this can probably be done soon, since we have most of what we need.
+
+	// FIXME: here, there are similar patterns for checking the policies..
+	// perhaps this could live somewhere else?
+
+	// 1. Read in the configs. We have a few types of configs to read in.
+	//  a. Plugin Config
+	pluginCtx, err := cfg.GetPluginConfigFromFile()
+	if err != nil {
+		switch policies.PolicyManager.GetPluginConfigPolicy() {
+		case policies.PluginConfigOptional:
+			// The plugin config is optional: do not fail if the config is not found.
+		case policies.PluginConfigRequired:
+			// The plugin config is required: fail if the config is not found.
+		default:
+			// log.Fatal? -- unsupported plugin config policiy
+		}
+		// what do we do when we error out here?
+	}
+
+	//  b. Device Config
+	deviceCtxs, err := cfg.GetDeviceConfigsFromFile()
+	if err != nil {
+		switch policies.PolicyManager.GetDeviceConfigPolicy() {
+		case policies.DeviceConfigOptional:
+			// The device config is optional: do not fail if no configs are found.
+		case policies.DeviceConfigRequired:
+			// The device config is required: fail if no configs are found.
+		default:
+			// log.Fatal? -- unsupported device config policy
+		}
+
+		// what do we do when we error out here?
+	}
+
+	//  c. Type Config
+	// TODO
+
+	//  d. ... Other?
+	// TODO?
+
+	// FIXME: if no configs were found and we haven't failed yet (e.g. config policy
+	// is optional), then we should not fail validation. i.e. the pluginCtx/deviceCtxs
+	// should still be valid for all the steps below.
+
+	// 2. Validate Config Schemes
+	multiErr := cfg.Validator.Validate(pluginCtx, pluginCtx.Source)
+	if multiErr.HasErrors() {
+		// what to do here?
+	}
+
+	for _, ctx := range deviceCtxs {
+		multiErr = cfg.Validator.Validate(ctx, ctx.Source)
+		if multiErr.HasErrors() {
+			// what to do here?
+		}
+	}
+
+	// 3. Unify Configs
+	unifiedCtx, err := cfg.UnifyDeviceConfigs(deviceCtxs)
+	if err != nil {
+		// what to do here?
+	}
+
+	// 4. Verify
+	if !unifiedCtx.IsDeviceConfig() {
+		// ERROR
+	}
+	unifiedCfg := unifiedCtx.Config.(*cfg.DeviceConfig)
+	multiErr = cfg.VerifyConfigs(unifiedCfg)
+	if multiErr.HasErrors() {
+		// what to do here?
+	}
+
+	// TODO: once everything is done, what do we do with all the data?
 }
 
-// makeDevices converts the plugin configuration into the Device instances that
-// represent the physical/virtual devices that the plugin will manage.
-func (plugin *NPlugin) makeDevices() {
-	// TODO: implement
+// registerDevices registers devices with the plugin. Devices are registered
+// from multiple configuration sources: from file and from any dynamic registration
+// functions supplied by the plugin.
+//
+// In both cases, the config sources are converted into the SDK's Device instances
+// which represent the physical/virtual devices that the plugin will manage.
+func (plugin *NPlugin) registerDevices() {
+
+	// devices from config
+
+	// devices from dynamic registration
+
 }
 
 // Plugin represents an instance of a Synse plugin. Along with metadata
@@ -159,12 +263,12 @@ func NewPlugin(handlers *Handlers, pluginConfig *config.PluginConfig) (*Plugin, 
 		p.Config = pluginConfig
 	} else {
 		logger.Info("Loading plugin config from file")
-		cfg, err := config.NewPluginConfig()
+		cnfg, err := config.NewPluginConfig()
 		if err != nil {
 			logger.Errorf("Failed to load plugin config from file: %v", err)
 			return nil, err
 		}
-		p.Config = cfg
+		p.Config = cnfg
 	}
 	// Set logging level from the config now that we have a config.
 	logger.SetLogLevel(p.Config.Debug)

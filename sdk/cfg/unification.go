@@ -2,8 +2,6 @@ package cfg
 
 import (
 	"fmt"
-
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
 // UnifyDeviceConfigs will take a slice of ConfigContext which represents
