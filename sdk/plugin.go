@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/vapor-ware/synse-sdk/sdk/cfg"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
@@ -227,7 +227,7 @@ func (plugin *Plugin) processConfig() {
 
 	// 1. Read in the configs. We have a few types of configs to read in.
 	//  a. Plugin Config
-	pluginCtx, err := cfg.GetPluginConfigFromFile()
+	pluginCtx, err := config.GetPluginConfigFromFile()
 	if err != nil {
 		switch policies.PolicyManager.GetPluginConfigPolicy() {
 		case policies.PluginConfigOptional:
@@ -241,7 +241,7 @@ func (plugin *Plugin) processConfig() {
 	}
 
 	//  b. Device Config
-	deviceCtxs, err := cfg.GetDeviceConfigsFromFile()
+	deviceCtxs, err := config.GetDeviceConfigsFromFile()
 	if err != nil {
 		switch policies.PolicyManager.GetDeviceConfigPolicy() {
 		case policies.DeviceConfigOptional:
@@ -266,20 +266,20 @@ func (plugin *Plugin) processConfig() {
 	// should still be valid for all the steps below.
 
 	// 2. Validate Config Schemes
-	multiErr := cfg.Validator.Validate(pluginCtx, pluginCtx.Source)
+	multiErr := config.Validator.Validate(pluginCtx, pluginCtx.Source)
 	if multiErr.HasErrors() {
 		// what to do here?
 	}
 
 	for _, ctx := range deviceCtxs {
-		multiErr = cfg.Validator.Validate(ctx, ctx.Source)
+		multiErr = config.Validator.Validate(ctx, ctx.Source)
 		if multiErr.HasErrors() {
 			// what to do here?
 		}
 	}
 
 	// 3. Unify Configs
-	unifiedCtx, err := cfg.UnifyDeviceConfigs(deviceCtxs)
+	unifiedCtx, err := config.UnifyDeviceConfigs(deviceCtxs)
 	if err != nil {
 		// what to do here?
 	}
@@ -288,8 +288,8 @@ func (plugin *Plugin) processConfig() {
 	if !unifiedCtx.IsDeviceConfig() {
 		// ERROR
 	}
-	unifiedCfg := unifiedCtx.Config.(*cfg.DeviceConfig)
-	multiErr = cfg.VerifyConfigs(unifiedCfg)
+	unifiedCfg := unifiedCtx.Config.(*config.DeviceConfig)
+	multiErr = config.VerifyConfigs(unifiedCfg)
 	if multiErr.HasErrors() {
 		// what to do here?
 	}

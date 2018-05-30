@@ -42,13 +42,18 @@ type ReadContext struct {
 // NewReadContext creates a new instance of a ReadContext from the given
 // device and corresponding readings.
 func NewReadContext(device *Device, readings []*Reading) (*ReadContext, error) {
-	rack, err := device.Location.GetRack()
+	rack, err := device.Location.Rack.Get()
 	if err != nil {
 		return nil, err
 	}
+	board, err := device.Location.Board.Get()
+	if err != nil {
+		return nil, err
+	}
+
 	return &ReadContext{
 		Device:  device.ID(),
-		Board:   device.Location.Board,
+		Board:   board,
 		Rack:    rack,
 		Reading: readings,
 	}, nil
@@ -84,7 +89,7 @@ type WriteData synse.WriteData
 // encode translates the WriteData to a corresponding gRPC WriteData.
 func (w *WriteData) encode() *synse.WriteData {
 	return &synse.WriteData{
-		Raw:    w.Raw,
+		Data:   w.Data,
 		Action: w.Action,
 	}
 }
@@ -92,7 +97,7 @@ func (w *WriteData) encode() *synse.WriteData {
 // decodeWriteData decodes the gRPC WriteData to the SDK WriteData.
 func decodeWriteData(data *synse.WriteData) *WriteData {
 	return &WriteData{
-		Raw:    data.Raw,
+		Data:   data.Data,
 		Action: data.Action,
 	}
 }

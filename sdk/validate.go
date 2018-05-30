@@ -42,15 +42,6 @@ func validateWriteRequest(request *synse.WriteInfo) error {
 	return nil
 }
 
-// validateHandlers validates that the given Handlers struct has non-nil
-// values in its Plugin and Device fields.
-func validateHandlers(handlers *Handlers) error {
-	if handlers.DeviceIdentifier == nil {
-		return notFoundErr("device identifier not defined")
-	}
-	return nil
-}
-
 // validateForRead validates that a device with the given device ID is readable.
 func validateForRead(deviceID string) error {
 	device := deviceMap[deviceID]

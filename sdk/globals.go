@@ -10,9 +10,3 @@ import (
 
 var DeviceConfig config.DeviceConfig
 var PluginConfig config.PluginConfig
-
-// IsConfigured is a stand-in for a means by which we will determine whether
-// the plugin has been globally configured or not.
-func IsConfigured() bool {
-	return true
-}

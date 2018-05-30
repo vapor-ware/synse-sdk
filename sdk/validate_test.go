@@ -100,45 +100,6 @@ func TestValidateWriteRequestErr(t *testing.T) {
 	}
 }
 
-// TestValidateHandlers tests validating a handlers struct successfully.
-func TestValidateHandlers(t *testing.T) {
-	var cases = []Handlers{
-		{
-			// identifier and enumerator defined
-			DeviceIdentifier: testDeviceIdentifier,
-			DeviceEnumerator: testDeviceEnumerator,
-		},
-		{
-			// enumerator not defined
-			DeviceIdentifier: testDeviceIdentifier,
-		},
-	}
-
-	for _, testCase := range cases {
-		err := validateHandlers(&testCase)
-		assert.NoError(t, err)
-	}
-}
-
-// TestValidateHandlersErr tests validating a handlers struct when the given
-// values should cause validation to fail and return an error.
-func TestValidateHandlersErr(t *testing.T) {
-	var cases = []Handlers{
-		{
-			// no device identifier
-			DeviceEnumerator: testDeviceEnumerator,
-		},
-		{
-			// no handlers defined (all nil)
-		},
-	}
-
-	for _, testCase := range cases {
-		err := validateHandlers(&testCase)
-		assert.Error(t, err)
-	}
-}
-
 // TestValidateForRead_1 tests validating a device for read, when the specified
 // device is not in the device map.
 func TestValidateForRead_1(t *testing.T) {
