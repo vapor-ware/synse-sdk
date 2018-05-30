@@ -43,7 +43,7 @@ func (server *Server) Serve() (err error) {
 	svr := grpc.NewServer()
 	synse.RegisterPluginServer(svr, server)
 
-	if err := svr.Serve(lis); err != nil {
+	if err = svr.Serve(lis); err != nil {
 		return
 	}
 	return nil
