@@ -10,17 +10,99 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
+// FIXME -- these function type definitions should probably move somewhere else.
+type DeviceIdentifier func(map[string]interface{}) string
+
+type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
+type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceConfig, error)
+
 // Plugin is the New Plugin. This will replace Plugin once v1.0 work is completed.
 type Plugin struct {
 	policies []policies.ConfigPolicy
+
+	deviceIdentifier             DeviceIdentifier
+	dynamicDeviceRegistrar       DynamicDeviceRegistrar
+	dynamicDeviceConfigRegistrar DynamicDeviceConfigRegistrar
 
 	preRunActions      []pluginAction
 	postRunActions     []pluginAction
 	deviceSetupActions map[string][]deviceAction
 }
 
-func NewPlugin() {
+// FIXME: options should probably move somewhere else.
+type PluginOption func(*Plugin)
 
+// CustomDeviceIdentifier lets you set a custom function for creating a deterministic
+// identifier for a device using the config data for the device.
+func CustomDeviceIdentifier(identifier DeviceIdentifier) PluginOption {
+	return func(plugin *Plugin) {
+		plugin.deviceIdentifier = identifier
+	}
+}
+
+// CustomDynamicDeviceRegistration lets you set a custom function for dynamically registering
+// Device instances using the data from the "dynamic registration" field in the Plugin config.
+func CustomDynamicDeviceRegistration(registrar DynamicDeviceRegistrar) PluginOption {
+	return func(plugin *Plugin) {
+		plugin.dynamicDeviceRegistrar = registrar
+	}
+}
+
+// CustomDynamicDeviceConfigRegistration lets you set a custom function for dynamically
+// registering DeviceConfig instances using the data from the "dynamic registration" field
+// in the Plugin config.
+func CustomDynamicDeviceConfigRegistration(registrar DynamicDeviceConfigRegistrar) PluginOption {
+	return func(plugin *Plugin) {
+		plugin.dynamicDeviceConfigRegistrar = registrar
+	}
+}
+
+// defaultOptions defines the default plugin options.
+var defaultOptions = []PluginOption{
+	defaultDeviceIdentifierOption,
+	defaultDynamicDeviceRegistrationOption,
+	defaultDynamicDeviceConfigRegistrationOption,
+}
+
+// defaultDeviceIdentifierOption applies the default behavior for creating a deterministic
+// identifier to the plugin, if it does not already have one set.
+func defaultDeviceIdentifierOption(plugin *Plugin) {
+	if plugin.deviceIdentifier == nil {
+		plugin.deviceIdentifier = defaultDeviceIdentifier
+	}
+}
+
+// defaultDynamicDeviceRegistrationOption applies the default behavior for dynamic device
+// registration to the plugin, if it does not already have one set.
+func defaultDynamicDeviceRegistrationOption(plugin *Plugin) {
+	if plugin.dynamicDeviceRegistrar == nil {
+		plugin.dynamicDeviceRegistrar = defaultDynamicDeviceRegistration
+	}
+}
+
+// defaultDynamicDeviceConfigRegistrationOption applies the default behavior for dynamic
+// device config registration to the plugin, if it does not already have one set.
+func defaultDynamicDeviceConfigRegistrationOption(plugin *Plugin) {
+	if plugin.dynamicDeviceConfigRegistrar == nil {
+		plugin.dynamicDeviceConfigRegistrar = defaultDynamicDeviceConfigRegistration
+	}
+}
+
+// NewPlugin creates a new instance of a Synse Plugin.
+func NewPlugin(options ...PluginOption) *Plugin {
+	plugin := Plugin{}
+
+	// Set custom options for the plugin.
+	for _, option := range options {
+		option(&plugin)
+	}
+
+	// Apply defaults to any required field that was not set from an option.
+	for _, option := range defaultOptions {
+		option(&plugin)
+	}
+
+	return &plugin
 }
 
 // SetConfigPolicies sets the config policies for the plugin. Config policies will
