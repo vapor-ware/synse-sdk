@@ -13,21 +13,35 @@ var deviceMap = make(map[string]*Device)
 // DeviceHandler specifies the read and write handlers for a Device
 // based on its type and model.
 type DeviceHandler struct {
-	// FIXME: this used to be based off of the type/model.. we could have it
-	// be based off of the device kind, or we could just not require it to have
-	// any inherent association with a device, and leave it up to the plugin to
-	// somehow map them?
-	//
-	// The above only really makes sense if there are cases where we do not want
-	// to associate it to a device kind. I think in most basic cases, it is fine
-	// to associate. The question is: in dynamic cases, do we want that association
-	// still?
-	//
-	// Will need to think this through a bit more once I have some more brain power.
 
+	// Name is the name of the handler. This is how the handler will be referenced
+	// and associated with Device instances via their DeviceConfig. This name should
+	// be the same as the "Kind" of the device which it corresponds with.
+	//
+	// Additionally, there are cases where we may not want the DeviceHandler to match
+	// on the name of the Kind, or we may want a subset of a Device Kind's instances
+	// to match to a different handler. In that case, the "handlerName" field can be
+	// set in the DeviceConfig at either the DeviceKind level (where it would apply
+	// for all instances of that kind), or at the DeviceInstance level (where it would
+	// apply for only that instance.
+	//
+	// If the "handlerName" field is specified, it will be used to match against
+	// this Name field. Otherwise, the Kind of the device will be used to match
+	// against this Name field.
+	Name string
+
+	// Write is a function that handles Write requests for the device. If the
+	// device does not support writing, this can be left as nil.
 	Write func(*Device, *WriteData) error
-	Read  func(*Device) ([]*Reading, error)
 
+	// Read is a function that handles Read requests for the device. If the device
+	// does not support reading, this can be left as nil.
+	Read func(*Device) ([]*Reading, error)
+
+	// BulkRead is a function that handles bulk reading for the device. A bulk read
+	// is where all devices of a given kind are read at once, instead of individually.
+	// If a device does not support bulk read, this can be left as nil. Additionally,
+	// a device can only be bulk read if there is no Read handler set.
 	BulkRead func([]*Device) ([]*ReadContext, error)
 }
 

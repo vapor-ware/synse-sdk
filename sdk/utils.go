@@ -22,13 +22,13 @@ func makeIDString(rack, board, device string) string {
 
 // getHandlerForDevice gets the DeviceHandler for the device, based on its
 // Type and Model.
-func getHandlerForDevice(handlers []*DeviceHandler, device *config.DeviceConfig) (*DeviceHandler, error) {
-	for _, h := range handlers {
-		if device.Type == h.Type && device.Model == h.Model {
-			return h, nil
+func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
+	for _, handler := range registeredHandlers {
+		if handler.Name == handlerName {
+			return handler, nil
 		}
 	}
-	return nil, fmt.Errorf("no handler found for device %#v", device)
+	return nil, fmt.Errorf("no handler found with name: %s", handlerName)
 }
 
 // makeDevices
@@ -68,6 +68,22 @@ func makeDevices(config *config.DeviceConfig, plugin *Plugin) ([]*Device, error)
 				return nil, err
 			}
 
+			// If a specific handlerName is set in the config, we will use that as the
+			// definitive handler. Otherwise, use the kind.
+			handlerName := kind.Name
+			if kind.HandlerName != "" {
+				handlerName = kind.HandlerName
+			}
+			if instance.HandlerName != "" {
+				handlerName = instance.HandlerName
+			}
+
+			// Get the DeviceHandler
+			handler, err := getHandlerForDevice(handlerName)
+			if err != nil {
+				return nil, err
+			}
+
 			device := &Device{
 				// The name of the device kind. This is essentially the identifier
 				// for the device type.
@@ -94,7 +110,7 @@ func makeDevices(config *config.DeviceConfig, plugin *Plugin) ([]*Device, error)
 				Outputs: instanceOutputs,
 
 				// The read/write handler for the device. Handlers should be registered globally.
-				Handler: nil, // TODO: get the handler.. from somewhere..
+				Handler: handler,
 			}
 
 			devices = append(devices, device)
