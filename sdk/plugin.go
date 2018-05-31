@@ -10,13 +10,23 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
-// FIXME -- these function type definitions should probably move somewhere else.
+// DeviceIdentifier is a function that produces a string that can be used to
+// identify a device deterministically. The returned string should be a composite
+// from the Device's config data.
 type DeviceIdentifier func(map[string]interface{}) string
 
+// DynamicDeviceRegistrar is a function that takes a Plugin config's "dynamic
+// registration" data and generates Device instances from it. How this is done
+// is specific to the plugin/protocol.
 type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
+
+// DynamicDeviceConfigRegistrar is a function that takes a Plugin config's "dynamic
+// registration" data and generates DeviceConfig instances from it. How this is done
+// is specific to the plugin/protocol.
 type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceConfig, error)
 
-// Plugin is the New Plugin. This will replace Plugin once v1.0 work is completed.
+// A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
+// as data providers and device controllers for Synse Server.
 type Plugin struct {
 	policies []policies.ConfigPolicy
 
@@ -27,65 +37,6 @@ type Plugin struct {
 	preRunActions      []pluginAction
 	postRunActions     []pluginAction
 	deviceSetupActions map[string][]deviceAction
-}
-
-// FIXME: options should probably move somewhere else.
-type PluginOption func(*Plugin)
-
-// CustomDeviceIdentifier lets you set a custom function for creating a deterministic
-// identifier for a device using the config data for the device.
-func CustomDeviceIdentifier(identifier DeviceIdentifier) PluginOption {
-	return func(plugin *Plugin) {
-		plugin.deviceIdentifier = identifier
-	}
-}
-
-// CustomDynamicDeviceRegistration lets you set a custom function for dynamically registering
-// Device instances using the data from the "dynamic registration" field in the Plugin config.
-func CustomDynamicDeviceRegistration(registrar DynamicDeviceRegistrar) PluginOption {
-	return func(plugin *Plugin) {
-		plugin.dynamicDeviceRegistrar = registrar
-	}
-}
-
-// CustomDynamicDeviceConfigRegistration lets you set a custom function for dynamically
-// registering DeviceConfig instances using the data from the "dynamic registration" field
-// in the Plugin config.
-func CustomDynamicDeviceConfigRegistration(registrar DynamicDeviceConfigRegistrar) PluginOption {
-	return func(plugin *Plugin) {
-		plugin.dynamicDeviceConfigRegistrar = registrar
-	}
-}
-
-// defaultOptions defines the default plugin options.
-var defaultOptions = []PluginOption{
-	defaultDeviceIdentifierOption,
-	defaultDynamicDeviceRegistrationOption,
-	defaultDynamicDeviceConfigRegistrationOption,
-}
-
-// defaultDeviceIdentifierOption applies the default behavior for creating a deterministic
-// identifier to the plugin, if it does not already have one set.
-func defaultDeviceIdentifierOption(plugin *Plugin) {
-	if plugin.deviceIdentifier == nil {
-		plugin.deviceIdentifier = defaultDeviceIdentifier
-	}
-}
-
-// defaultDynamicDeviceRegistrationOption applies the default behavior for dynamic device
-// registration to the plugin, if it does not already have one set.
-func defaultDynamicDeviceRegistrationOption(plugin *Plugin) {
-	if plugin.dynamicDeviceRegistrar == nil {
-		plugin.dynamicDeviceRegistrar = defaultDynamicDeviceRegistration
-	}
-}
-
-// defaultDynamicDeviceConfigRegistrationOption applies the default behavior for dynamic
-// device config registration to the plugin, if it does not already have one set.
-func defaultDynamicDeviceConfigRegistrationOption(plugin *Plugin) {
-	if plugin.dynamicDeviceConfigRegistrar == nil {
-		plugin.dynamicDeviceConfigRegistrar = defaultDynamicDeviceConfigRegistration
-	}
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
@@ -202,42 +153,13 @@ func (plugin *Plugin) Run() error {
 
 	// Before we start the dataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
-	if len(plugin.preRunActions) > 0 {
-		logger.Debug("Executing Pre Run Actions:")
-		for _, action := range plugin.preRunActions {
-			logger.Debugf(" * %v", action)
-			err := action(plugin)
-			if err != nil {
-				logger.Errorf("Failed pre-run action %v: %v", action, err)
-				return err
-			}
-		}
-	}
+	execPreRun(plugin)
 
 	// At this point all state that the plugin will need should be available.
 	// With a complete view of the plugin, devices, and configuration, we can
 	// now process any device setup actions prior to reading to/writing from
 	// the device(s).
-	if len(plugin.deviceSetupActions) > 0 {
-		logger.Debug("Executing Device Setup Actions:")
-		for filter, actions := range plugin.deviceSetupActions {
-			devices, err := filterDevices(filter)
-			if err != nil {
-				logger.Errorf("Failed to filter devices for setup actions: %v", err)
-				return err
-			}
-			logger.Debugf("* %v (%v devices match filter %v)", actions, len(devices), filter)
-			for _, d := range devices {
-				for _, action := range actions {
-					err := action(plugin, d)
-					if err != nil {
-						logger.Errorf("Failed device setup action %v: %v", action, err)
-						return err
-					}
-				}
-			}
-		}
-	}
+	execDeviceSetup(plugin)
 
 	// Log info at plugin startup
 	plugin.logStartupInfo()

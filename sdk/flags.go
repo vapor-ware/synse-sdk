@@ -1,6 +1,8 @@
 package sdk
 
-import "flag"
+import (
+	"flag"
+)
 
 var (
 	flagDebug   bool
