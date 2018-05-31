@@ -142,9 +142,12 @@ func (plugin *Plugin) Run() (err error) {
 
 	// ** "Making" steps **
 
-	// makeTransactionCache
-	// ttl, err := p.Config.Settings.Transaction.GetTTL()
-	// err = setupTransactionCache(ttl)
+	// Set up the transaction cache
+	ttl, err := PluginConfig.Settings.Transaction.GetTTL()
+	if err != nil {
+		return
+	}
+	setupTransactionCache(ttl)
 
 	// makeDataManager
 	// makeServer
