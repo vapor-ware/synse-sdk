@@ -190,12 +190,10 @@ func filterDevices(filter string) ([]*Device, error) {
 		k, v := pair[0], pair[1]
 
 		var isValid func(d *Device) bool
-		if k == "type" {
-			isValid = func(d *Device) bool { return d.Type == v || v == "*" }
-		} else if k == "model" {
-			isValid = func(d *Device) bool { return d.Model == v || v == "*" }
+		if k == "kind" {
+			isValid = func(d *Device) bool { return d.Kind == v || v == "*" }
 		} else {
-			return nil, fmt.Errorf("unsupported filter key. expect 'type' or 'string' but got %s", k)
+			return nil, fmt.Errorf("unsupported filter key. expect 'kind' but got %s", k)
 		}
 
 		i := 0

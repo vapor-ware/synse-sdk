@@ -83,10 +83,10 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 // functions here can be used for device-specific setup actions.
 //
 // The filter parameter should be the filter to apply to devices. Currently
-// filtering is only supported for device type and device model. Filter strings
-// are specified by the format "key=value,key=value". The filter
-//     "type=temperature,model=ABC123"
-// would only match devices whose type was temperature and model was ABC123.
+// filtering is only supported for device kind. Filter strings are specified in
+// the format "key=value,key=value". The filter
+//     "kind=temperature,kind=ABC123"
+// would only match devices whose kind was temperature or ABC123.
 func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
 	if _, exists := deviceSetupActions[filter]; exists {
 		deviceSetupActions[filter] = append(deviceSetupActions[filter], actions...)
