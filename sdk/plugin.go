@@ -25,6 +25,39 @@ type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
 // is specific to the plugin/protocol.
 type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceConfig, error)
 
+/*
+
+The tricky thing about plugins:
+
+  We want to have a Plugin represent the thing doing the work and to have it
+  hold the API for the user. At the same time, a lot of the data structures
+  that we have should probably be global structures. This way, we do not have
+  to constantly force things into the API/function sigs just so we can access
+  a piece of data.
+
+  With that in mind, all of this stuff really is tied to the plugin. There
+  shouldn't be more than one plugin active at a time in a single project so
+  using globals is okay, I think.
+
+  What are some things that would be good to have as global?
+    - the device map
+	- the registered handlers list
+	- the config
+	- the transaction cache
+	- the data manager
+	- the plugin server?.. this may not need to be global and could be tied
+	  directly to the plugin, I guess.
+
+  So, the question becomes: How do we do all of this while maintaining a
+  sane and useful API, and not making the underlying implementation too
+  convoluted?
+
+  We could just have the plugin be global................................
+  If the plugin is global, all of the data that is associated with it should
+  effectively be global as well. That seems kinda gross though.
+
+*/
+
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse Server.
 type Plugin struct {
@@ -33,10 +66,6 @@ type Plugin struct {
 	deviceIdentifier             DeviceIdentifier
 	dynamicDeviceRegistrar       DynamicDeviceRegistrar
 	dynamicDeviceConfigRegistrar DynamicDeviceConfigRegistrar
-
-	preRunActions      []pluginAction
-	postRunActions     []pluginAction
-	deviceSetupActions map[string][]deviceAction
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
@@ -69,11 +98,7 @@ func (plugin *Plugin) SetConfigPolicies(policies ...policies.ConfigPolicy) {
 // before the gRPC server and dataManager are started. The functions here can be
 // used for plugin-wide setup actions.
 func (plugin *Plugin) RegisterPreRunActions(actions ...pluginAction) {
-	if plugin.preRunActions == nil {
-		plugin.preRunActions = actions
-	} else {
-		plugin.preRunActions = append(plugin.preRunActions, actions...)
-	}
+	preRunActions = append(preRunActions, actions...)
 }
 
 // RegisterPostRunActions registers functions with the plugin that will be called
@@ -83,11 +108,7 @@ func (plugin *Plugin) RegisterPreRunActions(actions ...pluginAction) {
 // NOTE: While post run actions can be defined for a Plugin, they are currently
 // not executed. See: https://github.com/vapor-ware/synse-sdk/issues/85
 func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
-	if plugin.postRunActions == nil {
-		plugin.postRunActions = actions
-	} else {
-		plugin.postRunActions = append(plugin.postRunActions, actions...)
-	}
+	postRunActions = append(postRunActions, actions...)
 }
 
 // RegisterDeviceSetupActions registers functions with the plugin that will be
@@ -100,14 +121,21 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 //     "type=temperature,model=ABC123"
 // would only match devices whose type was temperature and model was ABC123.
 func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
-	if plugin.deviceSetupActions == nil {
-		plugin.deviceSetupActions = make(map[string][]deviceAction)
-	}
-	if _, exists := plugin.deviceSetupActions[filter]; exists {
-		plugin.deviceSetupActions[filter] = append(plugin.deviceSetupActions[filter], actions...)
+	if _, exists := deviceSetupActions[filter]; exists {
+		deviceSetupActions[filter] = append(deviceSetupActions[filter], actions...)
 	} else {
-		plugin.deviceSetupActions[filter] = actions
+		deviceSetupActions[filter] = actions
 	}
+}
+
+// RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
+//
+// These DeviceHandlers are then matched with the Device instances
+// by their type/model and provide the read/write functionality for the
+// Devices. If a DeviceHandler for a Device is not registered here, the
+// Device will not be usable by the plugin.
+func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
+	deviceHandlers = append(deviceHandlers, handlers...)
 }
 
 // Run starts the Plugin.
@@ -342,49 +370,3 @@ func (plugin *Plugin) logStartupInfo() {
 
 	logger.Info("--------------------------------")
 }
-
-//
-//// OPlugin represents an instance of a Synse plugin. Along with metadata
-//// and definable handlers, it contains a gRPC server to handle the plugin
-//// requests.
-//type OPlugin struct {
-//
-//	deviceHandlers     []*DeviceHandler          // Plugin-specific read and write functions for the devices supported by the plugin.
-//}
-//
-//
-//// RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
-////
-//// These DeviceHandlers are then matched with the Device instances
-//// by their type/model and provide the read/write functionality for the
-//// Devices. If a DeviceHandler for a Device is not registered here, the
-//// Device will not be usable by the plugin.
-//func (p *OPlugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
-//	if p.deviceHandlers == nil {
-//		p.deviceHandlers = handlers
-//	} else {
-//		p.deviceHandlers = append(p.deviceHandlers, handlers...)
-//	}
-//}
-//
-//// registerDevices registers all of the configured devices (via their proto and
-//// instance config) with the plugin.
-//func (p *OPlugin) registerDevices() error {
-//	var devices []*config.DeviceConfig
-//
-//	cfgDevices, err := devicesFromConfig()
-//	if err != nil {
-//		logger.Errorf("Failed to register devices from files: %v", err)
-//		return err
-//	}
-//	devices = append(devices, cfgDevices...)
-//
-//	enumDevices, err := devicesFromAutoEnum(p)
-//	if err != nil {
-//		logger.Errorf("Failed to register devices from auto-enum: %v", err)
-//		return err
-//	}
-//	devices = append(devices, enumDevices...)
-//
-//	return registerDevices(p, devices)
-//}

@@ -7,8 +7,20 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/types"
 )
 
-// The deviceMap holds all of the known devices configured for the plugin.
-var deviceMap = make(map[string]*Device)
+var (
+	// The deviceMap holds all of the known devices configured for the plugin.
+	deviceMap map[string]*Device
+
+	// The deviceHandlers list holds all of the DeviceHandlers that are registered
+	// with the plugin.
+	deviceHandlers []*DeviceHandler
+)
+
+func init() {
+	// Initialize the global variables so they are never nil.
+	deviceMap = map[string]*Device{}
+	deviceHandlers = []*DeviceHandler{}
+}
 
 // DeviceHandler specifies the read and write handlers for a Device
 // based on its type and model.

@@ -5,15 +5,38 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
+var (
+	// preRunActions holds all of the known plugin actions to run prior to starting
+	// up the plugin server and data manager.
+	preRunActions []pluginAction
+
+	// postRunActions holds all of the known plugin actions to run after terminating
+	// the plugin server and data manager.
+	postRunActions []pluginAction
+
+	// deviceSetupActions holds all of the known device device setup actions to run
+	// prior to starting up the plugin server and data manager. The map key is the
+	// filter used to apply the deviceAction value to a Device instance.
+	deviceSetupActions map[string][]deviceAction
+)
+
+func init() {
+	// Initialize the global variables so they are never nil.
+	preRunActions = []pluginAction{}
+	postRunActions = []pluginAction{}
+	deviceSetupActions = map[string][]deviceAction{}
+}
+
 type pluginAction func(p *Plugin) error
 type deviceAction func(p *Plugin, d *Device) error
 
+// execPreRun executes the pre-run actions for the plugin.
 func execPreRun(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("Pre Run Actions")
 
-	if len(plugin.preRunActions) > 0 {
+	if len(preRunActions) > 0 {
 		logger.Debug("Executing Pre Run Actions:")
-		for _, action := range plugin.preRunActions {
+		for _, action := range preRunActions {
 			logger.Debugf(" * %v", action)
 			err := action(plugin)
 			if err != nil {
@@ -25,12 +48,13 @@ func execPreRun(plugin *Plugin) *errors.MultiError {
 	return multiErr
 }
 
+// execDeviceSetup executes the device setup actions for the plugin.
 func execDeviceSetup(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("Device Setup Actions")
 
-	if len(plugin.deviceSetupActions) > 0 {
+	if len(deviceSetupActions) > 0 {
 		logger.Debug("Executing Device Setup Actions:")
-		for filter, acts := range plugin.deviceSetupActions {
+		for filter, acts := range deviceSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
 				logger.Errorf("Failed to filter devices for setup actions: %v", err)

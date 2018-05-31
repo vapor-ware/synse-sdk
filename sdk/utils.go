@@ -23,7 +23,7 @@ func makeIDString(rack, board, device string) string {
 // getHandlerForDevice gets the DeviceHandler for the device, based on its
 // Type and Model.
 func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
-	for _, handler := range registeredHandlers {
+	for _, handler := range deviceHandlers {
 		if handler.Name == handlerName {
 			return handler, nil
 		}
