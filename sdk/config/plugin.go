@@ -133,11 +133,17 @@ func (settings NetworkSettings) Validate(multiErr *errors.MultiError) {
 // DynamicRegistrationSettings specifies configuration and data for
 // the dynamic registration of devices.
 type DynamicRegistrationSettings struct {
+	// The plugin configuration for dynamic registration. This map holds the
+	// plugin-specific data that can be used to dynamically register new devices.
+	// As an example, this could hold the information for connecting with a server,
+	// or it could contain a bus address, etc.
+	Config map[string]interface{} `yaml:"config,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the DynamicRegistrationSettings has no configuration errors.
 func (settings DynamicRegistrationSettings) Validate(multiErr *errors.MultiError) {
-	// todo
+	// nothing to validate here.
+	return
 }
 
 // LimiterSettings specifies configurations for a rate limiter on reads
@@ -189,8 +195,7 @@ type ReadSettings struct {
 
 // Validate validates that the ReadSettings has no configuration errors.
 func (settings ReadSettings) Validate(multiErr *errors.MultiError) {
-	// Try parsing the interval to validate it is a correctly specified
-	// duration string.
+	// Try parsing the interval to validate it is a correctly specified duration string.
 	_, err := settings.GetInterval()
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
@@ -236,8 +241,7 @@ type WriteSettings struct {
 
 // Validate validates that the WriteSettings has no configuration errors.
 func (settings WriteSettings) Validate(multiErr *errors.MultiError) {
-	// Try parsing the interval to validate it is a correctly specified
-	// duration string.
+	// Try parsing the interval to validate it is a correctly specified duration string.
 	_, err := settings.GetInterval()
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
@@ -277,8 +281,7 @@ type TransactionSettings struct {
 
 // Validate validates that the TransactionSettings has no configuration errors.
 func (settings TransactionSettings) Validate(multiErr *errors.MultiError) {
-	// Try parsing the interval to validate it is a correctly specified
-	// duration string.
+	// Try parsing the interval to validate it is a correctly specified duration string.
 	_, err := settings.GetTTL()
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))

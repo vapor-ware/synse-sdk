@@ -272,7 +272,7 @@ func (plugin *Plugin) processConfig() error {
 	}
 
 	// Get device config from dynamic registration, if anything is set there.
-	deviceConfigs, err := plugin.dynamicDeviceConfigRegistrar() // TODO: pass in correct param
+	deviceConfigs, err := plugin.dynamicDeviceConfigRegistrar(PluginConfig.DynamicRegistration.Config)
 	if err != nil {
 		return err
 	}
@@ -336,7 +336,7 @@ func (plugin *Plugin) processConfig() error {
 func (plugin *Plugin) registerDevices() error {
 
 	// devices from dynamic registration
-	devices, err := plugin.dynamicDeviceRegistrar() // TODO: pass in correct param
+	devices, err := plugin.dynamicDeviceRegistrar(PluginConfig.DynamicRegistration.Config)
 	if err != nil {
 		return err
 	}

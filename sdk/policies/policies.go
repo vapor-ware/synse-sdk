@@ -5,7 +5,6 @@ package policies
 type ConfigPolicy uint8
 
 const (
-
 	// ignore first iota value since we don't want a zero-value.
 	_ ConfigPolicy = iota
 
