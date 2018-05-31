@@ -4,6 +4,7 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/types"
 )
 
@@ -203,72 +204,16 @@ func (device *Device) encode() *synse.Device {
 	}
 }
 
-//// devicesFromConfig generates device instance configurations from YAML, if any
-//// are specified.
-//func devicesFromConfig() ([]*config.DeviceConfig, error) {
-//	logger.Debug("devicesFromConfig start")
-//
-//	var configs []*config.DeviceConfig
-//	deviceConfig, err := config.ParseDeviceConfig()
-//	if err != nil {
-//		logger.Errorf("error when parsing device configs: %v", err)
-//		return nil, err
-//	}
-//	configs = append(configs, deviceConfig...)
-//
-//	return configs, nil
-//}
-//
-//// devicesFromAutoEnum generates device instance configurations based on the auto
-//// enumeration configuration and handler specified for the plugin.
-//func devicesFromAutoEnum(plugin *Plugin) ([]*config.DeviceConfig, error) {
-//	var configs []*config.DeviceConfig
-//
-//	// get any instance configurations from the enumerator function registered
-//	// with the plugin, if any is registered.
-//	autoEnum := plugin.Config.AutoEnumerate
-//	if len(autoEnum) > 0 {
-//		if plugin.handlers.DeviceEnumerator == nil {
-//			logger.Errorf("no device enumerator function registered with the plugin")
-//			return nil, fmt.Errorf("no device enumerator function registered with the plugin")
-//		}
-//
-//		for _, c := range autoEnum {
-//			deviceConfigs, err := plugin.handlers.DeviceEnumerator(c)
-//			if err != nil {
-//				logger.Errorf("failed to enumerate devices with %#v: %v", c, err)
-//			} else {
-//				configs = append(configs, deviceConfigs...)
-//			}
-//		}
-//	}
-//	logger.Debugf("device configs from auto-enumeration: %v", configs)
-//	return configs, nil
-//}
-//
-//// registerDevices registers all devices specified in the given device configurations
-//// with the Plugin by matching them up with their corresponding prototype config and
-//// creating new Devices for each of those devices.
-//func registerDevices(plugin *Plugin, deviceConfigs []*config.DeviceConfig) error {
-//	logger.Debugf("registering devices with the plugin")
-//
-//	// get the prototype configuration from YAML
-//	protoConfigs, err := config.ParsePrototypeConfig()
-//	if err != nil {
-//		logger.Errorf("failed to parse the device prototype configuration: %v", err)
-//		return err
-//	}
-//
-//	devices, err := makeDevices(deviceConfigs, protoConfigs, plugin)
-//	if err != nil {
-//		logger.Errorf("failed to make devices from found configs: %v", err)
-//		return err
-//	}
-//
-//	for _, device := range devices {
-//		deviceMap[device.GUID()] = device
-//		deviceMapOrder = append(deviceMapOrder, device.GUID())
-//	}
-//	logger.Debugf("finished registering devices")
-//	return nil
-//}
+// updateDeviceMap updates the global device map with the provided Devices.
+// If duplicate IDs are detected, the plugin will terminate.
+func updateDeviceMap(devices []*Device) {
+	for _, d := range devices {
+		if _, hasDevice := deviceMap[d.GUID()]; hasDevice {
+			// If we have devices with the same ID, there is something very wrong
+			// happening and we will not want to proceed, since we won't be able
+			// to route to devices correctly.
+			logger.Fatalf("duplicate device id found: %s", d.GUID())
+		}
+		deviceMap[d.GUID()] = d
+	}
+}

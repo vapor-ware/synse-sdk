@@ -110,7 +110,7 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // Before the gRPC server is started, and before the read and write goroutines
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
-func (plugin *Plugin) Run() error {
+func (plugin *Plugin) Run() (err error) {
 
 	// ** "Config" steps **
 
@@ -120,16 +120,25 @@ func (plugin *Plugin) Run() error {
 
 	// Check for configuration policies. If no policy was set by the plugin,
 	// this will fall back on the default policies.
-	plugin.checkPolicies()
+	err = plugin.checkPolicies()
+	if err != nil {
+		return
+	}
 
 	// Read in all configs and verify that they are correct.
-	plugin.processConfig()
+	err = plugin.processConfig()
+	if err != nil {
+		return
+	}
 
 	// ** "Registration" steps **
 
 	// Initialize Device instances for each of the devices configured with
 	// the plugin.
-	plugin.registerDevices()
+	err = plugin.registerDevices()
+	if err != nil {
+		return
+	}
 
 	// ** "Making" steps **
 
@@ -144,13 +153,19 @@ func (plugin *Plugin) Run() error {
 
 	// Before we start the dataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
-	execPreRun(plugin)
+	multiErr := execPreRun(plugin)
+	if multiErr.HasErrors() {
+		return multiErr
+	}
 
 	// At this point all state that the plugin will need should be available.
 	// With a complete view of the plugin, devices, and configuration, we can
 	// now process any device setup actions prior to reading to/writing from
 	// the device(s).
-	execDeviceSetup(plugin)
+	multiErr = execDeviceSetup(plugin)
+	if multiErr.HasErrors() {
+		return multiErr
+	}
 
 	// Log info at plugin startup
 	plugin.logStartupInfo()
@@ -158,6 +173,7 @@ func (plugin *Plugin) Run() error {
 	// If the --dry-run flag is set, we will end here. The gRPC server and
 	// data manager do not get started up in the dry run.
 	if !flagDryRun {
+		logger.Debug("starting plugin server and manager")
 
 		// "Starting" steps **
 
@@ -195,17 +211,18 @@ func (plugin *Plugin) resolveFlags() {
 
 // checkPolicies checks for policies registered with the plugin. If no policies
 // were set, the defaults will be used.
-func (plugin *Plugin) checkPolicies() {
+func (plugin *Plugin) checkPolicies() error {
 	// Verify that the policies set for the plugin do not break any of the
 	// constraints set on the policies.
 	err := policies.CheckConstraints(plugin.policies)
 	if err.Err() != nil {
 		logger.Error("config policies set for the plugin are invalid")
-		logger.Fatal(err)
+		return err
 	}
 
 	// If we passed constraint checking, we can use the given policies
 	policies.Set(plugin.policies)
+	return nil
 }
 
 // processConfig handles plugin configuration in a number of steps. The behavior
@@ -215,7 +232,7 @@ func (plugin *Plugin) checkPolicies() {
 // There are four major steps to processing plugin configuration: reading in the
 // config, validating the config scheme, config unification, and verifying the
 // config data is correct. These steps should happen for all config types.
-func (plugin *Plugin) processConfig() {
+func (plugin *Plugin) processConfig() error {
 
 	// FIXME: here, there are similar patterns for checking the policies..
 	// perhaps this could live somewhere else?
@@ -224,13 +241,13 @@ func (plugin *Plugin) processConfig() {
 	//  a. Plugin Config
 	pluginCtx, err := config.GetPluginConfigFromFile()
 	if err != nil {
-		switch policies.PolicyManager.GetPluginConfigPolicy() {
+		switch p := policies.PolicyManager.GetPluginConfigPolicy(); p {
 		case policies.PluginConfigOptional:
 			// The plugin config is optional: do not fail if the config is not found.
 		case policies.PluginConfigRequired:
 			// The plugin config is required: fail if the config is not found.
 		default:
-			// log.Fatal? -- unsupported plugin config policiy
+			return fmt.Errorf("unsupported plugin config policy: %v", p)
 		}
 		// what do we do when we error out here?
 	}
@@ -238,13 +255,17 @@ func (plugin *Plugin) processConfig() {
 	//  b. Device Config
 	deviceCtxs, err := config.GetDeviceConfigsFromFile()
 	if err != nil {
-		switch policies.PolicyManager.GetDeviceConfigPolicy() {
+
+		// FIXME - should this error check also take into account the
+		// dynamic config, below?
+
+		switch p := policies.PolicyManager.GetDeviceConfigPolicy(); p {
 		case policies.DeviceConfigOptional:
 			// The device config is optional: do not fail if no configs are found.
 		case policies.DeviceConfigRequired:
 			// The device config is required: fail if no configs are found.
 		default:
-			// log.Fatal? -- unsupported device config policy
+			return fmt.Errorf("unsupported device config policy: %v", p)
 		}
 
 		// what do we do when we error out here?
@@ -253,7 +274,7 @@ func (plugin *Plugin) processConfig() {
 	// Get device config from dynamic registration, if anything is set there.
 	deviceConfigs, err := plugin.dynamicDeviceConfigRegistrar() // TODO: pass in correct param
 	if err != nil {
-		// todo: error
+		return err
 	}
 
 	// If any device configs were found during dynamic registration, wrap them in
@@ -276,33 +297,34 @@ func (plugin *Plugin) processConfig() {
 	// 2. Validate Config Schemes
 	multiErr := config.Validator.Validate(pluginCtx, pluginCtx.Source)
 	if multiErr.HasErrors() {
-		// what to do here?
+		return multiErr
 	}
 
 	for _, ctx := range deviceCtxs {
 		multiErr = config.Validator.Validate(ctx, ctx.Source)
 		if multiErr.HasErrors() {
-			// what to do here?
+			return multiErr
 		}
 	}
 
 	// 3. Unify Configs
 	unifiedCtx, err := config.UnifyDeviceConfigs(deviceCtxs)
 	if err != nil {
-		// what to do here?
+		return err
 	}
 
 	// 4. Verify
 	if !unifiedCtx.IsDeviceConfig() {
-		// ERROR
+		return fmt.Errorf("unexpected config type for unified device configs: %v", unifiedCtx)
 	}
 	unifiedCfg := unifiedCtx.Config.(*config.DeviceConfig)
 	multiErr = config.VerifyConfigs(unifiedCfg)
 	if multiErr.HasErrors() {
-		// what to do here?
+		return multiErr
 	}
 
 	// TODO: once everything is done, what do we do with all the data?
+	return nil
 }
 
 // registerDevices registers devices with the plugin. Devices are registered
@@ -311,36 +333,24 @@ func (plugin *Plugin) processConfig() {
 //
 // In both cases, the config sources are converted into the SDK's Device instances
 // which represent the physical/virtual devices that the plugin will manage.
-func (plugin *Plugin) registerDevices() {
+func (plugin *Plugin) registerDevices() error {
 
 	// devices from dynamic registration
 	devices, err := plugin.dynamicDeviceRegistrar() // TODO: pass in correct param
 	if err != nil {
-		// todo: error
+		return err
 	}
-
-	// Update global devices map
-	for _, d := range devices {
-		if _, hasDevice := deviceMap[d.GUID()]; hasDevice {
-			// todo: error -- we already have this device in the map...
-		}
-		deviceMap[d.GUID()] = d
-	}
+	updateDeviceMap(devices)
 
 	// devices from config. the config here is the unified device config which
 	// is joined from file and from dynamic registration, if set.
 	devices, err = makeDevices(&DeviceConfig)
 	if err != nil {
-		// todo: error
+		return err
 	}
+	updateDeviceMap(devices)
 
-	// Update global devices map
-	for _, d := range devices {
-		if _, hasDevice := deviceMap[d.GUID()]; hasDevice {
-			// todo: error -- we already have this device in the map...
-		}
-		deviceMap[d.GUID()] = d
-	}
+	return nil
 }
 
 // logStartupInfo is used to log plugin info at plugin startup. This will log
@@ -358,6 +368,5 @@ func (plugin *Plugin) logStartupInfo() {
 	for id, dev := range deviceMap {
 		logger.Infof("  %v (%v)", id, dev.Kind)
 	}
-
 	logger.Info("--------------------------------")
 }
