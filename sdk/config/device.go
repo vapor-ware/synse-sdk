@@ -35,6 +35,18 @@ func (config DeviceConfig) Validate(multiErr *errors.MultiError) {
 	}
 }
 
+// GetLocation gets a location from the DeviceConfig by name, if it exists.
+// If the specified location name is not associated with any location in the
+// DeviceConfig, an error is returned.
+func (config *DeviceConfig) GetLocation(name string) (*Location, error) {
+	for _, l := range config.Locations {
+		if l.Name == name {
+			return l, nil
+		}
+	}
+	return nil, fmt.Errorf("no location with name '%s' was found", name)
+}
+
 // Location defines a location (rack, board) which will be associated with
 // DeviceInstances. The locational information defined here is used by Synse
 // Server to route commands to the proper device instance.
@@ -147,6 +159,11 @@ type DeviceKind struct {
 	// This behavior can be changed by setting the DeviceInstance.InheritKindOutputs
 	// flag to false.
 	Outputs []*DeviceOutput `yaml:"outputs,omitempty" addedIn:"1.0"`
+
+	// HandlerName specifies the name of the DeviceHandler to match this DeviceKind
+	// with. By default, a DeviceKind will match with a DeviceHandler using its
+	// `Kind` field. This field can be set to override that behavior.
+	HandlerName string `yaml:"handlerName,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the DeviceKind has no configuration errors.
@@ -191,6 +208,12 @@ type DeviceInstance struct {
 	//
 	// If false, this will not inherit any of the DeviceKind's outputs.
 	InheritKindOutputs bool `yaml:"inheritKindOutputs,omitempty" addedIn:"1.0"`
+
+	// HandlerName specifies the name of the DeviceHandler to match this DeviceInstance
+	// with. By default, a DeviceInstance will match with a DeviceHandler using
+	// the `Kind` field of its DeviceKind. This field can be set to override
+	// that behavior.
+	HandlerName string `yaml:"handlerName,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the DeviceInstance has no configuration errors.

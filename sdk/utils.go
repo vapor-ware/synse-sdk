@@ -21,61 +21,113 @@ func makeIDString(rack, board, device string) string {
 
 // getHandlerForDevice gets the DeviceHandler for the device, based on its
 // Type and Model.
-func getHandlerForDevice(handlers []*DeviceHandler, device *config.DeviceConfig) (*DeviceHandler, error) {
-	for _, h := range handlers {
-		if device.Type == h.Type && device.Model == h.Model {
-			return h, nil
+func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
+	for _, handler := range deviceHandlers {
+		if handler.Name == handlerName {
+			return handler, nil
 		}
 	}
-	return nil, fmt.Errorf("no handler found for device %#v", device)
+	return nil, fmt.Errorf("no handler found with name: %s", handlerName)
 }
 
-// makeDevices takes the prototype and device instance configurations, parsed
-// into their corresponding structs, and generates Device instances with that
-// information.
-func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.PrototypeConfig, plugin *Plugin) ([]*Device, error) {
+// makeDevices
+func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 	logger.Debugf("makeDevices start")
 
+	// the list of devices we made
 	var devices []*Device
-	for _, dev := range deviceConfigs {
-		var protoconfig *config.PrototypeConfig
-		found := false
 
-		for _, proto := range protoConfigs {
-			if proto.Type == dev.Type && proto.Model == dev.Model {
-				protoconfig = proto
-				found = true
-				break
+	// the DeviceConfig we get here should be the unified config.
+	for _, kind := range config.Devices {
+		for _, instance := range kind.Instances {
+
+			// create the outputs for the instance.
+			var instanceOutputs []*Output
+			for _, o := range instance.Outputs {
+				output, err := NewOutputFromConfig(o)
+				if err != nil {
+					return nil, err
+				}
+				instanceOutputs = append(instanceOutputs, output)
 			}
+
+			if instance.InheritKindOutputs {
+				for _, o := range kind.Outputs {
+					output, err := NewOutputFromConfig(o)
+					if err != nil {
+						return nil, err
+					}
+					instanceOutputs = append(instanceOutputs, output)
+				}
+			}
+
+			// Get the location
+			location, err := config.GetLocation(instance.Location)
+			if err != nil {
+				return nil, err
+			}
+
+			// If a specific handlerName is set in the config, we will use that as the
+			// definitive handler. Otherwise, use the kind.
+			handlerName := kind.Name
+			if kind.HandlerName != "" {
+				handlerName = kind.HandlerName
+			}
+			if instance.HandlerName != "" {
+				handlerName = instance.HandlerName
+			}
+
+			// Get the DeviceHandler
+			handler, err := getHandlerForDevice(handlerName)
+			if err != nil {
+				return nil, err
+			}
+
+			device := &Device{
+				// The name of the device kind. This is essentially the identifier
+				// for the device type.
+				Kind: kind.Name,
+
+				// Any metadata associated with the device kind.
+				Metadata: kind.Metadata,
+
+				// The name of the plugin.
+				Plugin: metainfo.Name,
+
+				// Device-level information. This is not reading output level info.
+				Info: instance.Info,
+
+				// The location of the device.
+				Location: location,
+
+				// Any data associated with the device instance.
+				Data: instance.Data,
+
+				// The outputs supported by the device. A device output may
+				// supply more info, like Data, Info, Type, etc, so that should
+				// be accounted for when doing readings/writing stuff..
+				Outputs: instanceOutputs,
+
+				// The read/write handler for the device. Handlers should be registered globally.
+				Handler: handler,
+			}
+
+			devices = append(devices, device)
+
 		}
 
-		if !found {
-			logger.Warnf("Did not find prototype matching instance for %v-%v", dev.Type, dev.Model)
-			continue
-		}
-		logger.Debugf("Found prototype matching instance config for %v %v", dev.Type, dev.Model)
-
-		handler, err := getHandlerForDevice(plugin.deviceHandlers, dev)
-		if err != nil {
-			logger.Errorf("found no handler for device %v: %v", dev, err)
-			return nil, err
-		}
-
-		d, err := NewDevice(
-			protoconfig,
-			dev,
-			handler,
-			plugin,
-		)
-		if err != nil {
-			logger.Errorf("failed to create new device: %v", err)
-			return nil, err
-		}
-		devices = append(devices, d)
 	}
-
-	logger.Debugf("finished making devices: %v", devices)
 	return devices, nil
+}
+
+// getTypeByName gets the output type with the given name. If an output type does
+// not exist with the given name, an error is returned.
+func getTypeByName(name string) (*ReadingType, error) {
+	t, ok := outputTypeMap[name]
+	if !ok {
+		return nil, fmt.Errorf("no output type with name '%s' found", name)
+	}
+	return t, nil
 }
 
 // setupSocket is used to make sure the path for unix socket used for gRPC communication
@@ -106,21 +158,17 @@ func setupSocket(name string) (string, error) {
 	return socket, nil
 }
 
-// newUID creates a new unique identifier for a device. The device id is
-// deterministic because it is created as a hash of various components that
-// make up the device's configuration. By definition, each device will have
-// a (slightly) different configuration (otherwise they would just be the same
-// devices).
+// newUID creates a new unique identifier for a Device. This id should be
+// deterministic because it is a hash of various Device configuration components.
+// A device's config should be unique, so the hash should be unique.
 //
 // These device IDs are not guaranteed to be globally unique, but they should
 // be unique to the board they reside on.
-func newUID(protocol, deviceType, model, protoComp string) string {
-	h := md5.New()                // nolint: gas
-	io.WriteString(h, protocol)   // nolint: errcheck
-	io.WriteString(h, deviceType) // nolint: errcheck
-	io.WriteString(h, model)      // nolint: errcheck
-	io.WriteString(h, protoComp)  // nolint: errcheck
-
+func newUID(components ...string) string {
+	h := md5.New() // nolint: gas
+	for _, component := range components {
+		io.WriteString(h, component) // nolint: errcheck
+	}
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 

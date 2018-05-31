@@ -33,3 +33,6 @@ func SetPluginMeta(name, maintainer, desc, vcs string) {
 		VCS:         vcs,
 	}
 }
+
+// FIXME: we should have a check somewhere to ensure that there is a Name specified.
+// I think that is the only thing that is required here.
