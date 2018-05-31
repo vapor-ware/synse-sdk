@@ -74,6 +74,5 @@ func execDeviceSetup(plugin *Plugin) *errors.MultiError {
 			}
 		}
 	}
-
 	return multiErr
 }

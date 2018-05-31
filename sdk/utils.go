@@ -32,7 +32,7 @@ func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
 }
 
 // makeDevices
-func makeDevices(config *config.DeviceConfig, plugin *Plugin) ([]*Device, error) {
+func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 	logger.Debugf("makeDevices start")
 
 	// the list of devices we made
@@ -118,46 +118,6 @@ func makeDevices(config *config.DeviceConfig, plugin *Plugin) ([]*Device, error)
 		}
 
 	}
-
-	//var devices []*Device
-	//for _, dev := range deviceConfigs {
-	//	var protoconfig *config.PrototypeConfig
-	//	found := false
-	//
-	//	for _, proto := range protoConfigs {
-	//		if proto.Type == dev.Type && proto.Model == dev.Model {
-	//			protoconfig = proto
-	//			found = true
-	//			break
-	//		}
-	//	}
-	//
-	//	if !found {
-	//		logger.Warnf("Did not find prototype matching instance for %v-%v", dev.Type, dev.Model)
-	//		continue
-	//	}
-	//	logger.Debugf("Found prototype matching instance config for %v %v", dev.Type, dev.Model)
-	//
-	//	handler, err := getHandlerForDevice(plugin.deviceHandlers, dev)
-	//	if err != nil {
-	//		logger.Errorf("found no handler for device %v: %v", dev, err)
-	//		return nil, err
-	//	}
-	//
-	//	d, err := NewDevice(
-	//		protoconfig,
-	//		dev,
-	//		handler,
-	//		plugin,
-	//	)
-	//	if err != nil {
-	//		logger.Errorf("failed to create new device: %v", err)
-	//		return nil, err
-	//	}
-	//	devices = append(devices, d)
-	//}
-	//
-	//logger.Debugf("finished making devices: %v", devices)
 	return devices, nil
 }
 

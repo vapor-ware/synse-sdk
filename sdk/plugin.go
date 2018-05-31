@@ -287,6 +287,19 @@ func (plugin *Plugin) processConfig() {
 		// what do we do when we error out here?
 	}
 
+	// Get device config from dynamic registration, if anything is set there.
+	deviceConfigs, err := plugin.dynamicDeviceConfigRegistrar() // TODO: pass in correct param
+	if err != nil {
+		// todo: error
+	}
+
+	// If any device configs were found during dynamic registration, wrap them in
+	// a context and add them to the known deviceCtxs.
+	for _, cfg := range deviceConfigs {
+		ctx := config.NewConfigContext("dynamic registration", cfg)
+		deviceCtxs = append(deviceCtxs, ctx)
+	}
+
 	//  c. Type Config
 	// TODO
 
@@ -337,19 +350,34 @@ func (plugin *Plugin) processConfig() {
 // which represent the physical/virtual devices that the plugin will manage.
 func (plugin *Plugin) registerDevices() {
 
-	// devices from config
-
 	// devices from dynamic registration
-	devices, err := plugin.dynamicDeviceRegistrar()
+	devices, err := plugin.dynamicDeviceRegistrar() // TODO: pass in correct param
 	if err != nil {
 		// todo: error
 	}
 
-	deviceConfigs, err := plugin.dynamicDeviceConfigRegistrar()
+	// Update global devices map
+	for _, d := range devices {
+		if _, hasDevice := deviceMap[d.GUID()]; hasDevice {
+			// todo: error -- we already have this device in the map...
+		}
+		deviceMap[d.GUID()] = d
+	}
+
+	// devices from config. the config here is the unified device config which
+	// is joined from file and from dynamic registration, if set.
+	devices, err = makeDevices(&DeviceConfig)
 	if err != nil {
 		// todo: error
 	}
 
+	// Update global devices map
+	for _, d := range devices {
+		if _, hasDevice := deviceMap[d.GUID()]; hasDevice {
+			// todo: error -- we already have this device in the map...
+		}
+		deviceMap[d.GUID()] = d
+	}
 }
 
 // logStartupInfo is used to log plugin info at plugin startup. This will log
@@ -365,7 +393,7 @@ func (plugin *Plugin) logStartupInfo() {
 	// Log registered devices
 	logger.Info("Registered Devices:")
 	for id, dev := range deviceMap {
-		logger.Infof("  %v (%v)", id, dev.Model)
+		logger.Infof("  %v (%v)", id, dev.Kind)
 	}
 
 	logger.Info("--------------------------------")
