@@ -312,6 +312,15 @@ func (plugin *Plugin) registerDevices() {
 	// devices from config
 
 	// devices from dynamic registration
+	devices, err := plugin.dynamicDeviceRegistrar()
+	if err != nil {
+		// todo: error
+	}
+
+	deviceConfigs, err := plugin.dynamicDeviceConfigRegistrar()
+	if err != nil {
+		// todo: error
+	}
 
 }
 

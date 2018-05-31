@@ -10,6 +10,7 @@ import (
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-sdk/sdk/types"
 )
 
 // makeIDString makes a compound string out of the given rack, board, and
@@ -30,52 +31,123 @@ func getHandlerForDevice(handlers []*DeviceHandler, device *config.DeviceConfig)
 	return nil, fmt.Errorf("no handler found for device %#v", device)
 }
 
-// makeDevices takes the prototype and device instance configurations, parsed
-// into their corresponding structs, and generates Device instances with that
-// information.
-func makeDevices(deviceConfigs []*config.DeviceConfig, protoConfigs []*config.PrototypeConfig, plugin *Plugin) ([]*Device, error) {
+// makeDevices
+func makeDevices(config *config.DeviceConfig, plugin *Plugin) ([]*Device, error) {
 	logger.Debugf("makeDevices start")
 
+	// the list of devices we made
 	var devices []*Device
-	for _, dev := range deviceConfigs {
-		var protoconfig *config.PrototypeConfig
-		found := false
 
-		for _, proto := range protoConfigs {
-			if proto.Type == dev.Type && proto.Model == dev.Model {
-				protoconfig = proto
-				found = true
-				break
+	// the DeviceConfig we get here should be the unified config.
+	for _, kind := range config.Devices {
+		for _, instance := range kind.Instances {
+
+			// create the outputs for the instance.
+			var instanceOutputs []*Output
+			for _, o := range instance.Outputs {
+				output, err := NewOutputFromConfig(o)
+				if err != nil {
+					return nil, err
+				}
+				instanceOutputs = append(instanceOutputs, output)
 			}
+
+			if instance.InheritKindOutputs {
+				for _, o := range kind.Outputs {
+					output, err := NewOutputFromConfig(o)
+					if err != nil {
+						return nil, err
+					}
+					instanceOutputs = append(instanceOutputs, output)
+				}
+			}
+
+			// Get the location
+			location, err := config.GetLocation(instance.Location)
+			if err != nil {
+				return nil, err
+			}
+
+			device := &Device{
+				// The name of the device kind. This is essentially the identifier
+				// for the device type.
+				Kind: kind.Name,
+
+				// Any metadata associated with the device kind.
+				Metadata: kind.Metadata,
+
+				// The name of the plugin.
+				Plugin: metainfo.Name,
+
+				// Device-level information. This is not reading output level info.
+				Info: instance.Info,
+
+				// The location of the device.
+				Location: location,
+
+				// Any data associated with the device instance.
+				Data: instance.Data,
+
+				// The outputs supported by the device. A device output may
+				// supply more info, like Data, Info, Type, etc, so that should
+				// be accounted for when doing readings/writing stuff..
+				Outputs: instanceOutputs,
+
+				// The read/write handler for the device. Handlers should be registered globally.
+				Handler: nil, // TODO: get the handler.. from somewhere..
+			}
+
+			devices = append(devices, device)
+
 		}
 
-		if !found {
-			logger.Warnf("Did not find prototype matching instance for %v-%v", dev.Type, dev.Model)
-			continue
-		}
-		logger.Debugf("Found prototype matching instance config for %v %v", dev.Type, dev.Model)
-
-		handler, err := getHandlerForDevice(plugin.deviceHandlers, dev)
-		if err != nil {
-			logger.Errorf("found no handler for device %v: %v", dev, err)
-			return nil, err
-		}
-
-		d, err := NewDevice(
-			protoconfig,
-			dev,
-			handler,
-			plugin,
-		)
-		if err != nil {
-			logger.Errorf("failed to create new device: %v", err)
-			return nil, err
-		}
-		devices = append(devices, d)
 	}
 
-	logger.Debugf("finished making devices: %v", devices)
+	//var devices []*Device
+	//for _, dev := range deviceConfigs {
+	//	var protoconfig *config.PrototypeConfig
+	//	found := false
+	//
+	//	for _, proto := range protoConfigs {
+	//		if proto.Type == dev.Type && proto.Model == dev.Model {
+	//			protoconfig = proto
+	//			found = true
+	//			break
+	//		}
+	//	}
+	//
+	//	if !found {
+	//		logger.Warnf("Did not find prototype matching instance for %v-%v", dev.Type, dev.Model)
+	//		continue
+	//	}
+	//	logger.Debugf("Found prototype matching instance config for %v %v", dev.Type, dev.Model)
+	//
+	//	handler, err := getHandlerForDevice(plugin.deviceHandlers, dev)
+	//	if err != nil {
+	//		logger.Errorf("found no handler for device %v: %v", dev, err)
+	//		return nil, err
+	//	}
+	//
+	//	d, err := NewDevice(
+	//		protoconfig,
+	//		dev,
+	//		handler,
+	//		plugin,
+	//	)
+	//	if err != nil {
+	//		logger.Errorf("failed to create new device: %v", err)
+	//		return nil, err
+	//	}
+	//	devices = append(devices, d)
+	//}
+	//
+	//logger.Debugf("finished making devices: %v", devices)
 	return devices, nil
+}
+
+// TODO -- implement
+func getTypeByName(name string) (*types.ReadingType, error) {
+	return nil, nil
 }
 
 // setupSocket is used to make sure the path for unix socket used for gRPC communication

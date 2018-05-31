@@ -64,7 +64,7 @@ type Device struct {
 
 	Info string
 
-	Location config.Location
+	Location *config.Location
 
 	Data map[string]interface{}
 
@@ -85,6 +85,20 @@ type Output struct {
 
 	Info string
 	Data map[string]interface{}
+}
+
+// NewOutputFromConfig creates a new Output from the DeviceOutput config struct.
+func NewOutputFromConfig(config *config.DeviceOutput) (*Output, error) {
+	t, err := getTypeByName(config.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Output{
+		ReadingType: *t,
+		Info:        config.Info,
+		Data:        config.Data,
+	}, nil
 }
 
 //// NewDevice creates a new instance of a Device.

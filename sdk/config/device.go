@@ -35,6 +35,18 @@ func (config DeviceConfig) Validate(multiErr *errors.MultiError) {
 	}
 }
 
+// GetLocation gets a location from the DeviceConfig by name, if it exists.
+// If the specified location name is not associated with any location in the
+// DeviceConfig, an error is returned.
+func (config *DeviceConfig) GetLocation(name string) (*Location, error) {
+	for _, l := range config.Locations {
+		if l.Name == name {
+			return l, nil
+		}
+	}
+	return nil, fmt.Errorf("no location with name '%s' was found", name)
+}
+
 // Location defines a location (rack, board) which will be associated with
 // DeviceInstances. The locational information defined here is used by Synse
 // Server to route commands to the proper device instance.
