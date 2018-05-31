@@ -10,7 +10,6 @@ import (
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
-	"github.com/vapor-ware/synse-sdk/sdk/types"
 )
 
 // makeIDString makes a compound string out of the given rack, board, and
@@ -121,9 +120,14 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 	return devices, nil
 }
 
-// TODO -- implement
-func getTypeByName(name string) (*types.ReadingType, error) {
-	return nil, nil
+// getTypeByName gets the output type with the given name. If an output type does
+// not exist with the given name, an error is returned.
+func getTypeByName(name string) (*ReadingType, error) {
+	t, ok := outputTypeMap[name]
+	if !ok {
+		return nil, fmt.Errorf("no output type with name '%s' found", name)
+	}
+	return t, nil
 }
 
 // setupSocket is used to make sure the path for unix socket used for gRPC communication
@@ -154,21 +158,17 @@ func setupSocket(name string) (string, error) {
 	return socket, nil
 }
 
-// newUID creates a new unique identifier for a device. The device id is
-// deterministic because it is created as a hash of various components that
-// make up the device's configuration. By definition, each device will have
-// a (slightly) different configuration (otherwise they would just be the same
-// devices).
+// newUID creates a new unique identifier for a Device. This id should be
+// deterministic because it is a hash of various Device configuration components.
+// A device's config should be unique, so the hash should be unique.
 //
 // These device IDs are not guaranteed to be globally unique, but they should
 // be unique to the board they reside on.
-func newUID(protocol, deviceType, model, protoComp string) string {
-	h := md5.New()                // nolint: gas
-	io.WriteString(h, protocol)   // nolint: errcheck
-	io.WriteString(h, deviceType) // nolint: errcheck
-	io.WriteString(h, model)      // nolint: errcheck
-	io.WriteString(h, protoComp)  // nolint: errcheck
-
+func newUID(components ...string) string {
+	h := md5.New() // nolint: gas
+	for _, component := range components {
+		io.WriteString(h, component) // nolint: errcheck
+	}
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 

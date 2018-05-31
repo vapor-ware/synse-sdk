@@ -25,39 +25,6 @@ type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
 // is specific to the plugin/protocol.
 type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceConfig, error)
 
-/*
-
-The tricky thing about plugins:
-
-  We want to have a Plugin represent the thing doing the work and to have it
-  hold the API for the user. At the same time, a lot of the data structures
-  that we have should probably be global structures. This way, we do not have
-  to constantly force things into the API/function sigs just so we can access
-  a piece of data.
-
-  With that in mind, all of this stuff really is tied to the plugin. There
-  shouldn't be more than one plugin active at a time in a single project so
-  using globals is okay, I think.
-
-  What are some things that would be good to have as global?
-    - the device map
-	- the registered handlers list
-	- the config
-	- the transaction cache
-	- the data manager
-	- the plugin server?.. this may not need to be global and could be tied
-	  directly to the plugin, I guess.
-
-  So, the question becomes: How do we do all of this while maintaining a
-  sane and useful API, and not making the underlying implementation too
-  convoluted?
-
-  We could just have the plugin be global................................
-  If the plugin is global, all of the data that is associated with it should
-  effectively be global as well. That seems kinda gross though.
-
-*/
-
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse Server.
 type Plugin struct {
@@ -160,10 +127,6 @@ func (plugin *Plugin) Run() error {
 
 	// ** "Registration" steps **
 
-	// FIXME: at this point, we will need to resolve dynamic registration stuff.
-	//   - if dynamic registration makes Devices, just add to the global map.
-	//   - if dynamic registration makes Config artifacts, add to the unified config.
-	//     (or maybe this happens in th processConfig step, before unification?)
 	// Initialize Device instances for each of the devices configured with
 	// the plugin.
 	plugin.registerDevices()

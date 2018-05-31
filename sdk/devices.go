@@ -127,42 +127,6 @@ func NewOutputFromConfig(config *config.DeviceOutput) (*Output, error) {
 	}, nil
 }
 
-//// NewDevice creates a new instance of a Device.
-////
-//// A Device serves as the internal model for a single physical or virtual
-//// device that a plugin manages, e.g. a temperature sensor. The Device
-//// meta information is joined from the device's prototype config and its
-//// instance config.
-//func NewDevice(p *config.PrototypeConfig, d *config.DeviceConfig, h *DeviceHandler, plugin *Plugin) (*Device, error) {
-//	if plugin.handlers.DeviceIdentifier == nil {
-//		return nil, fmt.Errorf("identifier function not defined for device")
-//	}
-//
-//	if p.Type != d.Type {
-//		return nil, fmt.Errorf("prototype and instance config mismatch (type): %v != %v", p.Type, d.Type)
-//	}
-//
-//	if p.Model != d.Model {
-//		return nil, fmt.Errorf("prototype and instance config mismatch (model): %v != %v", p.Model, d.Model)
-//	}
-//
-//	dev := Device{
-//		Type:         p.Type,
-//		Model:        p.Model,
-//		Manufacturer: p.Manufacturer,
-//		Protocol:     p.Protocol,
-//		Output:       p.Output,
-//		Location:     d.Location,
-//		Data:         d.Data,
-//		Handler:      h,
-//		Identifier:   plugin.handlers.DeviceIdentifier,
-//		pconfig:      p,
-//		dconfig:      d,
-//		bulkRead:     h.doesBulkRead(),
-//	}
-//	return &dev, nil
-//}
-
 // Read performs the read action for the device, as set by its DeviceHandler.
 //
 // If reading is not supported on the device, an UnsupportedCommandError is
@@ -208,7 +172,7 @@ func (device *Device) IsWritable() bool {
 func (device *Device) ID() string {
 	if device.id == "" {
 		protocolComp := device.Identifier(device.Data)
-		device.id = newUID(device.Protocol, device.Type, device.Model, protocolComp)
+		device.id = newUID(device.Plugin, device.Kind, protocolComp)
 	}
 	return device.id
 }
@@ -216,8 +180,9 @@ func (device *Device) ID() string {
 // GUID generates a globally unique ID string by creating a composite
 // string from the rack, board, and device UID.
 func (device *Device) GUID() string {
-	rack, _ := device.Location.GetRack()
-	return makeIDString(rack, device.Location.Board, device.ID())
+	rack, _ := device.Location.Rack.Get()
+	board, _ := device.Location.Board.Get()
+	return makeIDString(rack, board, device.ID())
 }
 
 // encode translates the SDK Device to its corresponding gRPC Device.

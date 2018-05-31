@@ -1,8 +1,16 @@
-package types
+package sdk
 
 import (
 	"strings"
 )
+
+var (
+	outputTypeMap map[string]*ReadingType
+)
+
+func init() {
+	outputTypeMap = map[string]*ReadingType{}
+}
 
 /*
 TODO:
