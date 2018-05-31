@@ -9,7 +9,7 @@ import (
 
 // TestValidateReadRequest tests validating a Read request successfully.
 func TestValidateReadRequest(t *testing.T) {
-	request := &synse.ReadRequest{
+	request := &synse.DeviceFilter{
 		Device: "device",
 		Board:  "board",
 		Rack:   "rack",
@@ -22,7 +22,7 @@ func TestValidateReadRequest(t *testing.T) {
 // TestValidateReadRequestErr tests validating a Read request when the validation
 // should fail and cause an error.
 func TestValidateReadRequestErr(t *testing.T) {
-	var cases = []synse.ReadRequest{
+	var cases = []synse.DeviceFilter{
 		{
 			// missing device
 			Board: "board",
@@ -51,10 +51,12 @@ func TestValidateReadRequestErr(t *testing.T) {
 
 // TestValidateWriteRequest tests validating a Write request successfully.
 func TestValidateWriteRequest(t *testing.T) {
-	request := &synse.WriteRequest{
-		Device: "device",
-		Board:  "board",
-		Rack:   "rack",
+	request := &synse.WriteInfo{
+		DeviceFilter: &synse.DeviceFilter{
+			Device: "device",
+			Board:  "board",
+			Rack:   "rack",
+		},
 	}
 
 	err := validateWriteRequest(request)
@@ -64,68 +66,36 @@ func TestValidateWriteRequest(t *testing.T) {
 // TestValidateWriteRequestErr tests validating a Write request when the validation
 // should fail and cause an error.
 func TestValidateWriteRequestErr(t *testing.T) {
-	var cases = []synse.WriteRequest{
+	var cases = []synse.WriteInfo{
 		{
 			// missing device
-			Board: "board",
-			Rack:  "rack",
+			DeviceFilter: &synse.DeviceFilter{
+				Board: "board",
+				Rack:  "rack",
+			},
 		},
 		{
 			// missing board
-			Device: "device",
-			Rack:   "rack",
+			DeviceFilter: &synse.DeviceFilter{
+				Device: "device",
+				Rack:   "rack",
+			},
 		},
 		{
 			// missing rack
-			Device: "device",
-			Board:  "board",
+			DeviceFilter: &synse.DeviceFilter{
+				Device: "device",
+				Board:  "board",
+			},
 		},
 		{
 			// missing all
+			DeviceFilter: &synse.DeviceFilter{},
 		},
 	}
 
 	for _, testCase := range cases {
 		err := validateWriteRequest(&testCase)
-		assert.Error(t, err)
-	}
-}
-
-// TestValidateHandlers tests validating a handlers struct successfully.
-func TestValidateHandlers(t *testing.T) {
-	var cases = []Handlers{
-		{
-			// identifier and enumerator defined
-			DeviceIdentifier: testDeviceIdentifier,
-			DeviceEnumerator: testDeviceEnumerator,
-		},
-		{
-			// enumerator not defined
-			DeviceIdentifier: testDeviceIdentifier,
-		},
-	}
-
-	for _, testCase := range cases {
-		err := validateHandlers(&testCase)
-		assert.NoError(t, err)
-	}
-}
-
-// TestValidateHandlersErr tests validating a handlers struct when the given
-// values should cause validation to fail and return an error.
-func TestValidateHandlersErr(t *testing.T) {
-	var cases = []Handlers{
-		{
-			// no device identifier
-			DeviceEnumerator: testDeviceEnumerator,
-		},
-		{
-			// no handlers defined (all nil)
-		},
-	}
-
-	for _, testCase := range cases {
-		err := validateHandlers(&testCase)
 		assert.Error(t, err)
 	}
 }

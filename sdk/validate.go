@@ -8,7 +8,7 @@ import (
 
 // validateReadRequest checks to make sure that a ReadRequest has all of the
 // fields populated that we need in order to process it as a valid request.
-func validateReadRequest(request *synse.ReadRequest) error {
+func validateReadRequest(request *synse.DeviceFilter) error {
 	device := request.GetDevice()
 	if device == "" {
 		return invalidArgumentErr("no device UID supplied to Read")
@@ -26,27 +26,18 @@ func validateReadRequest(request *synse.ReadRequest) error {
 
 // validateWriteRequest checks to make sure that a ReadRequest has all of the
 // fields populated that we need in order to process it as a valid request.
-func validateWriteRequest(request *synse.WriteRequest) error {
-	device := request.GetDevice()
+func validateWriteRequest(request *synse.WriteInfo) error {
+	device := request.DeviceFilter.GetDevice()
 	if device == "" {
 		return invalidArgumentErr("no device UID supplied to Write")
 	}
-	board := request.GetBoard()
+	board := request.DeviceFilter.GetBoard()
 	if board == "" {
 		return invalidArgumentErr("no board supplied to Write")
 	}
-	rack := request.GetRack()
+	rack := request.DeviceFilter.GetRack()
 	if rack == "" {
 		return invalidArgumentErr("no rack supplied to Write")
-	}
-	return nil
-}
-
-// validateHandlers validates that the given Handlers struct has non-nil
-// values in its Plugin and Device fields.
-func validateHandlers(handlers *Handlers) error {
-	if handlers.DeviceIdentifier == nil {
-		return notFoundErr("device identifier not defined")
 	}
 	return nil
 }

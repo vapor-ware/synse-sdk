@@ -1,4 +1,4 @@
-package cfg
+package config
 
 import (
 	"github.com/vapor-ware/synse-sdk/sdk/errors"

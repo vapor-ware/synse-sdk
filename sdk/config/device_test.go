@@ -1,605 +1,497 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-server-grpc/go"
-
-	"github.com/vapor-ware/synse-sdk/internal/test"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
-// TestLocation_Encode tests encoding an SDK Location to the gRPC
-// MetaLocation model.
-func TestLocation_Encode(t *testing.T) {
-	var cases = []struct {
-		in  Location
-		out synse.MetaLocation
+// TestDeviceConfig_Validate_Ok tests validating a DeviceConfig with no errors.
+func TestDeviceConfig_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config DeviceConfig
 	}{
 		{
-			in: Location{
-				Rack:  "rack-1",
-				Board: "board-1",
-			},
-			out: synse.MetaLocation{
-				Rack:  "rack-1",
-				Board: "board-1",
+			desc: "DeviceConfig has valid version",
+			config: DeviceConfig{
+				ConfigVersion: ConfigVersion{Version: "1.0"},
 			},
 		},
 		{
-			in: Location{
-				Rack:  "1",
-				Board: "1",
-			},
-			out: synse.MetaLocation{
-				Rack:  "1",
-				Board: "1",
+			desc: "DeviceConfig has valid version and location",
+			config: DeviceConfig{
+				ConfigVersion: ConfigVersion{Version: "1.0"},
+				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
 			},
 		},
 		{
-			in: Location{
-				Rack:  "",
-				Board: "",
+			desc: "DeviceConfig has valid version, location, and DeviceKind",
+			config: DeviceConfig{
+				ConfigVersion: ConfigVersion{Version: "1.0"},
+				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Devices:       []*DeviceKind{{Name: "test"}},
 			},
-			out: synse.MetaLocation{
-				Rack:  "",
-				Board: "",
+		},
+		{
+			desc: "DeviceConfig has valid version, invalid Locations (Locations not validated here)",
+			config: DeviceConfig{
+				ConfigVersion: ConfigVersion{Version: "1.0"},
+				Locations:     []*Location{{Name: ""}},
+			},
+		},
+		{
+			desc: "DeviceConfig has valid version and locations, invalid DeviceKinds (DeviceKinds not validated here)",
+			config: DeviceConfig{
+				ConfigVersion: ConfigVersion{Version: "1.0"},
+				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Devices:       []*DeviceKind{{Name: ""}},
 			},
 		},
 	}
 
-	for _, tc := range cases {
-		err := tc.in.Validate()
-		assert.NoError(t, err)
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-		r := tc.in.Encode()
-		assert.Equal(t, tc.out, *r)
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
-// TestLocation_GetRack tests getting the rack info for a Location successfully.
-func TestLocation_GetRack(t *testing.T) {
-	var cases = []struct {
-		in  Location
-		out string
+// TestDeviceConfig_Validate_Error tests validating a DeviceConfig with errors.
+func TestDeviceConfig_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   DeviceConfig
 	}{
 		{
-			in: Location{
-				Rack:  "rack-1",
-				Board: "board-1",
+			desc:     "DeviceConfig has invalid version",
+			errCount: 1,
+			config: DeviceConfig{
+				ConfigVersion: ConfigVersion{Version: "abc"},
 			},
-			out: "rack-1",
-		},
-		{
-			in: Location{
-				Rack:  "1",
-				Board: "1",
-			},
-			out: "1",
-		},
-		{
-			in: Location{
-				Rack:  "",
-				Board: "",
-			},
-			out: "",
-		},
-		{
-			in: Location{
-				Rack: map[interface{}]interface{}{
-					"from_env": "TEST_RACK_ENV",
-				},
-				Board: "board-1",
-			},
-			out: "rack-env",
 		},
 	}
 
-	// Set the env variable for the test
-	test.CheckErr(t, os.Setenv("TEST_RACK_ENV", "rack-env"))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv("TEST_RACK_ENV"))
-	}()
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-	for _, tc := range cases {
-		rack, err := tc.in.GetRack()
-		assert.NoError(t, err)
-		assert.Equal(t, tc.out, rack)
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }
 
-// TestLocation_GetRackErr tests getting the rack info for a Location unsuccessfully.
-func TestLocation_GetRackErr(t *testing.T) {
-	var cases = []struct {
-		in  Location
-		out string
+// TestLocation_Validate_Ok tests validating a Location with no errors.
+func TestLocation_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		location Location
 	}{
 		{
-			in: Location{
-				Rack:  1,
-				Board: "board-1",
+			desc: "Valid Location instance",
+			location: Location{
+				Name:  "test",
+				Rack:  &LocationData{Name: "test"},
+				Board: &LocationData{Name: "test"},
 			},
-			out: "rack-1",
-		},
-		{
-			in: Location{
-				Rack:  true,
-				Board: "1",
-			},
-			out: "1",
-		},
-		{
-			in: Location{
-				Rack: map[interface{}]interface{}{
-					"invalid_key": "TEST_RACK_ENV",
-				},
-				Board: "board-1",
-			},
-		},
-		{
-			in: Location{
-				Rack: map[interface{}]interface{}{
-					"from_env": "TEST_RACK_ENV_EMPTY",
-				},
-				Board: "board-1",
-			},
-			out: "",
 		},
 	}
 
-	for _, tc := range cases {
-		rack, err := tc.in.GetRack()
-		assert.Empty(t, rack)
-		assert.Error(t, err)
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.location.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
-// TestLocation_Validate tests validating a Location successfully.
-func TestLocation_Validate(t *testing.T) {
-	var cases = []Location{
-		// Location with rack as string
+// TestLocation_Validate_Error tests validating a Location with errors.
+func TestLocation_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		location Location
+	}{
 		{
-			Rack:  "rack",
-			Board: "board",
-		},
-		// Location with rack as correct mapping
-		{
-			Rack: map[interface{}]interface{}{
-				"from_env": "TEST_RACK_ENV",
+			desc:     "Location requires a name, but has none",
+			errCount: 1,
+			location: Location{
+				Rack:  &LocationData{Name: "test"},
+				Board: &LocationData{Name: "test"},
 			},
-			Board: "board",
+		},
+		{
+			desc:     "Location requires a rack, but has none",
+			errCount: 1,
+			location: Location{
+				Name:  "test",
+				Board: &LocationData{Name: "test"},
+			},
+		},
+		{
+			desc:     "Location requires a board, but has none",
+			errCount: 1,
+			location: Location{
+				Name: "test",
+				Rack: &LocationData{Name: "test"},
+			},
+		},
+		{
+			desc:     "Location both rack and board, has neither",
+			errCount: 2,
+			location: Location{
+				Name: "test",
+			},
+		},
+		{
+			desc:     "Location has an invalid rack",
+			errCount: 1,
+			location: Location{
+				Name:  "test",
+				Rack:  &LocationData{Name: ""},
+				Board: &LocationData{Name: "test"},
+			},
+		},
+		{
+			desc:     "Location has an invalid board",
+			errCount: 1,
+			location: Location{
+				Name:  "test",
+				Rack:  &LocationData{Name: "test"},
+				Board: &LocationData{Name: ""},
+			},
+		},
+		{
+			desc:     "Location missing all fields",
+			errCount: 3,
+			location: Location{},
 		},
 	}
 
-	// Set the env variable for the test
-	test.CheckErr(t, os.Setenv("TEST_RACK_ENV", "rack-env"))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv("TEST_RACK_ENV"))
-	}()
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-	for _, testCase := range cases {
-		err := testCase.Validate()
-		assert.NoError(t, err)
+		testCase.location.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }
 
-// TestLocation_ValidateErr tests validating a Location unsuccessfully.
-func TestLocation_ValidateErr(t *testing.T) {
-	var cases = []Location{
-		// Empty Location
-		{},
-		// Location with rack as invalid type (int)
+// TestLocationData_Validate_Ok tests validating a LocationData with no errors.
+func TestLocationData_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc         string
+		locationData LocationData
+	}{
 		{
-			Rack:  2,
-			Board: "board",
+			desc:         "LocationData has a valid name",
+			locationData: LocationData{Name: "test"},
 		},
-		// Location with rack as invalid type (list)
 		{
-			Rack:  []interface{}{1, 2},
-			Board: "board",
+			desc:         "LocationData has a valid fromEnv",
+			locationData: LocationData{FromEnv: "TEST_ENV"},
 		},
-		// Location with rack as invalid type (bool)
 		{
-			Rack:  false,
-			Board: "board",
-		},
-		// Location with rack as invalid type (nil)
-		{
-			Rack:  nil,
-			Board: "board",
-		},
-		// Location with rack as interface mapping, but
-		// invalid map key type (int)
-		{
-			Rack: map[interface{}]interface{}{
-				2: "TEST_RACK_ENV",
-			},
-			Board: "board",
-		},
-		// Location with rack as interface mapping, but
-		// invalid map key type (bool)
-		{
-			Rack: map[interface{}]interface{}{
-				true: "TEST_RACK_ENV",
-			},
-			Board: "board",
-		},
-		// Location with rack as interface mapping, but
-		// invalid map value type (int)
-		{
-			Rack: map[interface{}]interface{}{
-				"from_env": 2,
-			},
-			Board: "board",
-		},
-		// Location with rack as interface mapping, but
-		// invalid map value type (bool)
-		{
-			Rack: map[interface{}]interface{}{
-				"from_env": true,
-			},
-			Board: "board",
-		},
-		// Location with rack as interface mapping, but
-		// unsupported key
-		{
-			Rack: map[interface{}]interface{}{
-				"not_supported": "value",
-			},
-			Board: "board",
-		},
-		// Location with rack as interface mapping, but
-		// the specified env variable doesn't exist
-		{
-			Rack: map[interface{}]interface{}{
-				"from_env": "TEST_INVALID_ENV_VALUE",
-			},
-			Board: "board",
+			desc:         "LocationData has both name and fromEnv",
+			locationData: LocationData{Name: "foo", FromEnv: "TEST_ENV"},
 		},
 	}
 
-	for _, testCase := range cases {
-		err := testCase.Validate()
-		assert.Error(t, err)
+	err := os.Setenv("TEST_ENV", "test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() {
+		err := os.Unsetenv("TEST_ENV")
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.locationData.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
 	}
 }
 
-// TestParseDeviceConfig tests parsing a device config when the config
-// file does not exist.
-func TestParseDeviceConfig(t *testing.T) {
-	// the default directory path shouldn't exist when running tests
-	_, err := ParseDeviceConfig()
-	assert.Error(t, err)
+// TestLocationData_Validate_Error tests validating a LocationData with errors.
+func TestLocationData_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc         string
+		errCount     int
+		locationData LocationData
+	}{
+		{
+			desc:         "LocationData has no fromEnv or name",
+			errCount:     2,
+			locationData: LocationData{},
+		},
+		{
+			desc:         "LocationData fromEnv does not resolve",
+			errCount:     2,
+			locationData: LocationData{FromEnv: "FOO_BAR_BAZ"},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.locationData.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
 }
 
-// TestParseDeviceConfig2 tests parsing device config when the config directory
-// is not a directory.
-func TestParseDeviceConfig2(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "test")
-	assert.NoError(t, err)
+// TestLocationData_Get_Ok tests getting the locational data with no errors.
+func TestLocationData_Get_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc         string
+		locationData LocationData
+		expected     string
+	}{
+		{
+			desc:         "LocationData has a valid name",
+			locationData: LocationData{Name: "test"},
+			expected:     "test",
+		},
+		{
+			desc:         "LocationData has a valid fromEnv",
+			locationData: LocationData{FromEnv: "TEST_ENV"},
+			expected:     "foo",
+		},
+		{
+			desc:         "LocationData has both name and fromEnv (should take name)",
+			locationData: LocationData{Name: "test", FromEnv: "TEST_ENV"},
+			expected:     "test",
+		},
+		{
+			desc:         "LocationData has no fromEnv or name",
+			locationData: LocationData{},
+			expected:     "",
+		},
+	}
+
+	err := os.Setenv("TEST_ENV", "foo")
+	if err != nil {
+		t.Error(err)
+	}
 	defer func() {
-		test.CheckErr(t, os.Remove(tmpfile.Name()))
+		err := os.Unsetenv("TEST_ENV")
+		if err != nil {
+			t.Error(err)
+		}
 	}()
 
-	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpfile.Name()))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
-	}()
-
-	_, err = ParseDeviceConfig()
-	assert.Error(t, err)
+	for _, testCase := range testTable {
+		actual, err := testCase.locationData.Get()
+		assert.NoError(t, err, testCase.desc)
+		assert.Equal(t, testCase.expected, actual, testCase.desc)
+	}
 }
 
-// TestParseDeviceConfig3 tests parsing device config when no valid configs are
-// in the device config directory.
-func TestParseDeviceConfig3(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
+// TestLocationData_Get_Error tests getting the location data with errors.
+func TestLocationData_Get_Error(t *testing.T) {
+	var testTable = []struct {
+		desc         string
+		locationData LocationData
+	}{
+		{
+			desc:         "LocationData fromEnv does not resolve",
+			locationData: LocationData{FromEnv: "FOO_BAR_BAZ"},
+		},
+	}
 
-	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
-	}()
-
-	res, err := ParseDeviceConfig()
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(res))
+	for _, testCase := range testTable {
+		actual, err := testCase.locationData.Get()
+		assert.Error(t, err, testCase.desc)
+		assert.Equal(t, "", actual, testCase.desc)
+	}
 }
 
-// TestParseDeviceConfig4 tests parsing device config when no config version
-// is specified in the device config file.
-func TestParseDeviceConfig4(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
+// TestDeviceKind_Validate_Ok tests validating a DeviceKind with no errors.
+func TestDeviceKind_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc string
+		kind DeviceKind
+	}{
+		{
+			desc: "DeviceKind has a valid name",
+			kind: DeviceKind{
+				Name: "test",
+			},
+		},
+		{
+			desc: "DeviceKind has a valid name and instances",
+			kind: DeviceKind{
+				Name:      "test",
+				Instances: []*DeviceInstance{{Location: "test"}},
+			},
+		},
+		{
+			desc: "DeviceKind has a valid name, instances, and outputs",
+			kind: DeviceKind{
+				Name:      "test",
+				Instances: []*DeviceInstance{{Location: "test"}},
+				Outputs:   []*DeviceOutput{{Type: "test"}},
+			},
+		},
+		{
+			desc: "DeviceKind has valid name, invalid instances (DeviceInstance not validated here)",
+			kind: DeviceKind{
+				Name:      "test",
+				Instances: []*DeviceInstance{{Location: ""}},
+			},
+		},
+		{
+			desc: "DeviceKind has valid name, invalid outputs (DeviceOutputs not validated here)",
+			kind: DeviceKind{
+				Name:    "test",
+				Outputs: []*DeviceOutput{{Type: ""}},
+			},
+		},
+	}
 
-	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
-	}()
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-	data := `locations:
-  r1b1:
-    rack: rack-1
-    board: board-1
-devices:
-  - type: airflow
-    model: air8884
-    instances:
-      - id: 1
-        location: r1b1
-        comment: first emulated airflow device`
-
-	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
-	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	assert.NoError(t, err)
-
-	_, err = ParseDeviceConfig()
-	assert.Error(t, err)
+		testCase.kind.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
 }
 
-// TestParseDeviceConfig5 tests parsing device config when there is no handler
-// defined for the specified config version.
-func TestParseDeviceConfig5(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
+// TestDeviceKind_Validate_Error tests validating a DeviceKind with errors.
+func TestDeviceKind_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		kind     DeviceKind
+	}{
+		{
+			desc:     "DeviceKind has no name specified",
+			errCount: 1,
+			kind:     DeviceKind{},
+		},
+	}
 
-	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
-	}()
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-	data := `version: 9999.9999
-locations:
-  r1b1:
-    rack: rack-1
-    board: board-1
-devices:
-  - type: airflow
-    model: air8884
-    instances:
-      - id: 1
-        location: r1b1
-        comment: first emulated airflow device`
-
-	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
-	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	assert.NoError(t, err)
-
-	_, err = ParseDeviceConfig()
-	assert.Error(t, err)
+		testCase.kind.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
 }
 
-// TestParseDeviceConfig6 tests parsing device config when unable to
-// process the config via handler.
-func TestParseDeviceConfig6(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
+// TestDeviceInstance_Validate_Ok tests validating a DeviceInstance with no errors.
+func TestDeviceInstance_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		instance DeviceInstance
+	}{
+		{
+			desc: "DeviceInstance has a valid location",
+			instance: DeviceInstance{
+				Location: "test",
+			},
+		},
+		{
+			desc: "DeviceInstance has a valid location and outputs",
+			instance: DeviceInstance{
+				Location: "test",
+				Outputs:  []*DeviceOutput{{Type: "test"}},
+			},
+		},
+		{
+			desc: "DeviceInstance has valid location, invalid outputs (DeviceOutputs not validated here)",
+			instance: DeviceInstance{
+				Location: "test",
+				Outputs:  []*DeviceOutput{{Type: ""}},
+			},
+		},
+	}
 
-	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
-	}()
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-	data := `version: 1.0
-devices:
-  - type: airflow
-    model: air8884
-    instances:
-      - id: 1
-        comment: first emulated airflow device`
-
-	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
-	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	assert.NoError(t, err)
-
-	_, err = ParseDeviceConfig()
-	assert.Error(t, err)
+		testCase.instance.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
 }
 
-// TestParseDeviceConfig7 tests parsing device configs successfully.
-func TestParseDeviceConfig7(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
+// TestDeviceInstance_Validate_Error tests validating a DeviceInstance with errors.
+func TestDeviceInstance_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		instance DeviceInstance
+	}{
+		{
+			desc:     "DeviceInstance has a no location",
+			errCount: 1,
+			instance: DeviceInstance{
+				Location: "",
+			},
+		},
+	}
 
-	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
-	}()
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-	data := `version: 1.0
-locations:
-  r1b1:
-    rack: rack-1
-    board: board-1
-devices:
-  - type: airflow
-    model: air8884
-    instances:
-      - id: 1
-        location: r1b1
-        comment: first emulated airflow device`
-
-	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
-	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	assert.NoError(t, err)
-
-	res, err := ParseDeviceConfig()
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(res))
+		testCase.instance.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
 }
 
-// TestParseDeviceConfig8 tests parsing device configs unsuccessfully using
-// an environment variable to specify the root config directory.
-func TestParseDeviceConfig8(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
+// TestDeviceOutput_Validate_Ok tests validating a DeviceOutput with no errors.
+func TestDeviceOutput_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		output DeviceOutput
+	}{
+		{
+			desc: "DeviceOutput has valid type",
+			output: DeviceOutput{
+				Type: "test",
+			},
+		},
+	}
 
-	test.CheckErr(t, os.Setenv(EnvDeviceConfig, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDeviceConfig))
-	}()
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-	data := `version: 1.0
-locations:
-  r1b1:
-    rack: rack-1
-    board: board-1
-devices:
-  - type: airflow
-    model: air8884
-    instances:
-      - id: 1
-        location: r1b1
-        comment: first emulated airflow device`
-
-	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
-	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	assert.NoError(t, err)
-
-	_, err = ParseDeviceConfig()
-	assert.Error(t, err)
+		testCase.output.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
 }
 
-// TestParseDeviceConfig9 tests parsing device configs successfully using
-// an environment variable to specify the root config directory.
-func TestParseDeviceConfig9(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
+// TestDeviceOutput_Validate_Error tests validating a DeviceOutput with errors.
+func TestDeviceOutput_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		output   DeviceOutput
+	}{
+		{
+			desc:     "DeviceOutput has no type",
+			errCount: 1,
+			output: DeviceOutput{
+				Type: "",
+			},
+		},
+	}
 
-	test.CheckErr(t, os.Setenv(EnvDeviceConfig, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDeviceConfig))
-	}()
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
 
-	deviceDir := filepath.Join(tmpdir, "device")
-	err = os.Mkdir(deviceDir, 0700)
-	assert.NoError(t, err)
-
-	data := `version: 1.0
-locations:
-  r1b1:
-    rack: rack-1
-    board: board-1
-devices:
-  - type: airflow
-    model: air8884
-    instances:
-      - id: 1
-        location: r1b1
-        comment: first emulated airflow device`
-
-	tmpf := filepath.Join(deviceDir, "tmpfile.yml")
-	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	assert.NoError(t, err)
-
-	res, err := ParseDeviceConfig()
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(res))
-}
-
-// TestParseDeviceConfig10 tests parsing device configs successfully using
-// 'from_env' as the rack value.
-func TestParseDeviceConfig10(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
-
-	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
-	}()
-
-	test.CheckErr(t, os.Setenv("SYNSE_ENV_TEST", "test-rack"))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv("SYNSE_ENV_TEST"))
-	}()
-
-	data := `version: 1.0
-locations:
-  r1b1:
-    rack:
-      from_env: SYNSE_ENV_TEST
-    board: board-1
-devices:
-  - type: airflow
-    model: air8884
-    instances:
-      - id: 1
-        location: r1b1
-        comment: first emulated airflow device`
-
-	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
-	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	assert.NoError(t, err)
-
-	res, err := ParseDeviceConfig()
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(res))
-
-	config := res[0]
-	rack, err := config.Location.GetRack()
-	assert.NoError(t, err)
-	assert.Equal(t, "test-rack", rack)
-}
-
-// TestParseDeviceConfig11 tests parsing device configs unsuccessfully specifying
-// 'from_env' as the rack value, but not having the environment variable set.
-func TestParseDeviceConfig11(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(tmpdir))
-	}()
-
-	test.CheckErr(t, os.Setenv(EnvDevicePath, tmpdir))
-	defer func() {
-		test.CheckErr(t, os.Unsetenv(EnvDevicePath))
-	}()
-
-	data := `version: 1.0
-locations:
-  r1b1:
-    rack:
-      from_env: SYNSE_ENV_TEST
-    board: board-1
-devices:
-  - type: airflow
-    model: air8884
-    instances:
-      - id: 1
-        location: r1b1
-        comment: first emulated airflow device`
-
-	tmpf := filepath.Join(tmpdir, "tmpfile.yml")
-	err = ioutil.WriteFile(tmpf, []byte(data), 0666)
-	assert.NoError(t, err)
-
-	_, err = ParseDeviceConfig()
-	assert.Error(t, err)
+		testCase.output.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
 }

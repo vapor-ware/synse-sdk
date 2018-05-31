@@ -5,6 +5,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// FIXME: move to the 'errors' package
+
 // UnsupportedCommandError is an error that can be used to designate that
 // a given device does not support an operation, e.g. write. Write is required
 // by the PluginHandler interface, but if a device (e.g. a temperature sensor)

@@ -33,23 +33,21 @@ func TestWriteContext_ID(t *testing.T) {
 // WriteData model.
 func TestWriteData_encode(t *testing.T) {
 	expected := &synse.WriteData{
-		Raw:    [][]byte{{0, 1, 2}},
+		Data:   []byte{0, 1, 2},
 		Action: "test",
 	}
 
 	wd := WriteData{
-		Raw:    [][]byte{{0, 1, 2}},
+		Data:   []byte{0, 1, 2},
 		Action: "test",
 	}
 
 	actual := wd.encode()
 
 	assert.Equal(t, expected.Action, actual.Action)
-	assert.Equal(t, len(expected.Raw), len(actual.Raw))
-	for i := 0; i < len(expected.Raw); i++ {
-		for j := 0; j < len(expected.Raw[i]); j++ {
-			assert.Equal(t, expected.Raw[i][j], actual.Raw[i][j])
-		}
+	assert.Equal(t, len(expected.Data), len(actual.Data))
+	for i := 0; i < len(expected.Data); i++ {
+		assert.Equal(t, expected.Data[i], actual.Data[i])
 	}
 }
 
@@ -57,23 +55,21 @@ func TestWriteData_encode(t *testing.T) {
 // WriteData model.
 func TestDecodeWriteData(t *testing.T) {
 	expected := &WriteData{
-		Raw:    [][]byte{{3, 2, 1}},
+		Data:   []byte{3, 2, 1},
 		Action: "test",
 	}
 
 	wd := &synse.WriteData{
-		Raw:    [][]byte{{3, 2, 1}},
+		Data:   []byte{3, 2, 1},
 		Action: "test",
 	}
 
 	actual := decodeWriteData(wd)
 
 	assert.Equal(t, expected.Action, actual.Action)
-	assert.Equal(t, len(expected.Raw), len(actual.Raw))
-	for i := 0; i < len(expected.Raw); i++ {
-		for j := 0; j < len(expected.Raw[i]); j++ {
-			assert.Equal(t, expected.Raw[i][j], actual.Raw[i][j])
-		}
+	assert.Equal(t, len(expected.Data), len(actual.Data))
+	for i := 0; i < len(expected.Data); i++ {
+		assert.Equal(t, expected.Data[i], actual.Data[i])
 	}
 }
 
