@@ -99,19 +99,10 @@ type ReadContext struct {
 // NewReadContext creates a new instance of a ReadContext from the given
 // device and corresponding readings.
 func NewReadContext(device *Device, readings []*Reading) (*ReadContext, error) {
-	rack, err := device.Location.Rack.Get()
-	if err != nil {
-		return nil, err
-	}
-	board, err := device.Location.Board.Get()
-	if err != nil {
-		return nil, err
-	}
-
 	return &ReadContext{
 		Device:  device.ID(),
-		Board:   board,
-		Rack:    rack,
+		Board:   device.Location.Board,
+		Rack:    device.Location.Rack,
 		Reading: readings,
 	}, nil
 }

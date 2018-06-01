@@ -29,10 +29,6 @@ type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.Device
 // as data providers and device controllers for Synse Server.
 type Plugin struct {
 	policies []policies.ConfigPolicy
-
-	deviceIdentifier             DeviceIdentifier
-	dynamicDeviceRegistrar       DynamicDeviceRegistrar
-	dynamicDeviceConfigRegistrar DynamicDeviceConfigRegistrar
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
@@ -41,12 +37,7 @@ func NewPlugin(options ...PluginOption) *Plugin {
 
 	// Set custom options for the plugin.
 	for _, option := range options {
-		option(&plugin)
-	}
-
-	// Apply defaults to any required field that was not set from an option.
-	for _, option := range defaultOptions {
-		option(&plugin)
+		option(Context)
 	}
 
 	return &plugin
@@ -281,7 +272,7 @@ func (plugin *Plugin) processConfig() error {
 	}
 
 	// Get device config from dynamic registration, if anything is set there.
-	deviceConfigs, err := plugin.dynamicDeviceConfigRegistrar(PluginConfig.DynamicRegistration.Config)
+	deviceConfigs, err := Context.dynamicDeviceConfigRegistrar(PluginConfig.DynamicRegistration.Config)
 	if err != nil {
 		return err
 	}
@@ -327,7 +318,7 @@ func (plugin *Plugin) processConfig() error {
 		return fmt.Errorf("unexpected config type for unified device configs: %v", unifiedCtx)
 	}
 	unifiedCfg := unifiedCtx.Config.(*config.DeviceConfig)
-	multiErr = config.VerifyConfigs(unifiedCfg)
+	multiErr = VerifyConfigs(unifiedCfg)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
@@ -345,7 +336,7 @@ func (plugin *Plugin) processConfig() error {
 func (plugin *Plugin) registerDevices() error {
 
 	// devices from dynamic registration
-	devices, err := plugin.dynamicDeviceRegistrar(PluginConfig.DynamicRegistration.Config)
+	devices, err := Context.dynamicDeviceRegistrar(PluginConfig.DynamicRegistration.Config)
 	if err != nil {
 		return err
 	}
