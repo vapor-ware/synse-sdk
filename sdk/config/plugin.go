@@ -37,6 +37,9 @@ type PluginConfig struct {
 	// Limiter specifies settings for a rate limiter for reads/writes.
 	Limiter *LimiterSettings `default:"{}" yaml:"limiter,omitempty" addedIn:"1.0"`
 
+	// Health sepcifies the settings for health checking in the plugin.
+	Health *HealthSettings `default:"{}" yaml:"health,omitempty" addedIn:"1.0"`
+
 	// Context is a map that allows the plugin to specify any arbitrary
 	// data it may need.
 	Context map[string]interface{} `default:"{}" yaml:"context,omitempty" addedIn:"1.0"`
@@ -292,4 +295,18 @@ func (settings TransactionSettings) Validate(multiErr *errors.MultiError) {
 // validated successfully, this should never return an error.
 func (settings *TransactionSettings) GetTTL() (time.Duration, error) {
 	return time.ParseDuration(settings.TTL)
+}
+
+// HealthSettings provides configuration options around health checking in
+// the plugin.
+type HealthSettings struct {
+	// Enabled globally enables or disables running health checks for the plugin.
+	// By default, a plugin will have health checks enabled.
+	Enabled bool `default:"true" yaml:"enabled,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the HealthSettings has no configuration errors.
+func (settings HealthSettings) Validate(multiErr *errors.MultiError) {
+	// Nothing to validate here.
+	return
 }

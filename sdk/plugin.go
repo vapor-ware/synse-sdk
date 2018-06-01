@@ -98,6 +98,11 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 	deviceHandlers = append(deviceHandlers, handlers...)
 }
 
+// RegisterHealthCheck registers a new HealthCheck with the plugin.
+func (plugin *Plugin) RegisterHealthCheck(check *HealthCheck) {
+	HealthManager.AddCheck(check)
+}
+
 // Run starts the Plugin.
 //
 // Before the gRPC server is started, and before the read and write goroutines
@@ -181,6 +186,9 @@ func (plugin *Plugin) Run() (err error) {
 		logger.Debug("starting plugin server and manager")
 
 		// "Starting" steps **
+
+		// start the health checks
+		HealthManager.RunChecks()
 
 		// startDataManager
 		DataManager.init()
