@@ -29,6 +29,8 @@ type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.Device
 // as data providers and device controllers for Synse Server.
 type Plugin struct {
 	policies []policies.ConfigPolicy
+
+	server *Server
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
@@ -146,8 +148,11 @@ func (plugin *Plugin) Run() (err error) {
 	}
 	setupTransactionCache(ttl)
 
-	// makeDataManager
-	// makeServer
+	// Initialize a gRPC server for the Plugin to use.
+	plugin.server = NewServer(
+		PluginConfig.Network.Type,
+		PluginConfig.Network.Address,
+	)
 
 	// ** "Action" steps **
 
@@ -178,12 +183,13 @@ func (plugin *Plugin) Run() (err error) {
 		// "Starting" steps **
 
 		// startDataManager
+		DataManager.init()
+
 		// startServer
+		return plugin.server.Serve()
 
+		// TODO: post run actions (https://github.com/vapor-ware/synse-sdk/issues/85)
 	}
-
-	// profit
-
 	return nil
 }
 
