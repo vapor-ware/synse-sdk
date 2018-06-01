@@ -10,16 +10,13 @@ import (
 // validateReadRequest checks to make sure that a ReadRequest has all of the
 // fields populated that we need in order to process it as a valid request.
 func validateReadRequest(request *synse.DeviceFilter) error {
-	device := request.GetDevice()
-	if device == "" {
+	if request.GetDevice() == "" {
 		return errors.InvalidArgumentErr("no device UID supplied to Read")
 	}
-	board := request.GetBoard()
-	if board == "" {
+	if request.GetBoard() == "" {
 		return errors.InvalidArgumentErr("no board supplied to Read")
 	}
-	rack := request.GetRack()
-	if rack == "" {
+	if request.GetRack() == "" {
 		return errors.InvalidArgumentErr("no rack supplied to Read")
 	}
 	return nil
@@ -28,16 +25,13 @@ func validateReadRequest(request *synse.DeviceFilter) error {
 // validateWriteRequest checks to make sure that a ReadRequest has all of the
 // fields populated that we need in order to process it as a valid request.
 func validateWriteRequest(request *synse.WriteInfo) error {
-	device := request.DeviceFilter.GetDevice()
-	if device == "" {
+	if request.DeviceFilter.GetDevice() == "" {
 		return errors.InvalidArgumentErr("no device UID supplied to Write")
 	}
-	board := request.DeviceFilter.GetBoard()
-	if board == "" {
+	if request.DeviceFilter.GetBoard() == "" {
 		return errors.InvalidArgumentErr("no board supplied to Write")
 	}
-	rack := request.DeviceFilter.GetRack()
-	if rack == "" {
+	if request.DeviceFilter.GetRack() == "" {
 		return errors.InvalidArgumentErr("no rack supplied to Write")
 	}
 	return nil

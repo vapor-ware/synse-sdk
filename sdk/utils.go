@@ -62,7 +62,11 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 			}
 
 			// Get the location
-			location, err := config.GetLocation(instance.Location)
+			l, err := config.GetLocation(instance.Location)
+			if err != nil {
+				return nil, err
+			}
+			location, err := NewLocationFromConfig(l)
 			if err != nil {
 				return nil, err
 			}

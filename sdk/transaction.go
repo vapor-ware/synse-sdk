@@ -40,7 +40,7 @@ func setupTransactionCache(ttl time.Duration) {
 //
 // If the transaction cache has not been initialized by the time this is called,
 // we will terminate the plugin, as it is indicative of an improper plugin setup.
-func newTransaction() (*transaction, error) {
+func newTransaction() *transaction {
 	if transactionCache == nil {
 		logger.Fatalf("transaction cache was not initialized; likely an issue in plugin setup")
 	}
@@ -56,7 +56,7 @@ func newTransaction() (*transaction, error) {
 		message: "",
 	}
 	transactionCache.Set(id, &t, cache.DefaultExpiration)
-	return &t, nil
+	return &t
 }
 
 // getTransaction looks up the given transaction ID in the cache. If it exists,

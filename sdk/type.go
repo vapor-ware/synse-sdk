@@ -1,7 +1,10 @@
 package sdk
 
 import (
+	"strconv"
 	"strings"
+
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 var (
@@ -38,7 +41,7 @@ type ReadingType struct {
 	Precision int
 
 	// Unit is the unit of measure for the reading.
-	Unit ReadingUnit
+	Unit Unit
 
 	// ScalingFactor is an optional value by which to scale the
 	// reading. This is useful when a device returns reading data
@@ -62,11 +65,24 @@ func (readingType *ReadingType) Type() string {
 	return readingType.Name
 }
 
-// ReadingUnit is the unit of measure for a device reading.
-type ReadingUnit struct {
+// GetScalingFactor gets the scaling factor for the reading type.
+func (readingType *ReadingType) GetScalingFactor() (float64, error) {
+	return strconv.ParseFloat(readingType.ScalingFactor, 64)
+}
+
+// Unit is the unit of measure for a device reading.
+type Unit struct {
 	// Name is the full name of the unit.
 	Name string
 
 	// Symbol is the symbolic representation of the unit.
 	Symbol string
+}
+
+// encode translates the SDK Unit type to the corresponding gRPC Unit type.
+func (unit *Unit) encode() *synse.Unit {
+	return &synse.Unit{
+		Name:   unit.Name,
+		Symbol: unit.Symbol,
+	}
 }
