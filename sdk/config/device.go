@@ -226,7 +226,7 @@ func (deviceInstance DeviceInstance) Validate(multiErr *errors.MultiError) {
 
 // DeviceOutput describes a valid output for the DeviceInstance.
 type DeviceOutput struct {
-	// Type is the name of the ReadingType that describes the expected output format
+	// Type is the name of the OutputType that describes the expected output format
 	// for this device output.
 	Type string `yaml:"type,omitempty" addedIn:"1.0"`
 

@@ -16,9 +16,9 @@ var (
 	// unified DeviceConfig. The key is the name of the DeviceKind.
 	deviceConfigKinds map[string]*config.DeviceKind
 
-	// outputTypes is a map to track the output types (ReadingType) that are
+	// outputTypes is a map to track the output types (OutputType) that are
 	// configured with the plugin.
-	outputTypes map[string]*ReadingType
+	outputTypes map[string]*config.OutputType
 )
 
 // VerifyConfigs verifies that all configurations that the plugin has found

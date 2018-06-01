@@ -6,9 +6,14 @@ import (
 	"os"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
+
+// outputTypeMap is a map where the the key is the name of the output type
+// and the value is the corresponding OutputType.
+var outputTypeMap = map[string]*config.OutputType{}
 
 // DeviceIdentifier is a function that produces a string that can be used to
 // identify a device deterministically. The returned string should be a composite
@@ -52,6 +57,23 @@ func NewPlugin(options ...PluginOption) *Plugin {
 // does not happen in this function. Config policies are validated on plugin Run.
 func (plugin *Plugin) SetConfigPolicies(policies ...policies.ConfigPolicy) {
 	plugin.policies = policies
+}
+
+// RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
+// is able to define its output types statically, they would be registered with the
+// plugin via this method. Output types can also be registered via configuration
+// file.
+func (plugin *Plugin) RegisterOutputTypes(types ...*config.OutputType) error {
+	multiErr := errors.NewMultiError("registering output types")
+	for _, outputType := range types {
+		_, hasType := outputTypeMap[outputType.Name]
+		if hasType {
+			multiErr.Add(fmt.Errorf("output type with name '%s' already exists", outputType.Name))
+			continue
+		}
+		outputTypeMap[outputType.Name] = outputType
+	}
+	return multiErr.Err()
 }
 
 // RegisterPreRunActions registers functions with the plugin that will be called
@@ -275,6 +297,19 @@ func (plugin *Plugin) processConfig() error {
 		}
 
 		// what do we do when we error out here?
+	}
+
+	// Register output type configs from file
+	outputTypeCtxs, err := config.GetOutputTypeConfigsFromFile()
+	if err != nil {
+		return err
+	}
+	for _, ctx := range outputTypeCtxs {
+		cfg := ctx.Config.(*config.OutputType)
+		err := plugin.RegisterOutputTypes(cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Get device config from dynamic registration, if anything is set there.

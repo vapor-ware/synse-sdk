@@ -158,7 +158,7 @@ func (device *Device) GetOutput(name string) *Output {
 // Output defines a single output that a device can support. It is the DeviceConfig's
 // Output merged with its associated output type.
 type Output struct {
-	ReadingType
+	config.OutputType
 
 	Info string
 	Data map[string]interface{}
@@ -182,7 +182,7 @@ func (output *Output) encode() *synse.Output {
 		DataType:      output.DataType,
 		Precision:     int32(output.Precision),
 		ScalingFactor: sf,
-		Unit:          output.Unit.encode(),
+		Unit:          output.Unit.Encode(),
 	}
 }
 
@@ -194,9 +194,9 @@ func NewOutputFromConfig(config *config.DeviceOutput) (*Output, error) {
 	}
 
 	return &Output{
-		ReadingType: *t,
-		Info:        config.Info,
-		Data:        config.Data,
+		OutputType: *t,
+		Info:       config.Info,
+		Data:       config.Data,
 	}, nil
 }
 

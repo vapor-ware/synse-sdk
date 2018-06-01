@@ -1,4 +1,4 @@
-package sdk
+package config
 
 import (
 	"testing"
@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestReadingType_Type tests getting the type of the reading
-// from the namespaced ReadingType name.
-func TestReadingType_Type(t *testing.T) {
+// TestOutputType_Type tests getting the type of the reading
+// from the namespaced OutputType name.
+func TestOutputType_Type(t *testing.T) {
 	var testTable = []struct {
 		name     string
 		expected string
@@ -28,7 +28,7 @@ func TestReadingType_Type(t *testing.T) {
 	}
 
 	for _, tc := range testTable {
-		readingType := ReadingType{Name: tc.name}
+		readingType := OutputType{Name: tc.name}
 		assert.Equal(t, tc.expected, readingType.Type())
 	}
 }
