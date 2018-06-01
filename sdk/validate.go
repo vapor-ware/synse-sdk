@@ -3,6 +3,7 @@ package sdk
 import (
 	"fmt"
 
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -11,15 +12,15 @@ import (
 func validateReadRequest(request *synse.DeviceFilter) error {
 	device := request.GetDevice()
 	if device == "" {
-		return invalidArgumentErr("no device UID supplied to Read")
+		return errors.InvalidArgumentErr("no device UID supplied to Read")
 	}
 	board := request.GetBoard()
 	if board == "" {
-		return invalidArgumentErr("no board supplied to Read")
+		return errors.InvalidArgumentErr("no board supplied to Read")
 	}
 	rack := request.GetRack()
 	if rack == "" {
-		return invalidArgumentErr("no rack supplied to Read")
+		return errors.InvalidArgumentErr("no rack supplied to Read")
 	}
 	return nil
 }
@@ -29,15 +30,15 @@ func validateReadRequest(request *synse.DeviceFilter) error {
 func validateWriteRequest(request *synse.WriteInfo) error {
 	device := request.DeviceFilter.GetDevice()
 	if device == "" {
-		return invalidArgumentErr("no device UID supplied to Write")
+		return errors.InvalidArgumentErr("no device UID supplied to Write")
 	}
 	board := request.DeviceFilter.GetBoard()
 	if board == "" {
-		return invalidArgumentErr("no board supplied to Write")
+		return errors.InvalidArgumentErr("no board supplied to Write")
 	}
 	rack := request.DeviceFilter.GetRack()
 	if rack == "" {
-		return invalidArgumentErr("no rack supplied to Write")
+		return errors.InvalidArgumentErr("no rack supplied to Write")
 	}
 	return nil
 }

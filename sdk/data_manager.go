@@ -9,6 +9,7 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"golang.org/x/time/rate"
 )
@@ -149,7 +150,7 @@ func (manager *dataManager) readOne(device *Device) {
 			// Check to see if the error is that of unsupported error. If it is, we
 			// do not want to log out here (low-interval read polling would cause this
 			// to pollute the logs for something that we should already know).
-			_, unsupported := err.(*UnsupportedCommandError)
+			_, unsupported := err.(*errors.UnsupportedCommandError)
 			if !unsupported {
 				logger.Errorf("failed to read from device %v: %v", device.GUID(), err)
 			}
@@ -388,7 +389,7 @@ func (manager *dataManager) Read(req *synse.DeviceFilter) ([]*synse.Reading, err
 	readings := manager.getReadings(deviceID)
 	if readings == nil {
 		logger.Errorf("No readings found for device: %s", deviceID)
-		return nil, notFoundErr("no readings found for device: %s", deviceID)
+		return nil, errors.NotFoundErr("no readings found for device: %s", deviceID)
 	}
 
 	// Create the response containing the device readings.

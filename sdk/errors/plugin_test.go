@@ -1,4 +1,4 @@
-package sdk
+package errors
 
 import (
 	"strings"
@@ -10,7 +10,7 @@ import (
 // TestInvalidArgumentErr tests constructing a new InvalidArgument error.
 func TestInvalidArgumentErr(t *testing.T) {
 	errString := "test error"
-	err := invalidArgumentErr(errString)
+	err := InvalidArgumentErr(errString)
 
 	assert.True(t, strings.Contains(err.Error(), "InvalidArgument"))
 	assert.True(t, strings.Contains(err.Error(), errString))
@@ -19,7 +19,7 @@ func TestInvalidArgumentErr(t *testing.T) {
 // TestNotFoundErr tests constructing a new NotFound error.
 func TestNotFoundErr(t *testing.T) {
 	errString := "test error"
-	err := notFoundErr(errString)
+	err := NotFoundErr(errString)
 
 	assert.True(t, strings.Contains(err.Error(), "NotFound"))
 	assert.True(t, strings.Contains(err.Error(), errString))

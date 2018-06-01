@@ -4,6 +4,7 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/types"
 )
@@ -142,7 +143,7 @@ func (device *Device) Read() (*ReadContext, error) {
 
 		return NewReadContext(device, readings)
 	}
-	return nil, &UnsupportedCommandError{}
+	return nil, &errors.UnsupportedCommandError{}
 }
 
 // Write performs the write action for the device, as set by its DeviceHandler.
@@ -154,7 +155,7 @@ func (device *Device) Write(data *WriteData) error {
 	if device.IsWritable() {
 		return device.Handler.Write(device, data)
 	}
-	return &UnsupportedCommandError{}
+	return &errors.UnsupportedCommandError{}
 }
 
 // IsReadable checks if the Device is readable based on the presence/absence
