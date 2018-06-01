@@ -244,7 +244,7 @@ func (device *Device) IsWritable() bool {
 // ID generates the ID for the Device.
 func (device *Device) ID() string {
 	if device.id == "" {
-		protocolComp := device.Identifier(device.Data)
+		protocolComp := Context.deviceIdentifier(device.Data)
 		device.id = newUID(device.Plugin, device.Kind, protocolComp)
 	}
 	return device.id

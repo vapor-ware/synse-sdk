@@ -1,24 +1,24 @@
-package config
+package sdk
 
 import (
 	"fmt"
 
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/types"
 )
 
 var (
 	// deviceConfigLocations is a map to track the locations for the unified
 	// DeviceConfig. The key is the name of the Location.
-	deviceConfigLocations map[string]*Location
+	deviceConfigLocations map[string]*config.Location
 
 	// deviceConfigKinds is a map to track the devices (DeviceKind) for the
 	// unified DeviceConfig. The key is the name of the DeviceKind.
-	deviceConfigKinds map[string]*DeviceKind
+	deviceConfigKinds map[string]*config.DeviceKind
 
 	// outputTypes is a map to track the output types (ReadingType) that are
 	// configured with the plugin.
-	outputTypes map[string]*types.ReadingType
+	outputTypes map[string]*ReadingType
 )
 
 // VerifyConfigs verifies that all configurations that the plugin has found
@@ -37,7 +37,7 @@ var (
 // files to be specified, for certain configs. This means that we can not verify
 // that all the information in a given config is correct until we have the
 // whole picture of what exists.
-func VerifyConfigs(unifiedDeviceConfig *DeviceConfig) *errors.MultiError {
+func VerifyConfigs(unifiedDeviceConfig *config.DeviceConfig) *errors.MultiError {
 	var multiErr = errors.NewMultiError("Config Verification")
 
 	// Verify that there are no conflicting device configurations. We want to
@@ -61,7 +61,7 @@ func VerifyConfigs(unifiedDeviceConfig *DeviceConfig) *errors.MultiError {
 
 // verifyDeviceConfigLocations verifies that there are no Locations specified
 // in the unified DeviceConfig that have conflicting data.
-func verifyDeviceConfigLocations(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
+func verifyDeviceConfigLocations(deviceConfig *config.DeviceConfig, multiErr *errors.MultiError) {
 	for _, location := range deviceConfig.Locations {
 		loc, hasName := deviceConfigLocations[location.Name]
 
@@ -87,7 +87,7 @@ func verifyDeviceConfigLocations(deviceConfig *DeviceConfig, multiErr *errors.Mu
 
 // verifyDeviceConfigDeviceKinds verifies that there are no duplicate DeviceKinds
 // specified in the unified DeviceConfig.
-func verifyDeviceConfigDeviceKinds(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
+func verifyDeviceConfigDeviceKinds(deviceConfig *config.DeviceConfig, multiErr *errors.MultiError) {
 	for _, kind := range deviceConfig.Devices {
 		_, hasKind := deviceConfigKinds[kind.Name]
 
@@ -110,7 +110,7 @@ func verifyDeviceConfigDeviceKinds(deviceConfig *DeviceConfig, multiErr *errors.
 // verifyDeviceConfigInstances verifies that the device instances all reference valid
 // locations. verifyDeviceConfigLocations needs to be called before this verification
 // function, as the deviceConfigLocations map is populated there.
-func verifyDeviceConfigInstances(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
+func verifyDeviceConfigInstances(deviceConfig *config.DeviceConfig, multiErr *errors.MultiError) {
 	for _, device := range deviceConfig.Devices {
 		for _, instance := range device.Instances {
 			if instance.Location == "" {
@@ -140,7 +140,7 @@ func verifyDeviceConfigInstances(deviceConfig *DeviceConfig, multiErr *errors.Mu
 
 // verifyDeviceConfigOutputs verifies that the DeviceOutputs of DeviceKinds and
 // DeviceInstances reference valid output types.
-func verifyDeviceConfigOutputs(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
+func verifyDeviceConfigOutputs(deviceConfig *config.DeviceConfig, multiErr *errors.MultiError) {
 	for _, device := range deviceConfig.Devices {
 		// Check the device-level outputs
 		for _, output := range device.Outputs {
