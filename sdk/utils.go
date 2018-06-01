@@ -126,7 +126,7 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 
 // getTypeByName gets the output type with the given name. If an output type does
 // not exist with the given name, an error is returned.
-func getTypeByName(name string) (*ReadingType, error) {
+func getTypeByName(name string) (*config.OutputType, error) {
 	t, ok := outputTypeMap[name]
 	if !ok {
 		return nil, fmt.Errorf("no output type with name '%s' found", name)

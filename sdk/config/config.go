@@ -54,3 +54,9 @@ func (ctx *ConfigContext) IsPluginConfig() bool {
 	_, ok := ctx.Config.(*PluginConfig)
 	return ok
 }
+
+// IsOutputTypeConfig checks whether the config in the context is an OutputType config.
+func (ctx *ConfigContext) IsOutputTypeConfig() bool {
+	_, ok := ctx.Config.(*OutputType)
+	return ok
+}

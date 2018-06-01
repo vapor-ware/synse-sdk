@@ -3,6 +3,7 @@ package sdk
 import (
 	"fmt"
 
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -12,7 +13,7 @@ type Reading struct {
 	Timestamp string
 	Type      string
 	Info      string
-	Unit      Unit
+	Unit      config.Unit
 	Value     interface{}
 }
 
@@ -25,7 +26,7 @@ func NewReading(output *Output, value interface{}) *Reading {
 		Type:      output.Type(),
 		Info:      output.Info,
 		Unit:      output.Unit,
-		Value:     value,
+		Value:     output.Apply(value),
 	}
 }
 
@@ -35,7 +36,7 @@ func (reading *Reading) encode() *synse.Reading {
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
 		Info:      reading.Info,
-		Unit:      reading.Unit.encode(),
+		Unit:      reading.Unit.Encode(),
 	}
 
 	switch t := reading.Value.(type) {

@@ -25,9 +25,41 @@ var (
 	// that are used when looking for device configuration files.
 	deviceConfigSearchPaths = []string{"./config/device", "/etc/synse/plugin/config/device"}
 
+	// typeConfigSearchPaths define the search paths, in order of evaluation,
+	// that are used when looking for output type configuration files.
+	typeConfigSearchPaths = []string{"./config/type", "/etc/synse/plugin/config/type"}
+
 	// supportedExts are the extensions supported for configuration files.
 	supportedExts = []string{".yml", ".yaml"}
 )
+
+// GetOutputTypeConfigsFromFile finds the files containing output type configurations
+// and marshals them into an OutputType struct. These OutputTypes are wrapped in a
+// ConfigContext which provides the source file for the configuration as well.
+//
+// All ConfigContexts returned by this function will have their IsOutputTypeConfig
+// function return true.
+func GetOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
+	var cfgs []*ConfigContext
+
+	// Search for output type config files. No name is specified as an arg here because
+	// output type config files do not require any particular name.
+	files, err := findConfigs(typeConfigSearchPaths, EnvOutputTypeConfig, "")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		config := &OutputType{}
+		err := unmarshalConfigFile(file, config)
+		if err != nil {
+			return nil, err
+		}
+		cfgs = append(cfgs, NewConfigContext(file, config))
+	}
+
+	return cfgs, nil
+}
 
 // GetDeviceConfigsFromFile finds the files containing device configurations and
 // marshals them into a DeviceConfig struct. These DeviceConfigs are wrapped in a
