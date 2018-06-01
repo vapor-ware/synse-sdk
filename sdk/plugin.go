@@ -112,6 +112,12 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // actions are executed, and device setup actions are executed, if defined.
 func (plugin *Plugin) Run() (err error) {
 
+	// The plugin name must be set as metainfo, since it is used in the Device
+	// model. Check if it is set here. If not, return an error.
+	if metainfo.Name == "" {
+		return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
+	}
+
 	// ** "Config" steps **
 
 	// Check for command line flags. If any flags are set that require an
