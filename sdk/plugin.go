@@ -83,10 +83,10 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 // functions here can be used for device-specific setup actions.
 //
 // The filter parameter should be the filter to apply to devices. Currently
-// filtering is only supported for device type and device model. Filter strings
-// are specified by the format "key=value,key=value". The filter
-//     "type=temperature,model=ABC123"
-// would only match devices whose type was temperature and model was ABC123.
+// filtering is only supported for device kind. Filter strings are specified in
+// the format "key=value,key=value". The filter
+//     "kind=temperature,kind=ABC123"
+// would only match devices whose kind was temperature or ABC123.
 func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
 	if _, exists := deviceSetupActions[filter]; exists {
 		deviceSetupActions[filter] = append(deviceSetupActions[filter], actions...)
@@ -111,6 +111,12 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
 func (plugin *Plugin) Run() (err error) {
+
+	// The plugin name must be set as metainfo, since it is used in the Device
+	// model. Check if it is set here. If not, return an error.
+	if metainfo.Name == "" {
+		return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
+	}
 
 	// ** "Config" steps **
 
@@ -142,9 +148,12 @@ func (plugin *Plugin) Run() (err error) {
 
 	// ** "Making" steps **
 
-	// makeTransactionCache
-	// ttl, err := p.Config.Settings.Transaction.GetTTL()
-	// err = setupTransactionCache(ttl)
+	// Set up the transaction cache
+	ttl, err := PluginConfig.Settings.Transaction.GetTTL()
+	if err != nil {
+		return
+	}
+	setupTransactionCache(ttl)
 
 	// makeDataManager
 	// makeServer

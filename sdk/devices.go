@@ -4,8 +4,8 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
-	"github.com/vapor-ware/synse-sdk/sdk/types"
 )
 
 var (
@@ -91,7 +91,7 @@ type Device struct {
 
 	Info string
 
-	Location *config.Location
+	Location *Location
 
 	Data map[string]interface{}
 
@@ -107,11 +107,83 @@ type Device struct {
 	bulkRead bool
 }
 
+// Location holds the location information for a Device. This is essentially just
+// the config.Location struct, but with all fields fully resolved.
+type Location struct {
+	Rack  string
+	Board string
+}
+
+// encode translates the SDK Location type to the corresponding gRPC Location type.
+func (location *Location) encode() *synse.Location {
+	return &synse.Location{
+		Rack:  location.Rack,
+		Board: location.Board,
+	}
+}
+
+// NewLocationFromConfig creates a new Location from the DeviceOutput location struct.
+func NewLocationFromConfig(config *config.Location) (*Location, error) {
+	multiErr := errors.NewMultiError("creating new Location from config")
+	rack, err := config.Rack.Get()
+	if err != nil {
+		multiErr.Add(err)
+	}
+	board, err := config.Board.Get()
+	if err != nil {
+		multiErr.Add(err)
+	}
+
+	if multiErr.HasErrors() {
+		return nil, multiErr
+	}
+
+	return &Location{
+		Rack:  rack,
+		Board: board,
+	}, nil
+}
+
+// GetOutput gets the named output from the Device's output list. If the output
+// is not there, nil is returned.
+func (device *Device) GetOutput(name string) *Output {
+	for _, output := range device.Outputs {
+		if output.Name == name {
+			return output
+		}
+	}
+	return nil
+}
+
+// Output defines a single output that a device can support. It is the DeviceConfig's
+// Output merged with its associated output type.
 type Output struct {
-	types.ReadingType
+	ReadingType
 
 	Info string
 	Data map[string]interface{}
+}
+
+// MakeReading makes a reading for this output. This is a wrapper around NewReading.
+func (output *Output) MakeReading(value interface{}) *Reading {
+	return NewReading(output, value)
+}
+
+// encode translates the SDK Output type to the corresponding gRPC Output type.
+func (output *Output) encode() *synse.Output {
+	sf, err := output.GetScalingFactor()
+	if err != nil {
+		logger.Errorf("error getting scaling factor: %v", err)
+	}
+
+	return &synse.Output{
+		Name:          output.Name,
+		Type:          output.Type(),
+		DataType:      output.DataType,
+		Precision:     int32(output.Precision),
+		ScalingFactor: sf,
+		Unit:          output.Unit.encode(),
+	}
 }
 
 // NewOutputFromConfig creates a new Output from the DeviceOutput config struct.
@@ -142,7 +214,7 @@ func (device *Device) Read() (*ReadContext, error) {
 
 		return NewReadContext(device, readings)
 	}
-	return nil, &UnsupportedCommandError{}
+	return nil, &errors.UnsupportedCommandError{}
 }
 
 // Write performs the write action for the device, as set by its DeviceHandler.
@@ -154,7 +226,7 @@ func (device *Device) Write(data *WriteData) error {
 	if device.IsWritable() {
 		return device.Handler.Write(device, data)
 	}
-	return &UnsupportedCommandError{}
+	return &errors.UnsupportedCommandError{}
 }
 
 // IsReadable checks if the Device is readable based on the presence/absence
@@ -181,16 +253,18 @@ func (device *Device) ID() string {
 // GUID generates a globally unique ID string by creating a composite
 // string from the rack, board, and device UID.
 func (device *Device) GUID() string {
-	rack, _ := device.Location.Rack.Get()
-	board, _ := device.Location.Board.Get()
-	return makeIDString(rack, board, device.ID())
+	return makeIDString(
+		device.Location.Rack,
+		device.Location.Board,
+		device.ID(),
+	)
 }
 
 // encode translates the SDK Device to its corresponding gRPC Device.
 func (device *Device) encode() *synse.Device {
 	var output []*synse.Output
 	for _, out := range device.Outputs {
-		output = append(output, out.Encode())
+		output = append(output, out.encode())
 	}
 	return &synse.Device{
 		Timestamp: GetCurrentTime(),
@@ -199,7 +273,7 @@ func (device *Device) encode() *synse.Device {
 		Metadata:  device.Metadata,
 		Plugin:    device.Plugin,
 		Info:      device.Info,
-		Location:  device.Location.Encode(),
+		Location:  device.Location.encode(),
 		Output:    output,
 	}
 }

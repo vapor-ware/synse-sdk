@@ -9,6 +9,7 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"golang.org/x/time/rate"
 )
@@ -41,7 +42,8 @@ type dataManager struct {
 	// received by the `pollWrite` function.
 	writeChannel chan *WriteContext
 
-	// Map of readings as strings. Key is the device UID.
+	// readings is a map of readings, where the key is the GUID of a
+	// device, and the values are the readings associated with that device.
 	readings map[string][]*Reading
 
 	// Lock around access/update of the `readings` map data.
@@ -50,23 +52,14 @@ type dataManager struct {
 	// Lock around async reads and writes.
 	rwLock *sync.Mutex
 
+	// limiter is a rate limiter for making requests. This is configured
+	// via the plugin config.
 	limiter *rate.Limiter
-
-	// The plugin's device handlers. These are what handle the read
-	// and write functionality for all devices.
-	deviceHandlers []*DeviceHandler
-
-	//// The plugin's handlers. See sdk/handlers.go.
-	//handlers *Handlers
-	//
-
-	//
-	//// The plugin's configuration. See sdk.config.plugin.go.
-	//config *config.PluginConfig
 }
 
-// init initializes the goroutines for the dataManager so it can start reading
-// from and writing to the devices managed by the Plugin.
+// init initializes the data manager by creating the structures needed, based
+// on the global plugin configuration, and by string the read, write, and updater
+// goroutines, allowing it to provide data from and access to configured devices.
 func (manager *dataManager) init() {
 	logger.Info("Initializing dataManager goroutines..")
 
@@ -129,8 +122,8 @@ func (manager *dataManager) goRead() {
 	}()
 }
 
-// read implements the logic for reading from a device that is configured
-// with the Plugin.
+// readOne implements the logic for reading from an individual device that is
+// configured with the Plugin.
 func (manager *dataManager) readOne(device *Device) {
 	// Rate limiting, if configured
 	if manager.limiter != nil {
@@ -149,7 +142,7 @@ func (manager *dataManager) readOne(device *Device) {
 			// Check to see if the error is that of unsupported error. If it is, we
 			// do not want to log out here (low-interval read polling would cause this
 			// to pollute the logs for something that we should already know).
-			_, unsupported := err.(*UnsupportedCommandError)
+			_, unsupported := err.(*errors.UnsupportedCommandError)
 			if !unsupported {
 				logger.Errorf("failed to read from device %v: %v", device.GUID(), err)
 			}
@@ -167,17 +160,17 @@ func (manager *dataManager) readBulk(handler *DeviceHandler) {
 	if manager.limiter != nil {
 		err := manager.limiter.Wait(context.Background())
 		if err != nil {
-			logger.Errorf("error from limiter when bulk reading with handler for %v: %v", handler.Model, err)
+			logger.Errorf("error from limiter when bulk reading with handler for %v: %v", handler.Name, err)
 		}
 	}
 
 	// If the handler supports bulk read, execute bulk read. Otherwise,
 	// do nothing. Individual reads are done via the readOne function.
-	if handler.doesBulkRead() {
+	if handler.supportsBulkRead() {
 		devices := handler.getDevicesForHandler()
 		resp, err := handler.BulkRead(devices)
 		if err != nil {
-			logger.Errorf("failed to bulk read from device handler for: %v: %v", handler.Model, err)
+			logger.Errorf("failed to bulk read from device handler for: %v: %v", handler.Name, err)
 		} else {
 			for _, readCtx := range resp {
 				manager.readChannel <- readCtx
@@ -197,7 +190,7 @@ func (manager *dataManager) serialRead() {
 		manager.readOne(dev)
 	}
 
-	for _, handler := range manager.deviceHandlers {
+	for _, handler := range deviceHandlers {
 		manager.readBulk(handler)
 	}
 }
@@ -217,7 +210,7 @@ func (manager *dataManager) parallelRead() {
 		}(&waitGroup, dev)
 	}
 
-	for _, handler := range manager.deviceHandlers {
+	for _, handler := range deviceHandlers {
 		// Increment the WaitGroup counter.
 		waitGroup.Add(1)
 
@@ -235,7 +228,7 @@ func (manager *dataManager) parallelRead() {
 // goWrite starts the goroutine for writing to configured devices.
 func (manager *dataManager) goWrite() {
 	// If writes are not enabled, there is nothing to do here.
-	if !PluginConfig.Settings.Write.Enabled {
+	if !manager.writesEnabled() {
 		logger.Info("plugin writes disabled in config - will not start the write goroutine")
 		return
 	}
@@ -263,6 +256,7 @@ func (manager *dataManager) goWrite() {
 	}()
 }
 
+// serialWrite writes to devices configured with the Plugin in serial.
 func (manager *dataManager) serialWrite() {
 	// If the plugin is a serial plugin, we want to lock around reads
 	// and writes so the two operations do not stomp on one another.
@@ -282,6 +276,7 @@ func (manager *dataManager) serialWrite() {
 	}
 }
 
+// parallelWrite writes to devices configured with the Plugin in parallel.
 func (manager *dataManager) parallelWrite() {
 	var waitGroup sync.WaitGroup
 
@@ -388,18 +383,13 @@ func (manager *dataManager) Read(req *synse.DeviceFilter) ([]*synse.Reading, err
 	readings := manager.getReadings(deviceID)
 	if readings == nil {
 		logger.Errorf("No readings found for device: %s", deviceID)
-		return nil, notFoundErr("no readings found for device: %s", deviceID)
+		return nil, errors.NotFoundErr("no readings found for device: %s", deviceID)
 	}
 
 	// Create the response containing the device readings.
 	var resp []*synse.Reading
 	for _, r := range readings {
-		reading := &synse.Reading{
-			Timestamp: r.Timestamp,
-			Type:      r.Type,
-			Value:     r.Value,
-		}
-		resp = append(resp, reading)
+		resp = append(resp, r.encode())
 	}
 	return resp, nil
 }
@@ -432,13 +422,13 @@ func (manager *dataManager) Write(req *synse.WriteInfo) (map[string]*synse.Write
 	// Perform the write and build the response.
 	var resp = make(map[string]*synse.WriteData)
 	for _, data := range req.Data {
-		t, err := newTransaction()
-		if err != nil {
-			return nil, err
-		}
+		t := newTransaction()
 		t.setStatusPending()
 
+		// Map the transaction ID to the write context for the response
 		resp[t.id] = data
+
+		// Pass the write context to the write channel to be queued for writing.
 		manager.writeChannel <- &WriteContext{
 			transaction: t,
 			device:      filter.Device,

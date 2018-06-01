@@ -6,8 +6,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
 	"github.com/vapor-ware/synse-server-grpc/go"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
@@ -27,33 +25,24 @@ const (
 var transactionCache *cache.Cache
 
 // setupTransactionCache creates the transaction cache with the TTL in seconds.
-// This needs to be called in order to have transactions.
-// If this is called more than once, the cache is reinitialized and an error is
-// returned. The caller may choose to ignore the error.
-func setupTransactionCache(ttl time.Duration) (err error) {
-	// FIXME -- if the cache is not nil, we will return an error, but
-	// in that same case, we will still create a new cache.. this seems
-	// weird. shouldn't we just return the error in this block and return
-	// nil at the end of the func?
-	if transactionCache != nil {
-		err = status.Errorf(codes.AlreadyExists,
-			"transactionCache already initialized.")
-	}
-
-	transactionCache = cache.New(
-		ttl,
-		ttl*2,
-	)
-	return err
+//
+// This needs to be called prior to the plugin grpc server and device manager
+// starting up in order for us to have transactions.
+//
+// Note that if this is called multiple times, the global transaction cache
+// will be re-initialized.
+func setupTransactionCache(ttl time.Duration) {
+	transactionCache = cache.New(ttl, ttl*2)
 }
 
 // newTransaction creates a new transaction instance. Upon creation, the
 // transaction is given a unique ID and is added to the transaction cache.
-// This call will fail if the transaction cache is not initialized.
-func newTransaction() (*transaction, error) {
+//
+// If the transaction cache has not been initialized by the time this is called,
+// we will terminate the plugin, as it is indicative of an improper plugin setup.
+func newTransaction() *transaction {
 	if transactionCache == nil {
-		return nil, status.Errorf(codes.FailedPrecondition,
-			"transactionCache not initialized. Call setupTransactionCache.")
+		logger.Fatalf("transaction cache was not initialized; likely an issue in plugin setup")
 	}
 
 	id := xid.New().String()
@@ -67,24 +56,25 @@ func newTransaction() (*transaction, error) {
 		message: "",
 	}
 	transactionCache.Set(id, &t, cache.DefaultExpiration)
-	return &t, nil
+	return &t
 }
 
 // getTransaction looks up the given transaction ID in the cache. If it exists,
 // that transaction is returned; otherwise nil is returned.
-// This call will fail if the transaction cache is not initialized.
-func getTransaction(id string) (*transaction, error) {
+//
+// If the transaction cache has not been initialized by the time this is called,
+// we will terminate the plugin, as it is indicative of an improper plugin setup.
+func getTransaction(id string) *transaction {
 	if transactionCache == nil {
-		return nil, status.Errorf(codes.FailedPrecondition,
-			"transactionCache not initialized. Call setupTransactionCache.")
+		logger.Fatalf("transaction cache was not initialized; likely an issue in plugin setup")
 	}
 
 	t, found := transactionCache.Get(id)
 	if found {
-		return t.(*transaction), nil
+		return t.(*transaction)
 	}
 	logger.Info("transaction %v not found", id)
-	return nil, nil
+	return nil
 }
 
 // transaction represents an asynchronous write transaction for the Plugin. It
