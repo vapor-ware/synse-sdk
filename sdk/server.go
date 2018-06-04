@@ -49,6 +49,26 @@ func setupSocket(name string) (string, error) {
 	return socket, nil
 }
 
+// cleanupSocket cleans up the socket and removes it, if it exists.
+func cleanupSocket(socket string) error {
+	_, err := os.Stat(socket)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// If the socket doesn't exist, there is nothing to do here.
+			return nil
+		}
+		return err
+	}
+
+	err = os.Remove(socket)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
 // NewServer creates a new instance of a Server. This should be used
 // by the plugin to create its server instance.
 func NewServer(network, address string) *Server {
@@ -68,6 +88,12 @@ func (server *Server) Serve() (err error) {
 		if err != nil {
 			return
 		}
+		// If we are in unix mode and have set up for the socket, we will
+		// want to register a post-run action to clean up the socket.
+		postRunActions = append(postRunActions, func(plugin *Plugin) error {
+			return cleanupSocket(addr)
+		})
+
 	default:
 		addr = server.address
 	}
