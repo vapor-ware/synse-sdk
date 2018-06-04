@@ -7,6 +7,9 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	"fmt"
+	"os"
+
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
@@ -16,6 +19,54 @@ import (
 type Server struct {
 	network string
 	address string
+}
+
+// setupSocket is used to make sure the path for unix socket used for gRPC communication
+// is set up and accessible locally. Creates the directory for the socket. Returns the
+// directoryName and err.
+func setupSocket(name string) (string, error) {
+	socket := fmt.Sprintf("%s/%s", sockPath, name)
+
+	_, err := os.Stat(sockPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(sockPath, os.ModePerm); err != nil {
+				return "", err
+			}
+		} else {
+			logger.Errorf("failed to create socket path %v: %v", sockPath, err)
+			return "", err
+		}
+	} else {
+		err = os.Remove(socket)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				logger.Errorf("failed to remove existing socket %v: %v", socket, err)
+				return "", err
+			}
+		}
+	}
+	return socket, nil
+}
+
+// cleanupSocket cleans up the socket and removes it, if it exists.
+func cleanupSocket(socket string) error {
+	_, err := os.Stat(socket)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// If the socket doesn't exist, there is nothing to do here.
+			return nil
+		}
+		return err
+	}
+
+	err = os.Remove(socket)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
 }
 
 // NewServer creates a new instance of a Server. This should be used
@@ -37,6 +88,12 @@ func (server *Server) Serve() (err error) {
 		if err != nil {
 			return
 		}
+		// If we are in unix mode and have set up for the socket, we will
+		// want to register a post-run action to clean up the socket.
+		postRunActions = append(postRunActions, func(plugin *Plugin) error {
+			return cleanupSocket(addr)
+		})
+
 	default:
 		addr = server.address
 	}
@@ -64,15 +121,14 @@ func (server *Server) Test(ctx context.Context, request *synse.Empty) (*synse.St
 // Version is the handler for the Synse GRPC Plugin service's `Version` RPC method.
 func (server *Server) Version(ctx context.Context, request *synse.Empty) (*synse.VersionInfo, error) {
 	logger.Debug("gRPC server: version")
-	ver := GetVersion()
 	return &synse.VersionInfo{
-		PluginVersion: ver.PluginVersion,
-		SdkVersion:    ver.SDKVersion,
-		BuildDate:     ver.BuildDate,
-		GitCommit:     ver.GitCommit,
-		GitTag:        ver.GitTag,
-		Arch:          ver.Arch,
-		Os:            ver.OS,
+		PluginVersion: Version.PluginVersion,
+		SdkVersion:    Version.SDKVersion,
+		BuildDate:     Version.BuildDate,
+		GitCommit:     Version.GitCommit,
+		GitTag:        Version.GitTag,
+		Arch:          Version.Arch,
+		Os:            Version.OS,
 	}, nil
 }
 
@@ -124,20 +180,19 @@ func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_D
 // Metainfo is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
 func (server *Server) Metainfo(ctx context.Context, request *synse.Empty) (*synse.Metadata, error) {
 	logger.Debug("gRPC server: metainfo")
-	ver := GetVersion()
 	return &synse.Metadata{
 		Name:        metainfo.Name,
 		Maintainer:  metainfo.Maintainer,
 		Description: metainfo.Description,
 		Vcs:         metainfo.VCS,
 		Version: &synse.VersionInfo{
-			PluginVersion: ver.PluginVersion,
-			SdkVersion:    ver.SDKVersion,
-			BuildDate:     ver.BuildDate,
-			GitCommit:     ver.GitCommit,
-			GitTag:        ver.GitTag,
-			Arch:          ver.Arch,
-			Os:            ver.OS,
+			PluginVersion: Version.PluginVersion,
+			SdkVersion:    Version.SDKVersion,
+			BuildDate:     Version.BuildDate,
+			GitCommit:     Version.GitCommit,
+			GitTag:        Version.GitTag,
+			Arch:          Version.Arch,
+			Os:            Version.OS,
 		},
 	}, nil
 }

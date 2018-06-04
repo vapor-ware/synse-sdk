@@ -32,10 +32,10 @@ type deviceAction func(p *Plugin, d *Device) error
 
 // execPreRun executes the pre-run actions for the plugin.
 func execPreRun(plugin *Plugin) *errors.MultiError {
-	var multiErr = errors.NewMultiError("Pre Run Actions")
+	var multiErr = errors.NewMultiError("pre-run actions")
 
 	if len(preRunActions) > 0 {
-		logger.Debug("Executing Pre Run Actions:")
+		logger.Debug("Executing pre-run actions:")
 		for _, action := range preRunActions {
 			logger.Debugf(" * %v", action)
 			err := action(plugin)
@@ -48,12 +48,29 @@ func execPreRun(plugin *Plugin) *errors.MultiError {
 	return multiErr
 }
 
+// execPostRun executes the post-run actions for the plugin.
+func execPostRun(plugin *Plugin) *errors.MultiError {
+	var multiErr = errors.NewMultiError("post-run actions")
+
+	if len(postRunActions) > 0 {
+		logger.Debug("Executing post-run actions:")
+		for _, action := range postRunActions {
+			logger.Debug(" * %v", action)
+			err := action(plugin)
+			if err != nil {
+				multiErr.Add(err)
+			}
+		}
+	}
+	return multiErr
+}
+
 // execDeviceSetup executes the device setup actions for the plugin.
 func execDeviceSetup(plugin *Plugin) *errors.MultiError {
-	var multiErr = errors.NewMultiError("Device Setup Actions")
+	var multiErr = errors.NewMultiError("device setup actions")
 
 	if len(deviceSetupActions) > 0 {
-		logger.Debug("Executing Device Setup Actions:")
+		logger.Debug("Executing device setup actions:")
 		for filter, acts := range deviceSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {

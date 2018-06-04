@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"os/signal"
+	"syscall"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -36,11 +39,14 @@ type Plugin struct {
 	policies []policies.ConfigPolicy
 
 	server *Server
+	quit   chan os.Signal
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
 func NewPlugin(options ...PluginOption) *Plugin {
-	plugin := Plugin{}
+	plugin := Plugin{
+		quit: make(chan os.Signal),
+	}
 
 	// Set custom options for the plugin.
 	for _, option := range options {
@@ -128,6 +134,10 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
 func (plugin *Plugin) Run() (err error) {
+	// Register system calls for graceful stopping.
+	signal.Notify(plugin.quit, syscall.SIGTERM)
+	signal.Notify(plugin.quit, syscall.SIGINT)
+	go plugin.Stop()
 
 	// The plugin name must be set as metainfo, since it is used in the Device
 	// model. Check if it is set here. If not, return an error.
@@ -215,9 +225,22 @@ func (plugin *Plugin) Run() (err error) {
 
 	// startServer
 	return plugin.server.Serve()
+}
 
-	// TODO: post run actions (https://github.com/vapor-ware/synse-sdk/issues/85)
-	return nil
+func (plugin *Plugin) Stop() {
+	sig := <-plugin.quit
+	logger.Infof("Stopping plugin (%s)...", sig.String())
+
+	// TODO: any other stop/cleanup actions should go here (closing channels, etc)
+
+	multiErr := execPostRun(plugin)
+	if multiErr.HasErrors() {
+		logger.Error(multiErr)
+		os.Exit(1)
+	}
+
+	logger.Info("[done]")
+	os.Exit(0)
 }
 
 // FIXME: its not clear that these private functions need to hang off the Plugin struct..
@@ -240,8 +263,7 @@ func (plugin *Plugin) resolveFlags() {
 
 	// Print out the version info for the plugin.
 	if flagVersion {
-		versionInfo := GetVersion()
-		fmt.Println(versionInfo.Format())
+		fmt.Println(Version.Format())
 		os.Exit(0)
 	}
 }
@@ -442,8 +464,7 @@ func (plugin *Plugin) logStartupInfo() {
 	metainfo.log()
 
 	// Log plugin version info
-	version := GetVersion()
-	logger.Info(version.Format())
+	Version.Log()
 
 	// Log registered devices
 	logger.Info("Registered Devices:")

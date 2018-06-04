@@ -3,6 +3,8 @@ package sdk
 import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 
+	"fmt"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -70,6 +72,16 @@ func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
 	return devices
 }
 
+// getHandlerForDevice gets the DeviceHandler for a device, based on the handler name.
+func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
+	for _, handler := range deviceHandlers {
+		if handler.Name == handlerName {
+			return handler, nil
+		}
+	}
+	return nil, fmt.Errorf("no handler found with name: %s", handlerName)
+}
+
 // supportsBulkRead checks if the handler supports bulk reading for its Devices.
 //
 // If BulkRead is set for the device handler and Read is not, then the handler
@@ -105,6 +117,123 @@ type Device struct {
 	// bulkRead is a flag that determines whether or not the device should be
 	// read in bulk, i.e. in a batch with other devices of the same kind.
 	bulkRead bool
+}
+
+// makeDevices creates Device instances from a DeviceConfig. The DeviceConfig
+// used here should be a unified config, meaning that all DeviceConfigs (either from
+// different files or from file and dynamic registration) are merged into a single
+// DeviceConfig. This should only be called once all configs have been parsed and
+// validated to ensure that the information we have is all correct.
+func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
+	var devices []*Device
+
+	// The DeviceConfig we get here should be the unified config.
+	for _, kind := range config.Devices {
+		for _, instance := range kind.Instances {
+
+			// Get the outputs for the instance.
+			instanceOutputs, err := getInstanceOutputs(kind, instance)
+
+			// Get the location
+			l, err := config.GetLocation(instance.Location)
+			if err != nil {
+				return nil, err
+			}
+			location, err := NewLocationFromConfig(l)
+			if err != nil {
+				return nil, err
+			}
+
+			// Get the DeviceHandler. If a specific handlerName is set in the config,
+			// we will use that as the definitive handler. Otherwise, use the kind.
+			handlerName := kind.Name
+			if kind.HandlerName != "" {
+				handlerName = kind.HandlerName
+			}
+			if instance.HandlerName != "" {
+				handlerName = instance.HandlerName
+			}
+			handler, err := getHandlerForDevice(handlerName)
+			if err != nil {
+				return nil, err
+			}
+
+			device := &Device{
+				// The name of the device kind. This is essentially the identifier
+				// for the device type.
+				Kind: kind.Name,
+
+				// Any metadata associated with the device kind.
+				Metadata: kind.Metadata,
+
+				// The name of the plugin.
+				Plugin: metainfo.Name,
+
+				// Device-level information. This is not output-specific info.
+				Info: instance.Info,
+
+				// The location of the device.
+				Location: location,
+
+				// Any data associated with the device instance.
+				Data: instance.Data,
+
+				// The outputs supported by the device. A device output may
+				// supply more info, like Data, Info, Type, etc, so that should
+				// be accounted for when doing readings/writing stuff..
+				Outputs: instanceOutputs,
+
+				// The read/write handler for the device. Handlers should be registered globally.
+				Handler: handler,
+			}
+
+			devices = append(devices, device)
+		}
+	}
+	return devices, nil
+}
+
+// getInstanceOutputs get the Outputs for a single device instance. It converts
+// the instance's DeviceOutput to an Output type, and by doing so unifies that
+// output with its corresponding OutputType information.
+//
+// If output inheritance is enable for the instance (which is it by default),
+// this will also take the DeviceOutputs defined by the instance's kind.
+func getInstanceOutputs(kind *config.DeviceKind, instance *config.DeviceInstance) ([]*Output, error) {
+	var instanceOutputs []*Output
+
+	// Create the outputs specific to the instance first.
+	for _, o := range instance.Outputs {
+		output, err := NewOutputFromConfig(o)
+		if err != nil {
+			return nil, err
+		}
+		instanceOutputs = append(instanceOutputs, output)
+	}
+
+	// If output inheritance is not disabled, we will take any outputs
+	// from the DeviceKind as well. If there is an output with the same
+	// name already set from the instance config, we will ignore it.
+	if !instance.DisableOutputInheritance {
+		for _, o := range kind.Outputs {
+			output, err := NewOutputFromConfig(o)
+			if err != nil {
+				return nil, err
+			}
+			// Check if the output is already being tracked
+			duplicate := false
+			for _, tracked := range instanceOutputs {
+				if tracked.Name == output.Name {
+					duplicate = true
+					break
+				}
+			}
+			if !duplicate {
+				instanceOutputs = append(instanceOutputs, output)
+			}
+		}
+	}
+	return instanceOutputs, nil
 }
 
 // Location holds the location information for a Device. This is essentially just
