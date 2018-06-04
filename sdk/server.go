@@ -7,6 +7,9 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	"fmt"
+	"os"
+
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
@@ -16,6 +19,34 @@ import (
 type Server struct {
 	network string
 	address string
+}
+
+// setupSocket is used to make sure the path for unix socket used for gRPC communication
+// is set up and accessible locally. Creates the directory for the socket. Returns the
+// directoryName and err.
+func setupSocket(name string) (string, error) {
+	socket := fmt.Sprintf("%s/%s", sockPath, name)
+
+	_, err := os.Stat(sockPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(sockPath, os.ModePerm); err != nil {
+				return "", err
+			}
+		} else {
+			logger.Errorf("failed to create socket path %v: %v", sockPath, err)
+			return "", err
+		}
+	} else {
+		err = os.Remove(socket)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				logger.Errorf("failed to remove existing socket %v: %v", socket, err)
+				return "", err
+			}
+		}
+	}
+	return socket, nil
 }
 
 // NewServer creates a new instance of a Server. This should be used
