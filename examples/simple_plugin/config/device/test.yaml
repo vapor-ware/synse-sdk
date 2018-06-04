@@ -1,21 +1,26 @@
 version: 1.0
 locations:
-  unknown:
-    rack: unknown
-    board: unknown
+  - name: unknown
+    rack:
+      name: unknown
+    board:
+      name: unknown
 devices:
-  - type: emulated-temperature
-    model: emul8-temp
+  - name: example.temperature
+    metadata:
+      author: vaporio
+    outputs:
+      - type: simple.temperature
     instances:
-      - id: 1
+      - info: CEC Temperature 1
         location: unknown
-        comment: first emulated temperature device
-        info: CEC temp 1
-      - id: 2
+        data:
+          id: 1
+      - info: CEC Temperature 2
         location: unknown
-        comment: second emulated temperature device
-        info: CEC temp 2
-      - id: 3
+        data:
+          id: 2
+      - info: CEC Temperature 3
         location: unknown
-        comment: third emulated temperature device
-        info: CEC temp 3
+        data:
+          id: 3

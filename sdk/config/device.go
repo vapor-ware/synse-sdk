@@ -8,6 +8,11 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
+var (
+	// The current (latest) version of the device config scheme.
+	currentDeviceSchemeVersion = "1.0"
+)
+
 // DeviceConfig holds the configuration for the kinds of devices and the
 // instances of those kinds which a plugin will manage.
 type DeviceConfig struct {
@@ -22,6 +27,19 @@ type DeviceConfig struct {
 	// Devices are all of the DeviceKinds (and subsequently, all of the
 	// DeviceInstances) that are defined by the configuration.
 	Devices []*DeviceKind `yaml:"devices,omitempty" addedIn:"1.0"`
+}
+
+// NewDeviceConfig returns a new instance of a DeviceConfig with the ConfigVersion
+// set to the latest (most current) device config scheme version, and the Locations
+// and Devices fields initialized, but not filled.
+func NewDeviceConfig() *DeviceConfig {
+	return &DeviceConfig{
+		ConfigVersion: ConfigVersion{
+			Version: currentDeviceSchemeVersion,
+		},
+		Locations: []*Location{},
+		Devices:   []*DeviceKind{},
+	}
 }
 
 // Validate validates that the DeviceConfig has no configuration errors.
@@ -74,6 +92,16 @@ func (location Location) Validate(multiErr *errors.MultiError) {
 	}
 }
 
+func (location *Location) Equals(other *Location) bool {
+	if location == other {
+		return true
+	}
+	if location.Name == other.Name && location.Rack.Equals(other.Rack) && location.Board.Equals(other.Board) {
+		return true
+	}
+	return false
+}
+
 // LocationData defines the name of a locational routing component.
 //
 // The name of a Location component can either be defined directly via the
@@ -124,6 +152,16 @@ func (locData *LocationData) Get() (string, error) {
 		}
 	}
 	return location, nil
+}
+
+func (locData *LocationData) Equals(other *LocationData) bool {
+	if locData == other {
+		return true
+	}
+	if locData.Name == other.Name && locData.FromEnv == other.FromEnv {
+		return true
+	}
+	return false
 }
 
 // DeviceKind is a kind of device that it being defined.

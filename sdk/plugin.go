@@ -65,12 +65,14 @@ func (plugin *Plugin) SetConfigPolicies(policies ...policies.ConfigPolicy) {
 // file.
 func (plugin *Plugin) RegisterOutputTypes(types ...*config.OutputType) error {
 	multiErr := errors.NewMultiError("registering output types")
+	logger.Debug("registering output types")
 	for _, outputType := range types {
 		_, hasType := outputTypeMap[outputType.Name]
 		if hasType {
 			multiErr.Add(fmt.Errorf("output type with name '%s' already exists", outputType.Name))
 			continue
 		}
+		logger.Debugf("adding type: %s", outputType.Name)
 		outputTypeMap[outputType.Name] = outputType
 	}
 	return multiErr.Err()
@@ -199,19 +201,22 @@ func (plugin *Plugin) Run() (err error) {
 
 	// If the --dry-run flag is set, we will end here. The gRPC server and
 	// data manager do not get started up in the dry run.
-	if !flagDryRun {
-		logger.Debug("starting plugin server and manager")
-
-		// "Starting" steps **
-
-		// startDataManager
-		DataManager.init()
-
-		// startServer
-		return plugin.server.Serve()
-
-		// TODO: post run actions (https://github.com/vapor-ware/synse-sdk/issues/85)
+	if flagDryRun {
+		logger.Info("dry-run successful")
+		os.Exit(0)
 	}
+
+	logger.Debug("starting plugin server and manager")
+
+	// "Starting" steps **
+
+	// startDataManager
+	DataManager.init()
+
+	// startServer
+	return plugin.server.Serve()
+
+	// TODO: post run actions (https://github.com/vapor-ware/synse-sdk/issues/85)
 	return nil
 }
 
@@ -229,10 +234,14 @@ func (plugin *Plugin) resolveFlags() {
 	// --help is already provided by the flag package, so we don't have
 	// to handle that here.
 
+	if flagDebug {
+		logger.SetLogLevel(true)
+	}
+
 	// Print out the version info for the plugin.
 	if flagVersion {
 		versionInfo := GetVersion()
-		fmt.Print(versionInfo.Format())
+		fmt.Println(versionInfo.Format())
 		os.Exit(0)
 	}
 }
@@ -262,60 +271,77 @@ func (plugin *Plugin) checkPolicies() error {
 // config data is correct. These steps should happen for all config types.
 func (plugin *Plugin) processConfig() error {
 
-	// FIXME: here, there are similar patterns for checking the policies..
-	// perhaps this could live somewhere else?
+	// First, resolve the plugin config. We need to do this first, since subsequent
+	// steps may require a plugin config to be specified.
+	pluginPolicy := policies.PolicyManager.GetPluginConfigPolicy()
+	logger.Debugf("plugin config policy: %s", pluginPolicy.String())
 
-	// 1. Read in the configs. We have a few types of configs to read in.
-	//  a. Plugin Config
 	pluginCtx, err := config.GetPluginConfigFromFile()
 	if err != nil {
-		switch p := policies.PolicyManager.GetPluginConfigPolicy(); p {
-		case policies.PluginConfigOptional:
-			// The plugin config is optional: do not fail if the config is not found.
+		// If we got an error when looking for the plugin config, we'll need to
+		// check what the policy is for plugin config to determine how to proceed.
+		switch pluginPolicy {
 		case policies.PluginConfigRequired:
-			// The plugin config is required: fail if the config is not found.
+			// TODO: this should be a custom error
+			return fmt.Errorf("policy violation: plugin config required but not found")
+		case policies.PluginConfigOptional:
+			// If the Plugin Config is optional, we will still need to create a new
+			// plugin config that has all of the defaults filled out.
+			cfg, err := config.NewDefaultPluginConfig()
+			if err != nil {
+				return err
+			}
+			PluginConfig = cfg
 		default:
-			return fmt.Errorf("unsupported plugin config policy: %v", p)
+			return fmt.Errorf("unsupported plugin config policy: %s", pluginPolicy.String())
 		}
-		// what do we do when we error out here?
 	}
 
-	//  b. Device Config
-	deviceCtxs, err := config.GetDeviceConfigsFromFile()
-	if err != nil {
-
-		// FIXME - should this error check also take into account the
-		// dynamic config, below?
-
-		switch p := policies.PolicyManager.GetDeviceConfigPolicy(); p {
-		case policies.DeviceConfigOptional:
-			// The device config is optional: do not fail if no configs are found.
-		case policies.DeviceConfigRequired:
-			// The device config is required: fail if no configs are found.
-		default:
-			return fmt.Errorf("unsupported device config policy: %v", p)
-		}
-
-		// what do we do when we error out here?
+	multiErr := config.Validator.Validate(pluginCtx, pluginCtx.Source)
+	if multiErr.HasErrors() {
+		return multiErr
 	}
+
+	// If we get here, the plugin config was verified correctly. Assign it to the
+	// global plugin config.
+	PluginConfig = pluginCtx.Config.(*config.PluginConfig)
+
+	// Now, resolve the other configs
 
 	// Register output type configs from file
 	outputTypeCtxs, err := config.GetOutputTypeConfigsFromFile()
 	if err != nil {
-		return err
-	}
-	for _, ctx := range outputTypeCtxs {
-		cfg := ctx.Config.(*config.OutputType)
-		err := plugin.RegisterOutputTypes(cfg)
-		if err != nil {
+		logger.Debug(err)
+		if len(outputTypeMap) == 0 {
+			// If we do not have any types already registered in the type map
+			// (e.g. via plugin.RegisterOutputTypes), then we will have to fail
+			// here.. if we don't know any output types, we won't be able to output
+			// anything properly.
 			return err
 		}
+	} else {
+		for _, ctx := range outputTypeCtxs {
+			cfg := ctx.Config.(*config.OutputType)
+			err := plugin.RegisterOutputTypes(cfg)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// TODO: policies for type configs?
+
+	// Resolve device configs both from file and from dynamic registration, if configured.
+	deviceMultiErr := errors.NewMultiError("parsing device configs")
+	deviceCtxs, err := config.GetDeviceConfigsFromFile()
+	if err != nil {
+		deviceMultiErr.Add(err)
 	}
 
 	// Get device config from dynamic registration, if anything is set there.
+	// cfg schemes not validated yet, so not populated w/ default values...
 	deviceConfigs, err := Context.dynamicDeviceConfigRegistrar(PluginConfig.DynamicRegistration.Config)
 	if err != nil {
-		return err
+		deviceMultiErr.Add(err)
 	}
 
 	// If any device configs were found during dynamic registration, wrap them in
@@ -325,22 +351,35 @@ func (plugin *Plugin) processConfig() error {
 		deviceCtxs = append(deviceCtxs, ctx)
 	}
 
-	//  c. Type Config
-	// TODO
+	// FIXME: should there be different policies here.. e.g. config from file is optional
+	// vs config entirely missing is bad?
+	devicePolicy := policies.PolicyManager.GetDeviceConfigPolicy()
+	logger.Debugf("device config policy: %s", devicePolicy.String())
 
-	//  d. ... Other?
-	// TODO?
+	if deviceMultiErr.Err() != nil || len(deviceCtxs) == 0 {
+		switch devicePolicy {
+		case policies.DeviceConfigRequired:
+			if deviceMultiErr.Err() != nil {
+				logger.Error(deviceMultiErr)
+			}
+			// TODO this should be a custom error
+			return fmt.Errorf("policy violation: device config(s) required, but none found")
+		case policies.DeviceConfigOptional:
+			// If the device config is optional, we should be fine without having found
+			// anything at this point. We will add a default, empty device config to the
+			// device config contexts so we can pass validation below.
+			ctx := config.ConfigContext{
+				Source: "default",
+				Config: config.NewDeviceConfig(),
+			}
+			deviceCtxs = append(deviceCtxs, &ctx)
 
-	// FIXME: if no configs were found and we haven't failed yet (e.g. config policy
-	// is optional), then we should not fail validation. i.e. the pluginCtx/deviceCtxs
-	// should still be valid for all the steps below.
-
-	// 2. Validate Config Schemes
-	multiErr := config.Validator.Validate(pluginCtx, pluginCtx.Source)
-	if multiErr.HasErrors() {
-		return multiErr
+		default:
+			return fmt.Errorf("unsupported device config policy: %s", devicePolicy.String())
+		}
 	}
 
+	// 2. Validate Config Schemes
 	for _, ctx := range deviceCtxs {
 		multiErr = config.Validator.Validate(ctx, ctx.Source)
 		if multiErr.HasErrors() {
@@ -364,7 +403,9 @@ func (plugin *Plugin) processConfig() error {
 		return multiErr
 	}
 
-	// TODO: once everything is done, what do we do with all the data?
+	// If we are all set here, we the unified config should be our global device config
+	DeviceConfig = unifiedCfg
+
 	return nil
 }
 
@@ -385,7 +426,7 @@ func (plugin *Plugin) registerDevices() error {
 
 	// devices from config. the config here is the unified device config which
 	// is joined from file and from dynamic registration, if set.
-	devices, err = makeDevices(&DeviceConfig)
+	devices, err = makeDevices(DeviceConfig)
 	if err != nil {
 		return err
 	}

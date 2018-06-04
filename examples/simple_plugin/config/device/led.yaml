@@ -1,17 +1,22 @@
 version: 1.0
 locations:
-  unknown:
-    rack: unknown
-    board: unknown
+  - name: unknown
+    rack:
+      name: unknown
+    board:
+      name: unknown
 devices:
-  - type: emulated-led
-    model: emul8-led
+  - name: example.led
+    metadata:
+      author: vaporio
+    outputs:
+      - type: simple.led
     instances:
-      - id: 5
+      - info: Chamber LED 1
         location: unknown
-        comment: first emulated led device
-        info: Chamber LED 1
-      - id: 6
+        data:
+          id: 5
+      - info: Chamber LED 2
         location: unknown
-        comment: second emulated led device
-        info: Chamber LED 2
+        data:
+          id: 6
