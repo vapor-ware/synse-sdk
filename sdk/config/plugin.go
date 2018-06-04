@@ -52,7 +52,7 @@ type PluginConfig struct {
 	DynamicRegistration *DynamicRegistrationSettings `default:"{}" yaml:"dynamicRegistration,omitempty" addedIn:"1.0"`
 
 	// Limiter specifies settings for a rate limiter for reads/writes.
-	Limiter *LimiterSettings `default:"{}" yaml:"limiter,omitempty" addedIn:"1.0"`
+	Limiter *LimiterSettings `yaml:"limiter,omitempty" addedIn:"1.0"`
 
 	// Context is a map that allows the plugin to specify any arbitrary
 	// data it may need.

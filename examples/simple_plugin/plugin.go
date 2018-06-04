@@ -49,7 +49,7 @@ var (
 
 		Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
 			return []*sdk.Reading{
-				device.GetOutput("simple.temperature").MakeReading(
+				device.GetOutput("simple.led").MakeReading(
 					strconv.Itoa(rand.Int()), // nolint: gas
 				),
 			}, nil

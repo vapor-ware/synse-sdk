@@ -38,6 +38,6 @@ func defaultDynamicDeviceRegistration(data map[string]interface{}) ([]*Device, e
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
-func defaultDynamicDeviceConfigRegistration(map[string]interface{}) ([]*config.DeviceConfig, error) {
+func defaultDynamicDeviceConfigRegistration(data map[string]interface{}) ([]*config.DeviceConfig, error) {
 	return []*config.DeviceConfig{}, nil
 }
