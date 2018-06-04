@@ -235,17 +235,16 @@ type DeviceInstance struct {
 	// Outputs describes the reading type output provided by this device instance.
 	Outputs []*DeviceOutput `yaml:"outputs,omitempty" addedIn:"1.0"`
 
-	// InheritKindOutputs determines whether the device instance should inherit
-	// the Outputs defined in it's DeviceKind. This should be true by default.
+	// DisableOutputInheritance determines whether the device instance should inherit
+	// the Outputs defined in it's DeviceKind. This is false by default, meaning that
+	// instances will inherit outputs from their DeviceKind. If it specifies an output
+	// of the same type, the one defined by the DeviceInstance will override the one
+	// defined by the DeviceKind, for the DeviceInstance. If the DeviceKind has no
+	// outputs defined, it simply will not inherit anything.
 	//
-	// If this is true, it will inherit all outputs defined by its DeviceKind.
-	// If it specifies an output of the same type, the one defined by the
-	// DeviceInstance will override the one defined by the DeviceKind, for the
-	// DeviceInstance. If the DeviceKind has no outputs defined and this is true,
-	// it simply will not inherit anything.
-	//
-	// If false, this will not inherit any of the DeviceKind's outputs.
-	InheritKindOutputs bool `yaml:"inheritKindOutputs,omitempty" addedIn:"1.0"`
+	// If this is true, this instance will not inherit any outputs defined by its
+	// DeviceKind.
+	DisableOutputInheritance bool `yaml:"disableOutputInheritance,omitempty" addedIn:"1.0"`
 
 	// HandlerName specifies the name of the DeviceHandler to match this DeviceInstance
 	// with. By default, a DeviceInstance will match with a DeviceHandler using

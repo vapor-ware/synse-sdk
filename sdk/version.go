@@ -62,6 +62,8 @@ func (version *BinVersion) Format() string {
 	return info.String()
 }
 
+// FIXME: instead of having this be a function call, we could do this in an init function
+
 // GetVersion gets the version information for the plugin. It builds
 // a BinVersion using the variables that should be set as build-time
 // arguments.

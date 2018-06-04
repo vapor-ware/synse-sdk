@@ -51,13 +51,26 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 				instanceOutputs = append(instanceOutputs, output)
 			}
 
-			if instance.InheritKindOutputs {
+			// If output inheritance is not disabled, we will take any outputs
+			// from the DeviceKind as well. If there is an output with the same
+			// name already set from the instance config, we will ignore this one.
+			if !instance.DisableOutputInheritance {
 				for _, o := range kind.Outputs {
 					output, err := NewOutputFromConfig(o)
 					if err != nil {
 						return nil, err
 					}
-					instanceOutputs = append(instanceOutputs, output)
+					// Check if the output is already being tracked
+					duplicate := false
+					for _, tracked := range instanceOutputs {
+						if tracked.Name == output.Name {
+							duplicate = true
+							break
+						}
+					}
+					if !duplicate {
+						instanceOutputs = append(instanceOutputs, output)
+					}
 				}
 			}
 
