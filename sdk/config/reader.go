@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
 )
@@ -53,7 +52,7 @@ func GetOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
 		config := &OutputType{}
 		err := unmarshalConfigFile(file, config)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("file: %s -> %s", file, err)
 		}
 		cfgs = append(cfgs, NewConfigContext(file, config))
 	}
@@ -81,7 +80,7 @@ func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
 		config := &DeviceConfig{}
 		err := unmarshalConfigFile(file, config)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("file: %s -> %s", file, err)
 		}
 		cfgs = append(cfgs, NewConfigContext(file, config))
 	}
@@ -106,16 +105,15 @@ func GetPluginConfigFromFile() (*ConfigContext, error) {
 		return nil, fmt.Errorf("only one plugin config should be defined, but found: %v", files)
 	}
 
-	config := &PluginConfig{}
 	// Resolve the defaults for the config first
-	err = defaults.Set(config)
+	config, err := NewDefaultPluginConfig()
 	if err != nil {
 		return nil, err
 	}
 	// Unmarshal the config data
 	err = unmarshalConfigFile(files[0], config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("file: %s -> %s", files[0], err)
 	}
 
 	return NewConfigContext(files[0], config), nil
@@ -170,6 +168,9 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 
 		configs, err = searchDir(path, name)
 		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
 			return
 		}
 

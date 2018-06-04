@@ -15,11 +15,12 @@ var (
 	// deviceConfigKinds is a map to track the devices (DeviceKind) for the
 	// unified DeviceConfig. The key is the name of the DeviceKind.
 	deviceConfigKinds map[string]*config.DeviceKind
-
-	// outputTypes is a map to track the output types (OutputType) that are
-	// configured with the plugin.
-	outputTypes map[string]*config.OutputType
 )
+
+func init() {
+	deviceConfigLocations = map[string]*config.Location{}
+	deviceConfigKinds = map[string]*config.DeviceKind{}
+}
 
 // VerifyConfigs verifies that all configurations that the plugin has found
 // are correct.
@@ -74,7 +75,7 @@ func verifyDeviceConfigLocations(deviceConfig *config.DeviceConfig, multiErr *er
 
 		// If we already have the location cached, make sure that this Location
 		// is the same as the existing one. If not, we have a conflict.
-		if loc != location {
+		if !loc.Equals(location) {
 			multiErr.Add(
 				errors.NewVerificationConflictError(
 					"device",
@@ -144,7 +145,7 @@ func verifyDeviceConfigOutputs(deviceConfig *config.DeviceConfig, multiErr *erro
 	for _, device := range deviceConfig.Devices {
 		// Check the device-level outputs
 		for _, output := range device.Outputs {
-			_, hasOutput := outputTypes[output.Type]
+			_, hasOutput := outputTypeMap[output.Type]
 			if !hasOutput {
 				multiErr.Add(
 					errors.NewVerificationInvalidError(
@@ -159,13 +160,16 @@ func verifyDeviceConfigOutputs(deviceConfig *config.DeviceConfig, multiErr *erro
 		// Check the instance-level outputs
 		for _, instance := range device.Instances {
 			for _, output := range instance.Outputs {
-				multiErr.Add(
-					errors.NewVerificationInvalidError(
-						"device",
-						fmt.Sprintf("unknown output type specified: %s", output.Type),
-					),
-				)
-				continue
+				_, hasOutput := outputTypeMap[output.Type]
+				if !hasOutput {
+					multiErr.Add(
+						errors.NewVerificationInvalidError(
+							"device",
+							fmt.Sprintf("unknown output type specified: %s", output.Type),
+						),
+					)
+					continue
+				}
 			}
 		}
 	}

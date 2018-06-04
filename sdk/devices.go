@@ -179,7 +179,6 @@ func (output *Output) encode() *synse.Output {
 	return &synse.Output{
 		Name:          output.Name,
 		Type:          output.Type(),
-		DataType:      output.DataType,
 		Precision:     int32(output.Precision),
 		ScalingFactor: sf,
 		Unit:          output.Unit.Encode(),

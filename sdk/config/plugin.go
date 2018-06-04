@@ -3,6 +3,7 @@ package config
 import (
 	"time"
 
+	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
@@ -13,6 +14,22 @@ const (
 	networkTypeTCP  = "tcp"
 	networkTypeUnix = "unix"
 )
+
+var (
+	// The current (latest) version of the plugin config scheme.
+	currentPluginSchemeVersion = "1.0"
+)
+
+// NewDefaultPluginConfig creates a new instance of a PluginConfig with its
+// default values resolved.
+func NewDefaultPluginConfig() (*PluginConfig, error) {
+	config := &PluginConfig{}
+	err := defaults.Set(config)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
 
 // PluginConfig contains the configuration options for the plugin.
 type PluginConfig struct {
@@ -137,7 +154,7 @@ type DynamicRegistrationSettings struct {
 	// plugin-specific data that can be used to dynamically register new devices.
 	// As an example, this could hold the information for connecting with a server,
 	// or it could contain a bus address, etc.
-	Config map[string]interface{} `yaml:"config,omitempty" addedIn:"1.0"`
+	Config map[string]interface{} `default:"{}" yaml:"config,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the DynamicRegistrationSettings has no configuration errors.
