@@ -19,8 +19,7 @@ func makeIDString(rack, board, device string) string {
 	return strings.Join([]string{rack, board, device}, "-")
 }
 
-// getHandlerForDevice gets the DeviceHandler for the device, based on its
-// Type and Model.
+// getHandlerForDevice gets the DeviceHandler for a device, based on the handler name.
 func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
 	for _, handler := range deviceHandlers {
 		if handler.Name == handlerName {
@@ -30,49 +29,20 @@ func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
 	return nil, fmt.Errorf("no handler found with name: %s", handlerName)
 }
 
-// makeDevices
+// makeDevices creates Device instances from a DeviceConfig. The DeviceConfig
+// used here should be a unified config, meaning that all DeviceConfigs (either from
+// different files or from file and dynamic registration) are merged into a single
+// DeviceConfig. This should only be called once all configs have been parsed and
+// validated to ensure that the information we have is all correct.
 func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
-	logger.Debugf("makeDevices start")
-
-	// the list of devices we made
 	var devices []*Device
 
-	// the DeviceConfig we get here should be the unified config.
+	// The DeviceConfig we get here should be the unified config.
 	for _, kind := range config.Devices {
 		for _, instance := range kind.Instances {
 
-			// create the outputs for the instance.
-			var instanceOutputs []*Output
-			for _, o := range instance.Outputs {
-				output, err := NewOutputFromConfig(o)
-				if err != nil {
-					return nil, err
-				}
-				instanceOutputs = append(instanceOutputs, output)
-			}
-
-			// If output inheritance is not disabled, we will take any outputs
-			// from the DeviceKind as well. If there is an output with the same
-			// name already set from the instance config, we will ignore this one.
-			if !instance.DisableOutputInheritance {
-				for _, o := range kind.Outputs {
-					output, err := NewOutputFromConfig(o)
-					if err != nil {
-						return nil, err
-					}
-					// Check if the output is already being tracked
-					duplicate := false
-					for _, tracked := range instanceOutputs {
-						if tracked.Name == output.Name {
-							duplicate = true
-							break
-						}
-					}
-					if !duplicate {
-						instanceOutputs = append(instanceOutputs, output)
-					}
-				}
-			}
+			// Get the outputs for the instance.
+			instanceOutputs, err := getInstanceOutputs(kind, instance)
 
 			// Get the location
 			l, err := config.GetLocation(instance.Location)
@@ -84,8 +54,8 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 				return nil, err
 			}
 
-			// If a specific handlerName is set in the config, we will use that as the
-			// definitive handler. Otherwise, use the kind.
+			// Get the DeviceHandler. If a specific handlerName is set in the config,
+			// we will use that as the definitive handler. Otherwise, use the kind.
 			handlerName := kind.Name
 			if kind.HandlerName != "" {
 				handlerName = kind.HandlerName
@@ -93,8 +63,6 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 			if instance.HandlerName != "" {
 				handlerName = instance.HandlerName
 			}
-
-			// Get the DeviceHandler
 			handler, err := getHandlerForDevice(handlerName)
 			if err != nil {
 				return nil, err
@@ -111,7 +79,7 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 				// The name of the plugin.
 				Plugin: metainfo.Name,
 
-				// Device-level information. This is not reading output level info.
+				// Device-level information. This is not output-specific info.
 				Info: instance.Info,
 
 				// The location of the device.
@@ -130,11 +98,53 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 			}
 
 			devices = append(devices, device)
-
 		}
-
 	}
 	return devices, nil
+}
+
+// getInstanceOutputs get the Outputs for a single device instance. It converts
+// the instance's DeviceOutput to an Output type, and by doing so unifies that
+// output with its corresponding OutputType information.
+//
+// If output inheritance is enable for the instance (which is it by default),
+// this will also take the DeviceOutputs defined by the instance's kind.
+func getInstanceOutputs(kind *config.DeviceKind, instance *config.DeviceInstance) ([]*Output, error) {
+	var instanceOutputs []*Output
+
+	// Create the outputs specific to the instance first.
+	for _, o := range instance.Outputs {
+		output, err := NewOutputFromConfig(o)
+		if err != nil {
+			return nil, err
+		}
+		instanceOutputs = append(instanceOutputs, output)
+	}
+
+	// If output inheritance is not disabled, we will take any outputs
+	// from the DeviceKind as well. If there is an output with the same
+	// name already set from the instance config, we will ignore it.
+	if !instance.DisableOutputInheritance {
+		for _, o := range kind.Outputs {
+			output, err := NewOutputFromConfig(o)
+			if err != nil {
+				return nil, err
+			}
+			// Check if the output is already being tracked
+			duplicate := false
+			for _, tracked := range instanceOutputs {
+				if tracked.Name == output.Name {
+					duplicate = true
+					break
+				}
+			}
+			if !duplicate {
+				instanceOutputs = append(instanceOutputs, output)
+			}
+		}
+	}
+
+	return instanceOutputs, nil
 }
 
 // getTypeByName gets the output type with the given name. If an output type does

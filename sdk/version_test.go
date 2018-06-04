@@ -1,11 +1,5 @@
 package sdk
 
-import (
-	"runtime"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
 //
 //// TestGetVersion gets the version and verifies that all fields are
 //// set correctly. In this case, we do not have all variables set, so

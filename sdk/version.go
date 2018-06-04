@@ -5,6 +5,7 @@ import (
 
 	"bytes"
 	"text/template"
+
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
@@ -44,7 +45,6 @@ func init() {
 		PluginVersion: setField(PluginVersion),
 	}
 }
-
 
 // BinVersion describes the version of the binary for a plugin.
 //
