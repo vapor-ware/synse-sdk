@@ -64,15 +64,14 @@ func (server *Server) Test(ctx context.Context, request *synse.Empty) (*synse.St
 // Version is the handler for the Synse GRPC Plugin service's `Version` RPC method.
 func (server *Server) Version(ctx context.Context, request *synse.Empty) (*synse.VersionInfo, error) {
 	logger.Debug("gRPC server: version")
-	ver := GetVersion()
 	return &synse.VersionInfo{
-		PluginVersion: ver.PluginVersion,
-		SdkVersion:    ver.SDKVersion,
-		BuildDate:     ver.BuildDate,
-		GitCommit:     ver.GitCommit,
-		GitTag:        ver.GitTag,
-		Arch:          ver.Arch,
-		Os:            ver.OS,
+		PluginVersion: Version.PluginVersion,
+		SdkVersion:    Version.SDKVersion,
+		BuildDate:     Version.BuildDate,
+		GitCommit:     Version.GitCommit,
+		GitTag:        Version.GitTag,
+		Arch:          Version.Arch,
+		Os:            Version.OS,
 	}, nil
 }
 
@@ -124,20 +123,19 @@ func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_D
 // Metainfo is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
 func (server *Server) Metainfo(ctx context.Context, request *synse.Empty) (*synse.Metadata, error) {
 	logger.Debug("gRPC server: metainfo")
-	ver := GetVersion()
 	return &synse.Metadata{
 		Name:        metainfo.Name,
 		Maintainer:  metainfo.Maintainer,
 		Description: metainfo.Description,
 		Vcs:         metainfo.VCS,
 		Version: &synse.VersionInfo{
-			PluginVersion: ver.PluginVersion,
-			SdkVersion:    ver.SDKVersion,
-			BuildDate:     ver.BuildDate,
-			GitCommit:     ver.GitCommit,
-			GitTag:        ver.GitTag,
-			Arch:          ver.Arch,
-			Os:            ver.OS,
+			PluginVersion: Version.PluginVersion,
+			SdkVersion:    Version.SDKVersion,
+			BuildDate:     Version.BuildDate,
+			GitCommit:     Version.GitCommit,
+			GitTag:        Version.GitTag,
+			Arch:          Version.Arch,
+			Os:            Version.OS,
 		},
 	}, nil
 }

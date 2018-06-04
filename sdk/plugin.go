@@ -240,8 +240,7 @@ func (plugin *Plugin) resolveFlags() {
 
 	// Print out the version info for the plugin.
 	if flagVersion {
-		versionInfo := GetVersion()
-		fmt.Println(versionInfo.Format())
+		fmt.Println(Version.Format())
 		os.Exit(0)
 	}
 }
@@ -442,8 +441,7 @@ func (plugin *Plugin) logStartupInfo() {
 	metainfo.log()
 
 	// Log plugin version info
-	version := GetVersion()
-	logger.Info(version.Format())
+	Version.Log()
 
 	// Log registered devices
 	logger.Info("Registered Devices:")
