@@ -1,12 +1,12 @@
 package sdk
 
 import (
-	"runtime"
-
 	"bytes"
+	"runtime"
 	"text/template"
 
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // SDKVersion specifies the version of the Synse Plugin SDK.
@@ -59,6 +59,19 @@ type BinVersion struct {
 	OS            string
 	PluginVersion string
 	SDKVersion    string
+}
+
+// Encode converts the BinVersion to its corresponding Synse GRPC VersionInfo message.
+func (version *BinVersion) Encode() *synse.VersionInfo {
+	return &synse.VersionInfo{
+		PluginVersion: version.PluginVersion,
+		SdkVersion:    version.SDKVersion,
+		BuildDate:     version.BuildDate,
+		GitCommit:     version.GitCommit,
+		GitTag:        version.GitTag,
+		Arch:          version.Arch,
+		Os:            version.OS,
+	}
 }
 
 // Format returns a formatted string with all of the BinVersion info.

@@ -10,16 +10,24 @@ import (
 // Reading describes a single device reading with a timestamp. The timestamp
 // should be formatted with the RFC3339Nano layout.
 type Reading struct {
+	// Timestamp describes the time at which the reading was taken.
 	Timestamp string
-	Type      string
-	Info      string
-	Unit      config.Unit
-	Value     interface{}
+
+	// Type describes the output type of the reading.
+	Type string
+
+	// Info provides additional info for the reading, from config.
+	Info string
+
+	// Unit describes the unit of measure for the reading.
+	Unit config.Unit
+
+	// Value is the reading value itself.
+	Value interface{}
 }
 
 // NewReading creates a new instance of a Reading. This is the recommended method
-// for creating new readings. It uses the current time (time.Now) to fill in the
-// Timestamp field, formatted with the RFC3339Nano layout.
+// for creating new readings.
 func NewReading(output *Output, value interface{}) *Reading {
 	return &Reading{
 		Timestamp: GetCurrentTime(),
@@ -30,7 +38,7 @@ func NewReading(output *Output, value interface{}) *Reading {
 	}
 }
 
-// encode translates the SDK Reading type to the corresponding gRPC Reading type.
+// encode translates the Reading type to the corresponding gRPC Reading message.
 func (reading *Reading) encode() *synse.Reading {
 	r := synse.Reading{
 		Timestamp: reading.Timestamp,
@@ -74,10 +82,9 @@ func (reading *Reading) encode() *synse.Reading {
 		r.Value = nil
 	default:
 		// If the reading type isn't one of the above, panic. The plugin should
-		// terminate. This is indicative of the plugin doing something wrong.
+		// terminate. This is indicative of the plugin is providing bad data.
 		panic(fmt.Sprintf("unsupported reading value type: %s", t))
 	}
-
 	return &r
 }
 

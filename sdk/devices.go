@@ -1,13 +1,12 @@
 package sdk
 
 import (
-	"github.com/vapor-ware/synse-server-grpc/go"
-
 	"fmt"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 var (
@@ -95,20 +94,31 @@ func (deviceHandler *DeviceHandler) supportsBulkRead() bool {
 // Device is the internal model for a single device (physical or virtual) that
 // a plugin can read to or write from.
 type Device struct {
+	// The name of the device kind. This is essentially the identifier
+	// for the device type.
 	Kind string
 
+	// Any metadata associated with the device kind.
 	Metadata map[string]string
 
+	// The name of the plugin this device is managed by.
 	Plugin string
 
+	// Device-level information specified in the Device's config.
 	Info string
 
+	// The location of the Device.
 	Location *Location
 
+	// Any plugin-specific configuration data associated with the Device.
 	Data map[string]interface{}
 
+	// The outputs supported by the device. A device output may supply more
+	// info, such as Data, Info, Type, etc. It is up to the user to extract
+	// and use that output info when they perform reads for the Device outputs.
 	Outputs []*Output
 
+	// The read/write handler for the device. Handlers should be registered globally.
 	Handler *DeviceHandler
 
 	// id is the deterministic id of the device
@@ -159,34 +169,15 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 			}
 
 			device := &Device{
-				// The name of the device kind. This is essentially the identifier
-				// for the device type.
-				Kind: kind.Name,
-
-				// Any metadata associated with the device kind.
+				Kind:     kind.Name,
 				Metadata: kind.Metadata,
-
-				// The name of the plugin.
-				Plugin: metainfo.Name,
-
-				// Device-level information. This is not output-specific info.
-				Info: instance.Info,
-
-				// The location of the device.
+				Plugin:   metainfo.Name,
+				Info:     instance.Info,
 				Location: location,
-
-				// Any data associated with the device instance.
-				Data: instance.Data,
-
-				// The outputs supported by the device. A device output may
-				// supply more info, like Data, Info, Type, etc, so that should
-				// be accounted for when doing readings/writing stuff..
-				Outputs: instanceOutputs,
-
-				// The read/write handler for the device. Handlers should be registered globally.
-				Handler: handler,
+				Data:     instance.Data,
+				Outputs:  instanceOutputs,
+				Handler:  handler,
 			}
-
 			devices = append(devices, device)
 		}
 	}
@@ -243,7 +234,7 @@ type Location struct {
 	Board string
 }
 
-// encode translates the SDK Location type to the corresponding gRPC Location type.
+// encode translates the Location to the corresponding gRPC Location message.
 func (location *Location) encode() *synse.Location {
 	return &synse.Location{
 		Rack:  location.Rack,
@@ -273,8 +264,8 @@ func NewLocationFromConfig(config *config.Location) (*Location, error) {
 	}, nil
 }
 
-// GetOutput gets the named output from the Device's output list. If the output
-// is not there, nil is returned.
+// GetOutput gets the named Output from the Device's output list. If the Output
+// is not found, nil is returned.
 func (device *Device) GetOutput(name string) *Output {
 	for _, output := range device.Outputs {
 		if output.Name == name {
@@ -293,12 +284,12 @@ type Output struct {
 	Data map[string]interface{}
 }
 
-// MakeReading makes a reading for this output. This is a wrapper around NewReading.
+// MakeReading makes a reading for the Output. This is a wrapper around `NewReading`.
 func (output *Output) MakeReading(value interface{}) *Reading {
 	return NewReading(output, value)
 }
 
-// encode translates the SDK Output type to the corresponding gRPC Output type.
+// encode translates the Output to the corresponding gRPC Output message.
 func (output *Output) encode() *synse.Output {
 	sf, err := output.GetScalingFactor()
 	if err != nil {
@@ -358,7 +349,7 @@ func (device *Device) Write(data *WriteData) error {
 }
 
 // IsReadable checks if the Device is readable based on the presence/absence
-// of a Read action defined in its DeviceHandler.
+// of a Read/BulkRead action defined in its DeviceHandler.
 func (device *Device) IsReadable() bool {
 	return device.Handler.Read != nil || device.Handler.BulkRead != nil
 }
@@ -369,7 +360,7 @@ func (device *Device) IsWritable() bool {
 	return device.Handler.Write != nil
 }
 
-// ID generates the ID for the Device.
+// ID generates the deterministic ID for the Device using its config values.
 func (device *Device) ID() string {
 	if device.id == "" {
 		protocolComp := Context.deviceIdentifier(device.Data)
@@ -388,7 +379,7 @@ func (device *Device) GUID() string {
 	)
 }
 
-// encode translates the SDK Device to its corresponding gRPC Device.
+// encode translates the Device to the corresponding gRPC Device message.
 func (device *Device) encode() *synse.Device {
 	var output []*synse.Output
 	for _, out := range device.Outputs {

@@ -6,11 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vapor-ware/synse-server-grpc/go"
-
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/time/rate"
 )
 
@@ -365,7 +364,7 @@ func (manager *dataManager) getReadings(device string) []*Reading {
 // and framing it up for the gRPC response.
 func (manager *dataManager) Read(req *synse.DeviceFilter) ([]*synse.Reading, error) {
 	// Validate that the incoming request has the requisite fields populated.
-	err := validateReadRequest(req)
+	err := validateDeviceFilter(req)
 	if err != nil {
 		logger.Errorf("Incoming read request failed validation %v: %v", req, err)
 		return nil, err
@@ -398,7 +397,7 @@ func (manager *dataManager) Read(req *synse.DeviceFilter) ([]*synse.Reading, err
 // up the corresponding gRPC response.
 func (manager *dataManager) Write(req *synse.WriteInfo) (map[string]*synse.WriteData, error) {
 	// Validate that the incoming request has the requisite fields populated.
-	err := validateWriteRequest(req)
+	err := validateWriteInfo(req)
 	if err != nil {
 		logger.Errorf("Incoming write request failed validation %v: %v", req, err)
 		return nil, err
