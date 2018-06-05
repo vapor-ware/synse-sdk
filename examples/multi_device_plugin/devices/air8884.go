@@ -4,17 +4,13 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
-// Air8884 is the handler for the example "air8884" device model.
+// Air8884 is the handler for the example airflow device with model "air8884".
 var Air8884 = sdk.DeviceHandler{
-	Type:  "airflow",
-	Model: "air8884",
+	Name: "airflow",
 
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
 		return []*sdk.Reading{
-			sdk.NewReading(
-				device.Type,
-				"100",
-			),
+			device.GetOutput("airflow").MakeReading(100),
 		}, nil
 	},
 }

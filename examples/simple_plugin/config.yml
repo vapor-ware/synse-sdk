@@ -7,6 +7,6 @@ settings:
   read:
     interval: 5s
   write:
-    interval: 30s
+    interval: 5s
   transaction:
     ttl: 8m

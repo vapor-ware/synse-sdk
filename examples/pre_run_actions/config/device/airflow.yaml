@@ -1,24 +1,36 @@
 version: 1.0
 locations:
-  r1b1:
-    rack: rack-1
-    board: board-1
-  r1b2:
-    rack: rack-1
-    board: board-2
-  r2b1:
-    rack: rack-2
-    board: board-1
+  - name: r1b1
+    rack:
+      name: rack-1
+    board:
+      name: board-1
+  - name: r1b2
+    rack:
+      name: rack-1
+    board:
+      name: board-2
+  - name: r2b1
+    rack:
+      name: rack-2
+    board:
+      name: board-1
 devices:
-  - type: airflow
-    model: air8884
+  - name: airflow
+    metadata:
+      model: air8884
+    outputs:
+      - type: airflow
     instances:
-      - id: 1
+      - info: Airflow Device 1
         location: r1b1
-        comment: first emulated airflow device
-      - id: 2
+        data:
+          id: 1
+      - info: Airflow Device 2
         location: r1b2
-        comment: second emulated airflow device
-      - id: 3
+        data:
+          id: 2
+      - info: Airflow Device 3
         location: r2b1
-        comment: third emulated airflow device
+        data:
+          id: 3

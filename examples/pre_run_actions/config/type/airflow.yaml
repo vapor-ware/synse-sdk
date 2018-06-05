@@ -1,0 +1,6 @@
+version: 1.0
+name: airflow
+precision: 2
+unit:
+  name: cubic feet per minute
+  symbol: CFM

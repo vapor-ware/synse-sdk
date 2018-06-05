@@ -1,16 +1,12 @@
 version: 1
-name: example-plugin
 debug: true
 network:
   type: unix
   address: example-plugin.sock
 settings:
   read:
-    interval: 100s
-    buffer: 150
+    interval: 5s
   write:
-    interval: 100s
-    buffer: 150
-    max: 30
+    interval: 5s
   transaction:
-    ttl: 600s
+    ttl: 8m
