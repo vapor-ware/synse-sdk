@@ -1,24 +1,36 @@
 version: 1.0
 locations:
-  r1b1:
-    rack: rack-1
-    board: board-1
-  r1b2:
-    rack: rack-1
-    board: board-2
-  r2b1:
-    rack: rack-2
-    board: board-1
+  - name: r1b1
+    rack:
+      name: rack-1
+    board:
+      name: board-1
+  - name: r1b2
+    rack:
+      name: rack-1
+    board:
+      name: board-2
+  - name: r2b1
+    rack:
+      name: rack-2
+    board:
+      name: board-1
 devices:
-  - type: temperature
-    model: temp2010
+  - name: temperature
+    metadata:
+      model: temp2010
+    outputs:
+      - type: temperature
     instances:
-      - id: 1
+      - info: Temperature 1
         location: r1b1
-        comment: first emulated temperature device
-      - id: 2
+        data:
+          id: 1
+      - info: Temperature 2
         location: r1b2
-        comment: second emulated temperature device
-      - id: 3
+        data:
+          id: 2
+      - info: Temperature 3
         location: r2b1
-        comment: third emulated temperature device
+        data:
+          id: 3

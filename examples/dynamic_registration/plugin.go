@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
 	"strconv"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
@@ -17,26 +16,34 @@ var (
 	pluginDesc       = "An example plugin that demonstrates dynamically registering devices"
 )
 
+var (
+	// The output for temperature devices.
+	temperatureOutput = config.OutputType{
+		Name:      "temperature",
+		Precision: 2,
+		Unit: config.Unit{
+			Name:   "celsius",
+			Symbol: "C",
+		},
+	}
+)
+
 // temperatureHandler defines the read/write behavior for the "temp2010"
 // temperature device.
 var temperatureHandler = sdk.DeviceHandler{
-	Type:  "temperature",
-	Model: "temp2010",
+	Name: "temperature",
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
 		value := strconv.Itoa(rand.Int()) // nolint: gas
 		return []*sdk.Reading{
-			sdk.NewReading(
-				device.Type,
-				value,
-			),
+			device.GetOutput("temperature").MakeReading(value),
 		}, nil
 	},
 }
 
 // ProtocolIdentifier gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
-func ProtocolIdentifier(data map[string]string) string {
-	return data["id"]
+func ProtocolIdentifier(data map[string]interface{}) string {
+	return data["id"].(string)
 }
 
 // EnumerateDevices is used to auto-enumerate device configurations for plugins
@@ -50,23 +57,12 @@ func ProtocolIdentifier(data map[string]string) string {
 // "auto-enumeration" by definition, but it is a valid usage. A more appropriate
 // example could be taking an IP from the configuration, and using that to hit some
 // endpoint which would give back all the information on the devices it manages.
-func EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error) {
-
+func DynamicDeviceConfig(cfg map[string]interface{}) ([]*config.DeviceConfig, error) {
 	var res []*config.DeviceConfig
 
 	baseAddr := cfg["base"]
 	for i := 0; i < 3; i++ {
 		devAddr := fmt.Sprintf("%v-%v", baseAddr, i)
-
-		// validate the location
-		location := config.Location{
-			Rack:  "rack-1",
-			Board: "board-1",
-		}
-		err := location.Validate()
-		if err != nil {
-			return nil, err
-		}
 
 		// create a new device - here, we are using the base address and appending
 		// index of the loop to create the id of the device. we are hardcoding in
@@ -76,28 +72,43 @@ func EnumerateDevices(cfg map[string]interface{}) ([]*config.DeviceConfig, error
 		// should be gathered from whatever the real source of auto-enumeration is,
 		// e.g. for IPMI - the SDR records.
 		d := config.DeviceConfig{
-			Version:  "1.0",
-			Type:     "temperature",
-			Model:    "temp2010",
-			Location: location,
-			// we want to have "id" in the map because our `GetProtocolIdentifiers"
-			// uses the "id" field here to create the internal device uid.
-			Data: map[string]string{
-				"id": devAddr,
+			ConfigVersion: config.ConfigVersion{
+				Version: "1.0",
+			},
+			Locations: []*config.Location{
+				{
+					Name:  "foobar",
+					Rack:  &config.LocationData{Name: "foo"},
+					Board: &config.LocationData{Name: "bar"},
+				},
+			},
+			Devices: []*config.DeviceKind{
+				{
+					Name: "temperature",
+					Metadata: map[string]string{
+						"model": "temp2010",
+					},
+					Instances: []*config.DeviceInstance{
+						{
+							Info:     fmt.Sprintf("Test Device %d", i),
+							Location: "foobar",
+							Data: map[string]interface{}{
+								"id": devAddr,
+							},
+							Outputs: []*config.DeviceOutput{
+								{
+									Type: "temperature",
+								},
+							},
+						},
+					},
+				},
 			},
 		}
+
 		res = append(res, &d)
 	}
-
 	return res, nil
-}
-
-// checkErr is a helper used in the main function to check errors. If any errors
-// are present, this will exit with log.Fatal.
-func checkErr(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func main() {
@@ -109,26 +120,21 @@ func main() {
 		"",
 	)
 
-	// Set the prototype and device instance config paths to be relative to the
-	// current working directory instead of using the default location. This way
-	// the plugin can be run from within this directory.
-	// TODO: https://github.com/vapor-ware/synse-sdk/issues/125
-	checkErr(os.Setenv("PLUGIN_DEVICE_PATH", "./config/device"))
-	checkErr(os.Setenv("PLUGIN_PROTO_PATH", "./config/proto"))
-
-	// Create handlers for the plugin.
-	handlers, err := sdk.NewHandlers(ProtocolIdentifier, EnumerateDevices)
-	checkErr(err)
-
-	// Create the plugin. The configuration comes from the paths set above.
-	plugin, err := sdk.NewPlugin(handlers, nil)
-	checkErr(err)
-
-	// Register handlers for our devices.
-	plugin.RegisterDeviceHandlers(
-		&temperatureHandler,
+	// Create a new Plugin instance with custom identifier and dynamic registration
+	// functions supplied.
+	plugin := sdk.NewPlugin(
+		sdk.CustomDeviceIdentifier(ProtocolIdentifier),
+		sdk.CustomDynamicDeviceConfigRegistration(DynamicDeviceConfig),
 	)
 
+	// Register output types
+	plugin.RegisterOutputTypes(&temperatureOutput)
+
+	// Register device handlers
+	plugin.RegisterDeviceHandlers(&temperatureHandler)
+
 	// Run the plugin.
-	checkErr(plugin.Run())
+	if err := plugin.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
