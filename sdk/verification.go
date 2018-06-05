@@ -22,8 +22,8 @@ func init() {
 	deviceConfigKinds = map[string]*config.DeviceKind{}
 }
 
-// VerifyConfigs verifies that all configurations that the plugin has found
-// are correct.
+// VerifyConfigs verifies that all device configurations that the plugin has
+// found are correct.
 //
 // Config verification is different than config validation. In general,
 // config validation consists of checks to ensure that a field is supported,
@@ -39,7 +39,7 @@ func init() {
 // that all the information in a given config is correct until we have the
 // whole picture of what exists.
 func VerifyConfigs(unifiedDeviceConfig *config.DeviceConfig) *errors.MultiError {
-	var multiErr = errors.NewMultiError("Config Verification")
+	var multiErr = errors.NewMultiError("config verification")
 
 	// Verify that there are no conflicting device configurations. We want to
 	// do this first. This has the side-effect of building the deviceConfigLocations

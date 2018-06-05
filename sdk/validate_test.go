@@ -15,7 +15,7 @@ func TestValidateReadRequest(t *testing.T) {
 		Rack:   "rack",
 	}
 
-	err := validateReadRequest(request)
+	err := validateDeviceFilter(request)
 	assert.NoError(t, err)
 }
 
@@ -44,7 +44,7 @@ func TestValidateReadRequestErr(t *testing.T) {
 	}
 
 	for _, testCase := range cases {
-		err := validateReadRequest(&testCase)
+		err := validateDeviceFilter(&testCase)
 		assert.Error(t, err)
 	}
 }
@@ -59,7 +59,7 @@ func TestValidateWriteRequest(t *testing.T) {
 		},
 	}
 
-	err := validateWriteRequest(request)
+	err := validateWriteInfo(request)
 	assert.NoError(t, err)
 }
 
@@ -95,7 +95,7 @@ func TestValidateWriteRequestErr(t *testing.T) {
 	}
 
 	for _, testCase := range cases {
-		err := validateWriteRequest(&testCase)
+		err := validateWriteInfo(&testCase)
 		assert.Error(t, err)
 	}
 }
