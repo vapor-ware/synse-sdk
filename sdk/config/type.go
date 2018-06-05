@@ -64,6 +64,9 @@ func (outputType *OutputType) Type() string {
 
 // GetScalingFactor gets the scaling factor for the reading type.
 func (outputType *OutputType) GetScalingFactor() (float64, error) {
+	if outputType.ScalingFactor == "" {
+		return 1, nil
+	}
 	return strconv.ParseFloat(outputType.ScalingFactor, 64)
 }
 

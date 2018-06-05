@@ -51,6 +51,11 @@ func TestConfigContext_IsDeviceConfig(t *testing.T) {
 			isDevCfg: false,
 			config:   &PluginConfig{},
 		},
+		{
+			desc:     "Config is a pointer to an OutputType",
+			isDevCfg: false,
+			config:   &OutputType{},
+		},
 	}
 
 	for _, testCase := range testTable {
@@ -81,6 +86,11 @@ func TestConfigContext_IsPluginConfig(t *testing.T) {
 			isPluginCfg: true,
 			config:      &PluginConfig{},
 		},
+		{
+			desc:        "Config is a pointer to an OutputType",
+			isPluginCfg: false,
+			config:      &OutputType{},
+		},
 	}
 
 	for _, testCase := range testTable {
@@ -91,5 +101,40 @@ func TestConfigContext_IsPluginConfig(t *testing.T) {
 
 		actual := ctx.IsPluginConfig()
 		assert.Equal(t, testCase.isPluginCfg, actual, testCase.desc)
+	}
+}
+
+// TestConfigContext_IsOutputTypeConfig tests whether the Config member is an OutputType config.
+func TestConfigContext_IsOutputTypeConfig(t *testing.T) {
+	var testTable = []struct {
+		desc         string
+		isOutputType bool
+		config       ConfigBase
+	}{
+		{
+			desc:         "Config is a pointer to an OutputType",
+			isOutputType: true,
+			config:       &OutputType{},
+		},
+		{
+			desc:         "Config is a pointer to a PluginConfig",
+			isOutputType: false,
+			config:       &PluginConfig{},
+		},
+		{
+			desc:         "Config is a pointer to a DeviceConfig",
+			isOutputType: false,
+			config:       &DeviceConfig{},
+		},
+	}
+
+	for _, testCase := range testTable {
+		ctx := ConfigContext{
+			Source: "test",
+			Config: testCase.config,
+		}
+
+		actual := ctx.IsOutputTypeConfig()
+		assert.Equal(t, testCase.isOutputType, actual, testCase.desc)
 	}
 }

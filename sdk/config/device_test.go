@@ -8,6 +8,98 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
+// TestNewDeviceConfig tests initializing a new DeviceConfig.
+func TestNewDeviceConfig(t *testing.T) {
+	cfg := NewDeviceConfig()
+
+	assert.IsType(t, &DeviceConfig{}, cfg)
+	assert.Equal(t, currentDeviceSchemeVersion, cfg.Version)
+	assert.Equal(t, 0, len(cfg.Locations))
+	assert.Equal(t, 0, len(cfg.Devices))
+}
+
+// TestDeviceConfig_GetLocation_Ok tests getting locations from a DeviceConfig successfully.
+func TestDeviceConfig_GetLocation_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		location string
+		config   DeviceConfig
+	}{
+		{
+			desc:     "DeviceConfig has single location",
+			location: "test",
+			config: DeviceConfig{
+				Locations: []*Location{
+					{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}},
+				},
+			},
+		},
+		{
+			desc:     "DeviceConfig has multiple locations",
+			location: "test",
+			config: DeviceConfig{
+				Locations: []*Location{
+					{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}},
+					{Name: "foo", Rack: &LocationData{Name: "foo"}, Board: &LocationData{Name: "foo"}},
+					{Name: "bar", Rack: &LocationData{Name: "bar"}, Board: &LocationData{Name: "bar"}},
+				},
+			},
+		},
+		{
+			desc:     "DeviceConfig has multiple locations",
+			location: "bar",
+			config: DeviceConfig{
+				Locations: []*Location{
+					{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}},
+					{Name: "foo", Rack: &LocationData{Name: "foo"}, Board: &LocationData{Name: "foo"}},
+					{Name: "bar", Rack: &LocationData{Name: "bar"}, Board: &LocationData{Name: "bar"}},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		l, err := testCase.config.GetLocation(testCase.location)
+		assert.NoError(t, err, testCase.desc)
+		assert.NotNil(t, l, testCase.desc)
+		assert.Equal(t, testCase.location, l.Name, testCase.desc)
+	}
+}
+
+// TestDeviceConfig_GetLocation_Err tests getting locations from a DeviceConfig unsuccessfully.
+func TestDeviceConfig_GetLocation_Err(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		location string
+		config   DeviceConfig
+	}{
+		{
+			desc:     "DeviceConfig has no locations defined",
+			location: "test",
+			config: DeviceConfig{
+				Locations: []*Location{},
+			},
+		},
+		{
+			desc:     "Specified name does not match any location",
+			location: "baz",
+			config: DeviceConfig{
+				Locations: []*Location{
+					{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}},
+					{Name: "foo", Rack: &LocationData{Name: "foo"}, Board: &LocationData{Name: "foo"}},
+					{Name: "bar", Rack: &LocationData{Name: "bar"}, Board: &LocationData{Name: "bar"}},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		l, err := testCase.config.GetLocation(testCase.location)
+		assert.Error(t, err, testCase.desc)
+		assert.Nil(t, l, testCase.desc)
+	}
+}
+
 // TestDeviceConfig_Validate_Ok tests validating a DeviceConfig with no errors.
 func TestDeviceConfig_Validate_Ok(t *testing.T) {
 	var testTable = []struct {
@@ -82,6 +174,170 @@ func TestDeviceConfig_Validate_Error(t *testing.T) {
 		testCase.config.Validate(merr)
 		assert.Error(t, merr.Err(), testCase.desc)
 		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestLocation_Equals tests whether a location equals another one.
+func TestLocation_Equals(t *testing.T) {
+	testLoc := Location{
+		Name:  "test",
+		Rack:  &LocationData{Name: "rack"},
+		Board: &LocationData{Name: "board"},
+	}
+
+	var testTable = []struct {
+		desc      string
+		isEqual   bool
+		location1 *Location
+		location2 *Location
+	}{
+		{
+			desc:      "pointer to the same Location",
+			isEqual:   true,
+			location1: &testLoc,
+			location2: &testLoc,
+		},
+		{
+			desc:      "different location instances, same data (empty)",
+			isEqual:   true,
+			location1: &Location{},
+			location2: &Location{},
+		},
+		{
+			desc:      "different location instances, same data",
+			isEqual:   true,
+			location1: &testLoc,
+			location2: &Location{
+				Name:  "test",
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
+			},
+		},
+		{
+			desc:      "different locations, different name",
+			isEqual:   false,
+			location1: &testLoc,
+			location2: &Location{
+				Name:  "foo",
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
+			},
+		},
+		{
+			desc:      "different locations, different rack",
+			isEqual:   false,
+			location1: &testLoc,
+			location2: &Location{
+				Name:  "test",
+				Rack:  &LocationData{Name: "foo"},
+				Board: &LocationData{Name: "board"},
+			},
+		},
+		{
+			desc:      "different locations, different board",
+			isEqual:   false,
+			location1: &testLoc,
+			location2: &Location{
+				Name:  "test",
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "foo"},
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		equals := testCase.location1.Equals(testCase.location2)
+		assert.Equal(t, testCase.isEqual, equals, testCase.desc)
+	}
+}
+
+// TestLocationData_Equals tests whether two LocationData instances are equal.
+func TestLocationData_Equals(t *testing.T) {
+	testLoc := LocationData{
+		Name: "foo",
+	}
+
+	var testTable = []struct {
+		desc    string
+		isEqual bool
+		loc1    *LocationData
+		loc2    *LocationData
+	}{
+		{
+			desc:    "pointer to the same LocationData",
+			isEqual: true,
+			loc1:    &testLoc,
+			loc2:    &testLoc,
+		},
+		{
+			desc:    "different LocationData, same data (empty)",
+			isEqual: true,
+			loc1:    &LocationData{},
+			loc2:    &LocationData{},
+		},
+		{
+			desc:    "different LocationData, same data (name)",
+			isEqual: true,
+			loc1: &LocationData{
+				Name: "test",
+			},
+			loc2: &LocationData{
+				Name: "test",
+			},
+		},
+		{
+			desc:    "different LocationData, same data (from env)",
+			isEqual: true,
+			loc1: &LocationData{
+				FromEnv: "HOSTNAME",
+			},
+			loc2: &LocationData{
+				FromEnv: "HOSTNAME",
+			},
+		},
+		{
+			desc:    "different LocationData, different data (name)",
+			isEqual: false,
+			loc1: &LocationData{
+				Name: "foo",
+			},
+			loc2: &LocationData{
+				Name: "bar",
+			},
+		},
+		{
+			desc:    "different LocationData, different data (from env)",
+			isEqual: false,
+			loc1: &LocationData{
+				FromEnv: "NODENAME",
+			},
+			loc2: &LocationData{
+				FromEnv: "HOSTNAME",
+			},
+		},
+		{
+			desc:    "different LocationData, different data (mixed)",
+			isEqual: false,
+			loc1: &LocationData{
+				Name: "test",
+			},
+			loc2: &LocationData{
+				FromEnv: "HOSTNAME",
+			},
+		},
+		{
+			desc:    "different LocationData, different data (empty)",
+			isEqual: false,
+			loc1:    &LocationData{},
+			loc2: &LocationData{
+				FromEnv: "HOSTNAME",
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		equals := testCase.loc1.Equals(testCase.loc2)
+		assert.Equal(t, testCase.isEqual, equals, testCase.desc)
 	}
 }
 
