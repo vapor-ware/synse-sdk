@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
@@ -13,13 +14,22 @@ import (
 // device data map. Non-string values in the map are cast to a string.
 func defaultDeviceIdentifier(data map[string]interface{}) string {
 	var identifier string
-	for _, value := range data {
+
+	// To ensure that we get the same identifier reliably, we want to make sure
+	// we append the components reliably, so we will sort the keys.
+	var keys []string
+	for k := range data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
 		// Instead of implementing our own type checking and casting, just
 		// use Sprint. Note that this may be meaningless for complex types.
 		// TODO: write tests/check to see how this behaves with things like
 		//  maps/lists. I have a feeling that maps will not produce a deterministic
 		//  string because they are unordered, so we may need custom handling for that.
-		identifier += fmt.Sprint(value)
+		identifier += fmt.Sprint(data[key])
 	}
 	return identifier
 }
@@ -29,7 +39,7 @@ func defaultDeviceIdentifier(data map[string]interface{}) string {
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
-func defaultDynamicDeviceRegistration(data map[string]interface{}) ([]*Device, error) {
+func defaultDynamicDeviceRegistration(_ map[string]interface{}) ([]*Device, error) {
 	return []*Device{}, nil
 }
 
@@ -38,6 +48,6 @@ func defaultDynamicDeviceRegistration(data map[string]interface{}) ([]*Device, e
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
-func defaultDynamicDeviceConfigRegistration(data map[string]interface{}) ([]*config.DeviceConfig, error) {
+func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*config.DeviceConfig, error) {
 	return []*config.DeviceConfig{}, nil
 }

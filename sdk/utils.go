@@ -59,9 +59,12 @@ func filterDevices(filter string) ([]*Device, error) {
 		k, v := pair[0], pair[1]
 
 		var isValid func(d *Device) bool
-		if k == "kind" {
+		switch k {
+		case "kind":
 			isValid = func(d *Device) bool { return d.Kind == v || v == "*" }
-		} else {
+		case "type":
+			isValid = func(d *Device) bool { return d.GetType() == v || v == "*" }
+		default:
 			return nil, fmt.Errorf("unsupported filter key. expect 'kind' but got %s", k)
 		}
 

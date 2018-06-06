@@ -41,6 +41,7 @@ func setupTransactionCache(ttl time.Duration) {
 // we will terminate the plugin, as it is indicative of an improper plugin setup.
 func newTransaction() *transaction {
 	if transactionCache == nil {
+		// FIXME - need to update logger so we can specify our own exiter to test this..
 		logger.Fatalf("transaction cache was not initialized; likely an issue in plugin setup")
 	}
 

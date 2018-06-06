@@ -3,6 +3,8 @@ package sdk
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -127,6 +129,17 @@ type Device struct {
 	// bulkRead is a flag that determines whether or not the device should be
 	// read in bulk, i.e. in a batch with other devices of the same kind.
 	bulkRead bool
+}
+
+// GetType gets the type of the device. The type of the device is the last
+// element in its Kind namespace. For example, with the Kind "foo.bar.temperature",
+// the type would be "temperature".
+func (device *Device) GetType() string {
+	if strings.Contains(device.Kind, ".") {
+		nameSpace := strings.Split(device.Kind, ".")
+		return nameSpace[len(nameSpace)-1]
+	}
+	return device.Kind
 }
 
 // makeDevices creates Device instances from a DeviceConfig. The DeviceConfig

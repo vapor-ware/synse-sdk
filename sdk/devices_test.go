@@ -9,6 +9,86 @@ package sdk
 //
 //	"github.com/vapor-ware/synse-sdk/sdk/config"
 //)
+
+//
+//// TestMakeDevices tests making devices where two instances match one prototype.
+//func TestMakeDevices(t *testing.T) {
+//	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+//	proto := []*config.PrototypeConfig{&testPrototypeConfig1}
+//
+//	devices, err := makeDevices(inst, proto, &testPlugin)
+//	assert.NoError(t, err)
+//	assert.Equal(t, 2, len(devices))
+//}
+//
+//// TestMakeDevices2 tests making devices when no instances match the prototype.
+//func TestMakeDevices2(t *testing.T) {
+//	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+//	proto := []*config.PrototypeConfig{&testPrototypeConfig2}
+//
+//	devices, err := makeDevices(inst, proto, &testPlugin)
+//	assert.NoError(t, err)
+//	assert.Equal(t, 0, len(devices))
+//}
+//
+//// TestMakeDevices3 tests making devices when one instance matches one of two prototypes.
+//func TestMakeDevices3(t *testing.T) {
+//	inst := []*config.DeviceConfig{&testDeviceConfig1}
+//	proto := []*config.PrototypeConfig{&testPrototypeConfig1, &testPrototypeConfig2}
+//
+//	devices, err := makeDevices(inst, proto, &testPlugin)
+//	assert.NoError(t, err)
+//	assert.Equal(t, 1, len(devices))
+//}
+//
+//// TestMakeDevices4 tests making devices when no prototypes exist for instances to
+//// match with.
+//func TestMakeDevices4(t *testing.T) {
+//	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+//	var proto []*config.PrototypeConfig
+//
+//	devices, err := makeDevices(inst, proto, &testPlugin)
+//	assert.NoError(t, err)
+//	assert.Equal(t, 0, len(devices))
+//}
+//
+//// TestMakeDevices5 tests making devices when no instances exist for protocols to
+//// be matched with.
+//func TestMakeDevices5(t *testing.T) {
+//	var inst []*config.DeviceConfig
+//	proto := []*config.PrototypeConfig{&testPrototypeConfig1, &testPrototypeConfig2}
+//
+//	devices, err := makeDevices(inst, proto, &testPlugin)
+//	assert.NoError(t, err)
+//	assert.Equal(t, 0, len(devices))
+//}
+//
+//// TestMakeDevices6 tests making devices when the plugin is incorrectly configured
+//// (no device identifier handler), which should prohibit devices from being created.
+//func TestMakeDevices6(t *testing.T) {
+//	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+//	proto := []*config.PrototypeConfig{&testPrototypeConfig1}
+//
+//	plugin := makeTestPlugin()
+//	plugin.handlers.DeviceIdentifier = nil
+//
+//	_, err := makeDevices(inst, proto, plugin)
+//	assert.Error(t, err)
+//}
+//
+//// TestMakeDevices7 tests making devices when the plugin is incorrectly configured
+//// (no device handlers), which should prohibit devices from being created.
+//func TestMakeDevices7(t *testing.T) {
+//	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
+//	proto := []*config.PrototypeConfig{&testPrototypeConfig1}
+//
+//	plugin := makeTestPlugin()
+//	plugin.deviceHandlers = []*DeviceHandler{}
+//
+//	_, err := makeDevices(inst, proto, plugin)
+//	assert.Error(t, err)
+//}
+
 //
 //// testDeviceFields is a test helper function to check the Device
 //// fields against the specified prototype and device configs.
