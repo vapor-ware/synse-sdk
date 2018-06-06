@@ -9,7 +9,7 @@ import (
 //
 // If any of the ConfigContexts given as a parameter do not represent a
 // DeviceConfig, an error is returned.
-func UnifyDeviceConfigs(ctxs []*ConfigContext) (*ConfigContext, error) {
+func UnifyDeviceConfigs(ctxs []*Context) (*Context, error) {
 
 	// FIXME (etd): figure out how to either:
 	//  i. merge the source info into the ConfigContext
@@ -21,7 +21,7 @@ func UnifyDeviceConfigs(ctxs []*ConfigContext) (*ConfigContext, error) {
 		return nil, fmt.Errorf("no ConfigContexts specified for unification")
 	}
 
-	var context *ConfigContext
+	var context *Context
 
 	for _, ctx := range ctxs {
 		if !ctx.IsDeviceConfig() {

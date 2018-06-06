@@ -14,16 +14,16 @@ var Validator = &SchemeValidator{}
 
 // SchemeValidator is used to validate the scheme of a config.
 type SchemeValidator struct {
-	// context is the ConfigContext, which references the configuration
+	// context is the Context, which references the configuration
 	// currently being validated.
-	context *ConfigContext
+	context *Context
 
 	// errors is the collection of errors that are found when validating.
 	errors *errors.MultiError
 
 	// version is the version of the scheme to validate configs with. This
 	// is taken from the configuration being validated.
-	version *SchemeVersion
+	version *Version
 }
 
 // Validate validates a struct that holds configuration information. There are
@@ -43,17 +43,17 @@ type SchemeValidator struct {
 // validation here is typically checking to make sure required values exist, or that
 // values are correct and can be parsed correctly.
 //
-// This function takes a ConfigContext, which provides both the SchemeVersion to
+// This function takes a Context, which provides both the SchemeVersion to
 // validate against, and the config to validate, and a "source", which is attributed
 // to the errors in the event that any are found.
-func (validator *SchemeValidator) Validate(context *ConfigContext, domain string) *errors.MultiError {
+func (validator *SchemeValidator) Validate(context *Context, domain string) *errors.MultiError {
 	// Once we're done validating, we'll want to clear the state from this validation.
 	defer validator.clearState()
 
 	// Before we start validating, apply the state to the validator.
 	validator.errors = errors.NewMultiError(domain)
 
-	version, err := context.Config.GetSchemeVersion()
+	version, err := context.Config.GetVersion()
 	if err != nil {
 		validator.errors.Add(errors.NewValidationError(context.Source, err.Error()))
 		return validator.errors
@@ -114,9 +114,9 @@ func (validator *SchemeValidator) walk(v reflect.Value) {
 		validator.walkStructFields(v)
 
 		// If the struct implements the ConfigComponent interface, validate the struct.
-		ifaceType := reflect.TypeOf(new(ConfigComponent)).Elem()
+		ifaceType := reflect.TypeOf(new(Component)).Elem()
 		if v.Type().Implements(ifaceType) {
-			v.Interface().(ConfigComponent).Validate(validator.errors)
+			v.Interface().(Component).Validate(validator.errors)
 		}
 
 	case reflect.Slice:
@@ -165,7 +165,7 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 		// Check the "addedIn" tag
 		tag := structField.Tag.Get(tagAddedIn)
 		if tag != "" {
-			addedInScheme, err := NewSchemeVersion(tag)
+			addedInScheme, err := NewVersion(tag)
 			if err != nil {
 				validator.errors.Add(err)
 			} else {
@@ -183,7 +183,7 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 		// Check the "deprecatedIn" tag
 		tag = structField.Tag.Get(tagDeprecatedIn)
 		if tag != "" {
-			deprecatedInScheme, err := NewSchemeVersion(tag)
+			deprecatedInScheme, err := NewVersion(tag)
 			if err != nil {
 				validator.errors.Add(err)
 			} else {
@@ -199,7 +199,7 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 		// Check the "removedIn" tag
 		tag = structField.Tag.Get(tagRemovedIn)
 		if tag != "" {
-			removedInScheme, err := NewSchemeVersion(tag)
+			removedInScheme, err := NewVersion(tag)
 			if err != nil {
 				validator.errors.Add(err)
 			} else {

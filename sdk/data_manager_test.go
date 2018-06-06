@@ -8,12 +8,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
-// DeviceID gets the unique identifiers out of the plugin-specific
-// configuration to be used in UID generation. Required to construct Handlers.
-func DeviceID(data map[string]string) string {
-	return data["id"]
-}
-
 // TestNewDataManager tests creating a new dataManager instance successfully.
 func TestNewDataManager(t *testing.T) {
 	d := newDataManager()
@@ -29,7 +23,7 @@ func TestNewDataManager(t *testing.T) {
 // when they are enabled in the config.
 func TestDataManager_WritesEnabled(t *testing.T) {
 	PluginConfig = &config.PluginConfig{
-		ConfigVersion: config.ConfigVersion{Version: "test"},
+		SchemeVersion: config.SchemeVersion{Version: "test"},
 		Network: &config.NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -59,7 +53,7 @@ func TestDataManager_WritesEnabled(t *testing.T) {
 // not configured.
 func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 	PluginConfig = &config.PluginConfig{
-		ConfigVersion: config.ConfigVersion{Version: "test"},
+		SchemeVersion: config.SchemeVersion{Version: "test"},
 		Network: &config.NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -94,7 +88,8 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 	}
 
 	d := newDataManager()
-	d.setup()
+	err := d.setup()
+	assert.NoError(t, err)
 
 	// Pass a reading in
 	assert.Equal(t, 0, len(d.readChannel))
@@ -112,7 +107,7 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 // configured.
 func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 	PluginConfig = &config.PluginConfig{
-		ConfigVersion: config.ConfigVersion{Version: "test"},
+		SchemeVersion: config.SchemeVersion{Version: "test"},
 		Network: &config.NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -148,7 +143,8 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 	}
 
 	d := newDataManager()
-	d.setup()
+	err := d.setup()
+	assert.NoError(t, err)
 
 	// Pass a reading in
 	assert.Equal(t, 0, len(d.readChannel))
@@ -165,7 +161,7 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 // TestDataManager_readErr tests reading a device that results in error.
 func TestDataManager_readOneErr(t *testing.T) {
 	PluginConfig = &config.PluginConfig{
-		ConfigVersion: config.ConfigVersion{Version: "test"},
+		SchemeVersion: config.SchemeVersion{Version: "test"},
 		Network: &config.NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -200,7 +196,8 @@ func TestDataManager_readOneErr(t *testing.T) {
 	}
 
 	d := newDataManager()
-	d.setup()
+	err := d.setup()
+	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(d.readChannel))
 	d.readOne(device)
@@ -210,7 +207,7 @@ func TestDataManager_readOneErr(t *testing.T) {
 // TestDataManager_serialReadSingle tests reading a single device serially.
 func TestDataManager_serialReadSingle(t *testing.T) {
 	PluginConfig = &config.PluginConfig{
-		ConfigVersion: config.ConfigVersion{Version: "test"},
+		SchemeVersion: config.SchemeVersion{Version: "test"},
 		Network: &config.NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -249,7 +246,8 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 	deviceMap["test-id-1"] = device
 
 	d := newDataManager()
-	d.setup()
+	err := d.setup()
+	assert.NoError(t, err)
 
 	// Pass a reading in
 	assert.Equal(t, 0, len(d.readChannel))
@@ -266,7 +264,7 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 // TestDataManager_parallelReadSingle tests reading a single device in parallel.
 func TestDataManager_parallelReadSingle(t *testing.T) {
 	PluginConfig = &config.PluginConfig{
-		ConfigVersion: config.ConfigVersion{Version: "test"},
+		SchemeVersion: config.SchemeVersion{Version: "test"},
 		Network: &config.NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -305,7 +303,8 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 	deviceMap["test-id-1"] = device
 
 	d := newDataManager()
-	d.setup()
+	err := d.setup()
+	assert.NoError(t, err)
 
 	// Pass a reading in
 	assert.Equal(t, 0, len(d.readChannel))

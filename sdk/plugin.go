@@ -132,11 +132,11 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // Before the gRPC server is started, and before the read and write goroutines
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
-func (plugin *Plugin) Run() (err error) {
+func (plugin *Plugin) Run() error {
 	// Register system calls for graceful stopping.
 	signal.Notify(plugin.quit, syscall.SIGTERM)
 	signal.Notify(plugin.quit, syscall.SIGINT)
-	go plugin.Stop()
+	go plugin.OnQuit()
 
 	// The plugin name must be set as metainfo, since it is used in the Device
 	// model. Check if it is set here. If not, return an error.
@@ -152,15 +152,15 @@ func (plugin *Plugin) Run() (err error) {
 
 	// Check for configuration policies. If no policy was set by the plugin,
 	// this will fall back on the default policies.
-	err = plugin.checkPolicies()
+	err := plugin.checkPolicies()
 	if err != nil {
-		return
+		return err
 	}
 
 	// Read in all configs and verify that they are correct.
 	err = plugin.processConfig()
 	if err != nil {
-		return
+		return err
 	}
 
 	// ** "Registration" steps **
@@ -169,7 +169,7 @@ func (plugin *Plugin) Run() (err error) {
 	// the plugin.
 	err = plugin.registerDevices()
 	if err != nil {
-		return
+		return err
 	}
 
 	// ** "Making" steps **
@@ -177,7 +177,7 @@ func (plugin *Plugin) Run() (err error) {
 	// Set up the transaction cache
 	ttl, err := PluginConfig.Settings.Transaction.GetTTL()
 	if err != nil {
-		return
+		return err
 	}
 	setupTransactionCache(ttl)
 
@@ -222,14 +222,16 @@ func (plugin *Plugin) Run() (err error) {
 	// startDataManager
 	err = DataManager.run()
 	if err != nil {
-		return
+		return err
 	}
 
 	// startServer
 	return plugin.server.Serve()
 }
 
-func (plugin *Plugin) Stop() {
+// OnQuit is a function that waits for a signal to terminate the plugin's run
+// and run cleanup/post-run actions prior to terminating.
+func (plugin *Plugin) OnQuit() {
 	sig := <-plugin.quit
 	logger.Infof("Stopping plugin (%s)...", sig.String())
 
@@ -293,7 +295,7 @@ func (plugin *Plugin) checkPolicies() error {
 // There are four major steps to processing plugin configuration: reading in the
 // config, validating the config scheme, config unification, and verifying the
 // config data is correct. These steps should happen for all config types.
-func (plugin *Plugin) processConfig() error {
+func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 
 	// First, resolve the plugin config. We need to do this first, since subsequent
 	// steps may require a plugin config to be specified.
@@ -311,9 +313,9 @@ func (plugin *Plugin) processConfig() error {
 		case policies.PluginConfigOptional:
 			// If the Plugin Config is optional, we will still need to create a new
 			// plugin config that has all of the defaults filled out.
-			cfg, err := config.NewDefaultPluginConfig()
-			if err != nil {
-				return err
+			cfg, e := config.NewDefaultPluginConfig()
+			if e != nil {
+				return e
 			}
 			PluginConfig = cfg
 		default:
@@ -346,9 +348,9 @@ func (plugin *Plugin) processConfig() error {
 	} else {
 		for _, ctx := range outputTypeCtxs {
 			cfg := ctx.Config.(*config.OutputType)
-			err := plugin.RegisterOutputTypes(cfg)
-			if err != nil {
-				return err
+			e := plugin.RegisterOutputTypes(cfg)
+			if e != nil {
+				return e
 			}
 		}
 	}
@@ -392,7 +394,7 @@ func (plugin *Plugin) processConfig() error {
 			// If the device config is optional, we should be fine without having found
 			// anything at this point. We will add a default, empty device config to the
 			// device config contexts so we can pass validation below.
-			ctx := config.ConfigContext{
+			ctx := config.Context{
 				Source: "default",
 				Config: config.NewDeviceConfig(),
 			}

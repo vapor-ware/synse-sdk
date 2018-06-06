@@ -9,7 +9,7 @@ import (
 // TestUnifyDeviceConfigs_NoConfigs tests unifying configs when no
 // configs are given.
 func TestUnifyDeviceConfigs_NoConfigs(t *testing.T) {
-	ctx, err := UnifyDeviceConfigs([]*ConfigContext{})
+	ctx, err := UnifyDeviceConfigs([]*Context{})
 	assert.Error(t, err)
 	assert.Nil(t, ctx)
 }
@@ -17,7 +17,7 @@ func TestUnifyDeviceConfigs_NoConfigs(t *testing.T) {
 // TestUnifyDeviceConfigs_NoDeviceConfig tests unifying configs when the
 // contexts specified do not contain DeviceConfigs.
 func TestUnifyDeviceConfigs_NoDeviceConfig(t *testing.T) {
-	ctx, err := UnifyDeviceConfigs([]*ConfigContext{
+	ctx, err := UnifyDeviceConfigs([]*Context{
 		{
 			Source: "test",
 			Config: &PluginConfig{},
@@ -31,11 +31,11 @@ func TestUnifyDeviceConfigs_NoDeviceConfig(t *testing.T) {
 // TestUnifyDeviceConfigs tests unifying configs when there is only one config
 // to unify.
 func TestUnifyDeviceConfigs(t *testing.T) {
-	ctx, err := UnifyDeviceConfigs([]*ConfigContext{
+	ctx, err := UnifyDeviceConfigs([]*Context{
 		{
 			Source: "test",
 			Config: &DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Locations: []*Location{
 					{
 						Name:  "test",
@@ -60,11 +60,11 @@ func TestUnifyDeviceConfigs(t *testing.T) {
 // TestUnifyDeviceConfigs2 tests unifying configs when there are multiple
 // configs to unify.
 func TestUnifyDeviceConfigs2(t *testing.T) {
-	ctx, err := UnifyDeviceConfigs([]*ConfigContext{
+	ctx, err := UnifyDeviceConfigs([]*Context{
 		{
 			Source: "test",
 			Config: &DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Locations: []*Location{
 					{
 						Name:  "loc-1",
@@ -80,7 +80,7 @@ func TestUnifyDeviceConfigs2(t *testing.T) {
 		{
 			Source: "test",
 			Config: &DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Locations: []*Location{
 					{
 						Name:  "loc-2",
@@ -101,7 +101,7 @@ func TestUnifyDeviceConfigs2(t *testing.T) {
 		{
 			Source: "test",
 			Config: &DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Locations: []*Location{
 					{
 						Name:  "loc-4",

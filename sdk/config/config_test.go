@@ -6,12 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewConfigContext tests creating a new ConfigContext.
+// TestNewConfigContext tests creating a new Context.
 func TestNewConfigContext(t *testing.T) {
 	var testTable = []struct {
 		desc   string
 		source string
-		config ConfigBase
+		config Base
 	}{
 		{
 			desc:   "Config is a pointer to a DeviceConfig",
@@ -28,7 +28,7 @@ func TestNewConfigContext(t *testing.T) {
 	for _, testCase := range testTable {
 		ctx := NewConfigContext(testCase.source, testCase.config)
 		assert.NotNil(t, ctx, testCase.desc)
-		assert.IsType(t, &ConfigContext{}, ctx, testCase.desc)
+		assert.IsType(t, &Context{}, ctx, testCase.desc)
 		assert.Equal(t, testCase.source, ctx.Source, testCase.desc)
 		assert.Equal(t, testCase.config, ctx.Config, testCase.desc)
 	}
@@ -39,7 +39,7 @@ func TestConfigContext_IsDeviceConfig(t *testing.T) {
 	var testTable = []struct {
 		desc     string
 		isDevCfg bool
-		config   ConfigBase
+		config   Base
 	}{
 		{
 			desc:     "Config is a pointer to a DeviceConfig",
@@ -59,7 +59,7 @@ func TestConfigContext_IsDeviceConfig(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		ctx := ConfigContext{
+		ctx := Context{
 			Source: "test",
 			Config: testCase.config,
 		}
@@ -74,7 +74,7 @@ func TestConfigContext_IsPluginConfig(t *testing.T) {
 	var testTable = []struct {
 		desc        string
 		isPluginCfg bool
-		config      ConfigBase
+		config      Base
 	}{
 		{
 			desc:        "Config is a pointer to a DeviceConfig",
@@ -94,7 +94,7 @@ func TestConfigContext_IsPluginConfig(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		ctx := ConfigContext{
+		ctx := Context{
 			Source: "test",
 			Config: testCase.config,
 		}
@@ -109,7 +109,7 @@ func TestConfigContext_IsOutputTypeConfig(t *testing.T) {
 	var testTable = []struct {
 		desc         string
 		isOutputType bool
-		config       ConfigBase
+		config       Base
 	}{
 		{
 			desc:         "Config is a pointer to an OutputType",
@@ -129,7 +129,7 @@ func TestConfigContext_IsOutputTypeConfig(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		ctx := ConfigContext{
+		ctx := Context{
 			Source: "test",
 			Config: testCase.config,
 		}

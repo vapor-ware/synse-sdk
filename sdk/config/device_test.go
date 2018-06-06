@@ -109,20 +109,20 @@ func TestDeviceConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "DeviceConfig has valid version",
 			config: DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version and location",
 			config: DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version, location, and DeviceKind",
 			config: DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
 				Devices:       []*DeviceKind{{Name: "test"}},
 			},
@@ -130,14 +130,14 @@ func TestDeviceConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "DeviceConfig has valid version, invalid Locations (Locations not validated here)",
 			config: DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Locations:     []*Location{{Name: ""}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version and locations, invalid DeviceKinds (DeviceKinds not validated here)",
 			config: DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Locations:     []*Location{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
 				Devices:       []*DeviceKind{{Name: ""}},
 			},
@@ -163,7 +163,7 @@ func TestDeviceConfig_Validate_Error(t *testing.T) {
 			desc:     "DeviceConfig has invalid version",
 			errCount: 1,
 			config: DeviceConfig{
-				ConfigVersion: ConfigVersion{Version: "abc"},
+				SchemeVersion: SchemeVersion{Version: "abc"},
 			},
 		},
 	}

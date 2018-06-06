@@ -95,10 +95,13 @@ func main() {
 	plugin := sdk.NewPlugin()
 
 	// Register our output types with the Plugin.
-	plugin.RegisterOutputTypes(
+	err := plugin.RegisterOutputTypes(
 		&temperatureOutput,
 		&ledOutput,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register our device handlers with the Plugin.
 	plugin.RegisterDeviceHandlers(

@@ -156,6 +156,9 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 
 			// Get the outputs for the instance.
 			instanceOutputs, err := getInstanceOutputs(kind, instance)
+			if err != nil {
+				return nil, err
+			}
 
 			// Get the location
 			l, err := config.GetLocation(instance.Location)

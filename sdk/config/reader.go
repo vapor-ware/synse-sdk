@@ -38,8 +38,8 @@ var (
 //
 // All ConfigContexts returned by this function will have their IsOutputTypeConfig
 // function return true.
-func GetOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
-	var cfgs []*ConfigContext
+func GetOutputTypeConfigsFromFile() ([]*Context, error) {
+	var cfgs []*Context
 
 	// Search for output type config files. No name is specified as an arg here because
 	// output type config files do not require any particular name.
@@ -66,8 +66,8 @@ func GetOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
 //
 // All ConfigContexts returned by this function will have their IsDeviceConfig
 // function return true.
-func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
-	var cfgs []*ConfigContext
+func GetDeviceConfigsFromFile() ([]*Context, error) {
+	var cfgs []*Context
 
 	// Search for device config files. No name is specified as an arg here because
 	// device config files do not require any particular name.
@@ -95,7 +95,7 @@ func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
 //
 // The ConfigContext returned by this function will have its IsPluginConfig
 // function return true.
-func GetPluginConfigFromFile() (*ConfigContext, error) {
+func GetPluginConfigFromFile() (*Context, error) {
 	// Search for the plugin config file. It should have the name "config".
 	files, err := findConfigs(pluginConfigSearchPaths, EnvPluginConfig, pluginConfigFileName)
 	if err != nil {

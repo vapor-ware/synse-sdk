@@ -97,7 +97,7 @@ func (manager *dataManager) setup() error {
 	if PluginConfig.Limiter != nil && PluginConfig.Limiter != (&config.LimiterSettings{}) {
 		manager.limiter = rate.NewLimiter(
 			rate.Limit(PluginConfig.Limiter.Rate),
-			int(PluginConfig.Limiter.Burst),
+			PluginConfig.Limiter.Burst,
 		)
 	}
 	return nil

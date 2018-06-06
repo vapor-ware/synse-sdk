@@ -1,24 +1,20 @@
 package sdk
 
-import (
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-)
-
 // File level global test configuration.
-var testConfig = config.PluginConfig{
-	ConfigVersion: config.ConfigVersion{
-		Version: "1.0",
-	},
-	Network: &config.NetworkSettings{
-		Type:    "tcp",
-		Address: "test_config",
-	},
-	Settings: &config.PluginSettings{
-		Read:        &config.ReadSettings{Buffer: 1024},
-		Write:       &config.WriteSettings{Buffer: 1024},
-		Transaction: &config.TransactionSettings{TTL: "2s"},
-	},
-}
+//var testConfig = config.PluginConfig{
+//	SchemeVersion: config.SchemeVersion{
+//		Version: "1.0",
+//	},
+//	Network: &config.NetworkSettings{
+//		Type:    "tcp",
+//		Address: "test_config",
+//	},
+//	Settings: &config.PluginSettings{
+//		Read:        &config.ReadSettings{Buffer: 1024},
+//		Write:       &config.WriteSettings{Buffer: 1024},
+//		Transaction: &config.TransactionSettings{TTL: "2s"},
+//	},
+//}
 
 //// TestNewPluginNilHandlers tests creating a new Plugin with nil handlers
 //func TestNewPluginNilHandlers(t *testing.T) {

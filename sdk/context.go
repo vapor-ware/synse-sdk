@@ -4,7 +4,7 @@ package sdk
 // including handler functions for customizable plugin functionality.
 var Context = newPluginContext()
 
-// pluginContext holds context information for the plugin. Having the context
+// PluginContext holds context information for the plugin. Having the context
 // global allows simpler access, without having to pass references to the plugin
 // through many of our functions.
 type PluginContext struct {

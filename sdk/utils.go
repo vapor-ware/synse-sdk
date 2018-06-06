@@ -43,7 +43,7 @@ func newUID(components ...string) string {
 
 // filterDevices returns a list of Devices (a subset of the deviceMap) which
 // match the specified filter(s) in the given filter string.
-func filterDevices(filter string) ([]*Device, error) {
+func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 	filters := strings.Split(filter, ",")
 
 	var devices []*Device

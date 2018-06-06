@@ -46,15 +46,14 @@ func ProtocolIdentifier(data map[string]interface{}) string {
 	return data["id"].(string)
 }
 
-// EnumerateDevices is used to auto-enumerate device configurations for plugins
+// DynamicDeviceConfig is used to dynamically register device configurations for plugins
 // that support it. This is plugin specific. The config parameter here is a map
-// of configuration values that are taken from the list defined in the plugin
-// config file under the "auto_enumerate" option. This method will be called on
-// each member of that list sequentially.
+// of configuration values that are taken from the config defined in the plugin
+// config file under the "dynamicRegistration" option.
 //
 // The example implementation here is a bit contrived - it takes a base address
 // from the config and creates 3 devices off of that base. This isn't necessarily
-// "auto-enumeration" by definition, but it is a valid usage. A more appropriate
+// "dynamic registration" by definition, but it is a valid usage. A more appropriate
 // example could be taking an IP from the configuration, and using that to hit some
 // endpoint which would give back all the information on the devices it manages.
 func DynamicDeviceConfig(cfg map[string]interface{}) ([]*config.DeviceConfig, error) {
@@ -72,7 +71,7 @@ func DynamicDeviceConfig(cfg map[string]interface{}) ([]*config.DeviceConfig, er
 		// should be gathered from whatever the real source of auto-enumeration is,
 		// e.g. for IPMI - the SDR records.
 		d := config.DeviceConfig{
-			ConfigVersion: config.ConfigVersion{
+			SchemeVersion: config.SchemeVersion{
 				Version: "1.0",
 			},
 			Locations: []*config.Location{
@@ -128,7 +127,10 @@ func main() {
 	)
 
 	// Register output types
-	plugin.RegisterOutputTypes(&temperatureOutput)
+	err := plugin.RegisterOutputTypes(&temperatureOutput)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register device handlers
 	plugin.RegisterDeviceHandlers(&temperatureHandler)

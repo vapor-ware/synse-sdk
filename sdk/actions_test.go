@@ -49,7 +49,7 @@ func Test_execPreRun1(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin) error {
-		c += 1
+		c++
 		return nil
 	}
 
@@ -68,7 +68,7 @@ func Test_execPreRun2(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin) error {
-		c += 1
+		c++
 		return nil
 	}
 
@@ -111,7 +111,7 @@ func Test_execPreRun4(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin) error {
-		c += 1
+		c++
 		return nil
 	}
 	actionErr := func(_ *Plugin) error {
@@ -170,7 +170,7 @@ func Test_execPostRun1(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin) error {
-		c += 1
+		c++
 		return nil
 	}
 
@@ -189,7 +189,7 @@ func Test_execPostRun2(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin) error {
-		c += 1
+		c++
 		return nil
 	}
 
@@ -232,7 +232,7 @@ func Test_execPostRun4(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin) error {
-		c += 1
+		c++
 		return nil
 	}
 	actionErr := func(_ *Plugin) error {
@@ -292,7 +292,7 @@ func Test_execDeviceSetup1(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin, _ *Device) error {
-		c += 1
+		c++
 		return nil
 	}
 
@@ -314,7 +314,7 @@ func Test_execDeviceSetup2(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin, _ *Device) error {
-		c += 1
+		c++
 		return nil
 	}
 
@@ -336,7 +336,7 @@ func Test_execDeviceSetup3(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin, _ *Device) error {
-		c += 1
+		c++
 		return nil
 	}
 
@@ -358,7 +358,7 @@ func Test_execDeviceSetup4(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin, _ *Device) error {
-		c += 1
+		c++
 		return nil
 	}
 
@@ -402,7 +402,7 @@ func Test_execDeviceSetup6(t *testing.T) {
 
 	c := 0
 	action := func(_ *Plugin, _ *Device) error {
-		c += 1
+		c++
 		return nil
 	}
 	actionErr := func(_ *Plugin, _ *Device) error {

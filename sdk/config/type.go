@@ -11,8 +11,8 @@ import (
 // OutputType provides information about the output of a device reading.
 type OutputType struct {
 
-	// ConfigVersion is the version of the configuration scheme.
-	ConfigVersion `yaml:",inline"`
+	// SchemeVersion is the version of the configuration scheme.
+	SchemeVersion `yaml:",inline"`
 
 	// Name is the name of the output type. Each reading type
 	// should have a unique name. Names can be namespaced with
@@ -77,7 +77,7 @@ func (outputType *OutputType) GetScalingFactor() (float64, error) {
 // Precision is not applied at this level, but will instead be applied
 // in Synse Server before the corresponding reading is returned to the
 // user.
-func (outputType *OutputType) Apply(value interface{}) interface{} {
+func (outputType *OutputType) Apply(value interface{}) interface{} { // nolint: gocyclo
 	scalingFactor, err := outputType.GetScalingFactor()
 	if err != nil {
 		return value
@@ -127,7 +127,6 @@ type Unit struct {
 // Validate validates that the Unit has no configuration errors.
 func (unit Unit) Validate(multiErr *errors.MultiError) {
 	// nothing to validate here -- neither are required.
-	return
 }
 
 // Encode translates the SDK Unit type to the corresponding gRPC Unit type.

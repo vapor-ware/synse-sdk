@@ -12,15 +12,15 @@ const (
 	tagRemovedIn    = "removedIn"
 )
 
-// SchemeVersion is a representation of a configuration scheme version
+// Version is a representation of a configuration scheme version
 // that can be compared to other SchemeVersions.
-type SchemeVersion struct {
+type Version struct {
 	Major int
 	Minor int
 }
 
-// NewSchemeVersion creates a new instance of a SchemeVersion.
-func NewSchemeVersion(versionString string) (*SchemeVersion, error) {
+// NewVersion creates a new instance of a Version.
+func NewVersion(versionString string) (*Version, error) {
 	var min, maj int
 	var err error
 
@@ -49,75 +49,75 @@ func NewSchemeVersion(versionString string) (*SchemeVersion, error) {
 		return nil, fmt.Errorf("too many version components - should only have MAJOR[.MINOR]")
 	}
 
-	return &SchemeVersion{
+	return &Version{
 		Major: maj,
 		Minor: min,
 	}, nil
 }
 
 // String returns a string representation of the scheme version.
-func (schemeVersion *SchemeVersion) String() string {
-	return fmt.Sprintf("%d.%d", schemeVersion.Major, schemeVersion.Minor)
+func (version *Version) String() string {
+	return fmt.Sprintf("%d.%d", version.Major, version.Minor)
 }
 
-// IsLessThan returns true if the SchemeVersion is less than the SchemeVersion
+// IsLessThan returns true if the Version is less than the Version
 // provided as a parameter.
-func (schemeVersion *SchemeVersion) IsLessThan(other *SchemeVersion) bool {
-	if schemeVersion.Major < other.Major {
+func (version *Version) IsLessThan(other *Version) bool {
+	if version.Major < other.Major {
 		return true
 	}
-	if schemeVersion.Major == other.Major && schemeVersion.Minor < other.Minor {
-		return true
-	}
-	return false
-}
-
-// IsGreaterOrEqualTo returns true if the SchemeVersion is greater than or equal to
-// the SchemeVersion provided as a parameter.
-func (schemeVersion *SchemeVersion) IsGreaterOrEqualTo(other *SchemeVersion) bool {
-	if schemeVersion.Major > other.Major {
-		return true
-	}
-	if schemeVersion.Major == other.Major && schemeVersion.Minor >= other.Minor {
+	if version.Major == other.Major && version.Minor < other.Minor {
 		return true
 	}
 	return false
 }
 
-// IsEqual returns true if the SchemeVersion is equal to the SchemeVersion provided
+// IsGreaterOrEqualTo returns true if the Version is greater than or equal to
+// the Version provided as a parameter.
+func (version *Version) IsGreaterOrEqualTo(other *Version) bool {
+	if version.Major > other.Major {
+		return true
+	}
+	if version.Major == other.Major && version.Minor >= other.Minor {
+		return true
+	}
+	return false
+}
+
+// IsEqual returns true if the Version is equal to the Version provided
 // as a parameter.
-func (schemeVersion *SchemeVersion) IsEqual(other *SchemeVersion) bool {
-	return schemeVersion.Major == other.Major && schemeVersion.Minor == other.Minor
+func (version *Version) IsEqual(other *Version) bool {
+	return version.Major == other.Major && version.Minor == other.Minor
 }
 
-// ConfigVersion is a struct that is used to extract the configuration
+// SchemeVersion is a struct that is used to extract the configuration
 // scheme version from any config file.
-type ConfigVersion struct {
+type SchemeVersion struct {
 	// Version is the config version scheme specified in the config file.
 	Version string `yaml:"version,omitempty" addedIn:"1.0"`
 
-	// scheme is the SchemeVersion that represents the ConfigVersion's Version.
-	scheme *SchemeVersion
+	// scheme is the Version that represents the SchemeVersion's Version.
+	scheme *Version
 }
 
-// parseScheme parses the Version field into a SchemeVersion.
-func (configVersion *ConfigVersion) parseScheme() error {
-	scheme, err := NewSchemeVersion(configVersion.Version)
+// parse parses the Version field into a Version.
+func (schemeVersion *SchemeVersion) parse() error {
+	scheme, err := NewVersion(schemeVersion.Version)
 	if err != nil {
 		return err
 	}
-	configVersion.scheme = scheme
+	schemeVersion.scheme = scheme
 	return nil
 }
 
-// GetSchemeVersion gets the SchemeVersion associated with the version specified
+// GetVersion gets the Version associated with the version specified
 // in the configuration.
-func (configVersion *ConfigVersion) GetSchemeVersion() (*SchemeVersion, error) {
-	if configVersion.scheme == nil {
-		err := configVersion.parseScheme()
+func (schemeVersion *SchemeVersion) GetVersion() (*Version, error) {
+	if schemeVersion.scheme == nil {
+		err := schemeVersion.parse()
 		if err != nil {
 			return nil, err
 		}
 	}
-	return configVersion.scheme, nil
+	return schemeVersion.scheme, nil
 }
