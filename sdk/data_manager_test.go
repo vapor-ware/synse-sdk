@@ -241,9 +241,8 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 		},
 	}
 
-	// Clear the global device map then add the device to it
-	deviceMap = make(map[string]*Device)
 	deviceMap["test-id-1"] = device
+	defer delete(deviceMap, "test-id-1")
 
 	d := newDataManager()
 	err := d.setup()
@@ -299,8 +298,8 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 	}
 
 	// Clear the global device map then add the device to it
-	deviceMap = make(map[string]*Device)
 	deviceMap["test-id-1"] = device
+	defer delete(deviceMap, "test-id-1")
 
 	d := newDataManager()
 	err := d.setup()

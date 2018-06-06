@@ -130,6 +130,9 @@ func TestFilterDevices(t *testing.T) {
 		"dev2": dev2,
 		"dev3": dev3,
 	}
+	defer delete(deviceMap, "dev1")
+	defer delete(deviceMap, "dev2")
+	defer delete(deviceMap, "dev3")
 
 	// Set up the test cases
 	var filterDevicesTestTable = []struct {
@@ -225,6 +228,8 @@ func TestFilterDevicesErr(t *testing.T) {
 		"dev1": dev1,
 		"dev2": dev2,
 	}
+	defer delete(deviceMap, "dev1")
+	defer delete(deviceMap, "dev2")
 
 	// Set up the test cases
 	var filterDevicesTestTable = []string{
