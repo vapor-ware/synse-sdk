@@ -344,7 +344,7 @@ func (device *Device) Read() (*ReadContext, error) {
 			return nil, err
 		}
 
-		return NewReadContext(device, readings)
+		return NewReadContext(device, readings), nil
 	}
 	return nil, &errors.UnsupportedCommandError{}
 }

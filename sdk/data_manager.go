@@ -14,13 +14,7 @@ import (
 )
 
 // DataManager is the global data manager for the plugin.
-var DataManager = &dataManager{
-	// Do not make the read/write channel. Those channels will be set up
-	// when the DataManger is initialized via `dataManager.init()`
-	readings: make(map[string][]*Reading),
-	dataLock: &sync.RWMutex{},
-	rwLock:   &sync.Mutex{},
-}
+var DataManager = newDataManager()
 
 // dataManager handles the reading from and writing to configured devices.
 // It executes the read and write goroutines and uses the channels between
@@ -56,11 +50,44 @@ type dataManager struct {
 	limiter *rate.Limiter
 }
 
-// init initializes the data manager by creating the structures needed, based
-// on the global plugin configuration, and by string the read, write, and updater
-// goroutines, allowing it to provide data from and access to configured devices.
-func (manager *dataManager) init() {
+func newDataManager() *dataManager {
+	return &dataManager{
+		// Do not make the read/write channel. Those channels will be set up
+		// when the DataManger is initialized via `dataManager.init()`
+		readings: make(map[string][]*Reading),
+		dataLock: &sync.RWMutex{},
+		rwLock:   &sync.Mutex{},
+	}
+}
+
+// run sets up the dataManager and starts the read, write, and updater goroutines
+// allowing it to provide data from, and access to, configured devices.
+func (manager *dataManager) run() error {
+
+	err := manager.setup()
+	if err != nil {
+		return err
+	}
+
+	// Start the reader/writer
+	manager.goRead()
+	manager.goWrite()
+
+	// Update the manager readings state
+	manager.goUpdateData()
+
+	logger.Info("dataManager initialization complete.")
+	return nil
+}
+
+// setup initializes the remaining data manager structures based on the global
+// plugin configuration.
+func (manager *dataManager) setup() error {
 	logger.Info("Initializing dataManager goroutines..")
+
+	if PluginConfig == nil {
+		return fmt.Errorf("plugin config not set, cannot setup data manager")
+	}
 
 	// Initialize the read and write channels
 	manager.readChannel = make(chan *ReadContext, PluginConfig.Settings.Read.Buffer)
@@ -73,15 +100,7 @@ func (manager *dataManager) init() {
 			int(PluginConfig.Limiter.Burst),
 		)
 	}
-
-	// Start the reader/writer
-	manager.goRead()
-	manager.goWrite()
-
-	// Update the manager readings state
-	manager.goUpdateData()
-
-	logger.Info("dataManager initialization complete.")
+	return nil
 }
 
 // writesEnabled checks to see whether writing is enabled for the plugin based on

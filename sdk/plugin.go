@@ -220,7 +220,10 @@ func (plugin *Plugin) Run() (err error) {
 	// "Starting" steps **
 
 	// startDataManager
-	DataManager.init()
+	err = DataManager.run()
+	if err != nil {
+		return
+	}
 
 	// startServer
 	return plugin.server.Serve()

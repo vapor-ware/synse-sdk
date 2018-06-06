@@ -106,13 +106,13 @@ type ReadContext struct {
 
 // NewReadContext creates a new instance of a ReadContext from the given
 // device and corresponding readings.
-func NewReadContext(device *Device, readings []*Reading) (*ReadContext, error) {
+func NewReadContext(device *Device, readings []*Reading) *ReadContext {
 	return &ReadContext{
 		Device:  device.ID(),
 		Board:   device.Location.Board,
 		Rack:    device.Location.Rack,
 		Reading: readings,
-	}, nil
+	}
 }
 
 // ID returns a compound string that can identify the resource by its
