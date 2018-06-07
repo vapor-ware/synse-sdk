@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
@@ -128,8 +129,40 @@ func (server *Server) Version(ctx context.Context, request *synse.Empty) (*synse
 // Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
 func (server *Server) Health(ctx context.Context, request *synse.Empty) (*synse.PluginHealth, error) {
 	logger.Debug("gRPC server: health")
-	// TODO
-	return nil, nil
+	statuses := health.GetStatus()
+
+	// First, we need to determine the overall health of the plugin.
+	// If all statuses are good, we are ok. If some are bad, we are partially
+	// degraded. If all are bad, we are failing.
+	// TODO: do we want partially degraded, or should we just consider it failing
+	total := len(statuses)
+	ok := 0
+	failing := 0
+
+	var healthChecks []*synse.HealthCheck
+	for _, status := range statuses {
+		if status.Ok {
+			ok++
+		} else {
+			failing++
+		}
+		healthChecks = append(healthChecks, status.Encode())
+	}
+
+	var pluginStatus synse.PluginHealth_Status
+	if total == ok {
+		pluginStatus = synse.PluginHealth_OK
+	} else if total == failing {
+		pluginStatus = synse.PluginHealth_FAILING
+	} else {
+		pluginStatus = synse.PluginHealth_PARTIALLY_DEGRADED
+	}
+
+	return &synse.PluginHealth{
+		Timestamp: GetCurrentTime(),
+		Status:    pluginStatus,
+		Checks:    healthChecks,
+	}, nil
 }
 
 // Capabilities is the handler for the Synse GRPC Plugin service's `Capabilities` RPC method.

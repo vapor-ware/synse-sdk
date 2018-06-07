@@ -318,13 +318,12 @@ func (settings *TransactionSettings) GetTTL() (time.Duration, error) {
 // HealthSettings provides configuration options around health checking in
 // the plugin.
 type HealthSettings struct {
-	// Enabled globally enables or disables running health checks for the plugin.
-	// By default, a plugin will have health checks enabled.
-	Enabled bool `default:"true" yaml:"enabled,omitempty" addedIn:"1.0"`
+	// UseDefaults determines whether the plugin should use the built-in health
+	// checks or not.
+	UseDefaults bool `default:"true" yaml:"useDefaults,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the HealthSettings has no configuration errors.
 func (settings HealthSettings) Validate(multiErr *errors.MultiError) {
 	// Nothing to validate here.
-	return
 }
