@@ -1,14 +1,20 @@
 package sdk
 
 import (
-	"runtime"
-
 	"bytes"
+	"runtime"
 	"text/template"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // SDKVersion specifies the version of the Synse Plugin SDK.
 const SDKVersion = "1.0.0"
+
+// Version is a reference to a BinVersion that can be used to get
+// the version info for a plugin.
+var Version *BinVersion
 
 var (
 	// BuildDate is the timestamp for when the build happened.
@@ -27,6 +33,19 @@ var (
 	PluginVersion string
 )
 
+func init() {
+	Version = &BinVersion{
+		Arch:          runtime.GOARCH,
+		OS:            runtime.GOOS,
+		SDKVersion:    SDKVersion,
+		BuildDate:     setField(BuildDate),
+		GitCommit:     setField(GitCommit),
+		GitTag:        setField(GitTag),
+		GoVersion:     setField(GoVersion),
+		PluginVersion: setField(PluginVersion),
+	}
+}
+
 // BinVersion describes the version of the binary for a plugin.
 //
 // This should be populated via build-time args passed in for
@@ -42,8 +61,20 @@ type BinVersion struct {
 	SDKVersion    string
 }
 
+// Encode converts the BinVersion to its corresponding Synse GRPC VersionInfo message.
+func (version *BinVersion) Encode() *synse.VersionInfo {
+	return &synse.VersionInfo{
+		PluginVersion: version.PluginVersion,
+		SdkVersion:    version.SDKVersion,
+		BuildDate:     version.BuildDate,
+		GitCommit:     version.GitCommit,
+		GitTag:        version.GitTag,
+		Arch:          version.Arch,
+		Os:            version.OS,
+	}
+}
+
 // Format returns a formatted string with all of the BinVersion info.
-// This string can be logged or printed out.
 func (version *BinVersion) Format() string {
 	var info bytes.Buffer
 
@@ -62,20 +93,16 @@ func (version *BinVersion) Format() string {
 	return info.String()
 }
 
-// GetVersion gets the version information for the plugin. It builds
-// a BinVersion using the variables that should be set as build-time
-// arguments.
-func GetVersion() *BinVersion {
-	return &BinVersion{
-		Arch:          runtime.GOARCH,
-		OS:            runtime.GOOS,
-		SDKVersion:    SDKVersion,
-		BuildDate:     setField(BuildDate),
-		GitCommit:     setField(GitCommit),
-		GitTag:        setField(GitTag),
-		GoVersion:     setField(GoVersion),
-		PluginVersion: setField(PluginVersion),
-	}
+// Log logs out the BinVersion at info level.
+func (version *BinVersion) Log() {
+	logger.Info("Version Info:")
+	logger.Infof("  Plugin Version: %s", version.PluginVersion)
+	logger.Infof("  SDK Version:    %s", version.SDKVersion)
+	logger.Infof("  Git Commit:     %s", version.GitCommit)
+	logger.Infof("  Git Tag:        %s", version.GitTag)
+	logger.Infof("  Build Date:     %s", version.BuildDate)
+	logger.Infof("  Go Version:     %s", version.GoVersion)
+	logger.Infof("  OS/Arch:        %s/%s", version.OS, version.Arch)
 }
 
 // setField is a helper function that checks whether a field is set.

@@ -2,7 +2,7 @@ version: 1
 debug: true
 network:
   type: unix
-  address: example-plugin.sock
+  address: simple-plugin.sock
 settings:
   read:
     interval: 5s

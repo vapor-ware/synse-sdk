@@ -5,9 +5,8 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
-	"github.com/vapor-ware/synse-server-grpc/go"
-
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 const (
@@ -24,13 +23,13 @@ const (
 // is used to track the asynchronous write transactions as they are processed.
 var transactionCache *cache.Cache
 
-// setupTransactionCache creates the transaction cache with the TTL in seconds.
+// setupTransactionCache creates the transaction cache with the given TTL.
 //
 // This needs to be called prior to the plugin grpc server and device manager
 // starting up in order for us to have transactions.
 //
 // Note that if this is called multiple times, the global transaction cache
-// will be re-initialized.
+// will be overwritten.
 func setupTransactionCache(ttl time.Duration) {
 	transactionCache = cache.New(ttl, ttl*2)
 }
@@ -42,6 +41,7 @@ func setupTransactionCache(ttl time.Duration) {
 // we will terminate the plugin, as it is indicative of an improper plugin setup.
 func newTransaction() *transaction {
 	if transactionCache == nil {
+		// FIXME - need to update logger so we can specify our own exiter to test this..
 		logger.Fatalf("transaction cache was not initialized; likely an issue in plugin setup")
 	}
 
@@ -73,7 +73,7 @@ func getTransaction(id string) *transaction {
 	if found {
 		return t.(*transaction)
 	}
-	logger.Info("transaction %v not found", id)
+	logger.Debugf("transaction %s not found", id)
 	return nil
 }
 
@@ -91,6 +91,7 @@ type transaction struct {
 // encode translates the transaction to a corresponding gRPC WriteResponse.
 func (t *transaction) encode() *synse.WriteResponse {
 	return &synse.WriteResponse{
+		Id:      t.id,
 		Status:  t.status,
 		State:   t.state,
 		Created: t.created,
@@ -99,56 +100,44 @@ func (t *transaction) encode() *synse.WriteResponse {
 	}
 }
 
-// setStateOk sets the transaction to be in the 'ok' state. Since a pointer
-// to this struct is stored in the cache, and update here should update the
-// in-memory cache as well.
+// setStateOk sets the transaction to be in the 'ok' state.
 func (t *transaction) setStateOk() {
-	logger.Debugf("transaction %v: setting state to 'ok'", t.id)
+	logger.Debugf("transaction %v: setting STATE to 'ok'", t.id)
 	t.updated = GetCurrentTime()
 	t.state = stateOk
 }
 
-// setStateError sets the transaction to be in the 'error' state. Since a
-// pointer to this struct is stored in the cache, and update here should
-// update the in-memory cache as well.
+// setStateError sets the transaction to be in the 'error' state.
 func (t *transaction) setStateError() {
-	logger.Debugf("transaction %v: setting state to 'error'", t.id)
+	logger.Debugf("transaction %v: setting STATE to 'error'", t.id)
 	t.updated = GetCurrentTime()
 	t.state = stateError
 }
 
-// setStatusUnknown sets the transaction status to 'unknown'. Since a
-// pointer to this struct is stored in the cache, and update here should
-// update the in-memory cache as well.
+// setStatusUnknown sets the transaction status to 'unknown'.
 func (t *transaction) setStatusUnknown() {
-	logger.Debugf("transaction %v: setting status to 'unknown'", t.id)
+	logger.Debugf("transaction %v: setting STATUS to 'unknown'", t.id)
 	t.updated = GetCurrentTime()
 	t.status = statusUnknown
 }
 
-// setStatusPending sets the transaction status to 'pending'. Since a
-// pointer to this struct is stored in the cache, and update here should
-// update the in-memory cache as well.
+// setStatusPending sets the transaction status to 'pending'.
 func (t *transaction) setStatusPending() {
-	logger.Debugf("transaction %v: setting status to 'pending'", t.id)
+	logger.Debugf("transaction %v: setting STATUS to 'pending'", t.id)
 	t.updated = GetCurrentTime()
 	t.status = statusPending
 }
 
-// setStatusWriting sets the transaction status to 'writing'. Since a
-// pointer to this struct is stored in the cache, and update here should
-// update the in-memory cache as well.
+// setStatusWriting sets the transaction status to 'writing'.
 func (t *transaction) setStatusWriting() {
-	logger.Debugf("transaction %v: setting status to 'writing'", t.id)
+	logger.Debugf("transaction %v: setting STATUS to 'writing'", t.id)
 	t.updated = GetCurrentTime()
 	t.status = statusWriting
 }
 
-// setStatusDone sets the transaction status to 'done'. Since a pointer
-// to this struct is stored in the cache, and update here should update
-// the in-memory cache as well.
+// setStatusDone sets the transaction status to 'done'.
 func (t *transaction) setStatusDone() {
-	logger.Debugf("transaction %v: setting status to 'done'", t.id)
+	logger.Debugf("transaction %v: setting STATUS to 'done'", t.id)
 	t.updated = GetCurrentTime()
 	t.status = statusDone
 }

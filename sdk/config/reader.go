@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
 )
@@ -25,9 +24,41 @@ var (
 	// that are used when looking for device configuration files.
 	deviceConfigSearchPaths = []string{"./config/device", "/etc/synse/plugin/config/device"}
 
+	// typeConfigSearchPaths define the search paths, in order of evaluation,
+	// that are used when looking for output type configuration files.
+	typeConfigSearchPaths = []string{"./config/type", "/etc/synse/plugin/config/type"}
+
 	// supportedExts are the extensions supported for configuration files.
 	supportedExts = []string{".yml", ".yaml"}
 )
+
+// GetOutputTypeConfigsFromFile finds the files containing output type configurations
+// and marshals them into an OutputType struct. These OutputTypes are wrapped in a
+// ConfigContext which provides the source file for the configuration as well.
+//
+// All ConfigContexts returned by this function will have their IsOutputTypeConfig
+// function return true.
+func GetOutputTypeConfigsFromFile() ([]*Context, error) {
+	var cfgs []*Context
+
+	// Search for output type config files. No name is specified as an arg here because
+	// output type config files do not require any particular name.
+	files, err := findConfigs(typeConfigSearchPaths, EnvOutputTypeConfig, "")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		config := &OutputType{}
+		err := unmarshalConfigFile(file, config)
+		if err != nil {
+			return nil, fmt.Errorf("file: %s -> %s", file, err)
+		}
+		cfgs = append(cfgs, NewConfigContext(file, config))
+	}
+
+	return cfgs, nil
+}
 
 // GetDeviceConfigsFromFile finds the files containing device configurations and
 // marshals them into a DeviceConfig struct. These DeviceConfigs are wrapped in a
@@ -35,8 +66,8 @@ var (
 //
 // All ConfigContexts returned by this function will have their IsDeviceConfig
 // function return true.
-func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
-	var cfgs []*ConfigContext
+func GetDeviceConfigsFromFile() ([]*Context, error) {
+	var cfgs []*Context
 
 	// Search for device config files. No name is specified as an arg here because
 	// device config files do not require any particular name.
@@ -49,7 +80,7 @@ func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
 		config := &DeviceConfig{}
 		err := unmarshalConfigFile(file, config)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("file: %s -> %s", file, err)
 		}
 		cfgs = append(cfgs, NewConfigContext(file, config))
 	}
@@ -64,7 +95,7 @@ func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
 //
 // The ConfigContext returned by this function will have its IsPluginConfig
 // function return true.
-func GetPluginConfigFromFile() (*ConfigContext, error) {
+func GetPluginConfigFromFile() (*Context, error) {
 	// Search for the plugin config file. It should have the name "config".
 	files, err := findConfigs(pluginConfigSearchPaths, EnvPluginConfig, pluginConfigFileName)
 	if err != nil {
@@ -74,16 +105,15 @@ func GetPluginConfigFromFile() (*ConfigContext, error) {
 		return nil, fmt.Errorf("only one plugin config should be defined, but found: %v", files)
 	}
 
-	config := &PluginConfig{}
 	// Resolve the defaults for the config first
-	err = defaults.Set(config)
+	config, err := NewDefaultPluginConfig()
 	if err != nil {
 		return nil, err
 	}
 	// Unmarshal the config data
 	err = unmarshalConfigFile(files[0], config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("file: %s -> %s", files[0], err)
 	}
 
 	return NewConfigContext(files[0], config), nil
@@ -138,6 +168,9 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 
 		configs, err = searchDir(path, name)
 		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
 			return
 		}
 

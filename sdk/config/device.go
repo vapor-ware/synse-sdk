@@ -8,12 +8,17 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
+var (
+	// The current (latest) version of the device config scheme.
+	currentDeviceSchemeVersion = "1.0"
+)
+
 // DeviceConfig holds the configuration for the kinds of devices and the
 // instances of those kinds which a plugin will manage.
 type DeviceConfig struct {
 
-	// ConfigVersion is the version of the configuration scheme.
-	ConfigVersion `yaml:",inline"`
+	// SchemeVersion is the version of the configuration scheme.
+	SchemeVersion `yaml:",inline"`
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.
@@ -24,12 +29,25 @@ type DeviceConfig struct {
 	Devices []*DeviceKind `yaml:"devices,omitempty" addedIn:"1.0"`
 }
 
+// NewDeviceConfig returns a new instance of a DeviceConfig with the SchemeVersion
+// set to the latest (most current) device config scheme version, and the Locations
+// and Devices fields initialized, but not filled.
+func NewDeviceConfig() *DeviceConfig {
+	return &DeviceConfig{
+		SchemeVersion: SchemeVersion{
+			Version: currentDeviceSchemeVersion,
+		},
+		Locations: []*Location{},
+		Devices:   []*DeviceKind{},
+	}
+}
+
 // Validate validates that the DeviceConfig has no configuration errors.
 //
 // This is called before Devices are created.
 func (config DeviceConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
-	_, err := config.GetSchemeVersion()
+	_, err := config.GetVersion()
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
@@ -72,6 +90,17 @@ func (location Location) Validate(multiErr *errors.MultiError) {
 	if location.Board == nil || *location.Board == (LocationData{}) {
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "location.board"))
 	}
+}
+
+// Equals checks if another Location is equal to this Location.
+func (location *Location) Equals(other *Location) bool {
+	if location == other {
+		return true
+	}
+	if location.Name == other.Name && location.Rack.Equals(other.Rack) && location.Board.Equals(other.Board) {
+		return true
+	}
+	return false
 }
 
 // LocationData defines the name of a locational routing component.
@@ -124,6 +153,17 @@ func (locData *LocationData) Get() (string, error) {
 		}
 	}
 	return location, nil
+}
+
+// Equals checks if another LocationData is equal to this LocationData.
+func (locData *LocationData) Equals(other *LocationData) bool {
+	if locData == other {
+		return true
+	}
+	if locData.Name == other.Name && locData.FromEnv == other.FromEnv {
+		return true
+	}
+	return false
 }
 
 // DeviceKind is a kind of device that it being defined.
@@ -197,17 +237,16 @@ type DeviceInstance struct {
 	// Outputs describes the reading type output provided by this device instance.
 	Outputs []*DeviceOutput `yaml:"outputs,omitempty" addedIn:"1.0"`
 
-	// InheritKindOutputs determines whether the device instance should inherit
-	// the Outputs defined in it's DeviceKind. This should be true by default.
+	// DisableOutputInheritance determines whether the device instance should inherit
+	// the Outputs defined in it's DeviceKind. This is false by default, meaning that
+	// instances will inherit outputs from their DeviceKind. If it specifies an output
+	// of the same type, the one defined by the DeviceInstance will override the one
+	// defined by the DeviceKind, for the DeviceInstance. If the DeviceKind has no
+	// outputs defined, it simply will not inherit anything.
 	//
-	// If this is true, it will inherit all outputs defined by its DeviceKind.
-	// If it specifies an output of the same type, the one defined by the
-	// DeviceInstance will override the one defined by the DeviceKind, for the
-	// DeviceInstance. If the DeviceKind has no outputs defined and this is true,
-	// it simply will not inherit anything.
-	//
-	// If false, this will not inherit any of the DeviceKind's outputs.
-	InheritKindOutputs bool `yaml:"inheritKindOutputs,omitempty" addedIn:"1.0"`
+	// If this is true, this instance will not inherit any outputs defined by its
+	// DeviceKind.
+	DisableOutputInheritance bool `yaml:"disableOutputInheritance,omitempty" addedIn:"1.0"`
 
 	// HandlerName specifies the name of the DeviceHandler to match this DeviceInstance
 	// with. By default, a DeviceInstance will match with a DeviceHandler using
@@ -226,7 +265,7 @@ func (deviceInstance DeviceInstance) Validate(multiErr *errors.MultiError) {
 
 // DeviceOutput describes a valid output for the DeviceInstance.
 type DeviceOutput struct {
-	// Type is the name of the ReadingType that describes the expected output format
+	// Type is the name of the OutputType that describes the expected output format
 	// for this device output.
 	Type string `yaml:"type,omitempty" addedIn:"1.0"`
 

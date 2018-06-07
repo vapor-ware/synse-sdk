@@ -75,7 +75,6 @@ endif
 	@ # disable gotype: https://github.com/alecthomas/gometalinter/issues/40
 	gometalinter ./... \
 		--disable=gotype --disable=interfacer \
-		--exclude='(sdk\/sdktest\.go)' \
 		--tests \
 		--vendor \
 		--sort=severity \

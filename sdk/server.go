@@ -1,14 +1,21 @@
 package sdk
 
 import (
+	"fmt"
 	"net"
-
-	"github.com/vapor-ware/synse-server-grpc/go"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
+	"os"
+	"strings"
 
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-server-grpc/go"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+)
+
+const (
+	modeUnix = "unix"
+	modeTCP  = "tcp"
 )
 
 // Server implements the Synse Plugin gRPC server. It is used by the
@@ -27,21 +34,74 @@ func NewServer(network, address string) *Server {
 	}
 }
 
-// Serve sets up the gRPC server and runs it.
-func (server *Server) Serve() (err error) {
-	var addr string
+// setup runs any steps needed to set up the environment for the server to run.
+// In particular, this makes sure that the proper directories exist if the server
+// is running in "unix" mode.
+func (server *Server) setup() error {
+	// Set the server cleanup function as a post-run action for the plugin.
+	postRunActions = append(postRunActions, func(plugin *Plugin) error {
+		return server.cleanup()
+	})
 
 	switch server.network {
-	case "unix":
-		addr, err = setupSocket(server.address)
-		if err != nil {
-			return
+	case modeUnix:
+		if !strings.HasPrefix(server.address, sockPath) {
+			server.address = fmt.Sprintf("%s/%s", sockPath, server.address)
 		}
+		// If the path containing the sockets does not exist, create it.
+		_, err := os.Stat(sockPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				if err = os.MkdirAll(sockPath, os.ModePerm); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+		// If the socket path does exist, try removing the socket if it is
+		// there and left over from a previous run.
+		if err = os.Remove(server.address); !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+
+	case modeTCP:
+		// There is nothing for us to do in this case.
+		return nil
+
 	default:
-		addr = server.address
+		return fmt.Errorf("unsupported network type: %s", server.network)
+	}
+}
+
+// cleanup cleans up the server. The action it takes will depend on the mode it is
+// running in. If running in 'unix' mode, it will remove the socket.
+func (server *Server) cleanup() error {
+	switch server.network {
+	case modeUnix:
+		if err := os.Remove(server.address); !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+
+	case modeTCP:
+		// There is nothing for us to do in this case.
+		return nil
+
+	default:
+		return fmt.Errorf("unsupported network type: %s", server.network)
+	}
+}
+
+// Serve sets up the gRPC server and runs it.
+func (server *Server) Serve() (err error) {
+	err = server.setup()
+	if err != nil {
+		return
 	}
 
-	lis, err := net.Listen(server.network, addr)
+	lis, err := net.Listen(server.network, server.address)
 	if err != nil {
 		return
 	}
@@ -49,10 +109,8 @@ func (server *Server) Serve() (err error) {
 	svr := grpc.NewServer()
 	synse.RegisterPluginServer(svr, server)
 
-	if err = svr.Serve(lis); err != nil {
-		return
-	}
-	return nil
+	logger.Infof("grpc listening on %s:%s", server.network, server.address)
+	return svr.Serve(lis)
 }
 
 // Test is the handler for the Synse GRPC Plugin service's `Test` RPC method.
@@ -64,16 +122,7 @@ func (server *Server) Test(ctx context.Context, request *synse.Empty) (*synse.St
 // Version is the handler for the Synse GRPC Plugin service's `Version` RPC method.
 func (server *Server) Version(ctx context.Context, request *synse.Empty) (*synse.VersionInfo, error) {
 	logger.Debug("gRPC server: version")
-	ver := GetVersion()
-	return &synse.VersionInfo{
-		PluginVersion: ver.PluginVersion,
-		SdkVersion:    ver.SDKVersion,
-		BuildDate:     ver.BuildDate,
-		GitCommit:     ver.GitCommit,
-		GitTag:        ver.GitTag,
-		Arch:          ver.Arch,
-		Os:            ver.OS,
-	}, nil
+	return Version.Encode(), nil
 }
 
 // Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
@@ -113,7 +162,29 @@ func (server *Server) Capabilities(request *synse.Empty, stream synse.Plugin_Cap
 // Devices is the handler for the Synse GRPC Plugin service's `Devices` RPC method.
 func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_DevicesServer) error {
 	logger.Debug("gRPC server: devices")
+	var (
+		rack   = request.GetRack()
+		board  = request.GetBoard()
+		device = request.GetDevice()
+	)
+	if device != "" {
+		return fmt.Errorf("devices rpc method does not support filtering on device")
+	}
+	if rack == "" && board != "" {
+		return fmt.Errorf("filter specifies board with no rack - must specifiy rack as well")
+	}
+
 	for _, device := range deviceMap {
+		if rack != "" {
+			if device.Location.Rack != rack {
+				continue
+			}
+			if board != "" {
+				if device.Location.Board != board {
+					continue
+				}
+			}
+		}
 		if err := stream.Send(device.encode()); err != nil {
 			return err
 		}
@@ -124,21 +195,12 @@ func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_D
 // Metainfo is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
 func (server *Server) Metainfo(ctx context.Context, request *synse.Empty) (*synse.Metadata, error) {
 	logger.Debug("gRPC server: metainfo")
-	ver := GetVersion()
 	return &synse.Metadata{
 		Name:        metainfo.Name,
 		Maintainer:  metainfo.Maintainer,
 		Description: metainfo.Description,
 		Vcs:         metainfo.VCS,
-		Version: &synse.VersionInfo{
-			PluginVersion: ver.PluginVersion,
-			SdkVersion:    ver.SDKVersion,
-			BuildDate:     ver.BuildDate,
-			GitCommit:     ver.GitCommit,
-			GitTag:        ver.GitTag,
-			Arch:          ver.Arch,
-			Os:            ver.OS,
-		},
+		Version:     Version.Encode(),
 	}, nil
 }
 
@@ -183,6 +245,7 @@ func (server *Server) Transaction(request *synse.TransactionFilter, stream synse
 				}
 			}
 		}
+		return nil
 	}
 
 	// Otherwise, return the transaction with the specified ID.

@@ -15,7 +15,7 @@ import (
 // and ConfigComponent interface. It is used to test simple validation
 // cases.
 type simpleTestConfig struct {
-	ConfigVersion
+	SchemeVersion
 
 	TestField string `addedIn:"1.0" deprecatedIn:"1.5" removedIn:"2.0"`
 
@@ -25,7 +25,7 @@ type simpleTestConfig struct {
 }
 
 func (config simpleTestConfig) Validate(multiErr *errors.MultiError) {
-	_, err := config.GetSchemeVersion()
+	_, err := config.GetVersion()
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
@@ -39,7 +39,7 @@ func (config simpleTestConfig) Validate(multiErr *errors.MultiError) {
 // and ConfigComponent interface. It is used to test complex validation
 // cases where there are nested and grouped components.
 type complexTestConfig struct {
-	ConfigVersion
+	SchemeVersion
 
 	Foo      bool               `addedIn:"1.0" removedIn:"1.5"`
 	Simples  []simpleTestConfig `addedIn:"1.5"`
@@ -52,7 +52,7 @@ type complexTestConfig struct {
 }
 
 func (config complexTestConfig) Validate(multiErr *errors.MultiError) {
-	_, err := config.GetSchemeVersion()
+	_, err := config.GetVersion()
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
@@ -96,10 +96,10 @@ func checkValidationCleanup(t *testing.T) {
 
 // TestSchemeValidator_Validate_Simple_Ok tests validating a simple struct where everything is ok.
 func TestSchemeValidator_Validate_Simple_Ok(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.0"},
+			SchemeVersion: SchemeVersion{Version: "1.0"},
 			TestField:     "foo",
 		},
 	}
@@ -112,12 +112,12 @@ func TestSchemeValidator_Validate_Simple_Ok(t *testing.T) {
 }
 
 // TestSchemeValidator_Validate_Simple_UnsupportedVersion tests validating a simple struct where
-// the ConfigVersion of the struct is less than that of a specified field.
+// the SchemeVersion of the struct is less than that of a specified field.
 func TestSchemeValidator_Validate_Simple_UnsupportedVersion(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "0.5"}, // config version less than addedIn tag for both fields
+			SchemeVersion: SchemeVersion{Version: "0.5"}, // config version less than addedIn tag for both fields
 			TestField:     "foo",
 		},
 	}
@@ -131,12 +131,12 @@ func TestSchemeValidator_Validate_Simple_UnsupportedVersion(t *testing.T) {
 }
 
 // TestSchemeValidator_Validate_Simple_DeprecatedVersion1 tests validating a simple struct where
-// the ConfigVersion of the struct is equal to the deprecatedIn tag of a field.
+// the SchemeVersion of the struct is equal to the deprecatedIn tag of a field.
 func TestSchemeValidator_Validate_Simple_DeprecatedVersion1(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.5"}, // equal to deprecatedIn tag for TestField
+			SchemeVersion: SchemeVersion{Version: "1.5"}, // equal to deprecatedIn tag for TestField
 			TestField:     "foo",
 		},
 	}
@@ -149,12 +149,12 @@ func TestSchemeValidator_Validate_Simple_DeprecatedVersion1(t *testing.T) {
 }
 
 // TestSchemeValidator_Validate_Simple_DeprecatedVersion2 tests validating a simple struct where
-// the ConfigVersion of the struct is greater than the deprecatedIn tag of a field.
+// the SchemeVersion of the struct is greater than the deprecatedIn tag of a field.
 func TestSchemeValidator_Validate_Simple_DeprecatedVersion2(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.8"}, // greater than deprecatedIn tag for TestField
+			SchemeVersion: SchemeVersion{Version: "1.8"}, // greater than deprecatedIn tag for TestField
 			TestField:     "foo",
 		},
 	}
@@ -167,12 +167,12 @@ func TestSchemeValidator_Validate_Simple_DeprecatedVersion2(t *testing.T) {
 }
 
 // TestSchemeValidator_Validate_Simple_RemovedVersion1 tests validating a simple struct where
-// the ConfigVersion of the struct is equal to the removedIn tag of a field.
+// the SchemeVersion of the struct is equal to the removedIn tag of a field.
 func TestSchemeValidator_Validate_Simple_RemovedVersion1(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "2.0"}, // equal to removedIn tag for TestField
+			SchemeVersion: SchemeVersion{Version: "2.0"}, // equal to removedIn tag for TestField
 			TestField:     "foo",
 		},
 	}
@@ -186,12 +186,12 @@ func TestSchemeValidator_Validate_Simple_RemovedVersion1(t *testing.T) {
 }
 
 // TestSchemeValidator_Validate_Simple_RemovedVersion2 tests validating a simple struct where
-// the ConfigVersion of the struct is greater than the removedIn tag of a field.
+// the SchemeVersion of the struct is greater than the removedIn tag of a field.
 func TestSchemeValidator_Validate_Simple_RemovedVersion2(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "2.1"}, // greater than removedIn tag for TestField
+			SchemeVersion: SchemeVersion{Version: "2.1"}, // greater than removedIn tag for TestField
 			TestField:     "foo",
 		},
 	}
@@ -207,10 +207,10 @@ func TestSchemeValidator_Validate_Simple_RemovedVersion2(t *testing.T) {
 // TestSchemeValidator_Validate_Error tests validating a simple struct where
 // the versions resolve, but the Validate function fails for one field.
 func TestSchemeValidator_Validate_Error(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.0"},
+			SchemeVersion: SchemeVersion{Version: "1.0"},
 			TestField:     "", // TestField required, will fail Validate()
 		},
 	}
@@ -229,10 +229,10 @@ func TestSchemeValidator_Validate_Error(t *testing.T) {
 // of bounds of the version. If a field is not set, we won't validate its version,
 // so it should only result in one of those errors being captured.
 func TestSchemeValidator_Validate_Error2(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "3.0"},
+			SchemeVersion: SchemeVersion{Version: "3.0"},
 			TestField:     "", // TestField required, will fail Validate()
 		},
 	}
@@ -246,12 +246,12 @@ func TestSchemeValidator_Validate_Error2(t *testing.T) {
 }
 
 // TestSchemeValidator_Validate_Simple_BadConfigScheme tests validating a simple struct where
-// the ConfigVersion specified a bad scheme version.
+// the SchemeVersion specified a bad scheme version.
 func TestSchemeValidator_Validate_Simple_BadConfigScheme(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "xyz.xyz"}, // bad scheme version
+			SchemeVersion: SchemeVersion{Version: "xyz.xyz"}, // bad scheme version
 			TestField:     "foo",
 		},
 	}
@@ -267,10 +267,10 @@ func TestSchemeValidator_Validate_Simple_BadConfigScheme(t *testing.T) {
 // TestSchemeValidator_Validate_Simple_BadAddedInTag tests validating a simple struct where
 // a field specifies a bad "addedIn" tag.
 func TestSchemeValidator_Validate_Simple_BadAddedInTag(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.0"},
+			SchemeVersion: SchemeVersion{Version: "1.0"},
 			TestField:     "foo",
 			BadAddedInTag: "bar", // this field has a bad addedIn tag in the struct definition
 		},
@@ -287,10 +287,10 @@ func TestSchemeValidator_Validate_Simple_BadAddedInTag(t *testing.T) {
 // TestSchemeValidator_Validate_Simple_BadDeprecatedInTag tests validating a simple struct where
 // a field specifies a bad "deprecatedIn" tag.
 func TestSchemeValidator_Validate_Simple_BadDeprecatedInTag(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion:      ConfigVersion{Version: "1.0"},
+			SchemeVersion:      SchemeVersion{Version: "1.0"},
 			TestField:          "foo",
 			BadDeprecatedInTag: "bar", // this field has a bad deprecatedIn tag in the struct definition
 		},
@@ -307,10 +307,10 @@ func TestSchemeValidator_Validate_Simple_BadDeprecatedInTag(t *testing.T) {
 // TestSchemeValidator_Validate_Simple_BadRemovedInTag tests validating a simple struct where
 // a field specifies a bad "removedIn" tag.
 func TestSchemeValidator_Validate_Simple_BadRemovedInTag(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<simple test config>",
 		Config: &simpleTestConfig{
-			ConfigVersion:   ConfigVersion{Version: "1.0"},
+			SchemeVersion:   SchemeVersion{Version: "1.0"},
 			TestField:       "foo",
 			BadRemovedInTag: "bar", // this field has a bad removedIn tag in the struct definition
 		},
@@ -348,10 +348,10 @@ func TestSchemeValidator_validate(t *testing.T) {
 
 // TestSchemeValidator_Validate_Complex_Ok tests validating a complex struct where everything is ok.
 func TestSchemeValidator_Validate_Complex_Ok(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<complex test config>",
 		Config: &complexTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.0"},
+			SchemeVersion: SchemeVersion{Version: "1.0"},
 			Foo:           true,
 			FloatVal:      20,
 			IntVal:        3,
@@ -373,10 +373,10 @@ func TestSchemeValidator_Validate_Complex_Ok(t *testing.T) {
 // TestSchemeValidator_Validate_Complex_Ok2 tests validating a complex struct where everything is ok,
 // but some values are specified as the zero value for that type.
 func TestSchemeValidator_Validate_Complex_Ok2(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<complex test config>",
 		Config: &complexTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.0"},
+			SchemeVersion: SchemeVersion{Version: "1.0"},
 			Foo:           false,
 			FloatVal:      0,
 			IntVal:        0,
@@ -399,13 +399,13 @@ func TestSchemeValidator_Validate_Complex_Ok2(t *testing.T) {
 // there are errors due to SchemeVersion mismatches. In this case, it is for fields
 // specified in a version before they are supported.
 func TestSchemeValidator_Validate_Complex_Error(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<complex test config>",
 		Config: &complexTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.0"},
+			SchemeVersion: SchemeVersion{Version: "1.0"},
 			Simples: []simpleTestConfig{
 				{
-					ConfigVersion: ConfigVersion{Version: "1.0"},
+					SchemeVersion: SchemeVersion{Version: "1.0"},
 					TestField:     "foo",
 				},
 			},
@@ -438,13 +438,13 @@ func TestSchemeValidator_Validate_Complex_Error(t *testing.T) {
 // there are errors due to SchemeVersion mismatches. In this case, it is for fields
 // specified in a version after they were removed.
 func TestSchemeValidator_Validate_Complex_Error2(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<complex test config>",
 		Config: &complexTestConfig{
-			ConfigVersion: ConfigVersion{Version: "3.0"},
+			SchemeVersion: SchemeVersion{Version: "3.0"},
 			Simples: []simpleTestConfig{
 				{
-					ConfigVersion: ConfigVersion{Version: "3.0"},
+					SchemeVersion: SchemeVersion{Version: "3.0"},
 					TestField:     "foo",
 				},
 			},
@@ -477,13 +477,13 @@ func TestSchemeValidator_Validate_Complex_Error2(t *testing.T) {
 // there are errors due to SchemeVersion mismatches. In this case, it is for ConfigComponent
 // validation errors.
 func TestSchemeValidator_Validate_Complex_Error3(t *testing.T) {
-	toValidate := &ConfigContext{
+	toValidate := &Context{
 		Source: "<complex test config>",
 		Config: &complexTestConfig{
-			ConfigVersion: ConfigVersion{Version: "1.5"},
+			SchemeVersion: SchemeVersion{Version: "1.5"},
 			Simples: []simpleTestConfig{
 				{
-					ConfigVersion: ConfigVersion{Version: "1.0"},
+					SchemeVersion: SchemeVersion{Version: "1.0"},
 					TestField:     "", // error #1
 				},
 			},

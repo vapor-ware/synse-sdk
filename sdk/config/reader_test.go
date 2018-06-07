@@ -675,8 +675,7 @@ network:
 	assert.Equal(t, 100, cfg.Settings.Write.Max)
 	assert.Equal(t, "5m", cfg.Settings.Transaction.TTL)
 
-	assert.Equal(t, 0, cfg.Limiter.Rate)
-	assert.Equal(t, 0, cfg.Limiter.Burst)
+	assert.Nil(t, cfg.Limiter)
 }
 
 // TestGetPluginConfigFromFile4 tests getting the ConfigContext for the plugin config.
@@ -741,4 +740,140 @@ limiter:
 	assert.Equal(t, 150, cfg.Settings.Write.Buffer)
 	assert.Equal(t, 100, cfg.Settings.Write.Max)
 	assert.Equal(t, "5m", cfg.Settings.Transaction.TTL)
+}
+
+// TestGetPluginConfigFromFile5 tests getting the ConfigContext for the plugin config.
+// In this case, two possible configs will be found.
+func TestGetPluginConfigFromFile5(t *testing.T) {
+	// Set up the test dir
+	test.SetupTestDir(t)
+	defer test.ClearTestDir(t)
+
+	data := `
+locations:
+- name: test
+  rack:
+    name: foo
+  board:
+    name: bar
+`
+
+	// Add files to the dir
+	_ = test.WriteTempFile(t, "config.yaml", data, os.ModePerm)
+	_ = test.WriteTempFile(t, "config.yml", data, os.ModePerm)
+
+	// Set up the test env
+	test.SetEnv(t, EnvPluginConfig, test.TempDir)
+	defer test.RemoveEnv(t, EnvPluginConfig)
+
+	ctx, err := GetPluginConfigFromFile()
+	assert.Error(t, err)
+	assert.Nil(t, ctx)
+}
+
+// TestGetOutputTypeConfigsFromFile tests getting OutputType for all configs found.
+// In this case, no config files will be found.
+func TestGetOutputTypeConfigsFromFile(t *testing.T) {
+	// Set up the test dir
+	test.SetupTestDir(t)
+	defer test.ClearTestDir(t)
+
+	// Set up the test env
+	test.SetEnv(t, EnvOutputTypeConfig, test.TempDir)
+	defer test.RemoveEnv(t, EnvOutputTypeConfig)
+
+	ctxs, err := GetOutputTypeConfigsFromFile()
+	assert.Error(t, err)
+	assert.Nil(t, ctxs)
+}
+
+// TestGetOutputTypeConfigsFromFile2 tests getting OutputType for all configs found.
+// In this case, one config will be found, but will have invalid yaml.
+func TestGetOutputTypeConfigsFromFile2(t *testing.T) {
+	// Set up the test dir
+	test.SetupTestDir(t)
+	defer test.ClearTestDir(t)
+
+	data := `
+location::
+rack
+  name: foo
+board:
+  name: bar
+`
+
+	// Add a file to the dir
+	foo := test.WriteTempFile(t, "foo.yaml", data, os.ModePerm)
+
+	// Set up the test env
+	test.SetEnv(t, EnvOutputTypeConfig, foo)
+	defer test.RemoveEnv(t, EnvOutputTypeConfig)
+
+	ctxs, err := GetOutputTypeConfigsFromFile()
+	assert.Error(t, err)
+	assert.Nil(t, ctxs)
+}
+
+// TestGetOutputTypeConfigsFromFile3 tests getting OutputType for all configs found.
+// In this case, one valid config is found.
+func TestGetOutputTypeConfigsFromFile3(t *testing.T) {
+	// Set up the test dir
+	test.SetupTestDir(t)
+	defer test.ClearTestDir(t)
+
+	data := `
+version: "1.0"
+`
+
+	// Add a file to the dir
+	foo := test.WriteTempFile(t, "foo.yaml", data, os.ModePerm)
+
+	// Set up the test env
+	test.SetEnv(t, EnvOutputTypeConfig, test.TempDir)
+	defer test.RemoveEnv(t, EnvOutputTypeConfig)
+
+	ctxs, err := GetOutputTypeConfigsFromFile()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ctxs))
+	assert.Equal(t, foo, ctxs[0].Source)
+
+	assert.True(t, ctxs[0].IsOutputTypeConfig())
+	cfg := ctxs[0].Config.(*OutputType)
+	assert.Equal(t, "1.0", cfg.Version)
+}
+
+// TestGetOutputTypeConfigsFromFile4 tests getting OutputType for all configs found.
+// In this case, multiple valid configs are found.
+func TestGetOutputTypeConfigsFromFile4(t *testing.T) {
+	// Set up the test dir
+	test.SetupTestDir(t)
+	defer test.ClearTestDir(t)
+
+	data := `
+version: "1.0"
+`
+
+	// Add a file to the dir
+	foo := test.WriteTempFile(t, "foo.yaml", data, os.ModePerm)
+	bar := test.WriteTempFile(t, "bar.yml", data, os.ModePerm)
+
+	// Set up the test env
+	test.SetEnv(t, EnvOutputTypeConfig, test.TempDir)
+	defer test.RemoveEnv(t, EnvOutputTypeConfig)
+
+	ctxs, err := GetOutputTypeConfigsFromFile()
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(ctxs))
+
+	barCtx := ctxs[0]
+	assert.Equal(t, bar, barCtx.Source)
+	assert.True(t, barCtx.IsOutputTypeConfig())
+	cfg := barCtx.Config.(*OutputType)
+	assert.Equal(t, "1.0", cfg.Version)
+
+	fooCtx := ctxs[1]
+	assert.Equal(t, foo, fooCtx.Source)
+	assert.True(t, fooCtx.IsOutputTypeConfig())
+	cfg = fooCtx.Config.(*OutputType)
+	assert.Equal(t, "1.0", cfg.Version)
 }

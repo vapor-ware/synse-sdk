@@ -3,6 +3,7 @@ package config
 import (
 	"time"
 
+	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
@@ -14,11 +15,29 @@ const (
 	networkTypeUnix = "unix"
 )
 
+var (
+	// The current (latest) version of the plugin config scheme.
+	currentPluginSchemeVersion = "1.0"
+)
+
+// NewDefaultPluginConfig creates a new instance of a PluginConfig with its
+// default values resolved.
+func NewDefaultPluginConfig() (*PluginConfig, error) {
+	config := &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: currentPluginSchemeVersion},
+	}
+	err := defaults.Set(config)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
 // PluginConfig contains the configuration options for the plugin.
 type PluginConfig struct {
 
-	// ConfigVersion is the version of the configuration scheme.
-	ConfigVersion `yaml:",inline"`
+	// SchemeVersion is the version of the configuration scheme.
+	SchemeVersion `yaml:",inline"`
 
 	// Debug is a flag that determines whether the plugin should run
 	// with debug logging or not.
@@ -35,7 +54,7 @@ type PluginConfig struct {
 	DynamicRegistration *DynamicRegistrationSettings `default:"{}" yaml:"dynamicRegistration,omitempty" addedIn:"1.0"`
 
 	// Limiter specifies settings for a rate limiter for reads/writes.
-	Limiter *LimiterSettings `default:"{}" yaml:"limiter,omitempty" addedIn:"1.0"`
+	Limiter *LimiterSettings `yaml:"limiter,omitempty" addedIn:"1.0"`
 
 	// Health sepcifies the settings for health checking in the plugin.
 	Health *HealthSettings `default:"{}" yaml:"health,omitempty" addedIn:"1.0"`
@@ -48,7 +67,7 @@ type PluginConfig struct {
 // Validate validates that the PluginConfig has no configuration errors.
 func (config PluginConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
-	_, err := config.GetSchemeVersion()
+	_, err := config.GetVersion()
 	if err != nil {
 		// TODO -- using multiErr.Context["source"] assumes that all of the
 		// configs came from file. Need to see if there is a way to check
@@ -140,13 +159,12 @@ type DynamicRegistrationSettings struct {
 	// plugin-specific data that can be used to dynamically register new devices.
 	// As an example, this could hold the information for connecting with a server,
 	// or it could contain a bus address, etc.
-	Config map[string]interface{} `yaml:"config,omitempty" addedIn:"1.0"`
+	Config map[string]interface{} `default:"{}" yaml:"config,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the DynamicRegistrationSettings has no configuration errors.
 func (settings DynamicRegistrationSettings) Validate(multiErr *errors.MultiError) {
 	// nothing to validate here.
-	return
 }
 
 // LimiterSettings specifies configurations for a rate limiter on reads

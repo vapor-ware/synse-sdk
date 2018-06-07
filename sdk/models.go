@@ -3,80 +3,88 @@ package sdk
 import (
 	"fmt"
 
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Reading describes a single device reading with a timestamp. The timestamp
 // should be formatted with the RFC3339Nano layout.
 type Reading struct {
+	// Timestamp describes the time at which the reading was taken.
 	Timestamp string
-	Type      string
-	Info      string
-	Unit      Unit
-	Value     interface{}
+
+	// Type describes the output type of the reading.
+	Type string
+
+	// Info provides additional info for the reading, from config.
+	Info string
+
+	// Unit describes the unit of measure for the reading.
+	Unit config.Unit
+
+	// Value is the reading value itself.
+	Value interface{}
 }
 
 // NewReading creates a new instance of a Reading. This is the recommended method
-// for creating new readings. It uses the current time (time.Now) to fill in the
-// Timestamp field, formatted with the RFC3339Nano layout.
+// for creating new readings.
 func NewReading(output *Output, value interface{}) *Reading {
 	return &Reading{
 		Timestamp: GetCurrentTime(),
 		Type:      output.Type(),
 		Info:      output.Info,
 		Unit:      output.Unit,
-		Value:     value,
+		Value:     output.Apply(value),
 	}
 }
 
-// encode translates the SDK Reading type to the corresponding gRPC Reading type.
-func (reading *Reading) encode() *synse.Reading {
+// encode translates the Reading type to the corresponding gRPC Reading message.
+func (reading *Reading) encode() *synse.Reading { // nolint: gocyclo
 	r := synse.Reading{
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
 		Info:      reading.Info,
-		Unit:      reading.Unit.encode(),
+		Unit:      reading.Unit.Encode(),
 	}
 
 	switch t := reading.Value.(type) {
 	case string:
-		r.Value = &synse.Reading_StringValue{t}
+		r.Value = &synse.Reading_StringValue{StringValue: t}
 	case bool:
-		r.Value = &synse.Reading_BoolValue{t}
+		r.Value = &synse.Reading_BoolValue{BoolValue: t}
 	case float64:
-		r.Value = &synse.Reading_Float64Value{t}
+		r.Value = &synse.Reading_Float64Value{Float64Value: t}
 	case float32:
-		r.Value = &synse.Reading_Float32Value{t}
+		r.Value = &synse.Reading_Float32Value{Float32Value: t}
 	case int64:
-		r.Value = &synse.Reading_Int64Value{t}
+		r.Value = &synse.Reading_Int64Value{Int64Value: t}
 	case int32:
-		r.Value = &synse.Reading_Int32Value{t}
+		r.Value = &synse.Reading_Int32Value{Int32Value: t}
 	case int16:
-		r.Value = &synse.Reading_Int32Value{int32(t)}
+		r.Value = &synse.Reading_Int32Value{Int32Value: int32(t)}
 	case int8:
-		r.Value = &synse.Reading_Int32Value{int32(t)}
+		r.Value = &synse.Reading_Int32Value{Int32Value: int32(t)}
 	case int:
-		r.Value = &synse.Reading_Int64Value{int64(t)}
+		r.Value = &synse.Reading_Int64Value{Int64Value: int64(t)}
 	case []byte:
-		r.Value = &synse.Reading_BytesValue{t}
+		r.Value = &synse.Reading_BytesValue{BytesValue: t}
 	case uint64:
-		r.Value = &synse.Reading_Uint64Value{t}
+		r.Value = &synse.Reading_Uint64Value{Uint64Value: t}
 	case uint32:
-		r.Value = &synse.Reading_Uint32Value{t}
+		r.Value = &synse.Reading_Uint32Value{Uint32Value: t}
 	case uint16:
-		r.Value = &synse.Reading_Uint32Value{uint32(t)}
+		r.Value = &synse.Reading_Uint32Value{Uint32Value: uint32(t)}
 	case uint8:
-		r.Value = &synse.Reading_Uint32Value{uint32(t)}
+		r.Value = &synse.Reading_Uint32Value{Uint32Value: uint32(t)}
 	case uint:
-		r.Value = &synse.Reading_Uint64Value{uint64(t)}
+		r.Value = &synse.Reading_Uint64Value{Uint64Value: uint64(t)}
 	case nil:
 		r.Value = nil
 	default:
 		// If the reading type isn't one of the above, panic. The plugin should
-		// terminate. This is indicative of the plugin doing something wrong.
+		// terminate. This is indicative of the plugin is providing bad data.
 		panic(fmt.Sprintf("unsupported reading value type: %s", t))
 	}
-
 	return &r
 }
 
@@ -98,13 +106,13 @@ type ReadContext struct {
 
 // NewReadContext creates a new instance of a ReadContext from the given
 // device and corresponding readings.
-func NewReadContext(device *Device, readings []*Reading) (*ReadContext, error) {
+func NewReadContext(device *Device, readings []*Reading) *ReadContext {
 	return &ReadContext{
 		Device:  device.ID(),
 		Board:   device.Location.Board,
 		Rack:    device.Location.Rack,
 		Reading: readings,
-	}, nil
+	}
 }
 
 // ID returns a compound string that can identify the resource by its

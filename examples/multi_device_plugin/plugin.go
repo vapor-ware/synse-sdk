@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"os"
 
 	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/devices"
+	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/outputs"
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
@@ -16,20 +17,10 @@ var (
 
 // ProtocolIdentifier gets the unique identifiers out of the plugin-specific
 // configuration to be used in UID generation.
-func ProtocolIdentifier(data map[string]string) string {
-	return data["id"]
+func ProtocolIdentifier(data map[string]interface{}) string {
+	return fmt.Sprint(data["id"])
 }
 
-// checkErr is a helper used in the main function to check errors. If any errors
-// are present, this will exit with log.Fatal.
-func checkErr(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// The main function - this is where we will configure, create, and run
-// the plugin.
 func main() {
 	// Set the metainfo for the plugin.
 	sdk.SetPluginMeta(
@@ -39,21 +30,22 @@ func main() {
 		"",
 	)
 
-	// Set the prototype and device instance config paths to be relative to the
-	// current working directory instead of using the default location. This way
-	// the plugin can be run from within this directory.
-	checkErr(os.Setenv("PLUGIN_DEVICE_PATH", "./config/device"))
-	checkErr(os.Setenv("PLUGIN_PROTO_PATH", "./config/proto"))
+	// Create a new Plugin instance with a custom device identifier.
+	plugin := sdk.NewPlugin(
+		sdk.CustomDeviceIdentifier(ProtocolIdentifier),
+	)
 
-	// Create handlers for the plugin.
-	handlers, err := sdk.NewHandlers(ProtocolIdentifier, nil)
-	checkErr(err)
+	// Register our output types with the plugin
+	err := plugin.RegisterOutputTypes(
+		&outputs.AirflowOutput,
+		&outputs.TemperatureOutput,
+		&outputs.VoltageOutput,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// Create the plugin.
-	// The configuration comes from the environment set above.
-	plugin, err := sdk.NewPlugin(handlers, nil)
-	checkErr(err)
-
+	// Register device handlers
 	plugin.RegisterDeviceHandlers(
 		&devices.Temp2010,
 		&devices.Air8884,
@@ -61,5 +53,7 @@ func main() {
 	)
 
 	// Run the plugin.
-	checkErr(plugin.Run())
+	if err := plugin.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

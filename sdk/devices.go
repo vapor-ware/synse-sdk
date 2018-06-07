@@ -1,11 +1,14 @@
 package sdk
 
 import (
-	"github.com/vapor-ware/synse-server-grpc/go"
+	"fmt"
+
+	"strings"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 var (
@@ -58,6 +61,16 @@ type DeviceHandler struct {
 	BulkRead func([]*Device) ([]*ReadContext, error)
 }
 
+// supportsBulkRead checks if the handler supports bulk reading for its Devices.
+//
+// If BulkRead is set for the device handler and Read is not, then the handler
+// supports bulk reading. If both BulkRead and Read are defined, bulk reading
+// will not be considered supported and the handler will default to individual
+// reads.
+func (deviceHandler *DeviceHandler) supportsBulkRead() bool {
+	return deviceHandler.Read == nil && deviceHandler.BulkRead != nil
+}
+
 // getDevicesForHandler gets a list of all the devices which use the DeviceHandler.
 func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
 	var devices []*Device
@@ -70,33 +83,44 @@ func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
 	return devices
 }
 
-// supportsBulkRead checks if the handler supports bulk reading for its Devices.
-//
-// If BulkRead is set for the device handler and Read is not, then the handler
-// supports bulk reading. If both BulkRead and Read are defined, bulk reading
-// will not be considered supported and the handler will default to individual
-// reads.
-func (deviceHandler *DeviceHandler) supportsBulkRead() bool {
-	return deviceHandler.Read == nil && deviceHandler.BulkRead != nil
+// getHandlerForDevice gets the DeviceHandler for a device, based on the handler name.
+func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
+	for _, handler := range deviceHandlers {
+		if handler.Name == handlerName {
+			return handler, nil
+		}
+	}
+	return nil, fmt.Errorf("no handler found with name: %s", handlerName)
 }
 
 // Device is the internal model for a single device (physical or virtual) that
 // a plugin can read to or write from.
 type Device struct {
+	// The name of the device kind. This is essentially the identifier
+	// for the device type.
 	Kind string
 
+	// Any metadata associated with the device kind.
 	Metadata map[string]string
 
+	// The name of the plugin this device is managed by.
 	Plugin string
 
+	// Device-level information specified in the Device's config.
 	Info string
 
+	// The location of the Device.
 	Location *Location
 
+	// Any plugin-specific configuration data associated with the Device.
 	Data map[string]interface{}
 
+	// The outputs supported by the device. A device output may supply more
+	// info, such as Data, Info, Type, etc. It is up to the user to extract
+	// and use that output info when they perform reads for the Device outputs.
 	Outputs []*Output
 
+	// The read/write handler for the device. Handlers should be registered globally.
 	Handler *DeviceHandler
 
 	// id is the deterministic id of the device
@@ -107,6 +131,129 @@ type Device struct {
 	bulkRead bool
 }
 
+// GetType gets the type of the device. The type of the device is the last
+// element in its Kind namespace. For example, with the Kind "foo.bar.temperature",
+// the type would be "temperature".
+func (device *Device) GetType() string {
+	if strings.Contains(device.Kind, ".") {
+		nameSpace := strings.Split(device.Kind, ".")
+		return nameSpace[len(nameSpace)-1]
+	}
+	return device.Kind
+}
+
+// GetOutput gets the named Output from the Device's output list. If the Output
+// is not found, nil is returned.
+func (device *Device) GetOutput(name string) *Output {
+	for _, output := range device.Outputs {
+		if output.Name == name {
+			return output
+		}
+	}
+	return nil
+}
+
+// makeDevices creates Device instances from a DeviceConfig. The DeviceConfig
+// used here should be a unified config, meaning that all DeviceConfigs (either from
+// different files or from file and dynamic registration) are merged into a single
+// DeviceConfig. This should only be called once all configs have been parsed and
+// validated to ensure that the information we have is all correct.
+func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
+	var devices []*Device
+
+	// The DeviceConfig we get here should be the unified config.
+	for _, kind := range config.Devices {
+		for _, instance := range kind.Instances {
+
+			// Get the outputs for the instance.
+			instanceOutputs, err := getInstanceOutputs(kind, instance)
+			if err != nil {
+				return nil, err
+			}
+
+			// Get the location
+			l, err := config.GetLocation(instance.Location)
+			if err != nil {
+				return nil, err
+			}
+			location, err := NewLocationFromConfig(l)
+			if err != nil {
+				return nil, err
+			}
+
+			// Get the DeviceHandler. If a specific handlerName is set in the config,
+			// we will use that as the definitive handler. Otherwise, use the kind.
+			handlerName := kind.Name
+			if kind.HandlerName != "" {
+				handlerName = kind.HandlerName
+			}
+			if instance.HandlerName != "" {
+				handlerName = instance.HandlerName
+			}
+			handler, err := getHandlerForDevice(handlerName)
+			if err != nil {
+				return nil, err
+			}
+
+			device := &Device{
+				Kind:     kind.Name,
+				Metadata: kind.Metadata,
+				Plugin:   metainfo.Name,
+				Info:     instance.Info,
+				Location: location,
+				Data:     instance.Data,
+				Outputs:  instanceOutputs,
+				Handler:  handler,
+			}
+			devices = append(devices, device)
+		}
+	}
+	return devices, nil
+}
+
+// getInstanceOutputs get the Outputs for a single device instance. It converts
+// the instance's DeviceOutput to an Output type, and by doing so unifies that
+// output with its corresponding OutputType information.
+//
+// If output inheritance is enable for the instance (which is it by default),
+// this will also take the DeviceOutputs defined by the instance's kind.
+func getInstanceOutputs(kind *config.DeviceKind, instance *config.DeviceInstance) ([]*Output, error) {
+	var instanceOutputs []*Output
+
+	// Create the outputs specific to the instance first.
+	for _, o := range instance.Outputs {
+		output, err := NewOutputFromConfig(o)
+		if err != nil {
+			return nil, err
+		}
+		instanceOutputs = append(instanceOutputs, output)
+	}
+
+	// If output inheritance is not disabled, we will take any outputs
+	// from the DeviceKind as well. If there is an output with the same
+	// name already set from the instance config, we will ignore it.
+	if !instance.DisableOutputInheritance {
+		for _, o := range kind.Outputs {
+			output, err := NewOutputFromConfig(o)
+			if err != nil {
+				return nil, err
+			}
+			// Check if the output is already being tracked
+			duplicate := false
+			for _, tracked := range instanceOutputs {
+				if tracked.Name == output.Name {
+					duplicate = true
+					break
+				}
+			}
+			if !duplicate {
+				instanceOutputs = append(instanceOutputs, output)
+			}
+		}
+	}
+	return instanceOutputs, nil
+}
+
 // Location holds the location information for a Device. This is essentially just
 // the config.Location struct, but with all fields fully resolved.
 type Location struct {
@@ -114,7 +261,7 @@ type Location struct {
 	Board string
 }
 
-// encode translates the SDK Location type to the corresponding gRPC Location type.
+// encode translates the Location to the corresponding gRPC Location message.
 func (location *Location) encode() *synse.Location {
 	return &synse.Location{
 		Rack:  location.Rack,
@@ -144,32 +291,21 @@ func NewLocationFromConfig(config *config.Location) (*Location, error) {
 	}, nil
 }
 
-// GetOutput gets the named output from the Device's output list. If the output
-// is not there, nil is returned.
-func (device *Device) GetOutput(name string) *Output {
-	for _, output := range device.Outputs {
-		if output.Name == name {
-			return output
-		}
-	}
-	return nil
-}
-
 // Output defines a single output that a device can support. It is the DeviceConfig's
 // Output merged with its associated output type.
 type Output struct {
-	ReadingType
+	config.OutputType
 
 	Info string
 	Data map[string]interface{}
 }
 
-// MakeReading makes a reading for this output. This is a wrapper around NewReading.
+// MakeReading makes a reading for the Output. This is a wrapper around `NewReading`.
 func (output *Output) MakeReading(value interface{}) *Reading {
 	return NewReading(output, value)
 }
 
-// encode translates the SDK Output type to the corresponding gRPC Output type.
+// encode translates the Output to the corresponding gRPC Output message.
 func (output *Output) encode() *synse.Output {
 	sf, err := output.GetScalingFactor()
 	if err != nil {
@@ -179,10 +315,9 @@ func (output *Output) encode() *synse.Output {
 	return &synse.Output{
 		Name:          output.Name,
 		Type:          output.Type(),
-		DataType:      output.DataType,
 		Precision:     int32(output.Precision),
 		ScalingFactor: sf,
-		Unit:          output.Unit.encode(),
+		Unit:          output.Unit.Encode(),
 	}
 }
 
@@ -194,9 +329,9 @@ func NewOutputFromConfig(config *config.DeviceOutput) (*Output, error) {
 	}
 
 	return &Output{
-		ReadingType: *t,
-		Info:        config.Info,
-		Data:        config.Data,
+		OutputType: *t,
+		Info:       config.Info,
+		Data:       config.Data,
 	}, nil
 }
 
@@ -212,7 +347,7 @@ func (device *Device) Read() (*ReadContext, error) {
 			return nil, err
 		}
 
-		return NewReadContext(device, readings)
+		return NewReadContext(device, readings), nil
 	}
 	return nil, &errors.UnsupportedCommandError{}
 }
@@ -230,7 +365,7 @@ func (device *Device) Write(data *WriteData) error {
 }
 
 // IsReadable checks if the Device is readable based on the presence/absence
-// of a Read action defined in its DeviceHandler.
+// of a Read/BulkRead action defined in its DeviceHandler.
 func (device *Device) IsReadable() bool {
 	return device.Handler.Read != nil || device.Handler.BulkRead != nil
 }
@@ -241,7 +376,7 @@ func (device *Device) IsWritable() bool {
 	return device.Handler.Write != nil
 }
 
-// ID generates the ID for the Device.
+// ID generates the deterministic ID for the Device using its config values.
 func (device *Device) ID() string {
 	if device.id == "" {
 		protocolComp := Context.deviceIdentifier(device.Data)
@@ -260,7 +395,7 @@ func (device *Device) GUID() string {
 	)
 }
 
-// encode translates the SDK Device to its corresponding gRPC Device.
+// encode translates the Device to the corresponding gRPC Device message.
 func (device *Device) encode() *synse.Device {
 	var output []*synse.Output
 	for _, out := range device.Outputs {
