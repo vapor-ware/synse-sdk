@@ -91,6 +91,7 @@ type transaction struct {
 // encode translates the transaction to a corresponding gRPC WriteResponse.
 func (t *transaction) encode() *synse.WriteResponse {
 	return &synse.WriteResponse{
+		Id:      t.id,
 		Status:  t.status,
 		State:   t.state,
 		Created: t.created,
