@@ -14,13 +14,7 @@ import (
 )
 
 // DataManager is the global data manager for the plugin.
-var DataManager = &dataManager{
-	// Do not make the read/write channel. Those channels will be set up
-	// when the DataManger is initialized via `dataManager.init()`
-	readings: make(map[string][]*Reading),
-	dataLock: &sync.RWMutex{},
-	rwLock:   &sync.Mutex{},
-}
+var DataManager = newDataManager()
 
 // dataManager handles the reading from and writing to configured devices.
 // It executes the read and write goroutines and uses the channels between
@@ -56,22 +50,23 @@ type dataManager struct {
 	limiter *rate.Limiter
 }
 
-// init initializes the data manager by creating the structures needed, based
-// on the global plugin configuration, and by string the read, write, and updater
-// goroutines, allowing it to provide data from and access to configured devices.
-func (manager *dataManager) init() {
-	logger.Info("Initializing dataManager goroutines..")
+func newDataManager() *dataManager {
+	return &dataManager{
+		// Do not make the read/write channel. Those channels will be set up
+		// when the DataManger is initialized via `dataManager.init()`
+		readings: make(map[string][]*Reading),
+		dataLock: &sync.RWMutex{},
+		rwLock:   &sync.Mutex{},
+	}
+}
 
-	// Initialize the read and write channels
-	manager.readChannel = make(chan *ReadContext, PluginConfig.Settings.Read.Buffer)
-	manager.writeChannel = make(chan *WriteContext, PluginConfig.Settings.Write.Buffer)
+// run sets up the dataManager and starts the read, write, and updater goroutines
+// allowing it to provide data from, and access to, configured devices.
+func (manager *dataManager) run() error {
 
-	// Initialize the limiter, if configured
-	if PluginConfig.Limiter != nil && PluginConfig.Limiter != (&config.LimiterSettings{}) {
-		manager.limiter = rate.NewLimiter(
-			rate.Limit(PluginConfig.Limiter.Rate),
-			int(PluginConfig.Limiter.Burst),
-		)
+	err := manager.setup()
+	if err != nil {
+		return err
 	}
 
 	// Start the reader/writer
@@ -82,6 +77,30 @@ func (manager *dataManager) init() {
 	manager.goUpdateData()
 
 	logger.Info("dataManager initialization complete.")
+	return nil
+}
+
+// setup initializes the remaining data manager structures based on the global
+// plugin configuration.
+func (manager *dataManager) setup() error {
+	logger.Info("Initializing dataManager goroutines..")
+
+	if PluginConfig == nil {
+		return fmt.Errorf("plugin config not set, cannot setup data manager")
+	}
+
+	// Initialize the read and write channels
+	manager.readChannel = make(chan *ReadContext, PluginConfig.Settings.Read.Buffer)
+	manager.writeChannel = make(chan *WriteContext, PluginConfig.Settings.Write.Buffer)
+
+	// Initialize the limiter, if configured
+	if PluginConfig.Limiter != nil && PluginConfig.Limiter != (&config.LimiterSettings{}) {
+		manager.limiter = rate.NewLimiter(
+			rate.Limit(PluginConfig.Limiter.Rate),
+			PluginConfig.Limiter.Burst,
+		)
+	}
+	return nil
 }
 
 // writesEnabled checks to see whether writing is enabled for the plugin based on
@@ -323,14 +342,14 @@ func (manager *dataManager) write(w *WriteContext) {
 		msg := "no device found with ID " + w.ID()
 		w.transaction.message = msg
 		logger.Error(msg)
-	}
-
-	data := decodeWriteData(w.data)
-	err := device.Write(data)
-	if err != nil {
-		w.transaction.setStateError()
-		w.transaction.message = err.Error()
-		logger.Errorf("failed to write to device %v: %v", w.device, err)
+	} else {
+		data := decodeWriteData(w.data)
+		err := device.Write(data)
+		if err != nil {
+			w.transaction.setStateError()
+			w.transaction.message = err.Error()
+			logger.Errorf("failed to write to device %v: %v", w.device, err)
+		}
 	}
 	w.transaction.setStatusDone()
 }

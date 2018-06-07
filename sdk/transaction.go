@@ -41,6 +41,7 @@ func setupTransactionCache(ttl time.Duration) {
 // we will terminate the plugin, as it is indicative of an improper plugin setup.
 func newTransaction() *transaction {
 	if transactionCache == nil {
+		// FIXME - need to update logger so we can specify our own exiter to test this..
 		logger.Fatalf("transaction cache was not initialized; likely an issue in plugin setup")
 	}
 
@@ -90,6 +91,7 @@ type transaction struct {
 // encode translates the transaction to a corresponding gRPC WriteResponse.
 func (t *transaction) encode() *synse.WriteResponse {
 	return &synse.WriteResponse{
+		Id:      t.id,
 		Status:  t.status,
 		State:   t.state,
 		Created: t.created,

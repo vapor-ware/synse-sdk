@@ -41,22 +41,6 @@ var temperatureHandler = sdk.DeviceHandler{
 	},
 }
 
-// ProtocolIdentifier gets the unique identifiers out of the plugin-specific
-// configuration to be used in UID generation.
-func ProtocolIdentifier(data map[string]string) string {
-	return data["id"]
-}
-
-// checkErr is a helper used in the main function to check errors. If any errors
-// are present, this will exit with log.Fatal.
-func checkErr(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// The main function - this is where we will configure, create, and run
-// the plugin.
 func main() {
 	// Set the metainfo for the plugin.
 	sdk.SetPluginMeta(
@@ -70,9 +54,12 @@ func main() {
 	plugin := sdk.NewPlugin()
 
 	// Register the output types
-	plugin.RegisterOutputTypes(
+	err := plugin.RegisterOutputTypes(
 		&temperatureOutput,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register device handlers
 	plugin.RegisterDeviceHandlers(

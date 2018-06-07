@@ -36,11 +36,14 @@ func main() {
 	)
 
 	// Register our output types with the plugin
-	plugin.RegisterOutputTypes(
+	err := plugin.RegisterOutputTypes(
 		&outputs.AirflowOutput,
 		&outputs.TemperatureOutput,
 		&outputs.VoltageOutput,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register device handlers
 	plugin.RegisterDeviceHandlers(

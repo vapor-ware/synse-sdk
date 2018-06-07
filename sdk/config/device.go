@@ -17,8 +17,8 @@ var (
 // instances of those kinds which a plugin will manage.
 type DeviceConfig struct {
 
-	// ConfigVersion is the version of the configuration scheme.
-	ConfigVersion `yaml:",inline"`
+	// SchemeVersion is the version of the configuration scheme.
+	SchemeVersion `yaml:",inline"`
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.
@@ -29,12 +29,12 @@ type DeviceConfig struct {
 	Devices []*DeviceKind `yaml:"devices,omitempty" addedIn:"1.0"`
 }
 
-// NewDeviceConfig returns a new instance of a DeviceConfig with the ConfigVersion
+// NewDeviceConfig returns a new instance of a DeviceConfig with the SchemeVersion
 // set to the latest (most current) device config scheme version, and the Locations
 // and Devices fields initialized, but not filled.
 func NewDeviceConfig() *DeviceConfig {
 	return &DeviceConfig{
-		ConfigVersion: ConfigVersion{
+		SchemeVersion: SchemeVersion{
 			Version: currentDeviceSchemeVersion,
 		},
 		Locations: []*Location{},
@@ -47,7 +47,7 @@ func NewDeviceConfig() *DeviceConfig {
 // This is called before Devices are created.
 func (config DeviceConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
-	_, err := config.GetSchemeVersion()
+	_, err := config.GetVersion()
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
@@ -92,6 +92,7 @@ func (location Location) Validate(multiErr *errors.MultiError) {
 	}
 }
 
+// Equals checks if another Location is equal to this Location.
 func (location *Location) Equals(other *Location) bool {
 	if location == other {
 		return true
@@ -154,6 +155,7 @@ func (locData *LocationData) Get() (string, error) {
 	return location, nil
 }
 
+// Equals checks if another LocationData is equal to this LocationData.
 func (locData *LocationData) Equals(other *LocationData) bool {
 	if locData == other {
 		return true

@@ -12,7 +12,7 @@ import (
 // SDKVersion specifies the version of the Synse Plugin SDK.
 const SDKVersion = "1.0.0"
 
-// version is a reference to a BinVersion that can be used to get
+// Version is a reference to a BinVersion that can be used to get
 // the version info for a plugin.
 var Version *BinVersion
 

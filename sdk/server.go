@@ -162,7 +162,29 @@ func (server *Server) Capabilities(request *synse.Empty, stream synse.Plugin_Cap
 // Devices is the handler for the Synse GRPC Plugin service's `Devices` RPC method.
 func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_DevicesServer) error {
 	logger.Debug("gRPC server: devices")
+	var (
+		rack   = request.GetRack()
+		board  = request.GetBoard()
+		device = request.GetDevice()
+	)
+	if device != "" {
+		return fmt.Errorf("devices rpc method does not support filtering on device")
+	}
+	if rack == "" && board != "" {
+		return fmt.Errorf("filter specifies board with no rack - must specifiy rack as well")
+	}
+
 	for _, device := range deviceMap {
+		if rack != "" {
+			if device.Location.Rack != rack {
+				continue
+			}
+			if board != "" {
+				if device.Location.Board != board {
+					continue
+				}
+			}
+		}
 		if err := stream.Send(device.encode()); err != nil {
 			return err
 		}
@@ -223,6 +245,7 @@ func (server *Server) Transaction(request *synse.TransactionFilter, stream synse
 				}
 			}
 		}
+		return nil
 	}
 
 	// Otherwise, return the transaction with the specified ID.

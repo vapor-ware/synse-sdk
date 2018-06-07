@@ -25,3 +25,8 @@ func TestSetPluginMeta(t *testing.T) {
 	assert.Equal(t, "desc", metainfo.Description)
 	assert.Equal(t, "vcs", metainfo.VCS)
 }
+
+// TestMetaLog tests logging out the metadata.
+func TestMetaLog(t *testing.T) {
+	metainfo.log()
+}

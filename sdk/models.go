@@ -39,7 +39,7 @@ func NewReading(output *Output, value interface{}) *Reading {
 }
 
 // encode translates the Reading type to the corresponding gRPC Reading message.
-func (reading *Reading) encode() *synse.Reading {
+func (reading *Reading) encode() *synse.Reading { // nolint: gocyclo
 	r := synse.Reading{
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
@@ -49,35 +49,35 @@ func (reading *Reading) encode() *synse.Reading {
 
 	switch t := reading.Value.(type) {
 	case string:
-		r.Value = &synse.Reading_StringValue{t}
+		r.Value = &synse.Reading_StringValue{StringValue: t}
 	case bool:
-		r.Value = &synse.Reading_BoolValue{t}
+		r.Value = &synse.Reading_BoolValue{BoolValue: t}
 	case float64:
-		r.Value = &synse.Reading_Float64Value{t}
+		r.Value = &synse.Reading_Float64Value{Float64Value: t}
 	case float32:
-		r.Value = &synse.Reading_Float32Value{t}
+		r.Value = &synse.Reading_Float32Value{Float32Value: t}
 	case int64:
-		r.Value = &synse.Reading_Int64Value{t}
+		r.Value = &synse.Reading_Int64Value{Int64Value: t}
 	case int32:
-		r.Value = &synse.Reading_Int32Value{t}
+		r.Value = &synse.Reading_Int32Value{Int32Value: t}
 	case int16:
-		r.Value = &synse.Reading_Int32Value{int32(t)}
+		r.Value = &synse.Reading_Int32Value{Int32Value: int32(t)}
 	case int8:
-		r.Value = &synse.Reading_Int32Value{int32(t)}
+		r.Value = &synse.Reading_Int32Value{Int32Value: int32(t)}
 	case int:
-		r.Value = &synse.Reading_Int64Value{int64(t)}
+		r.Value = &synse.Reading_Int64Value{Int64Value: int64(t)}
 	case []byte:
-		r.Value = &synse.Reading_BytesValue{t}
+		r.Value = &synse.Reading_BytesValue{BytesValue: t}
 	case uint64:
-		r.Value = &synse.Reading_Uint64Value{t}
+		r.Value = &synse.Reading_Uint64Value{Uint64Value: t}
 	case uint32:
-		r.Value = &synse.Reading_Uint32Value{t}
+		r.Value = &synse.Reading_Uint32Value{Uint32Value: t}
 	case uint16:
-		r.Value = &synse.Reading_Uint32Value{uint32(t)}
+		r.Value = &synse.Reading_Uint32Value{Uint32Value: uint32(t)}
 	case uint8:
-		r.Value = &synse.Reading_Uint32Value{uint32(t)}
+		r.Value = &synse.Reading_Uint32Value{Uint32Value: uint32(t)}
 	case uint:
-		r.Value = &synse.Reading_Uint64Value{uint64(t)}
+		r.Value = &synse.Reading_Uint64Value{Uint64Value: uint64(t)}
 	case nil:
 		r.Value = nil
 	default:
@@ -106,13 +106,13 @@ type ReadContext struct {
 
 // NewReadContext creates a new instance of a ReadContext from the given
 // device and corresponding readings.
-func NewReadContext(device *Device, readings []*Reading) (*ReadContext, error) {
+func NewReadContext(device *Device, readings []*Reading) *ReadContext {
 	return &ReadContext{
 		Device:  device.ID(),
 		Board:   device.Location.Board,
 		Rack:    device.Location.Rack,
 		Reading: readings,
-	}, nil
+	}
 }
 
 // ID returns a compound string that can identify the resource by its

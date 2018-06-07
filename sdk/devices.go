@@ -3,6 +3,8 @@ package sdk
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
@@ -59,6 +61,16 @@ type DeviceHandler struct {
 	BulkRead func([]*Device) ([]*ReadContext, error)
 }
 
+// supportsBulkRead checks if the handler supports bulk reading for its Devices.
+//
+// If BulkRead is set for the device handler and Read is not, then the handler
+// supports bulk reading. If both BulkRead and Read are defined, bulk reading
+// will not be considered supported and the handler will default to individual
+// reads.
+func (deviceHandler *DeviceHandler) supportsBulkRead() bool {
+	return deviceHandler.Read == nil && deviceHandler.BulkRead != nil
+}
+
 // getDevicesForHandler gets a list of all the devices which use the DeviceHandler.
 func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
 	var devices []*Device
@@ -79,16 +91,6 @@ func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
 		}
 	}
 	return nil, fmt.Errorf("no handler found with name: %s", handlerName)
-}
-
-// supportsBulkRead checks if the handler supports bulk reading for its Devices.
-//
-// If BulkRead is set for the device handler and Read is not, then the handler
-// supports bulk reading. If both BulkRead and Read are defined, bulk reading
-// will not be considered supported and the handler will default to individual
-// reads.
-func (deviceHandler *DeviceHandler) supportsBulkRead() bool {
-	return deviceHandler.Read == nil && deviceHandler.BulkRead != nil
 }
 
 // Device is the internal model for a single device (physical or virtual) that
@@ -129,6 +131,28 @@ type Device struct {
 	bulkRead bool
 }
 
+// GetType gets the type of the device. The type of the device is the last
+// element in its Kind namespace. For example, with the Kind "foo.bar.temperature",
+// the type would be "temperature".
+func (device *Device) GetType() string {
+	if strings.Contains(device.Kind, ".") {
+		nameSpace := strings.Split(device.Kind, ".")
+		return nameSpace[len(nameSpace)-1]
+	}
+	return device.Kind
+}
+
+// GetOutput gets the named Output from the Device's output list. If the Output
+// is not found, nil is returned.
+func (device *Device) GetOutput(name string) *Output {
+	for _, output := range device.Outputs {
+		if output.Name == name {
+			return output
+		}
+	}
+	return nil
+}
+
 // makeDevices creates Device instances from a DeviceConfig. The DeviceConfig
 // used here should be a unified config, meaning that all DeviceConfigs (either from
 // different files or from file and dynamic registration) are merged into a single
@@ -143,6 +167,9 @@ func makeDevices(config *config.DeviceConfig) ([]*Device, error) {
 
 			// Get the outputs for the instance.
 			instanceOutputs, err := getInstanceOutputs(kind, instance)
+			if err != nil {
+				return nil, err
+			}
 
 			// Get the location
 			l, err := config.GetLocation(instance.Location)
@@ -264,17 +291,6 @@ func NewLocationFromConfig(config *config.Location) (*Location, error) {
 	}, nil
 }
 
-// GetOutput gets the named Output from the Device's output list. If the Output
-// is not found, nil is returned.
-func (device *Device) GetOutput(name string) *Output {
-	for _, output := range device.Outputs {
-		if output.Name == name {
-			return output
-		}
-	}
-	return nil
-}
-
 // Output defines a single output that a device can support. It is the DeviceConfig's
 // Output merged with its associated output type.
 type Output struct {
@@ -331,7 +347,7 @@ func (device *Device) Read() (*ReadContext, error) {
 			return nil, err
 		}
 
-		return NewReadContext(device, readings)
+		return NewReadContext(device, readings), nil
 	}
 	return nil, &errors.UnsupportedCommandError{}
 }

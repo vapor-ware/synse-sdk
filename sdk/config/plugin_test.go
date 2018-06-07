@@ -7,6 +7,21 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
+// TestNewDefaultPluginConfig tests getting a default plugin config.
+func TestNewDefaultPluginConfig(t *testing.T) {
+	cfg, err := NewDefaultPluginConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
+
+	assert.Equal(t, false, cfg.Debug)
+	assert.NotNil(t, cfg.Settings, "settings should not be nil")
+	assert.NotNil(t, cfg.Network, "network should not be nil")
+	assert.NotNil(t, cfg.DynamicRegistration, "dynamic registration should not be nil")
+	assert.NotNil(t, cfg.Context, "context should not be nil")
+
+	assert.Nil(t, cfg.Limiter, "limiter should be nil")
+}
+
 // TestPluginConfig_Validate_Ok tests validating a PluginConfig with no errors.
 func TestPluginConfig_Validate_Ok(t *testing.T) {
 	var testTable = []struct {
@@ -16,7 +31,7 @@ func TestPluginConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "PluginConfig has valid version and network",
 			config: PluginConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Network: &NetworkSettings{
 					Type:    "tcp",
 					Address: "10.10.10.10",
@@ -26,7 +41,7 @@ func TestPluginConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "PluginConfig has valid version and network, invalid settings (not validated here)",
 			config: PluginConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 				Network: &NetworkSettings{
 					Type:    "tcp",
 					Address: "10.10.10.10",
@@ -57,7 +72,7 @@ func TestPluginConfig_Validate_Error(t *testing.T) {
 			desc:     "PluginConfig has invalid version",
 			errCount: 1,
 			config: PluginConfig{
-				ConfigVersion: ConfigVersion{Version: "abc"},
+				SchemeVersion: SchemeVersion{Version: "abc"},
 				Network: &NetworkSettings{
 					Type:    "tcp",
 					Address: "10.10.10.10",
@@ -68,7 +83,7 @@ func TestPluginConfig_Validate_Error(t *testing.T) {
 			desc:     "PluginConfig has no network",
 			errCount: 1,
 			config: PluginConfig{
-				ConfigVersion: ConfigVersion{Version: "1.0"},
+				SchemeVersion: SchemeVersion{Version: "1.0"},
 			},
 		},
 		{
@@ -541,4 +556,13 @@ func TestTransactionSettings_Validate_Error(t *testing.T) {
 		assert.Error(t, merr.Err(), testCase.desc)
 		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
+}
+
+// TestDynamicRegistrationSettings_Validate tests validating a DynamicRegistrationSetting.
+// Validation should always pass here.
+func TestDynamicRegistrationSettings_Validate(t *testing.T) {
+	merr := errors.NewMultiError("test")
+	config := DynamicRegistrationSettings{}
+	config.Validate(merr)
+	assert.NoError(t, merr.Err())
 }

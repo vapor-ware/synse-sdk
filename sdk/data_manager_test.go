@@ -1,473 +1,1397 @@
 package sdk
 
-//"testing"
-//
-//"github.com/stretchr/testify/assert"
-//
-//"fmt"
-//
-//"github.com/vapor-ware/synse-sdk/sdk/config"
-//"golang.org/x/time/rate"
+import (
+	"fmt"
+	"testing"
 
-// DeviceID gets the unique identifiers out of the plugin-specific
-// configuration to be used in UID generation. Required to construct Handlers.
-func DeviceID(data map[string]string) string {
-	return data["id"]
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-server-grpc/go"
+)
+
+// TestNewDataManager tests creating a new dataManager instance successfully.
+func TestNewDataManager(t *testing.T) {
+	d := newDataManager()
+	assert.Nil(t, d.readChannel)
+	assert.Nil(t, d.writeChannel)
+	assert.Nil(t, d.limiter)
+	assert.NotNil(t, d.dataLock)
+	assert.NotNil(t, d.rwLock)
+	assert.Empty(t, d.readings)
 }
 
-//
-//// TestNewDataManager tests creating a new dataManager instance successfully.
-//func TestNewDataManager(t *testing.T) {
-//	// Create handlers.
-//	h, err := NewHandlers(DeviceID, nil)
-//	assert.NoError(t, err)
-//
-//	c := config.PluginConfig{
-//		Version: "test",
-//		Network: config.NetworkSettings{
-//			Type:    "tcp",
-//			Address: "test",
-//		},
-//		Settings: config.Settings{
-//			Read:        config.ReadSettings{Buffer: 200},
-//			Write:       config.WriteSettings{Buffer: 200},
-//			Transaction: config.TransactionSettings{TTL: "2s"},
-//		},
-//	}
-//	p := Plugin{handlers: h}
-//	err = p.SetConfig(&c)
-//	assert.NoError(t, err)
-//
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 200, cap(d.writeChannel))
-//	assert.Equal(t, 200, cap(d.readChannel))
-//	assert.Equal(t, h, d.handlers)
-//}
-//
-//// TestNewDataManager2 tests creating a new dataManager instance successfully with
-//// a different configuration.
-//func TestNewDataManager2(t *testing.T) {
-//	// Create handlers.
-//	h, err := NewHandlers(DeviceID, nil)
-//	assert.NoError(t, err)
-//
-//	c := &config.PluginConfig{
-//		Version: "test",
-//		Network: config.NetworkSettings{
-//			Type:    "tcp",
-//			Address: "test",
-//		},
-//		Settings: config.Settings{
-//			Read:        config.ReadSettings{Buffer: 500},
-//			Write:       config.WriteSettings{Buffer: 500},
-//			Transaction: config.TransactionSettings{TTL: "2s"},
-//		},
-//	}
-//	p := Plugin{handlers: h}
-//	err = p.SetConfig(c)
-//	assert.NoError(t, err)
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 500, cap(d.writeChannel))
-//	assert.Equal(t, 500, cap(d.readChannel))
-//	assert.Equal(t, h, d.handlers)
-//}
-//
-//// TestNewDataManager_NilPlugin tests creating a new dataManager instance, passing
-//// in a nil Plugin to the constructor.
-//func TestNewDataManager_NilPlugin(t *testing.T) {
-//	d, err := newDataManager(nil)
-//	assert.Nil(t, d)
-//	assert.Error(t, err)
-//}
-//
-//// TestNewDataManager_NilPluginHandlers tests creating a new dataManager instance,
-//// passing in a Plugin with nil handlers to the constructor.
-//func TestNewDataManager_NilPluginHandlers(t *testing.T) {
-//	p := Plugin{
-//		handlers: nil,
-//	}
-//
-//	d, err := newDataManager(&p)
-//	assert.Nil(t, d)
-//	assert.Error(t, err)
-//}
-//
-//// TestNewDataManager_NilPluginConfig tests creating a new dataManager instance,
-//// passing in a Plugin with nil config to the constructor.
-//func TestNewDataManager_NilPluginConfig(t *testing.T) {
-//	p := Plugin{
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	d, err := newDataManager(&p)
-//	assert.Nil(t, d)
-//	assert.Error(t, err)
-//}
-//
-//// TestDataManager_WritesEnabled tests that writes are enabled in the dataManager
-//// when they are enabled in the config.
-//func TestDataManager_WritesEnabled(t *testing.T) {
-//	// Create the plugin
-//	c := config.PluginConfig{
-//		Version: "test",
-//		Network: config.NetworkSettings{
-//			Type:    "tcp",
-//			Address: "test",
-//		},
-//		Settings: config.Settings{
-//			Read: config.ReadSettings{Buffer: 200},
-//			Write: config.WriteSettings{
-//				Enabled: true,
-//				Buffer:  200,
-//			},
-//			Transaction: config.TransactionSettings{TTL: "2s"},
-//		},
-//	}
-//	p := Plugin{
-//		Config:   &c,
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.True(t, d.writesEnabled())
-//}
-//
-//// TestDataManager_readNoLimiter tests reading a device when a limiter is
-//// not configured.
-//func TestDataManager_readOneOkNoLimiter(t *testing.T) {
-//	// Create the plugin
-//	p := Plugin{
-//		Config: &config.PluginConfig{
-//			Version: "test",
-//			Network: config.NetworkSettings{
-//				Type:    "tcp",
-//				Address: "test",
-//			},
-//			Settings: config.Settings{
-//				Read:        config.ReadSettings{Buffer: 200},
-//				Write:       config.WriteSettings{Buffer: 200},
-//				Transaction: config.TransactionSettings{TTL: "2s"},
-//			},
-//		},
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	// Create the device to read
-//	device := makeTestDevice()
-//	device.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return []*Reading{NewReading("test", "ok")}, nil
-//		},
-//	}
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 0, len(d.readChannel))
-//	d.readOne(device)
-//	assert.Equal(t, 1, len(d.readChannel))
-//
-//	reading := <-d.readChannel
-//	assert.Equal(t, 1, len(reading.Reading))
-//	assert.Equal(t, "test", reading.Reading[0].Type)
-//	assert.Equal(t, "ok", reading.Reading[0].Value)
-//}
-//
-//// TestDataManager_readOkWithLimiter tests reading a device when a limiter is
-//// configured.
-//func TestDataManager_readOneOkWithLimiter(t *testing.T) {
-//	// Create the plugin
-//	p := Plugin{
-//		Config: &config.PluginConfig{
-//			Version: "test",
-//			Network: config.NetworkSettings{
-//				Type:    "tcp",
-//				Address: "test",
-//			},
-//			Settings: config.Settings{
-//				Read:        config.ReadSettings{Buffer: 200},
-//				Write:       config.WriteSettings{Buffer: 200},
-//				Transaction: config.TransactionSettings{TTL: "2s"},
-//			},
-//			Limiter: rate.NewLimiter(200, 200),
-//		},
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	// Create the device to read
-//	device := makeTestDevice()
-//	device.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return []*Reading{NewReading("test", "ok")}, nil
-//		},
-//	}
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 0, len(d.readChannel))
-//	d.readOne(device)
-//	assert.Equal(t, 1, len(d.readChannel))
-//
-//	reading := <-d.readChannel
-//	assert.Equal(t, 1, len(reading.Reading))
-//	assert.Equal(t, "test", reading.Reading[0].Type)
-//	assert.Equal(t, "ok", reading.Reading[0].Value)
-//}
-//
-//// TestDataManager_readErr tests reading a device that results in error.
-//func TestDataManager_readOneErr(t *testing.T) {
-//	// Create the plugin
-//	p := Plugin{
-//		Config: &config.PluginConfig{
-//			Version: "test",
-//			Network: config.NetworkSettings{
-//				Type:    "tcp",
-//				Address: "test",
-//			},
-//			Settings: config.Settings{
-//				Read:        config.ReadSettings{Buffer: 200},
-//				Write:       config.WriteSettings{Buffer: 200},
-//				Transaction: config.TransactionSettings{TTL: "2s"},
-//			},
-//		},
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	// Create the device to read
-//	device := makeTestDevice()
-//	device.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return nil, fmt.Errorf("test read error")
-//		},
-//	}
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 0, len(d.readChannel))
-//	d.readOne(device)
-//	assert.Equal(t, 0, len(d.readChannel))
-//}
-//
-//// TestDataManager_serialReadSingle tests reading a single device serially.
-//func TestDataManager_serialReadSingle(t *testing.T) {
-//	// Create the plugin
-//	p := Plugin{
-//		Config: &config.PluginConfig{
-//			Version: "test",
-//			Network: config.NetworkSettings{
-//				Type:    "tcp",
-//				Address: "test",
-//			},
-//			Settings: config.Settings{
-//				Read:        config.ReadSettings{Buffer: 200},
-//				Write:       config.WriteSettings{Buffer: 200},
-//				Transaction: config.TransactionSettings{TTL: "2s"},
-//			},
-//		},
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	// Create the device to read
-//	device := makeTestDevice()
-//	device.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return []*Reading{NewReading("test", "ok")}, nil
-//		},
-//	}
-//
-//	// Clear the global device map then add the device to it
-//	deviceMap = make(map[string]*Device)
-//	deviceMap["test-id-1"] = device
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 0, len(d.readChannel))
-//	d.serialRead()
-//	assert.Equal(t, 1, len(d.readChannel))
-//
-//	reading := <-d.readChannel
-//	assert.Equal(t, 1, len(reading.Reading))
-//	assert.Equal(t, "test", reading.Reading[0].Type)
-//	assert.Equal(t, "ok", reading.Reading[0].Value)
-//}
+// TestDeviceManager_setupError tests calling setup on the DataManager when there
+// is no global plugin config. This should result in error.
+func TestDataManager_setupError(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+	}()
+	PluginConfig = nil
+	err := DataManager.setup()
+	assert.Error(t, err)
+}
 
-// FIXME - race condition, likely because the deviceMap is global and used by other tests..
-//// TestDataManager_serialReadMultiple tests reading multiple devices serially.
-//func TestDataManager_serialReadMultiple(t *testing.T) {
-//	// Create the plugin
-//	p := Plugin{
-//		Config:   &config.PluginConfig{
-//			Version: "test",
-//			Network: config.NetworkSettings{
-//				Type:    "tcp",
-//				Address: "test",
-//			},
-//			Settings: config.Settings{
-//				Read: config.ReadSettings{Buffer: 200},
-//				Write: config.WriteSettings{Buffer:  200},
-//				Transaction: config.TransactionSettings{TTL: "2s"},
-//			},
-//		},
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	// Create the device to read
-//	device1 := makeTestDevice()
-//	device1.Type = "abc"
-//	device1.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return []*Reading{NewReading("test", "ok")}, nil
-//		},
-//	}
-//	fmt.Printf("device1: %v\n", device1.ID())
-//
-//	device2 := makeTestDevice()
-//	device2.Type = "def"
-//	device2.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return []*Reading{NewReading("test", "ok")}, nil
-//		},
-//	}
-//	fmt.Printf("device2: %v\n", device2.ID())
-//
-//	device3 := makeTestDevice()
-//	device3.Type = "ghi"
-//	device3.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return []*Reading{NewReading("test", "ok")}, nil
-//		},
-//	}
-//	fmt.Printf("device3: %v\n", device3.ID())
-//
-//	// Clear the global device map then add devices to it
-//	deviceMap = make(map[string]*Device)
-//	deviceMap["test-id-1"] = device1
-//	deviceMap["test-id-2"] = device2
-//	deviceMap["test-id-3"] = device3
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 0, len(d.readChannel))
-//	d.serialRead()
-//	assert.Equal(t, 3, len(d.readChannel))
-//
-//	reading := <-d.readChannel
-//	assert.Equal(t, 3, len(reading.Reading))
-//	for _, r := range reading.Reading {
-//		assert.Equal(t, "test", r.Type)
-//		assert.Equal(t, "ok", r.Value)
-//	}
-//}
-//
-//// TestDataManager_parallelReadSingle tests reading a single device in parallel.
-//func TestDataManager_parallelReadSingle(t *testing.T) {
-//	// Create the plugin
-//	p := Plugin{
-//		Config: &config.PluginConfig{
-//			Version: "test",
-//			Network: config.NetworkSettings{
-//				Type:    "tcp",
-//				Address: "test",
-//			},
-//			Settings: config.Settings{
-//				Read:        config.ReadSettings{Buffer: 200},
-//				Write:       config.WriteSettings{Buffer: 200},
-//				Transaction: config.TransactionSettings{TTL: "2s"},
-//			},
-//		},
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	// Create the device to read
-//	device := makeTestDevice()
-//	device.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return []*Reading{NewReading("test", "ok")}, nil
-//		},
-//	}
-//
-//	// Clear the global device map then add the device to it
-//	deviceMap = make(map[string]*Device)
-//	deviceMap["test-id-1"] = device
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 0, len(d.readChannel))
-//	d.parallelRead()
-//	assert.Equal(t, 1, len(d.readChannel))
-//
-//	reading := <-d.readChannel
-//	assert.Equal(t, 1, len(reading.Reading))
-//	assert.Equal(t, "test", reading.Reading[0].Type)
-//	assert.Equal(t, "ok", reading.Reading[0].Value)
-//}
+// TestDataManager_WritesEnabled tests that writes are enabled in the dataManager
+// when they are enabled in the config.
+func TestDataManager_WritesEnabled(t *testing.T) {
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read: &config.ReadSettings{
+				Buffer: 200,
+			},
+			Write: &config.WriteSettings{
+				Enabled: true,
+				Buffer:  200,
+			},
+			Transaction: &config.TransactionSettings{
+				TTL: "2s",
+			},
+		},
+	}
+	defer func() {
+		// reset the plugin config
+		PluginConfig = &config.PluginConfig{}
+	}()
 
-// FIXME - race condition, likely because the deviceMap is global and used by other tests..
-//// TestDataManager_parallelReadSingle tests reading multiple devices in parallel.
-//func TestDataManager_parallelReadMultiple(t *testing.T) {
-//	// Create the plugin
-//	p := Plugin{
-//		Config:   &config.PluginConfig{
-//			Version: "test",
-//			Network: config.NetworkSettings{
-//				Type:    "tcp",
-//				Address: "test",
-//			},
-//			Settings: config.Settings{
-//				Read: config.ReadSettings{Buffer: 200},
-//				Write: config.WriteSettings{Buffer:  200},
-//				Transaction: config.TransactionSettings{TTL: "2s"},
-//			},
-//		},
-//		handlers: &Handlers{DeviceID, nil},
-//	}
-//
-//	// Create the device to read
-//	device := makeTestDevice()
-//	device.Handler = &DeviceHandler{
-//		Read: func(d *Device) ([]*Reading, error) {
-//			return []*Reading{NewReading("test", "ok")}, nil
-//		},
-//	}
-//
-//	// Clear the global device map then add devices to it
-//	deviceMap = make(map[string]*Device)
-//	deviceMap["test-id-1"] = device
-//	deviceMap["test-id-2"] = device
-//	deviceMap["test-id-3"] = device
-//
-//	// Create the dataManager
-//	d, err := newDataManager(&p)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, 0, len(d.readChannel))
-//	d.parallelRead()
-//	assert.Equal(t, 3, len(d.readChannel))
-//
-//	reading := <-d.readChannel
-//	assert.Equal(t, 3, len(reading.Reading))
-//	for _, r := range reading.Reading {
-//		assert.Equal(t, "test", r.Type)
-//		assert.Equal(t, "ok", r.Value)
-//	}
-//}
+	assert.True(t, DataManager.writesEnabled())
+}
+
+// TestDataManager_readNoLimiter tests reading a device when a limiter is
+// not configured.
+func TestDataManager_readOneOkNoLimiter(t *testing.T) {
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+	defer func() {
+		// reset the plugin config
+		PluginConfig = &config.PluginConfig{}
+	}()
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.readOne(device)
+	assert.Equal(t, 1, len(d.readChannel))
+
+	// Get the reading out
+	reading := <-d.readChannel
+	assert.Equal(t, 1, len(reading.Reading))
+	assert.Equal(t, "foo", reading.Reading[0].Type)
+	assert.Equal(t, "ok", reading.Reading[0].Value)
+}
+
+// TestDataManager_readOkWithLimiter tests reading a device when a limiter is
+// configured.
+func TestDataManager_readOneOkWithLimiter(t *testing.T) {
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+	}
+	defer func() {
+		// reset the plugin config
+		PluginConfig = &config.PluginConfig{}
+	}()
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.readOne(device)
+	assert.Equal(t, 1, len(d.readChannel))
+
+	// Get the reading out
+	reading := <-d.readChannel
+	assert.Equal(t, 1, len(reading.Reading))
+	assert.Equal(t, "foo", reading.Reading[0].Type)
+	assert.Equal(t, "ok", reading.Reading[0].Value)
+}
+
+// TestDataManager_readErr tests reading a device that results in error.
+func TestDataManager_readOneErr(t *testing.T) {
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+	defer func() {
+		// reset the plugin config
+		PluginConfig = &config.PluginConfig{}
+	}()
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return nil, fmt.Errorf("test read error")
+			},
+		},
+	}
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	assert.Equal(t, 0, len(d.readChannel))
+	d.readOne(device)
+	assert.Equal(t, 0, len(d.readChannel))
+}
+
+// TestDataManager_readBulkOkNoLimiter tests bulk reading a device when a limiter is
+// not configured.
+func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceHandlers = []*DeviceHandler{}
+		deviceMap = map[string]*Device{}
+	}()
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	handler := &DeviceHandler{
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			var ctxs []*ReadContext
+			for _, d := range devices {
+				ctx := &ReadContext{
+					Rack:   "rack",
+					Board:  "board",
+					Device: "device",
+					Reading: []*Reading{
+						d.GetOutput("foo").MakeReading("ok"),
+					},
+				}
+				ctxs = append(ctxs, ctx)
+			}
+			return ctxs, nil
+		},
+	}
+	deviceHandlers = []*DeviceHandler{handler}
+
+	// Create the device to read
+	device := &Device{
+		id:       "device",
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Handler:  handler,
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+	}
+
+	deviceMap["test-device-1"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.readBulk(handler)
+	assert.Equal(t, 1, len(d.readChannel))
+
+	// Get the reading out
+	reading := <-d.readChannel
+	assert.Equal(t, 1, len(reading.Reading))
+	assert.Equal(t, "foo", reading.Reading[0].Type)
+	assert.Equal(t, "ok", reading.Reading[0].Value)
+}
+
+// TestDataManager_readBulkOkWithLimiter tests bulk reading a device when a limiter is
+// configured.
+func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceHandlers = []*DeviceHandler{}
+		deviceMap = map[string]*Device{}
+	}()
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+	}
+
+	handler := &DeviceHandler{
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			var ctxs []*ReadContext
+			for _, d := range devices {
+				ctx := &ReadContext{
+					Rack:   "rack",
+					Board:  "board",
+					Device: "device",
+					Reading: []*Reading{
+						d.GetOutput("foo").MakeReading("ok"),
+					},
+				}
+				ctxs = append(ctxs, ctx)
+			}
+			return ctxs, nil
+		},
+	}
+	deviceHandlers = []*DeviceHandler{handler}
+
+	// Create the device to read
+	device := &Device{
+		id:       "device",
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Handler:  handler,
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+	}
+
+	deviceMap["test-device-1"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.readBulk(handler)
+	assert.Equal(t, 1, len(d.readChannel))
+
+	// Get the reading out
+	reading := <-d.readChannel
+	assert.Equal(t, 1, len(reading.Reading))
+	assert.Equal(t, "foo", reading.Reading[0].Type)
+	assert.Equal(t, "ok", reading.Reading[0].Value)
+}
+
+// TestDataManager_readBulkError tests bulk reading a device when reading returns an error.
+func TestDataManager_readBulkError(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceHandlers = []*DeviceHandler{}
+		deviceMap = map[string]*Device{}
+	}()
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	handler := &DeviceHandler{
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			return nil, fmt.Errorf("test error")
+		},
+	}
+	deviceHandlers = []*DeviceHandler{handler}
+
+	// Create the device to read
+	device := &Device{
+		id:       "device",
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Handler:  handler,
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+	}
+
+	deviceMap["test-device-1"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.readBulk(handler)
+	assert.Equal(t, 0, len(d.readChannel))
+}
+
+// TestDataManager_serialReadSingle tests reading a single device serially.
+func TestDataManager_serialReadSingle(t *testing.T) {
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+	defer func() {
+		// reset the plugin config
+		PluginConfig = &config.PluginConfig{}
+	}()
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+
+	deviceMap["test-id-1"] = device
+	defer delete(deviceMap, "test-id-1")
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.serialRead()
+	assert.Equal(t, 1, len(d.readChannel))
+
+	// Get the reading out
+	reading := <-d.readChannel
+	assert.Equal(t, 1, len(reading.Reading))
+	assert.Equal(t, "foo", reading.Reading[0].Type)
+	assert.Equal(t, "ok", reading.Reading[0].Value)
+}
+
+// TestDataManager_serialReadSingleBulk tests reading a single device in bulk serially.
+func TestDataManager_serialReadSingleBulk(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceHandlers = []*DeviceHandler{}
+		deviceMap = map[string]*Device{}
+	}()
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	handler := &DeviceHandler{
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			var ctxs []*ReadContext
+			for _, d := range devices {
+				ctx := &ReadContext{
+					Rack:   "rack",
+					Board:  "board",
+					Device: "device",
+					Reading: []*Reading{
+						d.GetOutput("foo").MakeReading("ok"),
+					},
+				}
+				ctxs = append(ctxs, ctx)
+			}
+			return ctxs, nil
+		},
+	}
+	deviceHandlers = []*DeviceHandler{handler}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler:  handler,
+		bulkRead: true,
+	}
+
+	deviceMap["test-id-1"] = device
+	defer delete(deviceMap, "test-id-1")
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.serialRead()
+	assert.Equal(t, 1, len(d.readChannel))
+
+	// Get the reading out
+	reading := <-d.readChannel
+	assert.Equal(t, 1, len(reading.Reading))
+	assert.Equal(t, "foo", reading.Reading[0].Type)
+	assert.Equal(t, "ok", reading.Reading[0].Value)
+}
+
+// TestDataManager_parallelReadSingle tests reading a single device in parallel.
+func TestDataManager_parallelReadSingle(t *testing.T) {
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+	defer func() {
+		// reset the plugin config
+		PluginConfig = &config.PluginConfig{}
+	}()
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+
+	// Clear the global device map then add the device to it
+	deviceMap["test-id-1"] = device
+	defer delete(deviceMap, "test-id-1")
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.parallelRead()
+	assert.Equal(t, 1, len(d.readChannel))
+
+	// Get the reading out
+	reading := <-d.readChannel
+	assert.Equal(t, 1, len(reading.Reading))
+	assert.Equal(t, "foo", reading.Reading[0].Type)
+	assert.Equal(t, "ok", reading.Reading[0].Value)
+}
+
+// TestDataManager_parallelReadSingleBulk tests reading a single device in bulk in parallel.
+func TestDataManager_parallelReadSingleBulk(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceHandlers = []*DeviceHandler{}
+		deviceMap = map[string]*Device{}
+	}()
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	handler := &DeviceHandler{
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			var ctxs []*ReadContext
+			for _, d := range devices {
+				ctx := &ReadContext{
+					Rack:   "rack",
+					Board:  "board",
+					Device: "device",
+					Reading: []*Reading{
+						d.GetOutput("foo").MakeReading("ok"),
+					},
+				}
+				ctxs = append(ctxs, ctx)
+			}
+			return ctxs, nil
+		},
+	}
+	deviceHandlers = []*DeviceHandler{handler}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler:  handler,
+		bulkRead: true,
+	}
+
+	// Clear the global device map then add the device to it
+	deviceMap["test-id-1"] = device
+	defer delete(deviceMap, "test-id-1")
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	// Pass a reading in
+	assert.Equal(t, 0, len(d.readChannel))
+	d.parallelRead()
+	assert.Equal(t, 1, len(d.readChannel))
+
+	// Get the reading out
+	reading := <-d.readChannel
+	assert.Equal(t, 1, len(reading.Reading))
+	assert.Equal(t, "foo", reading.Reading[0].Type)
+	assert.Equal(t, "ok", reading.Reading[0].Value)
+}
+
+// TestDataManager_serialReadMultiple tests reading multiple devices serially.
+func TestDataManager_serialReadMultiple(t *testing.T) {
+	defer func() {
+		// reset the plugin config
+		PluginConfig = &config.PluginConfig{}
+	}()
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	// Create the devices to read
+	device1 := &Device{
+		Kind:     "test.1.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+	device2 := &Device{
+		Kind:     "test.2.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+	device3 := &Device{
+		Kind:     "test.3.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+
+	deviceMap = make(map[string]*Device)
+	deviceMap["test-id-1"] = device1
+	deviceMap["test-id-2"] = device2
+	deviceMap["test-id-3"] = device3
+	defer delete(deviceMap, "test-id-1")
+	defer delete(deviceMap, "test-id-2")
+	defer delete(deviceMap, "test-id-3")
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	assert.Equal(t, 0, len(d.readChannel))
+	d.serialRead()
+	assert.Equal(t, 3, len(d.readChannel))
+
+	for i := 0; i < 3; i++ {
+		reading := <-d.readChannel
+		assert.Equal(t, 1, len(reading.Reading))
+		assert.Equal(t, "foo", reading.Reading[0].Type)
+		assert.Equal(t, "ok", reading.Reading[0].Value)
+	}
+}
+
+// TestDataManager_parallelReadSingle tests reading multiple devices in parallel.
+func TestDataManager_parallelReadMultiple(t *testing.T) {
+	defer func() {
+		// reset the plugin config
+		PluginConfig = &config.PluginConfig{}
+	}()
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	// Create the devices to read
+	device1 := &Device{
+		Kind:     "test.1.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+	device2 := &Device{
+		Kind:     "test.2.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+	device3 := &Device{
+		Kind:     "test.3.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Read: func(d *Device) ([]*Reading, error) {
+				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+			},
+		},
+	}
+
+	deviceMap = make(map[string]*Device)
+	deviceMap["test-id-1"] = device1
+	deviceMap["test-id-2"] = device2
+	deviceMap["test-id-3"] = device3
+	defer delete(deviceMap, "test-id-1")
+	defer delete(deviceMap, "test-id-2")
+	defer delete(deviceMap, "test-id-3")
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	assert.Equal(t, 0, len(d.readChannel))
+	d.parallelRead()
+	assert.Equal(t, 3, len(d.readChannel))
+
+	for i := 0; i < 3; i++ {
+		reading := <-d.readChannel
+		assert.Equal(t, 1, len(reading.Reading))
+		assert.Equal(t, "foo", reading.Reading[0].Type)
+		assert.Equal(t, "ok", reading.Reading[0].Value)
+	}
+}
+
+// TestDataManager_writeOkNoLimiter tests writing to a device with no limiter configured.
+func TestDataManager_writeOkNoLimiter(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceMap = map[string]*Device{}
+	}()
+	setupTransactionCache(time.Duration(600) * time.Second)
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+	deviceMap["rack-board-device"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	ctx := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+
+	d.write(ctx)
+
+	assert.Equal(t, stateOk, ctx.transaction.state)
+	assert.Equal(t, statusDone, ctx.transaction.status)
+	assert.Equal(t, "", ctx.transaction.message)
+}
+
+// TestDataManager_writeOkWithLimiter tests writing to a device with a limiter configured.
+func TestDataManager_writeOkWithLimiter(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceMap = map[string]*Device{}
+	}()
+	setupTransactionCache(time.Duration(600) * time.Second)
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+	}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+	deviceMap["rack-board-device"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	ctx := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+
+	d.write(ctx)
+
+	assert.Equal(t, stateOk, ctx.transaction.state)
+	assert.Equal(t, statusDone, ctx.transaction.status)
+	assert.Equal(t, "", ctx.transaction.message)
+}
+
+// TestDataManager_writeNoDevice tests writing to a device when that device cannot be found.
+func TestDataManager_writeNoDevice(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceMap = map[string]*Device{}
+	}()
+	setupTransactionCache(time.Duration(600) * time.Second)
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	ctx := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+
+	d.write(ctx)
+
+	assert.Equal(t, stateError, ctx.transaction.state)
+	assert.Equal(t, statusDone, ctx.transaction.status)
+	assert.NotEmpty(t, ctx.transaction.message)
+}
+
+// TestDataManager_writeError tests writing to a device when the write errors.
+func TestDataManager_writeError(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceMap = map[string]*Device{}
+	}()
+	setupTransactionCache(time.Duration(600) * time.Second)
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+	}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return fmt.Errorf("test error")
+			},
+		},
+	}
+	deviceMap["rack-board-device"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	ctx := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+
+	d.write(ctx)
+
+	assert.Equal(t, stateError, ctx.transaction.state)
+	assert.Equal(t, statusDone, ctx.transaction.status)
+	assert.NotEmpty(t, ctx.transaction.message)
+}
+
+// TestDataManager_serialWriteSingle tests writing to a single device in serial.
+func TestDataManager_serialWriteSingle(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceMap = map[string]*Device{}
+	}()
+	setupTransactionCache(time.Duration(600) * time.Second)
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200, Max: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+	}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+	deviceMap["rack-board-device"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	ctx := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+
+	d.writeChannel <- ctx
+
+	d.serialWrite()
+
+	assert.Equal(t, stateOk, ctx.transaction.state)
+	assert.Equal(t, statusDone, ctx.transaction.status)
+	assert.Equal(t, "", ctx.transaction.message)
+}
+
+// TestDataManager_serialWriteMultiple tests writing to multiple devices in serial.
+func TestDataManager_serialWriteMultiple(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceMap = map[string]*Device{}
+	}()
+	setupTransactionCache(time.Duration(600) * time.Second)
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200, Max: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+	}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+	deviceMap["rack-board-device"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	ctx1 := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+	ctx2 := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+	ctx3 := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+
+	d.writeChannel <- ctx1
+	d.writeChannel <- ctx2
+	d.writeChannel <- ctx3
+
+	d.serialWrite()
+
+	for _, ctx := range []*WriteContext{ctx1, ctx2, ctx3} {
+		assert.Equal(t, stateOk, ctx.transaction.state)
+		assert.Equal(t, statusDone, ctx.transaction.status)
+		assert.Equal(t, "", ctx.transaction.message)
+	}
+}
+
+// TestDataManager_parallelWriteSingle tests writing to a single device in parallel.
+func TestDataManager_parallelWriteSingle(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceMap = map[string]*Device{}
+	}()
+	setupTransactionCache(time.Duration(600) * time.Second)
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200, Max: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+	}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+	deviceMap["rack-board-device"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	ctx := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+
+	d.writeChannel <- ctx
+
+	d.parallelWrite()
+
+	assert.Equal(t, stateOk, ctx.transaction.state)
+	assert.Equal(t, statusDone, ctx.transaction.status)
+	assert.Equal(t, "", ctx.transaction.message)
+}
+
+// TestDataManager_parallelWriteMultiple tests writing to multiple devices in parallel.
+func TestDataManager_parallelWriteMultiple(t *testing.T) {
+	defer func() {
+		PluginConfig = &config.PluginConfig{}
+		deviceMap = map[string]*Device{}
+	}()
+	setupTransactionCache(time.Duration(600) * time.Second)
+
+	PluginConfig = &config.PluginConfig{
+		SchemeVersion: config.SchemeVersion{Version: "test"},
+		Network: &config.NetworkSettings{
+			Type:    "tcp",
+			Address: "test",
+		},
+		Settings: &config.PluginSettings{
+			Read:        &config.ReadSettings{Buffer: 200},
+			Write:       &config.WriteSettings{Buffer: 200, Max: 200},
+			Transaction: &config.TransactionSettings{TTL: "2s"},
+		},
+		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+	}
+
+	// Create the device to read
+	device := &Device{
+		Kind:     "test.state",
+		Location: &Location{Rack: "rack", Board: "board"},
+		Outputs: []*Output{
+			{
+				OutputType: config.OutputType{
+					Name: "foo",
+				},
+			},
+		},
+		Handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+		},
+	}
+	deviceMap["rack-board-device"] = device
+
+	d := newDataManager()
+	err := d.setup()
+	assert.NoError(t, err)
+
+	ctx1 := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+	ctx2 := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+	ctx3 := &WriteContext{
+		transaction: newTransaction(),
+		device:      "device",
+		board:       "board",
+		rack:        "rack",
+		data: &synse.WriteData{
+			Action: "test",
+		},
+	}
+
+	d.writeChannel <- ctx1
+	d.writeChannel <- ctx2
+	d.writeChannel <- ctx3
+
+	d.parallelWrite()
+
+	for _, ctx := range []*WriteContext{ctx1, ctx2, ctx3} {
+		assert.Equal(t, stateOk, ctx.transaction.state)
+		assert.Equal(t, statusDone, ctx.transaction.status)
+		assert.Equal(t, "", ctx.transaction.message)
+	}
+}

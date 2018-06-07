@@ -56,7 +56,7 @@ func TestMultiError_Error(t *testing.T) {
 			errs: []error{
 				fmt.Errorf("error 1"),
 			},
-			expected: "MultiError has 1 error(s) for source: unspecified\nerror 1\n",
+			expected: "1 error(s) for: unspecified\nerror 1\n",
 		},
 		{
 			desc:   "MultiError has 1 error, with source",
@@ -64,7 +64,7 @@ func TestMultiError_Error(t *testing.T) {
 			errs: []error{
 				fmt.Errorf("error 1"),
 			},
-			expected: "MultiError has 1 error(s) for source: test\nerror 1\n",
+			expected: "1 error(s) for: test\nerror 1\n",
 		},
 		{
 			desc:   "MultiError has multiple errors, no source",
@@ -74,7 +74,7 @@ func TestMultiError_Error(t *testing.T) {
 				fmt.Errorf("error 2"),
 				fmt.Errorf("error 3"),
 			},
-			expected: "MultiError has 3 error(s) for source: unspecified\nerror 1\nerror 2\nerror 3\n",
+			expected: "3 error(s) for: unspecified\nerror 1\nerror 2\nerror 3\n",
 		},
 		{
 			desc:   "MultiError has multiple errors, with source",
@@ -84,7 +84,7 @@ func TestMultiError_Error(t *testing.T) {
 				fmt.Errorf("error 2"),
 				fmt.Errorf("error 3"),
 			},
-			expected: "MultiError has 3 error(s) for source: test\nerror 1\nerror 2\nerror 3\n",
+			expected: "3 error(s) for: test\nerror 1\nerror 2\nerror 3\n",
 		},
 	}
 
