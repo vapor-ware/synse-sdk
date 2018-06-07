@@ -1,0 +1,12 @@
+version: 1
+debug: true
+network:
+  type: unix
+  address: simple-plugin.sock
+settings:
+  read:
+    interval: 5s
+  write:
+    interval: 5s
+  transaction:
+    ttl: 8m
