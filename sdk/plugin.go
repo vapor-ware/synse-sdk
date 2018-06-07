@@ -7,8 +7,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"time"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
@@ -132,7 +135,7 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // Before the gRPC server is started, and before the read and write goroutines
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
-func (plugin *Plugin) Run() error {
+func (plugin *Plugin) Run() error { // nolint: gocyclo
 	// Register system calls for graceful stopping.
 	signal.Notify(plugin.quit, syscall.SIGTERM)
 	signal.Notify(plugin.quit, syscall.SIGINT)
@@ -218,6 +221,12 @@ func (plugin *Plugin) Run() error {
 	logger.Debug("starting plugin server and manager")
 
 	// "Starting" steps **
+
+	// If the default health checks are enabled, register them now
+	if PluginConfig.Health.UseDefaults {
+		health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
+		health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
+	}
 
 	// startDataManager
 	err = DataManager.run()
