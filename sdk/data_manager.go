@@ -342,14 +342,14 @@ func (manager *dataManager) write(w *WriteContext) {
 		msg := "no device found with ID " + w.ID()
 		w.transaction.message = msg
 		logger.Error(msg)
-	}
-
-	data := decodeWriteData(w.data)
-	err := device.Write(data)
-	if err != nil {
-		w.transaction.setStateError()
-		w.transaction.message = err.Error()
-		logger.Errorf("failed to write to device %v: %v", w.device, err)
+	} else {
+		data := decodeWriteData(w.data)
+		err := device.Write(data)
+		if err != nil {
+			w.transaction.setStateError()
+			w.transaction.message = err.Error()
+			logger.Errorf("failed to write to device %v: %v", w.device, err)
+		}
 	}
 	w.transaction.setStatusDone()
 }
