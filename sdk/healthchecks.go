@@ -14,7 +14,7 @@ func readBufferHealthCheck() error {
 	// total capacity of the channel
 	channelCap := cap(DataManager.readChannel)
 
-	pctUsage := float64(channelSize) / float64(channelCap)
+	pctUsage := (float64(channelSize) / float64(channelCap)) * 100
 	if pctUsage > 95 {
 		return fmt.Errorf("data manager read buffer usage >95%%, consider increasing buffer size in plugin config")
 	}
@@ -31,7 +31,7 @@ func writeBufferHealthCheck() error {
 	// total capacity of the channel
 	channelCap := cap(DataManager.writeChannel)
 
-	pctUsage := float64(channelSize) / float64(channelCap)
+	pctUsage := (float64(channelSize) / float64(channelCap)) * 100
 	if pctUsage > 95 {
 		return fmt.Errorf("data manager write buffer usage >95%%, consider increasing buffer size in plugin config")
 	}
