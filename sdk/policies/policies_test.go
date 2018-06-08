@@ -6,8 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// resetPolicyManager is a helper that should be run after every test
+// to reset test state.
+func resetPolicyManager() {
+	policyManager = manager{}
+}
+
 // TestConfigPolicy_String tests getting the string name for ConfigPolicy instances.
 func TestConfigPolicy_String(t *testing.T) {
+	defer resetPolicyManager()
+
 	var testTable = []struct {
 		desc     string
 		policy   ConfigPolicy
@@ -46,50 +54,52 @@ func TestConfigPolicy_String(t *testing.T) {
 	}
 }
 
-// TestPolicyManager_GetDeviceConfigPolicy tests getting the device config
-// policy from the global PolicyManager.
-func TestPolicyManager_GetDeviceConfigPolicy(t *testing.T) {
+// TestGetDeviceConfigPolicy tests getting the device config
+// policy from the global policy manager.
+func TestGetDeviceConfigPolicy(t *testing.T) {
+	defer resetPolicyManager()
 
-	// Get the device config policy when none is set - this should give the
-	// default.
-	assert.Empty(t, PolicyManager.deviceConfigPolicy)
-	policy := PolicyManager.GetDeviceConfigPolicy()
+	// Get the device config policy when none is set - this should give the default.
+	assert.Empty(t, policyManager.deviceConfigPolicy)
+	policy := GetDeviceConfigPolicy()
 	assert.Equal(t, DeviceConfigRequired, policy)
 
 	// Get the device config policy when Optional is set.
-	PolicyManager.deviceConfigPolicy = DeviceConfigOptional
-	policy = PolicyManager.GetDeviceConfigPolicy()
+	policyManager.deviceConfigPolicy = DeviceConfigOptional
+	policy = GetDeviceConfigPolicy()
 	assert.Equal(t, DeviceConfigOptional, policy)
 
 	// Get the device config policy when Required is set.
-	PolicyManager.deviceConfigPolicy = DeviceConfigRequired
-	policy = PolicyManager.GetDeviceConfigPolicy()
+	policyManager.deviceConfigPolicy = DeviceConfigRequired
+	policy = GetDeviceConfigPolicy()
 	assert.Equal(t, DeviceConfigRequired, policy)
 }
 
-// TestPolicyManager_GetPluginConfigPolicy tests getting the plugin config
-// policy from the global PolicyManager.
-func TestPolicyManager_GetPluginConfigPolicy(t *testing.T) {
+// TestGetPluginConfigPolicy tests getting the plugin config
+// policy from the global policy manager.
+func TestGetPluginConfigPolicy(t *testing.T) {
+	defer resetPolicyManager()
 
-	// Get the plugin config policy when none is set - this should give the
-	// default.
-	assert.Empty(t, PolicyManager.pluginConfigPolicy)
-	policy := PolicyManager.GetPluginConfigPolicy()
+	// Get the plugin config policy when none is set - this should give the default.
+	assert.Empty(t, policyManager.pluginConfigPolicy)
+	policy := GetPluginConfigPolicy()
 	assert.Equal(t, PluginConfigOptional, policy)
 
 	// Get the plugin config policy when Optional is set.
-	PolicyManager.pluginConfigPolicy = PluginConfigOptional
-	policy = PolicyManager.GetPluginConfigPolicy()
+	policyManager.pluginConfigPolicy = PluginConfigOptional
+	policy = GetPluginConfigPolicy()
 	assert.Equal(t, PluginConfigOptional, policy)
 
 	// Get the plugin config policy when Required is set.
-	PolicyManager.pluginConfigPolicy = PluginConfigRequired
-	policy = PolicyManager.GetPluginConfigPolicy()
+	policyManager.pluginConfigPolicy = PluginConfigRequired
+	policy = GetPluginConfigPolicy()
 	assert.Equal(t, PluginConfigRequired, policy)
 }
 
-// TestSet tests setting the global config policies.
-func TestSet(t *testing.T) {
+// TestManager_Set tests setting the global config policies.
+func TestManager_Set(t *testing.T) {
+	defer resetPolicyManager()
+
 	var testTable = []struct {
 		desc                 string
 		policies             []ConfigPolicy
@@ -99,15 +109,15 @@ func TestSet(t *testing.T) {
 		{
 			desc:                 "No policies set",
 			policies:             []ConfigPolicy{},
-			expectedPluginPolicy: 0,
-			expectedDevicePolicy: 0,
+			expectedPluginPolicy: NoPolicy,
+			expectedDevicePolicy: NoPolicy,
 		},
 		{
 			desc: "One device config policy set",
 			policies: []ConfigPolicy{
 				DeviceConfigOptional,
 			},
-			expectedPluginPolicy: 0,
+			expectedPluginPolicy: NoPolicy,
 			expectedDevicePolicy: DeviceConfigOptional,
 		},
 		{
@@ -116,7 +126,7 @@ func TestSet(t *testing.T) {
 				PluginConfigOptional,
 			},
 			expectedPluginPolicy: PluginConfigOptional,
-			expectedDevicePolicy: 0,
+			expectedDevicePolicy: NoPolicy,
 		},
 		{
 			desc: "Two device config policies set",
@@ -124,7 +134,7 @@ func TestSet(t *testing.T) {
 				DeviceConfigRequired,
 				DeviceConfigOptional,
 			},
-			expectedPluginPolicy: 0,
+			expectedPluginPolicy: NoPolicy,
 			expectedDevicePolicy: DeviceConfigOptional,
 		},
 		{
@@ -134,7 +144,7 @@ func TestSet(t *testing.T) {
 				PluginConfigOptional,
 			},
 			expectedPluginPolicy: PluginConfigOptional,
-			expectedDevicePolicy: 0,
+			expectedDevicePolicy: NoPolicy,
 		},
 		{
 			desc: "One of each policy",
@@ -160,10 +170,57 @@ func TestSet(t *testing.T) {
 
 	for _, testCase := range testTable {
 		// reset the policy manager every time
-		PolicyManager = policyManager{}
+		policyManager = manager{}
 
-		Set(testCase.policies)
-		assert.Equal(t, testCase.expectedDevicePolicy, PolicyManager.deviceConfigPolicy, testCase.desc)
-		assert.Equal(t, testCase.expectedPluginPolicy, PolicyManager.pluginConfigPolicy, testCase.desc)
+		policyManager.Set(testCase.policies)
+		assert.Equal(t, testCase.expectedDevicePolicy, policyManager.deviceConfigPolicy, testCase.desc)
+		assert.Equal(t, testCase.expectedPluginPolicy, policyManager.pluginConfigPolicy, testCase.desc)
 	}
+}
+
+// TestApplyOk tests applying policies to the manager with no error.
+func TestApplyOk(t *testing.T) {
+	defer resetPolicyManager()
+
+	policies := []ConfigPolicy{DeviceConfigOptional, PluginConfigRequired}
+
+	assert.Equal(t, NoPolicy, policyManager.pluginConfigPolicy)
+	assert.Equal(t, NoPolicy, policyManager.deviceConfigPolicy)
+
+	err := Apply(policies)
+	assert.NoError(t, err)
+
+	assert.Equal(t, PluginConfigRequired, policyManager.pluginConfigPolicy)
+	assert.Equal(t, DeviceConfigOptional, policyManager.deviceConfigPolicy)
+}
+
+// TestApplyOk2 tests applying policies to the manager with no error, when
+// no policies are specified.
+func TestApplyOk2(t *testing.T) {
+	defer resetPolicyManager()
+
+	assert.Equal(t, NoPolicy, policyManager.pluginConfigPolicy)
+	assert.Equal(t, NoPolicy, policyManager.deviceConfigPolicy)
+
+	err := Apply([]ConfigPolicy{})
+	assert.NoError(t, err)
+
+	assert.Equal(t, NoPolicy, policyManager.pluginConfigPolicy)
+	assert.Equal(t, NoPolicy, policyManager.deviceConfigPolicy)
+}
+
+// TestApplyError tests applying policies to the manager with error.
+func TestApplyError(t *testing.T) {
+	defer resetPolicyManager()
+
+	policies := []ConfigPolicy{DeviceConfigOptional, PluginConfigRequired, DeviceConfigRequired}
+
+	assert.Equal(t, NoPolicy, policyManager.pluginConfigPolicy)
+	assert.Equal(t, NoPolicy, policyManager.deviceConfigPolicy)
+
+	err := Apply(policies)
+	assert.Error(t, err)
+
+	assert.Equal(t, NoPolicy, policyManager.pluginConfigPolicy)
+	assert.Equal(t, NoPolicy, policyManager.deviceConfigPolicy)
 }

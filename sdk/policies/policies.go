@@ -1,12 +1,15 @@
 package policies
 
+import "github.com/vapor-ware/synse-sdk/sdk/logger"
+
 // ConfigPolicy is a type that defines a behavior profile for the plugin
 // on how it should handle configurations and configuration errors.
 type ConfigPolicy uint8
 
 const (
-	// ignore first iota value since we don't want a zero-value.
-	_ ConfigPolicy = iota
+	// NoPolicy is the zero-value policy. It means that there is no policy
+	// specified.
+	NoPolicy ConfigPolicy = iota
 
 	// PluginConfigOptional is a policy that allows no plugin config to
 	// be specified, so the plugin can just use default values. This is
@@ -29,6 +32,7 @@ const (
 
 // policyStrings maps ConfigPolicies to their name.
 var policyStrings = map[ConfigPolicy]string{
+	NoPolicy: "NoPolicy",
 	PluginConfigOptional: "PluginConfigOptional",
 	PluginConfigRequired: "PluginConfigRequired",
 	DeviceConfigOptional: "DeviceConfigOptional",
@@ -43,43 +47,57 @@ func (policy ConfigPolicy) String() string {
 	return "unknown"
 }
 
-// PolicyManager is a global policyManager instance that holds the
+// policyManager is a global policyManager instance that holds the
 // policies for the plugin.
-var PolicyManager = policyManager{}
+var policyManager = manager{}
 
-// policyManager is used to track the different sets of policies set for
-// a plugin.
-type policyManager struct {
+// manager is used to track the policies set for a plugin.
+type manager struct {
 	pluginConfigPolicy ConfigPolicy
 	deviceConfigPolicy ConfigPolicy
 }
 
-// GetPluginConfigPolicy gets the plugin config policy for the plugin. If
-// none was set by the plugin, this will return the default policy.
-func (pm *policyManager) GetPluginConfigPolicy() ConfigPolicy {
-	if PolicyManager.pluginConfigPolicy != 0 {
-		return PolicyManager.pluginConfigPolicy
-	}
-	return PluginConfigOptional
-}
-
-// GetDeviceConfigPolicy gets the device config policy for the plugin. If
-// none was set by the plugin, this will return the default policy.
-func (pm *policyManager) GetDeviceConfigPolicy() ConfigPolicy {
-	if PolicyManager.deviceConfigPolicy != 0 {
-		return PolicyManager.deviceConfigPolicy
-	}
-	return DeviceConfigRequired
-}
-
-// Set sets the ConfigPolicies for the plugin.
-func Set(policies []ConfigPolicy) {
+// Set sets the policies for the manager to track.
+func (m *manager) Set(policies []ConfigPolicy) {
 	for _, policy := range policies {
 		switch policy {
 		case PluginConfigRequired, PluginConfigOptional:
-			PolicyManager.pluginConfigPolicy = policy
+			m.pluginConfigPolicy = policy
 		case DeviceConfigRequired, DeviceConfigOptional:
-			PolicyManager.deviceConfigPolicy = policy
+			m.deviceConfigPolicy = policy
 		}
 	}
+}
+
+// GetPluginConfigPolicy gets the plugin config policy for the plugin. If
+// none was explicitly set by the plugin, this will return the default policy.
+func GetPluginConfigPolicy() ConfigPolicy {
+	if policyManager.pluginConfigPolicy == 0 {
+		policyManager.pluginConfigPolicy = PluginConfigOptional
+	}
+	return policyManager.pluginConfigPolicy
+}
+
+// GetDeviceConfigPolicy gets the device config policy for the plugin. If
+// none was explicitly set by the plugin, this will return the default policy.
+func GetDeviceConfigPolicy() ConfigPolicy {
+	if policyManager.deviceConfigPolicy == 0 {
+		policyManager.deviceConfigPolicy =  DeviceConfigRequired
+	}
+	return policyManager.deviceConfigPolicy
+}
+
+// Apply applies the given config policies to the SDK policy manager. Before
+// policies are added to the policy manager, they are first verified OK by
+// checking the policy constraints.
+func Apply(policies []ConfigPolicy) error {
+	err := CheckConstraints(policies)
+	if err.HasErrors() {
+		logger.Error("applied config policies do not pass constraint checks")
+		return err
+	}
+
+	// Constraint checking passed, apply the policies to the policy manager.
+	policyManager.Set(policies)
+	return nil
 }

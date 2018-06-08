@@ -293,7 +293,7 @@ func (plugin *Plugin) checkPolicies() error {
 	}
 
 	// If we passed constraint checking, we can use the given policies
-	policies.Set(plugin.policies)
+	policies.Apply(plugin.policies)
 	return nil
 }
 
@@ -308,7 +308,7 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 
 	// First, resolve the plugin config. We need to do this first, since subsequent
 	// steps may require a plugin config to be specified.
-	pluginPolicy := policies.PolicyManager.GetPluginConfigPolicy()
+	pluginPolicy := policies.GetPluginConfigPolicy()
 	logger.Debugf("plugin config policy: %s", pluginPolicy.String())
 
 	pluginCtx, err := config.GetPluginConfigFromFile()
@@ -317,8 +317,10 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 		// check what the policy is for plugin config to determine how to proceed.
 		switch pluginPolicy {
 		case policies.PluginConfigRequired:
-			// TODO: this should be a custom error
-			return fmt.Errorf("policy violation: plugin config required but not found")
+			return errors.NewPolicyViolationError(
+				pluginPolicy.String(),
+				"plugin config required but not found",
+			)
 		case policies.PluginConfigOptional:
 			// If the Plugin Config is optional, we will still need to create a new
 			// plugin config that has all of the defaults filled out.
@@ -328,7 +330,10 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 			}
 			PluginConfig = cfg
 		default:
-			return fmt.Errorf("unsupported plugin config policy: %s", pluginPolicy.String())
+			return errors.NewPolicyViolationError(
+				pluginPolicy.String(),
+				"unsupported plugin config policy",
+			)
 		}
 	}
 
@@ -388,7 +393,7 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 
 	// FIXME: should there be different policies here.. e.g. config from file is optional
 	// vs config entirely missing is bad?
-	devicePolicy := policies.PolicyManager.GetDeviceConfigPolicy()
+	devicePolicy := policies.GetDeviceConfigPolicy()
 	logger.Debugf("device config policy: %s", devicePolicy.String())
 
 	if deviceMultiErr.Err() != nil || len(deviceCtxs) == 0 {
@@ -397,8 +402,10 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 			if deviceMultiErr.Err() != nil {
 				logger.Error(deviceMultiErr)
 			}
-			// TODO this should be a custom error
-			return fmt.Errorf("policy violation: device config(s) required, but none found")
+			return errors.NewPolicyViolationError(
+				devicePolicy.String(),
+				"device config(s) required, but not found",
+			)
 		case policies.DeviceConfigOptional:
 			// If the device config is optional, we should be fine without having found
 			// anything at this point. We will add a default, empty device config to the
@@ -410,7 +417,10 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 			deviceCtxs = append(deviceCtxs, &ctx)
 
 		default:
-			return fmt.Errorf("unsupported device config policy: %s", devicePolicy.String())
+			return errors.NewPolicyViolationError(
+				devicePolicy.String(),
+				"unsupported device config policy",
+			)
 		}
 	}
 
