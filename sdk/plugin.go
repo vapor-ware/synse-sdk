@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
 	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -20,26 +19,9 @@ import (
 // and the value is the corresponding OutputType.
 var outputTypeMap = map[string]*config.OutputType{}
 
-// DeviceIdentifier is a function that produces a string that can be used to
-// identify a device deterministically. The returned string should be a composite
-// from the Device's config data.
-type DeviceIdentifier func(map[string]interface{}) string
-
-// DynamicDeviceRegistrar is a function that takes a Plugin config's "dynamic
-// registration" data and generates Device instances from it. How this is done
-// is specific to the plugin/protocol.
-type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
-
-// DynamicDeviceConfigRegistrar is a function that takes a Plugin config's "dynamic
-// registration" data and generates DeviceConfig instances from it. How this is done
-// is specific to the plugin/protocol.
-type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceConfig, error)
-
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse Server.
 type Plugin struct {
-	policies []policies.ConfigPolicy
-
 	server *Server
 	quit   chan os.Signal
 }
@@ -54,17 +36,7 @@ func NewPlugin(options ...PluginOption) *Plugin {
 	for _, option := range options {
 		option(Context)
 	}
-
 	return &plugin
-}
-
-// SetConfigPolicies sets the config policies for the plugin. Config policies will
-// determine how the plugin behaves when reading in configurations.
-//
-// If no config policies are set, default policies will be used. Policy validation
-// does not happen in this function. Config policies are validated on plugin Run.
-func (plugin *Plugin) SetConfigPolicies(policies ...policies.ConfigPolicy) {
-	plugin.policies = policies
 }
 
 // RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
@@ -155,7 +127,7 @@ func (plugin *Plugin) Run() error { // nolint: gocyclo
 
 	// Check for configuration policies. If no policy was set by the plugin,
 	// this will fall back on the default policies.
-	err := plugin.checkPolicies()
+	err := policies.Check()
 	if err != nil {
 		return err
 	}
@@ -281,22 +253,6 @@ func (plugin *Plugin) resolveFlags() {
 	}
 }
 
-// checkPolicies checks for policies registered with the plugin. If no policies
-// were set, the defaults will be used.
-func (plugin *Plugin) checkPolicies() error {
-	// Verify that the policies set for the plugin do not break any of the
-	// constraints set on the policies.
-	err := policies.CheckConstraints(plugin.policies)
-	if err.Err() != nil {
-		logger.Error("config policies set for the plugin are invalid")
-		return err
-	}
-
-	// If we passed constraint checking, we can use the given policies
-	policies.Set(plugin.policies)
-	return nil
-}
-
 // processConfig handles plugin configuration in a number of steps. The behavior
 // of config handling is dependent on the config policy that is set. If no config
 // policies are set, the plugin will terminate in error.
@@ -308,7 +264,7 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 
 	// First, resolve the plugin config. We need to do this first, since subsequent
 	// steps may require a plugin config to be specified.
-	pluginPolicy := policies.PolicyManager.GetPluginConfigPolicy()
+	pluginPolicy := policies.GetPluginConfigPolicy()
 	logger.Debugf("plugin config policy: %s", pluginPolicy.String())
 
 	pluginCtx, err := config.GetPluginConfigFromFile()
@@ -317,8 +273,10 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 		// check what the policy is for plugin config to determine how to proceed.
 		switch pluginPolicy {
 		case policies.PluginConfigRequired:
-			// TODO: this should be a custom error
-			return fmt.Errorf("policy violation: plugin config required but not found")
+			return errors.NewPolicyViolationError(
+				pluginPolicy.String(),
+				"plugin config required but not found",
+			)
 		case policies.PluginConfigOptional:
 			// If the Plugin Config is optional, we will still need to create a new
 			// plugin config that has all of the defaults filled out.
@@ -328,7 +286,10 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 			}
 			PluginConfig = cfg
 		default:
-			return fmt.Errorf("unsupported plugin config policy: %s", pluginPolicy.String())
+			return errors.NewPolicyViolationError(
+				pluginPolicy.String(),
+				"unsupported plugin config policy",
+			)
 		}
 	}
 
@@ -388,7 +349,7 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 
 	// FIXME: should there be different policies here.. e.g. config from file is optional
 	// vs config entirely missing is bad?
-	devicePolicy := policies.PolicyManager.GetDeviceConfigPolicy()
+	devicePolicy := policies.GetDeviceConfigPolicy()
 	logger.Debugf("device config policy: %s", devicePolicy.String())
 
 	if deviceMultiErr.Err() != nil || len(deviceCtxs) == 0 {
@@ -397,8 +358,10 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 			if deviceMultiErr.Err() != nil {
 				logger.Error(deviceMultiErr)
 			}
-			// TODO this should be a custom error
-			return fmt.Errorf("policy violation: device config(s) required, but none found")
+			return errors.NewPolicyViolationError(
+				devicePolicy.String(),
+				"device config(s) required, but not found",
+			)
 		case policies.DeviceConfigOptional:
 			// If the device config is optional, we should be fine without having found
 			// anything at this point. We will add a default, empty device config to the
@@ -410,7 +373,10 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 			deviceCtxs = append(deviceCtxs, &ctx)
 
 		default:
-			return fmt.Errorf("unsupported device config policy: %s", devicePolicy.String())
+			return errors.NewPolicyViolationError(
+				devicePolicy.String(),
+				"unsupported device config policy",
+			)
 		}
 	}
 

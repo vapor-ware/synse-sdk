@@ -6,76 +6,60 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test_constraintPluginConfigNecessity tests the PluginConfigNecessity constraint.
-func Test_constraintPluginConfigNecessity(t *testing.T) {
+// Test_oneOrNoneOf tests the oneOrNoneOf constraint
+func Test_oneOrNoneOf(t *testing.T) {
 	var testTable = []struct {
-		desc     string
-		policies []ConfigPolicy
-		hasErr   bool
+		desc        string
+		policies    []ConfigPolicy
+		constraints []ConfigPolicy
+		hasErr      bool
 	}{
 		{
-			desc:     "no policies - should not fail",
-			policies: []ConfigPolicy{},
-			hasErr:   false,
+			desc:        "no policies - should not fail",
+			policies:    []ConfigPolicy{},
+			constraints: []ConfigPolicy{DeviceConfigOptional, DeviceConfigRequired},
+			hasErr:      false,
 		},
 		{
-			desc:     "no PluginConfig policies - should not fail",
-			policies: []ConfigPolicy{DeviceConfigOptional, DeviceConfigRequired},
-			hasErr:   false,
+			desc:        "no PluginConfig policies - should not fail",
+			policies:    []ConfigPolicy{DeviceConfigOptional, DeviceConfigRequired},
+			constraints: []ConfigPolicy{PluginConfigOptional, PluginConfigRequired},
+			hasErr:      false,
 		},
 		{
-			desc:     "one PluginConfig policy - should not fail",
-			policies: []ConfigPolicy{PluginConfigOptional},
-			hasErr:   false,
+			desc:        "one PluginConfig policy - should not fail",
+			policies:    []ConfigPolicy{PluginConfigOptional},
+			constraints: []ConfigPolicy{PluginConfigOptional, PluginConfigRequired},
+			hasErr:      false,
 		},
 		{
-			desc:     "conflicting PluginConfig policies - should fail",
-			policies: []ConfigPolicy{PluginConfigOptional, PluginConfigRequired},
-			hasErr:   true,
+			desc:        "conflicting PluginConfig policies - should fail",
+			policies:    []ConfigPolicy{PluginConfigOptional, PluginConfigRequired},
+			constraints: []ConfigPolicy{PluginConfigOptional, PluginConfigRequired},
+			hasErr:      true,
+		},
+		{
+			desc:        "no DeviceConfig policies - should not fail",
+			policies:    []ConfigPolicy{PluginConfigRequired, PluginConfigOptional},
+			constraints: []ConfigPolicy{DeviceConfigOptional, DeviceConfigRequired},
+			hasErr:      false,
+		},
+		{
+			desc:        "one DeviceConfig policy - should not fail",
+			policies:    []ConfigPolicy{DeviceConfigRequired},
+			constraints: []ConfigPolicy{DeviceConfigOptional, DeviceConfigRequired},
+			hasErr:      false,
+		},
+		{
+			desc:        "conflicting DeviceConfig policies - should fail",
+			policies:    []ConfigPolicy{DeviceConfigRequired, DeviceConfigOptional},
+			constraints: []ConfigPolicy{DeviceConfigOptional, DeviceConfigRequired},
+			hasErr:      true,
 		},
 	}
 
 	for _, testCase := range testTable {
-		err := constraintPluginConfigNecessity(testCase.policies)
-		if testCase.hasErr {
-			assert.Error(t, err, testCase.desc)
-		} else {
-			assert.NoError(t, err, testCase.desc)
-		}
-	}
-}
-
-// Test_constraintDeviceConfigNecessity tests the DeviceConfigNecessity constraint.
-func Test_constraintDeviceConfigNecessity(t *testing.T) {
-	var testTable = []struct {
-		desc     string
-		policies []ConfigPolicy
-		hasErr   bool
-	}{
-		{
-			desc:     "no policies - should not fail",
-			policies: []ConfigPolicy{},
-			hasErr:   false,
-		},
-		{
-			desc:     "no DeviceConfig policies - should not fail",
-			policies: []ConfigPolicy{PluginConfigRequired, PluginConfigOptional},
-			hasErr:   false,
-		},
-		{
-			desc:     "one DeviceConfig policy - should not fail",
-			policies: []ConfigPolicy{DeviceConfigRequired},
-			hasErr:   false,
-		},
-		{
-			desc:     "conflicting DeviceConfig policies - should fail",
-			policies: []ConfigPolicy{DeviceConfigRequired, DeviceConfigOptional},
-			hasErr:   true,
-		},
-	}
-
-	for _, testCase := range testTable {
-		err := constraintDeviceConfigNecessity(testCase.policies)
+		err := oneOrNoneOf(testCase.constraints...)(testCase.policies)
 		if testCase.hasErr {
 			assert.Error(t, err, testCase.desc)
 		} else {
@@ -129,7 +113,7 @@ func TestCheckConstraints(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		multiErr := CheckConstraints(testCase.policies)
+		multiErr := checkConstraints(testCase.policies)
 		assert.Equal(t, testCase.errCount, len(multiErr.Errors), testCase.desc)
 	}
 }

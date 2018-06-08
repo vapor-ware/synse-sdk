@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
 // TestNewPlugin tests creating a new plugin.
@@ -54,16 +53,6 @@ func TestNewPlugin(t *testing.T) {
 		plugin := NewPlugin(testCase.options...)
 		assert.NotNil(t, plugin)
 	}
-}
-
-// TestPlugin_SetConfigPolicies tests setting the config policies for the plugin.
-func TestPlugin_SetConfigPolicies(t *testing.T) {
-	plugin := NewPlugin()
-	plugin.SetConfigPolicies(
-		policies.DeviceConfigOptional,
-		policies.PluginConfigRequired,
-	)
-	assert.Equal(t, 2, len(plugin.policies))
 }
 
 // TestPlugin_RegisterOutputTypes tests registering the output types for the plugin.
