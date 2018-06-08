@@ -43,6 +43,17 @@ endif
 docs:  ## Build the docs locally
 	(cd docs ; make html)
 
+.PHONY: check-examples
+check-examples:  ## Check that the examples run without failing.
+	@for d in examples/*/ ; do \
+		echo "\n\033[32m$$d\033[0m" ; \
+		cd $$d ; \
+		if [ ! -f "plugin" ]; then echo "\033[31mplugin binary not found\033[0m"; fi; \
+		if ! ./plugin --dry-run; then exit 1; fi; \
+		cd ../.. ; \
+	done
+
+
 .PHONY: examples
 examples:  ## Build the examples
 	@for d in examples/*/ ; do \
