@@ -127,10 +127,6 @@ func GetDeviceConfigPolicy() ConfigPolicy {
 	return defaultManager.GetDeviceConfigPolicy()
 }
 
-// Apply applies the given config policies to the SDK policy manager. Before
-// policies are added to the policy manager, they are first verified OK by
-// checking the policy constraints.
-
 // Check checks the policy constraint functions against the manager's set of
 // tracked policies. This should be done prior to getting any policies to ensure
 // that the policy set is valid to begin with.

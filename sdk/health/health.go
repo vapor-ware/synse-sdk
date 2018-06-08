@@ -56,9 +56,6 @@ func GetStatus() []*Status {
 
 // Register registers a checker with the catalog.
 func (catalog *Catalog) Register(name string, check Checker) {
-	if catalog == nil {
-		catalog = DefaultCatalog
-	}
 	catalog.lock.Lock()
 	defer catalog.lock.Unlock()
 
