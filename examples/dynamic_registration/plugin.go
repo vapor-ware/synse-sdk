@@ -8,6 +8,7 @@ import (
 
 	"github.com/vapor-ware/synse-sdk/sdk"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
 var (
@@ -59,54 +60,49 @@ func ProtocolIdentifier(data map[string]interface{}) string {
 func DynamicDeviceConfig(cfg map[string]interface{}) ([]*config.DeviceConfig, error) {
 	var res []*config.DeviceConfig
 
-	baseAddr := cfg["base"]
-	for i := 0; i < 3; i++ {
-		devAddr := fmt.Sprintf("%v-%v", baseAddr, i)
-
-		// create a new device - here, we are using the base address and appending
-		// index of the loop to create the id of the device. we are hardcoding in
-		// the type and model as temperature and temp2010, respectively, because
-		// we need the devices to match the prototypes were support. in this example,
-		// we only have the temperature device prototype. in a real case, this info
-		// should be gathered from whatever the real source of auto-enumeration is,
-		// e.g. for IPMI - the SDR records.
-		d := config.DeviceConfig{
-			SchemeVersion: config.SchemeVersion{
-				Version: "1.0",
+	// create a new device - here, we are using the base address and appending
+	// index of the loop to create the id of the device. we are hardcoding in
+	// the type and model as temperature and temp2010, respectively, because
+	// we need the devices to match the prototypes were support. in this example,
+	// we only have the temperature device prototype. in a real case, this info
+	// should be gathered from whatever the real source of auto-enumeration is,
+	// e.g. for IPMI - the SDR records.
+	d := config.DeviceConfig{
+		SchemeVersion: config.SchemeVersion{
+			Version: "1.0",
+		},
+		Locations: []*config.Location{
+			{
+				Name:  "foobar",
+				Rack:  &config.LocationData{Name: "foo"},
+				Board: &config.LocationData{Name: "bar"},
 			},
-			Locations: []*config.Location{
-				{
-					Name:  "foobar",
-					Rack:  &config.LocationData{Name: "foo"},
-					Board: &config.LocationData{Name: "bar"},
+		},
+		Devices: []*config.DeviceKind{
+			{
+				Name: "temperature",
+				Metadata: map[string]string{
+					"model": "temp2010",
 				},
-			},
-			Devices: []*config.DeviceKind{
-				{
-					Name: "temperature",
-					Metadata: map[string]string{
-						"model": "temp2010",
-					},
-					Instances: []*config.DeviceInstance{
-						{
-							Info:     fmt.Sprintf("Test Device %d", i),
-							Location: "foobar",
-							Data: map[string]interface{}{
-								"id": devAddr,
-							},
-							Outputs: []*config.DeviceOutput{
-								{
-									Type: "temperature",
-								},
+				Instances: []*config.DeviceInstance{
+					{
+						Info:     "test device",
+						Location: "foobar",
+						Data: map[string]interface{}{
+							"id": fmt.Sprint(cfg["base"]),
+						},
+						Outputs: []*config.DeviceOutput{
+							{
+								Type: "temperature",
 							},
 						},
 					},
 				},
 			},
-		}
-
-		res = append(res, &d)
+		},
 	}
+
+	res = append(res, &d)
 	return res, nil
 }
 
@@ -125,6 +121,10 @@ func main() {
 		sdk.CustomDeviceIdentifier(ProtocolIdentifier),
 		sdk.CustomDynamicDeviceConfigRegistration(DynamicDeviceConfig),
 	)
+
+	// Set the device config policy to optional - this means that we will not
+	// fail if there are no device config files found.
+	plugin.SetConfigPolicies(policies.DeviceConfigOptional)
 
 	// Register output types
 	err := plugin.RegisterOutputTypes(&temperatureOutput)

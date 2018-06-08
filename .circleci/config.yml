@@ -63,6 +63,9 @@ jobs:
       - run:
           name: Build Examples
           command: make examples
+      - run:
+          name: Check Examples
+          command: make check-examples
       - save_cache:
           when: on_success
           key: v1-vendor-{{ checksum "Gopkg.toml" }}-{{ checksum "Gopkg.lock" }}
