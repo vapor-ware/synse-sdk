@@ -17,4 +17,5 @@ func Test_newPluginContext(t *testing.T) {
 	assert.NotNil(t, ctx.deviceIdentifier)
 	assert.NotNil(t, ctx.dynamicDeviceRegistrar)
 	assert.NotNil(t, ctx.dynamicDeviceConfigRegistrar)
+	assert.NotNil(t, ctx.deviceDataValidator)
 }
