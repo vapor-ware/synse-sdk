@@ -51,3 +51,18 @@ func TestCustomDynamicDeviceConfigRegistration(t *testing.T) {
 	opt(&ctx)
 	assert.NotNil(t, ctx.dynamicDeviceConfigRegistrar)
 }
+
+// TestCustomDeviceDataValidator tests creating a PluginOption for a custom
+// device data validator function.
+func TestCustomDeviceDataValidator(t *testing.T) {
+	opt := CustomDeviceDataValidator(
+		func(i map[string]interface{}) error {
+			return nil
+		},
+	)
+	ctx := PluginContext{}
+	assert.Nil(t, ctx.deviceDataValidator)
+
+	opt(&ctx)
+	assert.NotNil(t, ctx.deviceDataValidator)
+}

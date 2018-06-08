@@ -42,6 +42,41 @@ func NewDeviceConfig() *DeviceConfig {
 	}
 }
 
+// ValidateDeviceConfigData validates the `Data` field(s) of a Device Config to
+// ensure that they are correct. The `Data` fields are plugin-specific, so its
+// up to the user to provide us with a validation function.
+func (config *DeviceConfig) ValidateDeviceConfigData(validator func(map[string]interface{}) error) *errors.MultiError {
+	multiErr := errors.NewMultiError("device config 'data' field validation")
+
+	for _, device := range config.Devices {
+		// Verify that the DeviceKind Instances' `Data` field is correct
+		for _, instance := range device.Instances {
+			err := validator(instance.Data)
+			if err != nil {
+				multiErr.Add(err)
+			}
+			// Instance Outputs can have their own data too. Verify instance
+			// output data.
+			for _, output := range instance.Outputs {
+				err := validator(output.Data)
+				if err != nil {
+					multiErr.Add(err)
+				}
+			}
+		}
+
+		// Device kind outputs can have their own data too. Verify the
+		// device kind output data.
+		for _, output := range device.Outputs {
+			err := validator(output.Data)
+			if err != nil {
+				multiErr.Add(err)
+			}
+		}
+	}
+	return multiErr
+}
+
 // Validate validates that the DeviceConfig has no configuration errors.
 //
 // This is called before Devices are created.

@@ -29,3 +29,12 @@ func CustomDynamicDeviceConfigRegistration(registrar DynamicDeviceConfigRegistra
 		ctx.dynamicDeviceConfigRegistrar = registrar
 	}
 }
+
+// CustomDeviceDataValidator lets you set a custom function for validating the Data field
+// of a device's config. By default, this data is not validated by the SDK, since it is
+// plugin-specific.
+func CustomDeviceDataValidator(validator DeviceDataValidator) PluginOption {
+	return func(ctx *PluginContext) {
+		ctx.deviceDataValidator = validator
+	}
+}

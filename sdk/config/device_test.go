@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"fmt"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
@@ -749,5 +751,171 @@ func TestDeviceOutput_Validate_Error(t *testing.T) {
 		testCase.output.Validate(merr)
 		assert.Error(t, merr.Err(), testCase.desc)
 		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestDeviceConfig_ValidateDeviceConfigDataOk tests validating config data when there
+// are no errors.
+func TestDeviceConfig_ValidateDeviceConfigDataOk(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config DeviceConfig
+	}{
+		{
+			desc: "no data field in the device config",
+			config: DeviceConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Locations:     []*Location{},
+				Devices:       []*DeviceKind{},
+			},
+		},
+		{
+			desc: "data in the device kind output",
+			config: DeviceConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Locations:     []*Location{},
+				Devices: []*DeviceKind{
+					{
+						Outputs: []*DeviceOutput{
+							{
+								Data: map[string]interface{}{
+									"foo": "bar",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "data in the device instance",
+			config: DeviceConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Locations:     []*Location{},
+				Devices: []*DeviceKind{
+					{
+						Instances: []*DeviceInstance{
+							{
+								Data: map[string]interface{}{
+									"foo": "bar",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "data in the device instance output",
+			config: DeviceConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Locations:     []*Location{},
+				Devices: []*DeviceKind{
+					{
+						Instances: []*DeviceInstance{
+							{
+								Outputs: []*DeviceOutput{
+									{
+										Data: map[string]interface{}{
+											"foo": "bar",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// define the validator function. it does nothing and returns nil,
+	// so we should never get an error.
+	var validator = func(_ map[string]interface{}) error {
+		return nil
+	}
+
+	for _, testCase := range testTable {
+		err := testCase.config.ValidateDeviceConfigData(validator)
+		assert.NoError(t, err.Err(), testCase.desc)
+	}
+}
+
+// TestDeviceConfig_ValidateDeviceConfigDataError tests validating config data when there
+// are errors.
+func TestDeviceConfig_ValidateDeviceConfigDataError(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config DeviceConfig
+	}{
+		{
+			desc: "data in the device kind output",
+			config: DeviceConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Locations:     []*Location{},
+				Devices: []*DeviceKind{
+					{
+						Outputs: []*DeviceOutput{
+							{
+								Data: map[string]interface{}{
+									"foo": "bar",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "data in the device instance",
+			config: DeviceConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Locations:     []*Location{},
+				Devices: []*DeviceKind{
+					{
+						Instances: []*DeviceInstance{
+							{
+								Data: map[string]interface{}{
+									"foo": "bar",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "data in the device instance output",
+			config: DeviceConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Locations:     []*Location{},
+				Devices: []*DeviceKind{
+					{
+						Instances: []*DeviceInstance{
+							{
+								Outputs: []*DeviceOutput{
+									{
+										Data: map[string]interface{}{
+											"foo": "bar",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// define the validator function. it does nothing and returns an error, so
+	// all things should fail validation.
+	var validator = func(_ map[string]interface{}) error {
+		return fmt.Errorf("test error")
+	}
+
+	for _, testCase := range testTable {
+		err := testCase.config.ValidateDeviceConfigData(validator)
+		assert.Error(t, err.Err(), testCase.desc)
 	}
 }

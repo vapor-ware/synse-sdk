@@ -8,7 +8,7 @@ import (
 )
 
 // defaultDeviceIdentifier is the default implementation that fulfils the DeviceIdentifier
-// type for a plugin.
+// type for a plugin context.
 //
 // This implementation creates a string by joining all values found in the provided
 // device data map. Non-string values in the map are cast to a string.
@@ -35,7 +35,7 @@ func defaultDeviceIdentifier(data map[string]interface{}) string {
 }
 
 // defaultDynamicDeviceRegistration is the default implementation that fulfils the
-// DynamicDeviceRegistrar type for a plugin.
+// DynamicDeviceRegistrar type for a plugin context.
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
@@ -44,10 +44,19 @@ func defaultDynamicDeviceRegistration(_ map[string]interface{}) ([]*Device, erro
 }
 
 // defaultDynamicDeviceConfigRegistration is the default implementation that fulfils the
-// DynamicDeviceConfigRegistrar type for a plugin.
+// DynamicDeviceConfigRegistrar type for a plugin context.
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
 func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*config.DeviceConfig, error) {
 	return []*config.DeviceConfig{}, nil
+}
+
+// defaultDeviceDataValidator is the default implementation that fulfils the
+// DeviceDataValidator type for a plugin context.
+//
+// This implementation simply returns nil. By default, this will not do any custom
+// validation.
+func defaultDeviceDataValidator(_ map[string]interface{}) error {
+	return nil
 }

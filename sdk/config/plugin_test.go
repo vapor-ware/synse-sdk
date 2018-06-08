@@ -558,11 +558,19 @@ func TestTransactionSettings_Validate_Error(t *testing.T) {
 	}
 }
 
-// TestDynamicRegistrationSettings_Validate tests validating a DynamicRegistrationSetting.
+// TestDynamicRegistrationSettings_Validate tests validating a DynamicRegistrationSettings.
 // Validation should always pass here.
 func TestDynamicRegistrationSettings_Validate(t *testing.T) {
 	merr := errors.NewMultiError("test")
 	config := DynamicRegistrationSettings{}
+	config.Validate(merr)
+	assert.NoError(t, merr.Err())
+}
+
+// TestHealthSettings_Validate tests validating a HealthSettings. Validation should always pass.
+func TestHealthSettings_Validate(t *testing.T) {
+	merr := errors.NewMultiError("test")
+	config := HealthSettings{}
 	config.Validate(merr)
 	assert.NoError(t, merr.Err())
 }

@@ -33,3 +33,9 @@ func Test_defaultDynamicDeviceConfigRegistration(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, cfgs)
 }
+
+// Test_defaultDeviceDataValidator tests the default device data validator functionality.
+func Test_defaultDeviceDataValidator(t *testing.T) {
+	err := defaultDeviceDataValidator(testData)
+	assert.NoError(t, err)
+}

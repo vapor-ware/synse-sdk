@@ -19,6 +19,11 @@ type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
 // is specific to the plugin/protocol.
 type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceConfig, error)
 
+// DeviceDataValidator is a function that takes the `Data` field of a device config
+// and performs some validation on it. This allows users to provide validation on the
+// plugin-specific config fields.
+type DeviceDataValidator func(map[string]interface{}) error
+
 // Context is the global context for the plugin. It stores various plugin settings,
 // including handler functions for customizable plugin functionality.
 var Context = newPluginContext()
@@ -30,6 +35,7 @@ type PluginContext struct {
 	deviceIdentifier             DeviceIdentifier
 	dynamicDeviceRegistrar       DynamicDeviceRegistrar
 	dynamicDeviceConfigRegistrar DynamicDeviceConfigRegistrar
+	deviceDataValidator          DeviceDataValidator
 }
 
 // newPluginContext creates a new instance of the plugin context, supplying the default
@@ -39,5 +45,6 @@ func newPluginContext() *PluginContext {
 		deviceIdentifier:             defaultDeviceIdentifier,
 		dynamicDeviceRegistrar:       defaultDynamicDeviceRegistration,
 		dynamicDeviceConfigRegistrar: defaultDynamicDeviceConfigRegistration,
+		deviceDataValidator:          defaultDeviceDataValidator,
 	}
 }

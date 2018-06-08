@@ -386,6 +386,15 @@ func (plugin *Plugin) processConfig() error { // nolint: gocyclo
 		if multiErr.HasErrors() {
 			return multiErr
 		}
+
+		// Now that we have the configs and have the base scheme validated, we want to
+		// validate the `Data` field of the Device config. This field is plugin-specific,
+		// so we require the plugin author to provide the function for validation.
+		cfg := ctx.Config.(*config.DeviceConfig)
+		multiErr = cfg.ValidateDeviceConfigData(Context.deviceDataValidator)
+		if multiErr.HasErrors() {
+			return multiErr
+		}
 	}
 
 	// 3. Unify Configs
