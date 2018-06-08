@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
 	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -20,26 +19,9 @@ import (
 // and the value is the corresponding OutputType.
 var outputTypeMap = map[string]*config.OutputType{}
 
-// DeviceIdentifier is a function that produces a string that can be used to
-// identify a device deterministically. The returned string should be a composite
-// from the Device's config data.
-type DeviceIdentifier func(map[string]interface{}) string
-
-// DynamicDeviceRegistrar is a function that takes a Plugin config's "dynamic
-// registration" data and generates Device instances from it. How this is done
-// is specific to the plugin/protocol.
-type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
-
-// DynamicDeviceConfigRegistrar is a function that takes a Plugin config's "dynamic
-// registration" data and generates DeviceConfig instances from it. How this is done
-// is specific to the plugin/protocol.
-type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceConfig, error)
-
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse Server.
 type Plugin struct {
-	policies []policies.ConfigPolicy
-
 	server *Server
 	quit   chan os.Signal
 }
@@ -54,17 +36,7 @@ func NewPlugin(options ...PluginOption) *Plugin {
 	for _, option := range options {
 		option(Context)
 	}
-
 	return &plugin
-}
-
-// SetConfigPolicies sets the config policies for the plugin. Config policies will
-// determine how the plugin behaves when reading in configurations.
-//
-// If no config policies are set, default policies will be used. Policy validation
-// does not happen in this function. Config policies are validated on plugin Run.
-func (plugin *Plugin) SetConfigPolicies(policies ...policies.ConfigPolicy) {
-	plugin.policies = policies
 }
 
 // RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
@@ -155,7 +127,7 @@ func (plugin *Plugin) Run() error { // nolint: gocyclo
 
 	// Check for configuration policies. If no policy was set by the plugin,
 	// this will fall back on the default policies.
-	err := plugin.checkPolicies()
+	err := policies.Check()
 	if err != nil {
 		return err
 	}
@@ -279,22 +251,6 @@ func (plugin *Plugin) resolveFlags() {
 		fmt.Println(Version.Format())
 		os.Exit(0)
 	}
-}
-
-// checkPolicies checks for policies registered with the plugin. If no policies
-// were set, the defaults will be used.
-func (plugin *Plugin) checkPolicies() error {
-	// Verify that the policies set for the plugin do not break any of the
-	// constraints set on the policies.
-	err := policies.CheckConstraints(plugin.policies)
-	if err.Err() != nil {
-		logger.Error("config policies set for the plugin are invalid")
-		return err
-	}
-
-	// If we passed constraint checking, we can use the given policies
-	policies.Apply(plugin.policies)
-	return nil
 }
 
 // processConfig handles plugin configuration in a number of steps. The behavior

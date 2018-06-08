@@ -32,7 +32,7 @@ const (
 
 // policyStrings maps ConfigPolicies to their name.
 var policyStrings = map[ConfigPolicy]string{
-	NoPolicy: "NoPolicy",
+	NoPolicy:             "NoPolicy",
 	PluginConfigOptional: "PluginConfigOptional",
 	PluginConfigRequired: "PluginConfigRequired",
 	DeviceConfigOptional: "DeviceConfigOptional",
@@ -47,57 +47,105 @@ func (policy ConfigPolicy) String() string {
 	return "unknown"
 }
 
-// policyManager is a global policyManager instance that holds the
+// defaultManager is a global policyManager instance that holds the
 // policies for the plugin.
-var policyManager = manager{}
+var defaultManager = manager{}
 
 // manager is used to track the policies set for a plugin.
 type manager struct {
+	policies []ConfigPolicy
+
 	pluginConfigPolicy ConfigPolicy
 	deviceConfigPolicy ConfigPolicy
 }
 
-// Set sets the policies for the manager to track.
+// Add adds a ConfigPolicy to the policies tracked by the manager.
+func (m *manager) Add(policy ConfigPolicy) {
+	m.policies = append(m.policies, policy)
+}
+
+// Add adds a ConfigPolicy to the SDK's policy manager.
+func Add(policy ConfigPolicy) {
+	defaultManager.Add(policy)
+}
+
+// Set sets multiple policies for the manager to track.
 func (m *manager) Set(policies []ConfigPolicy) {
-	for _, policy := range policies {
-		switch policy {
-		case PluginConfigRequired, PluginConfigOptional:
-			m.pluginConfigPolicy = policy
-		case DeviceConfigRequired, DeviceConfigOptional:
-			m.deviceConfigPolicy = policy
+	m.policies = append(m.policies, policies...)
+}
+
+// Set sets multiple policies for the SDK's policy manager.
+func Set(policies []ConfigPolicy) {
+	defaultManager.Set(policies)
+}
+
+// GetPluginConfigPolicy gets the plugin config policy for the manager. If
+// none was explicitly set, this will return the default policy.
+func (m *manager) GetPluginConfigPolicy() ConfigPolicy {
+	if m.pluginConfigPolicy == NoPolicy {
+		for _, p := range m.policies {
+			switch p {
+			case PluginConfigRequired, PluginConfigOptional:
+				m.pluginConfigPolicy = p
+			}
+		}
+		if m.pluginConfigPolicy == NoPolicy {
+			m.pluginConfigPolicy = PluginConfigOptional
 		}
 	}
+	return m.pluginConfigPolicy
 }
 
-// GetPluginConfigPolicy gets the plugin config policy for the plugin. If
-// none was explicitly set by the plugin, this will return the default policy.
+// GetPluginConfigPolicy gets the plugin config policy that was registered
+// with the SDK's policy manager. If none was explicitly set, the default
+// policy is returned.
 func GetPluginConfigPolicy() ConfigPolicy {
-	if policyManager.pluginConfigPolicy == 0 {
-		policyManager.pluginConfigPolicy = PluginConfigOptional
-	}
-	return policyManager.pluginConfigPolicy
+	return defaultManager.GetPluginConfigPolicy()
 }
 
-// GetDeviceConfigPolicy gets the device config policy for the plugin. If
-// none was explicitly set by the plugin, this will return the default policy.
-func GetDeviceConfigPolicy() ConfigPolicy {
-	if policyManager.deviceConfigPolicy == 0 {
-		policyManager.deviceConfigPolicy =  DeviceConfigRequired
+// GetDeviceConfigPolicy gets the device config policy for the manager. If
+// none was explicitly set, this will return the default policy.
+func (m *manager) GetDeviceConfigPolicy() ConfigPolicy {
+	if m.deviceConfigPolicy == NoPolicy {
+		for _, p := range m.policies {
+			switch p {
+			case DeviceConfigRequired, DeviceConfigOptional:
+				m.deviceConfigPolicy = p
+			}
+		}
+		if m.deviceConfigPolicy == NoPolicy {
+			m.deviceConfigPolicy = DeviceConfigRequired
+		}
 	}
-	return policyManager.deviceConfigPolicy
+	return m.deviceConfigPolicy
+}
+
+// GetDeviceConfigPolicy gets the device config policy that was registered
+// with the SDK's policy manager. If none was explicitly set, the default
+// policy is returned.
+func GetDeviceConfigPolicy() ConfigPolicy {
+	return defaultManager.GetDeviceConfigPolicy()
 }
 
 // Apply applies the given config policies to the SDK policy manager. Before
 // policies are added to the policy manager, they are first verified OK by
 // checking the policy constraints.
-func Apply(policies []ConfigPolicy) error {
-	err := CheckConstraints(policies)
+
+// Check checks the policy constraint functions against the manager's set of
+// tracked policies. This should be done prior to getting any policies to ensure
+// that the policy set is valid to begin with.
+func (m *manager) Check() error {
+	err := checkConstraints(m.policies)
 	if err.HasErrors() {
 		logger.Error("applied config policies do not pass constraint checks")
 		return err
 	}
-
-	// Constraint checking passed, apply the policies to the policy manager.
-	policyManager.Set(policies)
 	return nil
+}
+
+// Check checks the policy constraint functions against the policies tracked by
+// the SDK's policy manager. This should be done prior to getting any policies
+// to ensure that the policy set is valid to begin with.
+func Check() error {
+	return defaultManager.Check()
 }

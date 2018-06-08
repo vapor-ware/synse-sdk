@@ -2,6 +2,7 @@ package policies
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
@@ -9,13 +10,13 @@ import (
 type constraint func([]ConfigPolicy) error
 
 var constraints = []constraint{
-	constraintDeviceConfigNecessity,
-	constraintPluginConfigNecessity,
+	oneOrNoneOf(PluginConfigOptional, PluginConfigRequired),
+	oneOrNoneOf(DeviceConfigRequired, DeviceConfigOptional),
 }
 
-// CheckConstraints checks the given slice of ConfigPolicies for constraint
+// checkConstraints checks the given slice of ConfigPolicies for constraint
 // violations. All constraints are checked and all violations returned.
-func CheckConstraints(policies []ConfigPolicy) *errors.MultiError {
+func checkConstraints(policies []ConfigPolicy) *errors.MultiError {
 	multiErr := errors.NewMultiError("ConfigPolicy Constraints")
 	for _, constr := range constraints {
 		err := constr(policies)
@@ -26,44 +27,30 @@ func CheckConstraints(policies []ConfigPolicy) *errors.MultiError {
 	return multiErr
 }
 
-// constraintPluginConfigNecessity checks that both PluginConfigRequired and
-// PluginConfigOptional are not specified.
-func constraintPluginConfigNecessity(policies []ConfigPolicy) error {
-	var (
-		hasReq, hasOpt bool
-	)
-	for _, policy := range policies {
-		switch policy {
-		case PluginConfigRequired:
-			hasReq = true
-		case PluginConfigOptional:
-			hasOpt = true
+// oneOrNoneOf creates a constraint on the given set of policies where either
+// none of the policies should be present, or only one of the policies should
+// be present.
+func oneOrNoneOf(policies ...ConfigPolicy) constraint {
+	return func(p []ConfigPolicy) error {
+		var has []ConfigPolicy
+		for _, toCheck := range policies {
+			for _, policy := range p {
+				if toCheck == policy {
+					has = append(has, policy)
+					break
+				}
+			}
 		}
-	}
-	if hasReq && hasOpt {
-		// FIXME: custom config policy error?
-		return fmt.Errorf("both PluginConfigRequired and PluginConfigOptional are specified, but are mutually exclusive")
-	}
-	return nil
-}
-
-// constraintDeviceConfigNecessity checks that both DeviceConfigRequired and
-// DeviceConfigOptional are not specified.
-func constraintDeviceConfigNecessity(policies []ConfigPolicy) error {
-	var (
-		hasReq, hasOpt bool
-	)
-	for _, policy := range policies {
-		switch policy {
-		case DeviceConfigRequired:
-			hasReq = true
-		case DeviceConfigOptional:
-			hasOpt = true
+		if len(has) > 1 {
+			var names []string
+			for _, policy := range has {
+				names = append(names, policy.String())
+			}
+			return errors.NewPolicyViolationError(
+				strings.Join(names, ","),
+				fmt.Sprintf("constraint oneOrNoneOf{%v} broken, more than one matching policy found", policies),
+			)
 		}
+		return nil
 	}
-	if hasReq && hasOpt {
-		// FIXME: custom config policy error?
-		return fmt.Errorf("both DeviceConfigRequired and DeviceConfigOptional are specified, but are mutually exclusive")
-	}
-	return nil
 }

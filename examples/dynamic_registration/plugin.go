@@ -124,7 +124,7 @@ func main() {
 
 	// Set the device config policy to optional - this means that we will not
 	// fail if there are no device config files found.
-	plugin.SetConfigPolicies(policies.DeviceConfigOptional)
+	policies.Add(policies.DeviceConfigOptional)
 
 	// Register output types
 	err := plugin.RegisterOutputTypes(&temperatureOutput)
