@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
 )
@@ -182,10 +183,7 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 
 	// If there are no configs after searching all paths, return an error
 	if len(configs) == 0 {
-		// TODO: this should probably be a specific config error so we can
-		// catch it later on. When configuration policies are implemented, this
-		// error might be ignored.
-		return nil, fmt.Errorf("no configuration files found in: %v", searchPaths)
+		return nil, errors.NewConfigsNotFoundError(searchPaths)
 	}
 	return
 }
@@ -230,7 +228,7 @@ func searchEnv(env, name string) (configs []string, err error) {
 		// Since the ENV is used for user-specified overrides, if we don't
 		// find anything here, we will return an error.
 		if len(configs) == 0 {
-			return configs, fmt.Errorf("no valid config files found in override path: %s", envValue)
+			return configs, errors.NewConfigsNotFoundError([]string{envValue})
 		}
 		return
 	}

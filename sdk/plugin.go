@@ -260,162 +260,57 @@ func (plugin *Plugin) resolveFlags() {
 // There are four major steps to processing plugin configuration: reading in the
 // config, validating the config scheme, config unification, and verifying the
 // config data is correct. These steps should happen for all config types.
-func (plugin *Plugin) processConfig() error { // nolint: gocyclo
+func (plugin *Plugin) processConfig() error {
 
-	// First, resolve the plugin config. We need to do this first, since subsequent
-	// steps may require a plugin config to be specified.
-	pluginPolicy := policies.GetPluginConfigPolicy()
-	logger.Debugf("plugin config policy: %s", pluginPolicy.String())
-
-	pluginCtx, err := config.GetPluginConfigFromFile()
-	if err != nil {
-		// If we got an error when looking for the plugin config, we'll need to
-		// check what the policy is for plugin config to determine how to proceed.
-		switch pluginPolicy {
-		case policies.PluginConfigRequired:
-			return errors.NewPolicyViolationError(
-				pluginPolicy.String(),
-				"plugin config required but not found",
-			)
-		case policies.PluginConfigOptional:
-			// If the Plugin Config is optional, we will still need to create a new
-			// plugin config that has all of the defaults filled out.
-			cfg, e := config.NewDefaultPluginConfig()
-			if e != nil {
-				return e
-			}
-			PluginConfig = cfg
-		default:
-			return errors.NewPolicyViolationError(
-				pluginPolicy.String(),
-				"unsupported plugin config policy",
-			)
-		}
-	}
-
-	multiErr := config.Validator.Validate(pluginCtx, pluginCtx.Source)
-	if multiErr.HasErrors() {
-		return multiErr
-	}
-
-	// If we get here, the plugin config was verified correctly. Assign it to the
-	// global plugin config.
-	PluginConfig = pluginCtx.Config.(*config.PluginConfig)
-
-	// Now, resolve the other configs
-
-	// Register output type configs from file
-	outputTypeCtxs, err := config.GetOutputTypeConfigsFromFile()
-	if err != nil {
-		logger.Debug(err)
-		if len(outputTypeMap) == 0 {
-			// If we do not have any types already registered in the type map
-			// (e.g. via plugin.RegisterOutputTypes), then we will have to fail
-			// here.. if we don't know any output types, we won't be able to output
-			// anything properly.
-			return err
-		}
-	} else {
-		for _, ctx := range outputTypeCtxs {
-			cfg := ctx.Config.(*config.OutputType)
-			e := plugin.RegisterOutputTypes(cfg)
-			if e != nil {
-				return e
-			}
-		}
-	}
-	// TODO: policies for type configs?
-
-	// Resolve device configs both from file and from dynamic registration, if configured.
-	deviceMultiErr := errors.NewMultiError("parsing device configs")
-	deviceCtxs, err := config.GetDeviceConfigsFromFile()
-	if err != nil {
-		deviceMultiErr.Add(err)
-	}
-
-	// Get device config from dynamic registration, if anything is set there.
-	// cfg schemes not validated yet, so not populated w/ default values...
-	deviceConfigs, err := Context.dynamicDeviceConfigRegistrar(PluginConfig.DynamicRegistration.Config)
-	if err != nil {
-		deviceMultiErr.Add(err)
-	}
-
-	// If any device configs were found during dynamic registration, wrap them in
-	// a context and add them to the known deviceCtxs.
-	for _, cfg := range deviceConfigs {
-		ctx := config.NewConfigContext("dynamic registration", cfg)
-		deviceCtxs = append(deviceCtxs, ctx)
-	}
-
-	// FIXME: should there be different policies here.. e.g. config from file is optional
-	// vs config entirely missing is bad?
-	devicePolicy := policies.GetDeviceConfigPolicy()
-	logger.Debugf("device config policy: %s", devicePolicy.String())
-
-	if deviceMultiErr.Err() != nil || len(deviceCtxs) == 0 {
-		switch devicePolicy {
-		case policies.DeviceConfigRequired:
-			if deviceMultiErr.Err() != nil {
-				logger.Error(deviceMultiErr)
-			}
-			return errors.NewPolicyViolationError(
-				devicePolicy.String(),
-				"device config(s) required, but not found",
-			)
-		case policies.DeviceConfigOptional:
-			// If the device config is optional, we should be fine without having found
-			// anything at this point. We will add a default, empty device config to the
-			// device config contexts so we can pass validation below.
-			ctx := config.Context{
-				Source: "default",
-				Config: config.NewDeviceConfig(),
-			}
-			deviceCtxs = append(deviceCtxs, &ctx)
-
-		default:
-			return errors.NewPolicyViolationError(
-				devicePolicy.String(),
-				"unsupported device config policy",
-			)
-		}
-	}
-
-	// 2. Validate Config Schemes
-	for _, ctx := range deviceCtxs {
-		multiErr = config.Validator.Validate(ctx, ctx.Source)
-		if multiErr.HasErrors() {
-			return multiErr
-		}
-
-		// Now that we have the configs and have the base scheme validated, we want to
-		// validate the `Data` field of the Device config. This field is plugin-specific,
-		// so we require the plugin author to provide the function for validation.
-		cfg := ctx.Config.(*config.DeviceConfig)
-		multiErr = cfg.ValidateDeviceConfigData(Context.deviceDataValidator)
-		if multiErr.HasErrors() {
-			return multiErr
-		}
-	}
-
-	// 3. Unify Configs
-	unifiedCtx, err := config.UnifyDeviceConfigs(deviceCtxs)
+	// Resolve the plugin config.
+	err := config.ProcessPluginConfig()
 	if err != nil {
 		return err
 	}
 
-	// 4. Verify
-	if !unifiedCtx.IsDeviceConfig() {
-		return fmt.Errorf("unexpected config type for unified device configs: %v", unifiedCtx)
+	// Resolve the output type config(s).
+	outputTypes, err := config.ProcessOutputTypeConfig()
+	if err != nil {
+		return err
 	}
-	unifiedCfg := unifiedCtx.Config.(*config.DeviceConfig)
-	multiErr = VerifyConfigs(unifiedCfg)
+
+	// Register the found output types, if any.
+	for _, output := range outputTypes {
+		err = plugin.RegisterOutputTypes(output)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Finally, make sure that we have output types. If we
+	// don't, return an error, since we won't be able to properly
+	// register devices.
+	if len(outputTypeMap) == 0 {
+		return fmt.Errorf(
+			"no output types found. you must either register output types " +
+				"with the plugin, or configure them via file",
+		)
+	}
+
+	// Resolve the device config(s).
+	err = config.ProcessDeviceConfigs(Context.dynamicDeviceConfigRegistrar)
+	if err != nil {
+		return err
+	}
+
+	// Verify the unified config, and validate plugin-specific data.
+	// FIXME: if we reorganize the SDK a bit, we can move the below to the above
+	// function, but for now it needs to live here.
+	multiErr := VerifyConfigs(config.Device)
+	if multiErr.HasErrors() {
+		return multiErr
+	}
+	multiErr = config.Device.ValidateDeviceConfigData(Context.deviceDataValidator)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
 
-	// If we are all set here, we the unified config should be our global device config
-	DeviceConfig = unifiedCfg
-
+	logger.Debug("finished processing configuration(s) for run")
 	return nil
 }
 

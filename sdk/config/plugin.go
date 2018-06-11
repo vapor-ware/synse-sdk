@@ -3,8 +3,12 @@ package config
 import (
 	"time"
 
+	"fmt"
+
 	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
 const (
@@ -15,10 +19,82 @@ const (
 	networkTypeUnix = "unix"
 )
 
-var (
-	// The current (latest) version of the plugin config scheme.
-	currentPluginSchemeVersion = "1.0"
-)
+// Plugin is the PluginConfig set for the plugin. It is globally accessible to the SDK.
+var Plugin *PluginConfig
+
+// The current (latest) version of the plugin config scheme.
+var currentPluginSchemeVersion = "1.0"
+
+// ProcessPluginConfig searches for, reads, and validates the plugin configuration.
+// Its behavior will vary depending on the plugin config policy that is set. If
+// plugin config is processed successfully, it will be set to the global Plugin
+// variable.
+func ProcessPluginConfig() error { // nolint: gocyclo
+	// Get the plugin's policy for plugin config files.
+	pluginFilePolicy := policies.GetPluginConfigFilePolicy()
+	logger.Debugf("plugin config file policy: %s", pluginFilePolicy.String())
+
+	// Now, try getting the plugin config from file.
+	pluginCtx, err := GetPluginConfigFromFile()
+
+	// If the error is not a "config not found" error, then we will return it.
+	_, notFoundErr := err.(*errors.ConfigsNotFound)
+	if !notFoundErr {
+		return err
+	}
+
+	switch pluginFilePolicy {
+	case policies.PluginConfigFileRequired:
+		if err != nil {
+			return errors.NewPolicyViolationError(
+				pluginFilePolicy.String(),
+				fmt.Sprintf("plugin config file required, but not found: %v", err),
+			)
+		}
+
+	case policies.PluginConfigFileOptional:
+		if err != nil {
+			ctx, e := NewDefaultPluginConfig()
+			if e != nil {
+				return e
+			}
+			pluginCtx = NewConfigContext("default", ctx)
+		}
+
+	case policies.PluginConfigFileProhibited:
+		// If the plugin config file is prohibited, we will log a warning
+		// if a file is found, but we will ultimately not fail. Instead, we
+		// will just pass along an empty config.
+		//
+		// It is up to the user to specify the config (whether default of not)
+		// when the plugin config is prohibited.
+		if err == nil && pluginCtx != nil {
+			logger.Warn(
+				"plugin config file found, but its use is prohibited via policy. " +
+					"you must ensure that the plugin has its config set manually.",
+			)
+			// The user should have specified the config, so we will take
+			// that config and wrap it in a context for validation.
+			pluginCtx = NewConfigContext("user defined", Plugin)
+		}
+
+	default:
+		return errors.NewPolicyViolationError(
+			pluginFilePolicy.String(),
+			"unsupported plugin config file policy",
+		)
+	}
+
+	// Validate the plugin config
+	multiErr := Validator.Validate(pluginCtx)
+	if multiErr.HasErrors() {
+		return multiErr
+	}
+
+	// With the config validated, we can now assign it to the global Plugin variable.
+	Plugin = pluginCtx.Config.(*PluginConfig)
+	return nil
+}
 
 // NewDefaultPluginConfig creates a new instance of a PluginConfig with its
 // default values resolved.

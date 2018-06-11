@@ -11,32 +11,85 @@ const (
 	// specified.
 	NoPolicy ConfigPolicy = iota
 
-	// PluginConfigOptional is a policy that allows no plugin config to
-	// be specified, so the plugin can just use default values. This is
-	// the default policy for plugins.
-	PluginConfigOptional
+	// PluginConfigFileOptional is a policy that allows zero or more plugin
+	// configurations from config file. This is the default policy for
+	// plugin config.
+	PluginConfigFileOptional
 
-	// PluginConfigRequired is a policy that requires a plugin to have a
+	// PluginConfigFileRequired is a policy that requires a plugin to have a
 	// plugin configuration specified.
-	PluginConfigRequired
+	PluginConfigFileRequired
 
-	// DeviceConfigOptional is a policy that allows no device config files
-	// to be specified. Some plugins may not device config files, as they
-	// could use dynamic registration exclusively.
-	DeviceConfigOptional
+	// PluginConfigFileProhibited is a policy that prevents a plugin from using
+	// plugin configurations from config file. This can be used if a plugin
+	// needs to restrict its configuration paths.
+	PluginConfigFileProhibited
 
-	// DeviceConfigRequired is a policy that requires device config files to
-	// be present for the plugin to run. This is the default policy for plugins.
-	DeviceConfigRequired
+	// DeviceConfigFileOptional is a policy that allows zero or more device
+	// configurations from config file.
+	DeviceConfigFileOptional
+
+	// DeviceConfigFileRequired is a policy that requires a plugin to have
+	// one or more device configuration files specified. This is the default
+	// policy for device config files.
+	DeviceConfigFileRequired
+
+	// DeviceConfigFileProhibited is a policy that prevents a plugin from using
+	// device configurations from config file(s). This can be used if a plugin
+	// needs to restrict its configuration paths.
+	DeviceConfigFileProhibited
+
+	// DeviceConfigDynamicOptional is a policy that allows zero or more device
+	// configurations from dynamic device registration. This is the default policy
+	// for dynamic device config.
+	DeviceConfigDynamicOptional
+
+	// DeviceConfigDynamicRequired is a policy that requires a plugin to have
+	// one or more device configurations from dynamic device registration.
+	DeviceConfigDynamicRequired
+
+	// DeviceConfigDynamicProhibited is a policy that prevents a plugin from using
+	// device configurations from dynamic registration function(s). This can be
+	// used if a plugin needs to restrict its configuration paths. This will prohibit
+	// both dynamic registration which generates DeviceConfig instance and Device
+	// instances.
+	DeviceConfigDynamicProhibited
+
+	// TypeConfigFileOptional is a policy that allows zero or more output type
+	// configurations from config file. This is the default policy for output
+	// type file config.
+	TypeConfigFileOptional
+
+	// TypeConfigFileRequired is a policy that requires a plugin to have
+	// one or more output type configurations from config file. It does not prohibit
+	// the plugin from defining additional type configs directly in its code.
+	TypeConfigFileRequired
+
+	// TypeConfigFileProhibited is a policy that prevents a plugin from using
+	// type configurations from config file(s). This can be used if a plugin
+	// needs to restrict its configuration paths.
+	TypeConfigFileProhibited
 )
 
 // policyStrings maps ConfigPolicies to their name.
 var policyStrings = map[ConfigPolicy]string{
-	NoPolicy:             "NoPolicy",
-	PluginConfigOptional: "PluginConfigOptional",
-	PluginConfigRequired: "PluginConfigRequired",
-	DeviceConfigOptional: "DeviceConfigOptional",
-	DeviceConfigRequired: "DeviceConfigRequired",
+	NoPolicy: "NoPolicy",
+
+	PluginConfigFileOptional:   "PluginConfigFileOptional",
+	PluginConfigFileRequired:   "PluginConfigFileRequired",
+	PluginConfigFileProhibited: "PluginConfigFileProhibited",
+
+	DeviceConfigFileOptional:   "DeviceConfigFileOptional",
+	DeviceConfigFileRequired:   "DeviceConfigFileRequired",
+	DeviceConfigFileProhibited: "DeviceConfigFileProhibited",
+
+	DeviceConfigDynamicOptional:   "DeviceConfigDynamicOptional",
+	DeviceConfigDynamicRequired:   "DeviceConfigDynamicRequired",
+	DeviceConfigDynamicProhibited: "DeviceConfigDynamicProhibited",
+
+	TypeConfigFileOptional:   "TypeConfigFileOptional",
+	TypeConfigFileRequired:   "TypeConfigFileRequired",
+	TypeConfigFileProhibited: "TypeConfigFileProhibited",
 }
 
 // String returns the name of the ConfigPolicy.
@@ -55,8 +108,10 @@ var defaultManager = manager{}
 type manager struct {
 	policies []ConfigPolicy
 
-	pluginConfigPolicy ConfigPolicy
-	deviceConfigPolicy ConfigPolicy
+	pluginConfigFilePolicy    ConfigPolicy
+	deviceConfigFilePolicy    ConfigPolicy
+	deviceConfigDynamicPolicy ConfigPolicy
+	typeConfigFilePolicy      ConfigPolicy
 }
 
 // Add adds a ConfigPolicy to the policies tracked by the manager.
@@ -79,52 +134,101 @@ func Set(policies []ConfigPolicy) {
 	defaultManager.Set(policies)
 }
 
-// GetPluginConfigPolicy gets the plugin config policy for the manager. If
-// none was explicitly set, this will return the default policy.
-func (m *manager) GetPluginConfigPolicy() ConfigPolicy {
-	if m.pluginConfigPolicy == NoPolicy {
+// GetPluginConfigFilePolicy gets the plugin config file policy for the manager. If
+// no policy was explicitly set, this will return the default policy.
+func (m *manager) GetPluginConfigFilePolicy() ConfigPolicy {
+	if m.pluginConfigFilePolicy == NoPolicy {
 		for _, p := range m.policies {
 			switch p {
-			case PluginConfigRequired, PluginConfigOptional:
-				m.pluginConfigPolicy = p
+			case PluginConfigFileRequired, PluginConfigFileOptional, PluginConfigFileProhibited:
+				m.pluginConfigFilePolicy = p
 			}
 		}
-		if m.pluginConfigPolicy == NoPolicy {
-			m.pluginConfigPolicy = PluginConfigOptional
+		if m.pluginConfigFilePolicy == NoPolicy {
+			m.pluginConfigFilePolicy = PluginConfigFileOptional
 		}
 	}
-	return m.pluginConfigPolicy
+	return m.pluginConfigFilePolicy
 }
 
-// GetPluginConfigPolicy gets the plugin config policy that was registered
-// with the SDK's policy manager. If none was explicitly set, the default
+// GetPluginConfigFilePolicy gets the plugin config policy that was registered
+// with the SDK's policy manager. If no policy was explicitly set, the default
 // policy is returned.
-func GetPluginConfigPolicy() ConfigPolicy {
-	return defaultManager.GetPluginConfigPolicy()
+func GetPluginConfigFilePolicy() ConfigPolicy {
+	return defaultManager.GetPluginConfigFilePolicy()
 }
 
-// GetDeviceConfigPolicy gets the device config policy for the manager. If
-// none was explicitly set, this will return the default policy.
-func (m *manager) GetDeviceConfigPolicy() ConfigPolicy {
-	if m.deviceConfigPolicy == NoPolicy {
+// GetDeviceConfigFilePolicy gets the device config policy for the manager. If
+// no policy was explicitly set, this will return the default policy.
+func (m *manager) GetDeviceConfigFilePolicy() ConfigPolicy {
+	if m.deviceConfigFilePolicy == NoPolicy {
 		for _, p := range m.policies {
 			switch p {
-			case DeviceConfigRequired, DeviceConfigOptional:
-				m.deviceConfigPolicy = p
+			case DeviceConfigFileRequired, DeviceConfigFileOptional, DeviceConfigFileProhibited:
+				m.deviceConfigFilePolicy = p
 			}
 		}
-		if m.deviceConfigPolicy == NoPolicy {
-			m.deviceConfigPolicy = DeviceConfigRequired
+		if m.deviceConfigFilePolicy == NoPolicy {
+			m.deviceConfigFilePolicy = DeviceConfigFileRequired
 		}
 	}
-	return m.deviceConfigPolicy
+	return m.deviceConfigFilePolicy
 }
 
-// GetDeviceConfigPolicy gets the device config policy that was registered
-// with the SDK's policy manager. If none was explicitly set, the default
+// GetDeviceConfigFilePolicy gets the device config policy that was registered
+// with the SDK's policy manager. If no policy was explicitly set, the default
 // policy is returned.
-func GetDeviceConfigPolicy() ConfigPolicy {
-	return defaultManager.GetDeviceConfigPolicy()
+func GetDeviceConfigFilePolicy() ConfigPolicy {
+	return defaultManager.GetDeviceConfigFilePolicy()
+}
+
+// GetDeviceConfigDynamicPolicy gets the device config policy for dynamic
+// registration that was registered with the manager. If no policy was
+// explicitly set, this will return the default policy.
+func (m *manager) GetDeviceConfigDynamicPolicy() ConfigPolicy {
+	if m.deviceConfigDynamicPolicy == NoPolicy {
+		for _, p := range m.policies {
+			switch p {
+			case DeviceConfigDynamicRequired, DeviceConfigDynamicOptional, DeviceConfigDynamicProhibited:
+				m.deviceConfigDynamicPolicy = p
+			}
+		}
+		if m.deviceConfigDynamicPolicy == NoPolicy {
+			m.deviceConfigDynamicPolicy = DeviceConfigDynamicOptional
+		}
+	}
+	return m.deviceConfigDynamicPolicy
+}
+
+// GetDeviceConfigDynamicPolicy gets the device config policy for dynamic
+// registration that was registered with the SDK's policy manager. If no
+// policy was explicitly set, the default policy is returned.
+func GetDeviceConfigDynamicPolicy() ConfigPolicy {
+	return defaultManager.GetDeviceConfigDynamicPolicy()
+}
+
+// GetTypeConfigFilePolicy gets the output type config policy for the manager.
+// If no policy was explicitly set, this will return the default policy.
+func (m *manager) GetTypeConfigFilePolicy() ConfigPolicy {
+	if m.typeConfigFilePolicy == NoPolicy {
+		for _, p := range m.policies {
+			switch p {
+			case TypeConfigFileOptional, TypeConfigFileRequired, TypeConfigFileProhibited:
+				m.typeConfigFilePolicy = p
+			}
+		}
+		if m.typeConfigFilePolicy == NoPolicy {
+			m.typeConfigFilePolicy = TypeConfigFileOptional
+		}
+	}
+	return m.typeConfigFilePolicy
+}
+
+// GetTypeConfigFilePolicy gets the output type config policy that was registered
+// with the SDK's policy manager. If no policy was explicitly set, the default
+// policy is returned.
+func GetTypeConfigFilePolicy() ConfigPolicy {
+	return defaultManager.GetTypeConfigFilePolicy()
 }
 
 // Check checks the policy constraint functions against the manager's set of

@@ -4,9 +4,79 @@ import (
 	"strconv"
 	"strings"
 
+	"fmt"
+
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-sdk/sdk/policies"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
+
+// ProcessOutputTypeConfig searches for, reads, and validates the output type
+// configuration from file. Its behavior will vary depending on the output type
+// config policy that is set. If output type config is processed successfully,
+// the found output type configs are returned.
+func ProcessOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
+	// Get the plugin's policy for output type config files.
+	outputTypeFilePolicy := policies.GetTypeConfigFilePolicy()
+	logger.Debugf("output type config file policy: %s", outputTypeFilePolicy.String())
+
+	// Now, try getting the output type config(s) from file.
+	outputTypeCtxs, err := GetOutputTypeConfigsFromFile()
+
+	// If the error is not a "config not found" error, then we will return it.
+	_, notFoundErr := err.(*errors.ConfigsNotFound)
+	if !notFoundErr {
+		return nil, err
+	}
+
+	switch outputTypeFilePolicy {
+	case policies.TypeConfigFileRequired:
+		if err != nil {
+			return nil, errors.NewPolicyViolationError(
+				outputTypeFilePolicy.String(),
+				fmt.Sprintf("output type config file(s) required, but not found: %v", err),
+			)
+		}
+
+	case policies.TypeConfigFileOptional:
+		if err != nil {
+			outputTypeCtxs = []*Context{}
+			logger.Debug("no type configuration config files found")
+		}
+
+	case policies.TypeConfigFileProhibited:
+		// If the output type config file is prohibited, we will log a warning
+		// if a file is found, but we will ultimately not fail. Instead, we
+		// will just pass along an empty config.
+		if err == nil && len(outputTypeCtxs) > 0 {
+			logger.Warn(
+				"output type config file(s) found, but its use is prohibited via policy. " +
+					"the output type config files will be ignored.",
+			)
+			outputTypeCtxs = []*Context{}
+		}
+
+	default:
+		return nil, errors.NewPolicyViolationError(
+			outputTypeFilePolicy.String(),
+			"unsupported output type config file policy",
+		)
+	}
+
+	var outputs []*OutputType
+
+	// Validate the plugin config
+	for _, outputTypeCtx := range outputTypeCtxs {
+		multiErr := Validator.Validate(outputTypeCtx)
+		if multiErr.HasErrors() {
+			return nil, multiErr
+		}
+		cfg := outputTypeCtx.Config.(*OutputType)
+		outputs = append(outputs, cfg)
+	}
+	return outputs, nil
+}
 
 // OutputType provides information about the output of a device reading.
 type OutputType struct {

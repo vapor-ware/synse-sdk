@@ -44,14 +44,14 @@ type SchemeValidator struct {
 // values are correct and can be parsed correctly.
 //
 // This function takes a Context, which provides both the SchemeVersion to
-// validate against, and the config to validate, and a "source", which is attributed
-// to the errors in the event that any are found.
-func (validator *SchemeValidator) Validate(context *Context, domain string) *errors.MultiError {
+// validate against, and the config to validate. The "source" from the context is
+// used to attribute to the errors in the event that any are found.
+func (validator *SchemeValidator) Validate(context *Context) *errors.MultiError {
 	// Once we're done validating, we'll want to clear the state from this validation.
 	defer validator.clearState()
 
 	// Before we start validating, apply the state to the validator.
-	validator.errors = errors.NewMultiError(domain)
+	validator.errors = errors.NewMultiError(context.Source)
 
 	version, err := context.Config.GetVersion()
 	if err != nil {

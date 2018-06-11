@@ -22,28 +22,68 @@ func TestConfigPolicy_String(t *testing.T) {
 		expected string
 	}{
 		{
-			desc:     "String for PluginConfigRequired",
-			policy:   PluginConfigRequired,
-			expected: "PluginConfigRequired",
+			desc:     "String for PluginConfigFileRequired",
+			policy:   PluginConfigFileRequired,
+			expected: "PluginConfigFileRequired",
 		},
 		{
-			desc:     "String for PluginConfigOptional",
-			policy:   PluginConfigOptional,
-			expected: "PluginConfigOptional",
+			desc:     "String for PluginConfigFileOptional",
+			policy:   PluginConfigFileOptional,
+			expected: "PluginConfigFileOptional",
 		},
 		{
-			desc:     "String for DeviceConfigRequired",
-			policy:   DeviceConfigRequired,
-			expected: "DeviceConfigRequired",
+			desc:     "String for PluginConfigFileProhibited",
+			policy:   PluginConfigFileProhibited,
+			expected: "PluginConfigFileProhibited",
 		},
 		{
-			desc:     "String for DeviceConfigOptional",
-			policy:   DeviceConfigOptional,
-			expected: "DeviceConfigOptional",
+			desc:     "String for DeviceConfigFileRequired",
+			policy:   DeviceConfigFileRequired,
+			expected: "DeviceConfigFileRequired",
+		},
+		{
+			desc:     "String for DeviceConfigFileOptional",
+			policy:   DeviceConfigFileOptional,
+			expected: "DeviceConfigFileOptional",
+		},
+		{
+			desc:     "String for DeviceConfigFileProhibited",
+			policy:   DeviceConfigFileProhibited,
+			expected: "DeviceConfigFileProhibited",
+		},
+		{
+			desc:     "String for DeviceConfigDynamicOptional",
+			policy:   DeviceConfigDynamicOptional,
+			expected: "DeviceConfigDynamicOptional",
+		},
+		{
+			desc:     "String for DeviceConfigDynamicRequired",
+			policy:   DeviceConfigDynamicRequired,
+			expected: "DeviceConfigDynamicRequired",
+		},
+		{
+			desc:     "String for DeviceConfigDynamicProhibited",
+			policy:   DeviceConfigDynamicProhibited,
+			expected: "DeviceConfigDynamicProhibited",
+		},
+		{
+			desc:     "String for TypeConfigFileOptional",
+			policy:   TypeConfigFileOptional,
+			expected: "TypeConfigFileOptional",
+		},
+		{
+			desc:     "String for TypeConfigFileRequired",
+			policy:   TypeConfigFileRequired,
+			expected: "TypeConfigFileRequired",
+		},
+		{
+			desc:     "String for TypeConfigFileProhibited",
+			policy:   TypeConfigFileProhibited,
+			expected: "TypeConfigFileProhibited",
 		},
 		{
 			desc:     "String for custom policy",
-			policy:   ConfigPolicy(8),
+			policy:   ConfigPolicy(17),
 			expected: "unknown",
 		},
 	}
@@ -54,60 +94,136 @@ func TestConfigPolicy_String(t *testing.T) {
 	}
 }
 
-// TestGetDeviceConfigPolicy tests getting the device config
+// TestGetDeviceConfigFilePolicy tests getting the device config
 // policy from the global policy manager.
-func TestGetDeviceConfigPolicy(t *testing.T) {
+func TestGetDeviceConfigFilePolicy(t *testing.T) {
 	defer resetPolicyManager()
 
-	// Get the device config policy when none is set - this should give the default.
-	assert.Empty(t, defaultManager.deviceConfigPolicy)
-	policy := GetDeviceConfigPolicy()
-	assert.Equal(t, DeviceConfigRequired, policy)
+	// Get the device config file policy when none is set - this should give the default.
+	assert.Empty(t, defaultManager.deviceConfigFilePolicy)
+	policy := GetDeviceConfigFilePolicy()
+	assert.Equal(t, DeviceConfigFileRequired, policy)
 
-	// Get the device config policy when Optional is set.
-	defaultManager.deviceConfigPolicy = DeviceConfigOptional
-	policy = GetDeviceConfigPolicy()
-	assert.Equal(t, DeviceConfigOptional, policy)
+	// Get the device config file policy when Optional is set.
+	defaultManager.deviceConfigFilePolicy = DeviceConfigFileOptional
+	policy = GetDeviceConfigFilePolicy()
+	assert.Equal(t, DeviceConfigFileOptional, policy)
 
-	// Get the device config policy when Required is set.
-	defaultManager.deviceConfigPolicy = DeviceConfigRequired
-	policy = GetDeviceConfigPolicy()
-	assert.Equal(t, DeviceConfigRequired, policy)
+	// Get the device config file policy when Required is set.
+	defaultManager.deviceConfigFilePolicy = DeviceConfigFileRequired
+	policy = GetDeviceConfigFilePolicy()
+	assert.Equal(t, DeviceConfigFileRequired, policy)
 
-	// Reset the device config policy and add the policy to the
+	// Get the device config file policy when Prohibited is set.
+	defaultManager.deviceConfigFilePolicy = DeviceConfigFileProhibited
+	policy = GetDeviceConfigFilePolicy()
+	assert.Equal(t, DeviceConfigFileProhibited, policy)
+
+	// Reset the device config file policy and add the policy to the
 	// tracked policies. It should now find it from there.
-	defaultManager.deviceConfigPolicy = NoPolicy
-	defaultManager.policies = []ConfigPolicy{DeviceConfigOptional}
-	policy = GetDeviceConfigPolicy()
-	assert.Equal(t, DeviceConfigOptional, policy)
+	defaultManager.deviceConfigFilePolicy = NoPolicy
+	defaultManager.policies = []ConfigPolicy{DeviceConfigFileOptional}
+	policy = GetDeviceConfigFilePolicy()
+	assert.Equal(t, DeviceConfigFileOptional, policy)
 }
 
-// TestGetPluginConfigPolicy tests getting the plugin config
+// TestGetPluginConfigFilePolicy tests getting the plugin config
 // policy from the global policy manager.
-func TestGetPluginConfigPolicy(t *testing.T) {
+func TestGetPluginConfigFilePolicy(t *testing.T) {
 	defer resetPolicyManager()
 
-	// Get the plugin config policy when none is set - this should give the default.
-	assert.Empty(t, defaultManager.pluginConfigPolicy)
-	policy := GetPluginConfigPolicy()
-	assert.Equal(t, PluginConfigOptional, policy)
+	// Get the plugin config file policy when none is set - this should give the default.
+	assert.Empty(t, defaultManager.pluginConfigFilePolicy)
+	policy := GetPluginConfigFilePolicy()
+	assert.Equal(t, PluginConfigFileOptional, policy)
 
-	// Get the plugin config policy when Optional is set.
-	defaultManager.pluginConfigPolicy = PluginConfigOptional
-	policy = GetPluginConfigPolicy()
-	assert.Equal(t, PluginConfigOptional, policy)
+	// Get the plugin config file policy when Optional is set.
+	defaultManager.pluginConfigFilePolicy = PluginConfigFileOptional
+	policy = GetPluginConfigFilePolicy()
+	assert.Equal(t, PluginConfigFileOptional, policy)
 
-	// Get the plugin config policy when Required is set.
-	defaultManager.pluginConfigPolicy = PluginConfigRequired
-	policy = GetPluginConfigPolicy()
-	assert.Equal(t, PluginConfigRequired, policy)
+	// Get the plugin config file policy when Required is set.
+	defaultManager.pluginConfigFilePolicy = PluginConfigFileRequired
+	policy = GetPluginConfigFilePolicy()
+	assert.Equal(t, PluginConfigFileRequired, policy)
 
-	// Reset the plugin config policy and add the policy to the
+	// Get the plugin config file policy when Prohibited is set.
+	defaultManager.pluginConfigFilePolicy = PluginConfigFileProhibited
+	policy = GetPluginConfigFilePolicy()
+	assert.Equal(t, PluginConfigFileProhibited, policy)
+
+	// Reset the plugin config file policy and add the policy to the
 	// tracked policies. It should now find it from there.
-	defaultManager.pluginConfigPolicy = NoPolicy
-	defaultManager.policies = []ConfigPolicy{PluginConfigOptional}
-	policy = GetPluginConfigPolicy()
-	assert.Equal(t, PluginConfigOptional, policy)
+	defaultManager.pluginConfigFilePolicy = NoPolicy
+	defaultManager.policies = []ConfigPolicy{PluginConfigFileOptional}
+	policy = GetPluginConfigFilePolicy()
+	assert.Equal(t, PluginConfigFileOptional, policy)
+}
+
+// TestGetDeviceConfigDynamicPolicy tests getting the dynamic device config
+// policy from the global policy manager.
+func TestGetDeviceConfigDynamicPolicy(t *testing.T) {
+	defer resetPolicyManager()
+
+	// Get the dynamic device config policy when none is set - this should give the default.
+	assert.Empty(t, defaultManager.deviceConfigDynamicPolicy)
+	policy := GetDeviceConfigDynamicPolicy()
+	assert.Equal(t, DeviceConfigDynamicOptional, policy)
+
+	// Get the dynamic device config policy when Optional is set.
+	defaultManager.deviceConfigDynamicPolicy = DeviceConfigDynamicOptional
+	policy = GetDeviceConfigDynamicPolicy()
+	assert.Equal(t, DeviceConfigDynamicOptional, policy)
+
+	// Get the dynamic device config policy when Required is set.
+	defaultManager.deviceConfigDynamicPolicy = DeviceConfigDynamicRequired
+	policy = GetDeviceConfigDynamicPolicy()
+	assert.Equal(t, DeviceConfigDynamicRequired, policy)
+
+	// Get the dynamic device config policy when Prohibited is set.
+	defaultManager.deviceConfigDynamicPolicy = DeviceConfigDynamicProhibited
+	policy = GetDeviceConfigDynamicPolicy()
+	assert.Equal(t, DeviceConfigDynamicProhibited, policy)
+
+	// Reset the dynamic device config policy and add the policy to the
+	// tracked policies. It should now find it from there.
+	defaultManager.deviceConfigDynamicPolicy = NoPolicy
+	defaultManager.policies = []ConfigPolicy{DeviceConfigDynamicOptional}
+	policy = GetDeviceConfigDynamicPolicy()
+	assert.Equal(t, DeviceConfigDynamicOptional, policy)
+}
+
+// TestGetTypeConfigFilePolicy tests getting the output type config
+// policy from the global policy manager.
+func TestGetTypeConfigFilePolicy(t *testing.T) {
+	defer resetPolicyManager()
+
+	// Get the output type config file policy when none is set - this should give the default.
+	assert.Empty(t, defaultManager.typeConfigFilePolicy)
+	policy := GetTypeConfigFilePolicy()
+	assert.Equal(t, TypeConfigFileOptional, policy)
+
+	// Get the output type config file policy when Optional is set.
+	defaultManager.typeConfigFilePolicy = TypeConfigFileOptional
+	policy = GetTypeConfigFilePolicy()
+	assert.Equal(t, TypeConfigFileOptional, policy)
+
+	// Get the output type config file policy when Required is set.
+	defaultManager.typeConfigFilePolicy = TypeConfigFileRequired
+	policy = GetTypeConfigFilePolicy()
+	assert.Equal(t, TypeConfigFileRequired, policy)
+
+	// Get the output type config file policy when Prohibited is set.
+	defaultManager.typeConfigFilePolicy = TypeConfigFileProhibited
+	policy = GetTypeConfigFilePolicy()
+	assert.Equal(t, TypeConfigFileProhibited, policy)
+
+	// Reset the output type config file policy and add the policy to the
+	// tracked policies. It should now find it from there.
+	defaultManager.typeConfigFilePolicy = NoPolicy
+	defaultManager.policies = []ConfigPolicy{TypeConfigFileOptional}
+	policy = GetTypeConfigFilePolicy()
+	assert.Equal(t, TypeConfigFileOptional, policy)
 }
 
 // TestSet tests adding multiple policies to the manager.
@@ -129,56 +245,56 @@ func TestSet(t *testing.T) {
 		{
 			desc: "One device config policy set",
 			policies: []ConfigPolicy{
-				DeviceConfigOptional,
+				DeviceConfigFileOptional,
 			},
 			expectedPluginPolicy: NoPolicy,
-			expectedDevicePolicy: DeviceConfigOptional,
+			expectedDevicePolicy: DeviceConfigFileOptional,
 		},
 		{
 			desc: "One plugin config policy set",
 			policies: []ConfigPolicy{
-				PluginConfigOptional,
+				PluginConfigFileOptional,
 			},
-			expectedPluginPolicy: PluginConfigOptional,
+			expectedPluginPolicy: PluginConfigFileOptional,
 			expectedDevicePolicy: NoPolicy,
 		},
 		{
 			desc: "Two device config policies set",
 			policies: []ConfigPolicy{
-				DeviceConfigRequired,
-				DeviceConfigOptional,
+				DeviceConfigFileRequired,
+				DeviceConfigFileOptional,
 			},
 			expectedPluginPolicy: NoPolicy,
-			expectedDevicePolicy: DeviceConfigOptional,
+			expectedDevicePolicy: DeviceConfigFileOptional,
 		},
 		{
 			desc: "Two plugin config policies set",
 			policies: []ConfigPolicy{
-				PluginConfigRequired,
-				PluginConfigOptional,
+				PluginConfigFileRequired,
+				PluginConfigFileOptional,
 			},
-			expectedPluginPolicy: PluginConfigOptional,
+			expectedPluginPolicy: PluginConfigFileOptional,
 			expectedDevicePolicy: NoPolicy,
 		},
 		{
 			desc: "One of each policy",
 			policies: []ConfigPolicy{
-				PluginConfigRequired,
-				DeviceConfigOptional,
+				PluginConfigFileRequired,
+				DeviceConfigFileOptional,
 			},
-			expectedPluginPolicy: PluginConfigRequired,
-			expectedDevicePolicy: DeviceConfigOptional,
+			expectedPluginPolicy: PluginConfigFileRequired,
+			expectedDevicePolicy: DeviceConfigFileOptional,
 		},
 		{
 			desc: "Two of each policy",
 			policies: []ConfigPolicy{
-				DeviceConfigRequired,
-				DeviceConfigOptional,
-				PluginConfigRequired,
-				PluginConfigOptional,
+				DeviceConfigFileRequired,
+				DeviceConfigFileOptional,
+				PluginConfigFileRequired,
+				PluginConfigFileOptional,
 			},
-			expectedPluginPolicy: PluginConfigOptional,
-			expectedDevicePolicy: DeviceConfigOptional,
+			expectedPluginPolicy: PluginConfigFileOptional,
+			expectedDevicePolicy: DeviceConfigFileOptional,
 		},
 	}
 
@@ -189,8 +305,8 @@ func TestSet(t *testing.T) {
 		Set(testCase.policies)
 		assert.Equal(t, len(testCase.policies), len(defaultManager.policies), testCase.desc)
 		// Setting should not change the internal state for the plugin/device policies
-		assert.Equal(t, NoPolicy, defaultManager.deviceConfigPolicy, testCase.desc)
-		assert.Equal(t, NoPolicy, defaultManager.pluginConfigPolicy, testCase.desc)
+		assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy, testCase.desc)
+		assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy, testCase.desc)
 	}
 }
 
@@ -213,56 +329,56 @@ func TestAdd(t *testing.T) {
 		{
 			desc: "One device config policy set",
 			policies: []ConfigPolicy{
-				DeviceConfigOptional,
+				DeviceConfigFileOptional,
 			},
 			expectedPluginPolicy: NoPolicy,
-			expectedDevicePolicy: DeviceConfigOptional,
+			expectedDevicePolicy: DeviceConfigFileOptional,
 		},
 		{
 			desc: "One plugin config policy set",
 			policies: []ConfigPolicy{
-				PluginConfigOptional,
+				PluginConfigFileOptional,
 			},
-			expectedPluginPolicy: PluginConfigOptional,
+			expectedPluginPolicy: PluginConfigFileOptional,
 			expectedDevicePolicy: NoPolicy,
 		},
 		{
 			desc: "Two device config policies set",
 			policies: []ConfigPolicy{
-				DeviceConfigRequired,
-				DeviceConfigOptional,
+				DeviceConfigFileRequired,
+				DeviceConfigFileOptional,
 			},
 			expectedPluginPolicy: NoPolicy,
-			expectedDevicePolicy: DeviceConfigOptional,
+			expectedDevicePolicy: DeviceConfigFileOptional,
 		},
 		{
 			desc: "Two plugin config policies set",
 			policies: []ConfigPolicy{
-				PluginConfigRequired,
-				PluginConfigOptional,
+				PluginConfigFileRequired,
+				PluginConfigFileOptional,
 			},
-			expectedPluginPolicy: PluginConfigOptional,
+			expectedPluginPolicy: PluginConfigFileOptional,
 			expectedDevicePolicy: NoPolicy,
 		},
 		{
 			desc: "One of each policy",
 			policies: []ConfigPolicy{
-				PluginConfigRequired,
-				DeviceConfigOptional,
+				PluginConfigFileRequired,
+				DeviceConfigFileOptional,
 			},
-			expectedPluginPolicy: PluginConfigRequired,
-			expectedDevicePolicy: DeviceConfigOptional,
+			expectedPluginPolicy: PluginConfigFileRequired,
+			expectedDevicePolicy: DeviceConfigFileOptional,
 		},
 		{
 			desc: "Two of each policy",
 			policies: []ConfigPolicy{
-				DeviceConfigRequired,
-				DeviceConfigOptional,
-				PluginConfigRequired,
-				PluginConfigOptional,
+				DeviceConfigFileRequired,
+				DeviceConfigFileOptional,
+				PluginConfigFileRequired,
+				PluginConfigFileOptional,
 			},
-			expectedPluginPolicy: PluginConfigOptional,
-			expectedDevicePolicy: DeviceConfigOptional,
+			expectedPluginPolicy: PluginConfigFileOptional,
+			expectedDevicePolicy: DeviceConfigFileOptional,
 		},
 	}
 
@@ -276,8 +392,8 @@ func TestAdd(t *testing.T) {
 
 		assert.Equal(t, len(testCase.policies), len(defaultManager.policies), testCase.desc)
 		// Setting should not change the internal state for the plugin/device policies
-		assert.Equal(t, NoPolicy, defaultManager.deviceConfigPolicy, testCase.desc)
-		assert.Equal(t, NoPolicy, defaultManager.pluginConfigPolicy, testCase.desc)
+		assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy, testCase.desc)
+		assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy, testCase.desc)
 	}
 }
 
@@ -285,49 +401,71 @@ func TestAdd(t *testing.T) {
 func TestCheckOk(t *testing.T) {
 	defer resetPolicyManager()
 
-	policies := []ConfigPolicy{DeviceConfigOptional, PluginConfigRequired}
+	policies := []ConfigPolicy{
+		DeviceConfigFileOptional,
+		PluginConfigFileRequired,
+		TypeConfigFileProhibited,
+		DeviceConfigDynamicOptional,
+	}
 
-	assert.Equal(t, NoPolicy, defaultManager.pluginConfigPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.deviceConfigPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 
 	defaultManager.Set(policies)
 	err := Check()
 	assert.NoError(t, err)
 
 	// State should not change on check
-	assert.Equal(t, NoPolicy, defaultManager.pluginConfigPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.deviceConfigPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 }
 
 // TestCheckOk2 tests checking policies with no error, when no policies are specified.
 func TestCheckOk2(t *testing.T) {
 	defer resetPolicyManager()
 
-	assert.Equal(t, NoPolicy, defaultManager.pluginConfigPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.deviceConfigPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 
 	err := Check()
 	assert.NoError(t, err)
 
 	// State should not change on check
-	assert.Equal(t, NoPolicy, defaultManager.pluginConfigPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.deviceConfigPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 }
 
 // TestCheckError tests checking policies resulting in error.
 func TestCheckError(t *testing.T) {
 	defer resetPolicyManager()
 
-	policies := []ConfigPolicy{DeviceConfigOptional, PluginConfigRequired, DeviceConfigRequired}
+	policies := []ConfigPolicy{
+		DeviceConfigFileOptional,
+		PluginConfigFileRequired,
+		DeviceConfigFileRequired,
+		DeviceConfigDynamicOptional,
+	}
 
-	assert.Equal(t, NoPolicy, defaultManager.pluginConfigPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.deviceConfigPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 
 	defaultManager.Set(policies)
 	err := Check()
 	assert.Error(t, err)
 
 	// State should not change on check
-	assert.Equal(t, NoPolicy, defaultManager.pluginConfigPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.deviceConfigPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
+	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
+	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 }

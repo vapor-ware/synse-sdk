@@ -104,7 +104,7 @@ func TestSchemeValidator_Validate_Simple_Ok(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.NoError(t, err.Err())
 
 	// check that validation cleanup was successful
@@ -122,7 +122,7 @@ func TestSchemeValidator_Validate_Simple_UnsupportedVersion(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 2, len(err.Errors), err.Error())
 
@@ -141,7 +141,7 @@ func TestSchemeValidator_Validate_Simple_DeprecatedVersion1(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.NoError(t, err.Err()) // deprecated logs warning, no error
 
 	// check that validation cleanup was successful
@@ -159,7 +159,7 @@ func TestSchemeValidator_Validate_Simple_DeprecatedVersion2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.NoError(t, err.Err()) // deprecated logs warning, no error
 
 	// check that validation cleanup was successful
@@ -177,7 +177,7 @@ func TestSchemeValidator_Validate_Simple_RemovedVersion1(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -196,7 +196,7 @@ func TestSchemeValidator_Validate_Simple_RemovedVersion2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -215,7 +215,7 @@ func TestSchemeValidator_Validate_Error(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -237,7 +237,7 @@ func TestSchemeValidator_Validate_Error2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -256,7 +256,7 @@ func TestSchemeValidator_Validate_Simple_BadConfigScheme(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -276,7 +276,7 @@ func TestSchemeValidator_Validate_Simple_BadAddedInTag(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -296,7 +296,7 @@ func TestSchemeValidator_Validate_Simple_BadDeprecatedInTag(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -316,7 +316,7 @@ func TestSchemeValidator_Validate_Simple_BadRemovedInTag(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -363,7 +363,7 @@ func TestSchemeValidator_Validate_Complex_Ok(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.NoError(t, err.Err())
 
 	// check that validation cleanup was successful
@@ -388,7 +388,7 @@ func TestSchemeValidator_Validate_Complex_Ok2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.NoError(t, err.Err())
 
 	// check that validation cleanup was successful
@@ -426,7 +426,7 @@ func TestSchemeValidator_Validate_Complex_Error(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 2, len(err.Errors), err.Error())
 
@@ -465,7 +465,7 @@ func TestSchemeValidator_Validate_Complex_Error2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 3, len(err.Errors), err.Error())
 
@@ -503,7 +503,7 @@ func TestSchemeValidator_Validate_Complex_Error3(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate, "test")
+	err := Validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 4, len(err.Errors), err.Error())
 
