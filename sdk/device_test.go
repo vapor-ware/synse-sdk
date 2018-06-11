@@ -11,12 +11,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
-// TestDevicesInit tests that the devices data structures were properly initialized
-func TestDevicesInit(t *testing.T) {
-	assert.NotNil(t, deviceMap)
-	assert.NotNil(t, deviceHandlers)
-}
-
 // TestDeviceHandler_supportsBulkRead tests whether a DeviceHandler supports bulk reads
 func TestDeviceHandler_supportsBulkRead(t *testing.T) {
 	var testTable = []struct {
@@ -87,11 +81,12 @@ func TestDeviceHandler_getDevicesForHandler(t *testing.T) {
 // TestDeviceHandler_getDevicesForHandler2 tests getting devices for the handler,
 // when one exists.
 func TestDeviceHandler_getDevicesForHandler2(t *testing.T) {
+	defer resetContext()
+
 	handler := DeviceHandler{Name: "test"}
-	deviceMap["123"] = &Device{
+	ctx.devices["123"] = &Device{
 		Handler: &handler,
 	}
-	defer delete(deviceMap, "123")
 
 	devices := handler.getDevicesForHandler()
 	assert.Equal(t, 1, len(devices))
@@ -108,12 +103,11 @@ func Test_getHandlerForDevice(t *testing.T) {
 // Test_getHandlerForDevice2 tests getting the handler for a Device when a handler
 // with the given name exists.
 func Test_getHandlerForDevice2(t *testing.T) {
-	deviceHandlers = []*DeviceHandler{
+	defer resetContext()
+
+	ctx.deviceHandlers = []*DeviceHandler{
 		{Name: "foo"},
 	}
-	defer func() {
-		deviceHandlers = []*DeviceHandler{}
-	}()
 
 	handler, err := getHandlerForDevice("foo")
 	assert.NoError(t, err)
@@ -186,19 +180,17 @@ func TestDevice_GetOutput(t *testing.T) {
 
 // TestMakeDevices tests making a single device.
 func TestMakeDevices(t *testing.T) {
+	defer resetContext()
+
 	// Add an output to the output map
-	outputTypeMap["something"] = &OutputType{
+	ctx.outputTypes["something"] = &OutputType{
 		Name: "something",
 	}
-	defer delete(outputTypeMap, "something")
 
 	// Add a handler to the handler list
-	deviceHandlers = []*DeviceHandler{
+	ctx.deviceHandlers = []*DeviceHandler{
 		{Name: "test"},
 	}
-	defer func() {
-		deviceHandlers = []*DeviceHandler{}
-	}()
 
 	// Create the device config from which Devices will be made
 	cfg := &DeviceConfig{
@@ -315,11 +307,11 @@ func TestMakeDevices4(t *testing.T) {
 // TestMakeDevices5 tests making a single device, when there is no associated handler
 // defined.
 func TestMakeDevices5(t *testing.T) {
+	defer resetContext()
 	// Add an output to the output map
-	outputTypeMap["something"] = &OutputType{
+	ctx.outputTypes["something"] = &OutputType{
 		Name: "something",
 	}
-	defer delete(outputTypeMap, "something")
 
 	// Create the device config from which Devices will be made
 	cfg := &DeviceConfig{
@@ -356,11 +348,12 @@ func TestMakeDevices5(t *testing.T) {
 // TestMakeDevices6 tests making a single device, when the locations do not
 // match up.
 func TestMakeDevices6(t *testing.T) {
+	defer resetContext()
+
 	// Add an output to the output map
-	outputTypeMap["something"] = &OutputType{
+	ctx.outputTypes["something"] = &OutputType{
 		Name: "something",
 	}
-	defer delete(outputTypeMap, "something")
 
 	// Create the device config from which Devices will be made
 	cfg := &DeviceConfig{
@@ -397,19 +390,17 @@ func TestMakeDevices6(t *testing.T) {
 // TestMakeDevices7 tests making a single device when the kind specifies
 // an override handler.
 func TestMakeDevices7(t *testing.T) {
+	defer resetContext()
+
 	// Add an output to the output map
-	outputTypeMap["something"] = &OutputType{
+	ctx.outputTypes["something"] = &OutputType{
 		Name: "something",
 	}
-	defer delete(outputTypeMap, "something")
 
 	// Add a handler to the handler list
-	deviceHandlers = []*DeviceHandler{
+	ctx.deviceHandlers = []*DeviceHandler{
 		{Name: "override"},
 	}
-	defer func() {
-		deviceHandlers = []*DeviceHandler{}
-	}()
 
 	// Create the device config from which Devices will be made
 	cfg := &DeviceConfig{
@@ -447,19 +438,17 @@ func TestMakeDevices7(t *testing.T) {
 // TestMakeDevices8 tests making a single device when the instances specifies
 // an override handler.
 func TestMakeDevices8(t *testing.T) {
+	defer resetContext()
+
 	// Add an output to the output map
-	outputTypeMap["something"] = &OutputType{
+	ctx.outputTypes["something"] = &OutputType{
 		Name: "something",
 	}
-	defer delete(outputTypeMap, "something")
 
 	// Add a handler to the handler list
-	deviceHandlers = []*DeviceHandler{
+	ctx.deviceHandlers = []*DeviceHandler{
 		{Name: "override"},
 	}
-	defer func() {
-		deviceHandlers = []*DeviceHandler{}
-	}()
 
 	// Create the device config from which Devices will be made
 	cfg := &DeviceConfig{
@@ -769,6 +758,8 @@ func TestDevice_encode(t *testing.T) {
 
 // Test_updateDeviceMap tests updating the device map.
 func Test_updateDeviceMap(t *testing.T) {
+	defer resetContext()
+
 	device := &Device{
 		Kind: "test",
 		Location: &Location{
@@ -777,11 +768,9 @@ func Test_updateDeviceMap(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, 0, len(deviceMap))
+	assert.Equal(t, 0, len(ctx.devices))
 	updateDeviceMap([]*Device{device})
-	assert.Equal(t, 1, len(deviceMap))
-
-	delete(deviceMap, device.GUID())
+	assert.Equal(t, 1, len(ctx.devices))
 }
 
 // Test_getInstanceOutputs tests getting instance output when none are defined.
@@ -796,8 +785,9 @@ func Test_getInstanceOutputs(t *testing.T) {
 
 // Test_getInstanceOutputs2 tests getting instance output when the Kind defines them.
 func Test_getInstanceOutputs2(t *testing.T) {
-	outputTypeMap["test"] = &OutputType{Name: "test"}
-	defer delete(outputTypeMap, "test")
+	defer resetContext()
+
+	ctx.outputTypes["test"] = &OutputType{Name: "test"}
 
 	kind := &DeviceKind{
 		Outputs: []*DeviceOutput{
@@ -815,8 +805,9 @@ func Test_getInstanceOutputs2(t *testing.T) {
 
 // Test_getInstanceOutputs3 tests getting instance output when the Instance defines them.
 func Test_getInstanceOutputs3(t *testing.T) {
-	outputTypeMap["test"] = &OutputType{Name: "test"}
-	defer delete(outputTypeMap, "test")
+	defer resetContext()
+
+	ctx.outputTypes["test"] = &OutputType{Name: "test"}
 
 	kind := &DeviceKind{}
 	instance := &DeviceInstance{
@@ -834,10 +825,10 @@ func Test_getInstanceOutputs3(t *testing.T) {
 
 // Test_getInstanceOutputs4 tests getting instance output when the Kind and Instance defines them.
 func Test_getInstanceOutputs4(t *testing.T) {
-	outputTypeMap["foo"] = &OutputType{Name: "foo"}
-	outputTypeMap["bar"] = &OutputType{Name: "bar"}
-	defer delete(outputTypeMap, "foo")
-	defer delete(outputTypeMap, "bar")
+	defer resetContext()
+
+	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
+	ctx.outputTypes["bar"] = &OutputType{Name: "bar"}
 
 	kind := &DeviceKind{
 		Outputs: []*DeviceOutput{
@@ -861,8 +852,9 @@ func Test_getInstanceOutputs4(t *testing.T) {
 
 // Test_getInstanceOutputs5 tests getting instance output when duplicates are defined.
 func Test_getInstanceOutputs5(t *testing.T) {
-	outputTypeMap["test"] = &OutputType{Name: "test"}
-	defer delete(outputTypeMap, "test")
+	defer resetContext()
+
+	ctx.outputTypes["test"] = &OutputType{Name: "test"}
 
 	kind := &DeviceKind{
 		Outputs: []*DeviceOutput{
@@ -887,10 +879,10 @@ func Test_getInstanceOutputs5(t *testing.T) {
 // Test_getInstanceOutputs6 tests getting instance output when the Kind and Instance defines them,
 // but the instance should not inherit from the kind..
 func Test_getInstanceOutputs6(t *testing.T) {
-	outputTypeMap["foo"] = &OutputType{Name: "foo"}
-	outputTypeMap["bar"] = &OutputType{Name: "bar"}
-	defer delete(outputTypeMap, "foo")
-	defer delete(outputTypeMap, "bar")
+	defer resetContext()
+
+	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
+	ctx.outputTypes["bar"] = &OutputType{Name: "bar"}
 
 	kind := &DeviceKind{
 		Outputs: []*DeviceOutput{

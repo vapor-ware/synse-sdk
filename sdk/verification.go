@@ -144,7 +144,7 @@ func verifyDeviceConfigOutputs(deviceConfig *DeviceConfig, multiErr *errors.Mult
 	for _, device := range deviceConfig.Devices {
 		// Check the device-level outputs
 		for _, output := range device.Outputs {
-			_, hasOutput := outputTypeMap[output.Type]
+			_, hasOutput := ctx.outputTypes[output.Type]
 			if !hasOutput {
 				multiErr.Add(
 					errors.NewVerificationInvalidError(
@@ -159,7 +159,7 @@ func verifyDeviceConfigOutputs(deviceConfig *DeviceConfig, multiErr *errors.Mult
 		// Check the instance-level outputs
 		for _, instance := range device.Instances {
 			for _, output := range instance.Outputs {
-				_, hasOutput := outputTypeMap[output.Type]
+				_, hasOutput := ctx.outputTypes[output.Type]
 				if !hasOutput {
 					multiErr.Add(
 						errors.NewVerificationInvalidError(

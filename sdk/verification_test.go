@@ -231,13 +231,11 @@ func Test_verifyDeviceConfigInstances_Error(t *testing.T) {
 
 // Test_verifyDeviceConfigOutputs_Ok tests verifying no issues with device outputs.
 func Test_verifyDeviceConfigOutputs_Ok(t *testing.T) {
-	defer func() {
-		outputTypeMap = map[string]*OutputType{}
-	}()
+	defer resetContext()
 
 	// add some expected outputs
-	outputTypeMap["foo"] = &OutputType{Name: "foo"}
-	outputTypeMap["bar"] = &OutputType{Name: "bar"}
+	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
+	ctx.outputTypes["bar"] = &OutputType{Name: "bar"}
 
 	cfg := &DeviceConfig{
 		SchemeVersion: SchemeVersion{Version: "1.0"},
@@ -290,12 +288,10 @@ func Test_verifyDeviceConfigOutputs_Ok(t *testing.T) {
 
 // Test_verifyDeviceConfigOutputs_Error tests verification errors with device outputs.
 func Test_verifyDeviceConfigOutputs_Error(t *testing.T) {
-	defer func() {
-		outputTypeMap = map[string]*OutputType{}
-	}()
+	defer resetContext()
 
 	// add some expected outputs
-	outputTypeMap["foo"] = &OutputType{Name: "foo"}
+	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
 
 	cfg := &DeviceConfig{
 		SchemeVersion: SchemeVersion{Version: "1.0"},

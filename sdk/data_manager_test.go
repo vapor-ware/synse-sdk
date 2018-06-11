@@ -213,8 +213,7 @@ func TestDataManager_readOneErr(t *testing.T) {
 func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 
 	config.Plugin = &PluginConfig{
@@ -247,7 +246,7 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 			return ctxs, nil
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -264,7 +263,7 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 		},
 	}
 
-	deviceMap["test-device-1"] = device
+	ctx.devices["test-device-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -287,8 +286,7 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 
 	config.Plugin = &PluginConfig{
@@ -322,7 +320,7 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 			return ctxs, nil
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -339,7 +337,7 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 		},
 	}
 
-	deviceMap["test-device-1"] = device
+	ctx.devices["test-device-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -361,8 +359,7 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 func TestDataManager_readBulkError(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 
 	config.Plugin = &PluginConfig{
@@ -383,7 +380,7 @@ func TestDataManager_readBulkError(t *testing.T) {
 			return nil, fmt.Errorf("test error")
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -400,7 +397,7 @@ func TestDataManager_readBulkError(t *testing.T) {
 		},
 	}
 
-	deviceMap["test-device-1"] = device
+	ctx.devices["test-device-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -414,7 +411,10 @@ func TestDataManager_readBulkError(t *testing.T) {
 
 // TestDataManager_serialReadSingle tests reading a single device serially.
 func TestDataManager_serialReadSingle(t *testing.T) {
-	defer config.reset()
+	defer func() {
+		config.reset()
+		resetContext()
+	}()
 
 	config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
@@ -447,8 +447,7 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 		},
 	}
 
-	deviceMap["test-id-1"] = device
-	defer delete(deviceMap, "test-id-1")
+	ctx.devices["test-id-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -470,8 +469,7 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 func TestDataManager_serialReadSingleBulk(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 
 	config.Plugin = &PluginConfig{
@@ -504,7 +502,7 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 			return ctxs, nil
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -521,8 +519,7 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 		bulkRead: true,
 	}
 
-	deviceMap["test-id-1"] = device
-	defer delete(deviceMap, "test-id-1")
+	ctx.devices["test-id-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -542,7 +539,10 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 
 // TestDataManager_parallelReadSingle tests reading a single device in parallel.
 func TestDataManager_parallelReadSingle(t *testing.T) {
-	defer config.reset()
+	defer func() {
+		config.reset()
+		resetContext()
+	}()
 
 	config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
@@ -576,8 +576,7 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 	}
 
 	// Clear the global device map then add the device to it
-	deviceMap["test-id-1"] = device
-	defer delete(deviceMap, "test-id-1")
+	ctx.devices["test-id-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -599,8 +598,7 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 
 	config.Plugin = &PluginConfig{
@@ -633,7 +631,7 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 			return ctxs, nil
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -651,8 +649,7 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 	}
 
 	// Clear the global device map then add the device to it
-	deviceMap["test-id-1"] = device
-	defer delete(deviceMap, "test-id-1")
+	ctx.devices["test-id-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -672,7 +669,10 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 
 // TestDataManager_serialReadMultiple tests reading multiple devices serially.
 func TestDataManager_serialReadMultiple(t *testing.T) {
-	defer config.reset()
+	defer func() {
+		config.reset()
+		resetContext()
+	}()
 
 	config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
@@ -737,13 +737,9 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		},
 	}
 
-	deviceMap = make(map[string]*Device)
-	deviceMap["test-id-1"] = device1
-	deviceMap["test-id-2"] = device2
-	deviceMap["test-id-3"] = device3
-	defer delete(deviceMap, "test-id-1")
-	defer delete(deviceMap, "test-id-2")
-	defer delete(deviceMap, "test-id-3")
+	ctx.devices["test-id-1"] = device1
+	ctx.devices["test-id-2"] = device2
+	ctx.devices["test-id-3"] = device3
 
 	d := newDataManager()
 	err := d.setup()
@@ -763,7 +759,10 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 
 // TestDataManager_parallelReadSingle tests reading multiple devices in parallel.
 func TestDataManager_parallelReadMultiple(t *testing.T) {
-	defer config.reset()
+	defer func() {
+		config.reset()
+		resetContext()
+	}()
 
 	config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
@@ -828,13 +827,9 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		},
 	}
 
-	deviceMap = make(map[string]*Device)
-	deviceMap["test-id-1"] = device1
-	deviceMap["test-id-2"] = device2
-	deviceMap["test-id-3"] = device3
-	defer delete(deviceMap, "test-id-1")
-	defer delete(deviceMap, "test-id-2")
-	defer delete(deviceMap, "test-id-3")
+	ctx.devices["test-id-1"] = device1
+	ctx.devices["test-id-2"] = device2
+	ctx.devices["test-id-3"] = device3
 
 	d := newDataManager()
 	err := d.setup()
@@ -856,7 +851,7 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 func TestDataManager_writeOkNoLimiter(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
@@ -890,7 +885,7 @@ func TestDataManager_writeOkNoLimiter(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -917,7 +912,7 @@ func TestDataManager_writeOkNoLimiter(t *testing.T) {
 func TestDataManager_writeOkWithLimiter(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
@@ -952,7 +947,7 @@ func TestDataManager_writeOkWithLimiter(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -979,7 +974,7 @@ func TestDataManager_writeOkWithLimiter(t *testing.T) {
 func TestDataManager_writeNoDevice(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
@@ -1021,7 +1016,7 @@ func TestDataManager_writeNoDevice(t *testing.T) {
 func TestDataManager_writeError(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
@@ -1055,7 +1050,7 @@ func TestDataManager_writeError(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -1082,7 +1077,7 @@ func TestDataManager_writeError(t *testing.T) {
 func TestDataManager_serialWriteSingle(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
@@ -1117,7 +1112,7 @@ func TestDataManager_serialWriteSingle(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -1146,7 +1141,7 @@ func TestDataManager_serialWriteSingle(t *testing.T) {
 func TestDataManager_serialWriteMultiple(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
@@ -1181,7 +1176,7 @@ func TestDataManager_serialWriteMultiple(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -1232,7 +1227,7 @@ func TestDataManager_serialWriteMultiple(t *testing.T) {
 func TestDataManager_parallelWriteSingle(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
@@ -1267,7 +1262,7 @@ func TestDataManager_parallelWriteSingle(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -1296,7 +1291,7 @@ func TestDataManager_parallelWriteSingle(t *testing.T) {
 func TestDataManager_parallelWriteMultiple(t *testing.T) {
 	defer func() {
 		config.reset()
-		deviceMap = map[string]*Device{}
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
@@ -1331,7 +1326,7 @@ func TestDataManager_parallelWriteMultiple(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()

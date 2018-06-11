@@ -116,15 +116,14 @@ func TestFilterDevices(t *testing.T) {
 		Handler: &DeviceHandler{},
 	}
 
+	defer resetContext()
+
 	// Populate the device map with the test devices.
-	deviceMap = map[string]*Device{
+	ctx.devices = map[string]*Device{
 		"dev1": dev1,
 		"dev2": dev2,
 		"dev3": dev3,
 	}
-	defer delete(deviceMap, "dev1")
-	defer delete(deviceMap, "dev2")
-	defer delete(deviceMap, "dev3")
 
 	// Set up the test cases
 	var filterDevicesTestTable = []struct {
@@ -215,13 +214,13 @@ func TestFilterDevicesErr(t *testing.T) {
 		Handler: &DeviceHandler{},
 	}
 
+	defer resetContext()
+
 	// Populate the device map with the test devices.
-	deviceMap = map[string]*Device{
+	ctx.devices = map[string]*Device{
 		"dev1": dev1,
 		"dev2": dev2,
 	}
-	defer delete(deviceMap, "dev1")
-	defer delete(deviceMap, "dev2")
 
 	// Set up the test cases
 	var filterDevicesTestTable = []string{
@@ -250,8 +249,9 @@ func TestGetCurrentTime(t *testing.T) {
 
 // Test_getTypeByNameOk tests getting a type that exists.
 func Test_getTypeByNameOk(t *testing.T) {
-	outputTypeMap["foo"] = &OutputType{Name: "foo"}
-	defer delete(outputTypeMap, "foo")
+	defer resetContext()
+
+	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
 
 	ot, err := getTypeByName("foo")
 	assert.NoError(t, err)

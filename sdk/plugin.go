@@ -15,10 +15,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
-// outputTypeMap is a map where the the key is the name of the output type
-// and the value is the corresponding OutputType.
-var outputTypeMap = map[string]*OutputType{}
-
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse Server.
 type Plugin struct {
@@ -34,7 +30,7 @@ func NewPlugin(options ...PluginOption) *Plugin {
 
 	// Set custom options for the plugin.
 	for _, option := range options {
-		option(Context)
+		option(ctx)
 	}
 	return &plugin
 }
@@ -47,13 +43,13 @@ func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
 	multiErr := errors.NewMultiError("registering output types")
 	logger.Debug("registering output types")
 	for _, outputType := range types {
-		_, hasType := outputTypeMap[outputType.Name]
+		_, hasType := ctx.outputTypes[outputType.Name]
 		if hasType {
 			multiErr.Add(fmt.Errorf("output type with name '%s' already exists", outputType.Name))
 			continue
 		}
 		logger.Debugf("adding type: %s", outputType.Name)
-		outputTypeMap[outputType.Name] = outputType
+		ctx.outputTypes[outputType.Name] = outputType
 	}
 	return multiErr.Err()
 }
@@ -62,17 +58,14 @@ func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
 // before the gRPC server and dataManager are started. The functions here can be
 // used for plugin-wide setup actions.
 func (plugin *Plugin) RegisterPreRunActions(actions ...pluginAction) {
-	preRunActions = append(preRunActions, actions...)
+	ctx.preRunActions = append(ctx.preRunActions, actions...)
 }
 
 // RegisterPostRunActions registers functions with the plugin that will be called
 // after the gRPC server and dataManager terminate running. The functions here can
 // be used for plugin-wide teardown actions.
-//
-// NOTE: While post run actions can be defined for a Plugin, they are currently
-// not executed. See: https://github.com/vapor-ware/synse-sdk/issues/85
 func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
-	postRunActions = append(postRunActions, actions...)
+	ctx.postRunActions = append(ctx.postRunActions, actions...)
 }
 
 // RegisterDeviceSetupActions registers functions with the plugin that will be
@@ -85,10 +78,10 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 //     "kind=temperature,kind=ABC123"
 // would only match devices whose kind was temperature or ABC123.
 func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
-	if _, exists := deviceSetupActions[filter]; exists {
-		deviceSetupActions[filter] = append(deviceSetupActions[filter], actions...)
+	if _, exists := ctx.deviceSetupActions[filter]; exists {
+		ctx.deviceSetupActions[filter] = append(ctx.deviceSetupActions[filter], actions...)
 	} else {
-		deviceSetupActions[filter] = actions
+		ctx.deviceSetupActions[filter] = actions
 	}
 }
 
@@ -99,7 +92,7 @@ func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...devic
 // Devices. If a DeviceHandler for a Device is not registered here, the
 // Device will not be usable by the plugin.
 func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
-	deviceHandlers = append(deviceHandlers, handlers...)
+	ctx.deviceHandlers = append(ctx.deviceHandlers, handlers...)
 }
 
 // Run starts the Plugin.
@@ -285,7 +278,7 @@ func (plugin *Plugin) processConfig() error {
 	// Finally, make sure that we have output types. If we
 	// don't, return an error, since we won't be able to properly
 	// register devices.
-	if len(outputTypeMap) == 0 {
+	if len(ctx.outputTypes) == 0 {
 		return fmt.Errorf(
 			"no output types found. you must either register output types " +
 				"with the plugin, or configure them via file",
@@ -305,7 +298,7 @@ func (plugin *Plugin) processConfig() error {
 	if multiErr.HasErrors() {
 		return multiErr
 	}
-	multiErr = config.Device.ValidateDeviceConfigData(Context.deviceDataValidator)
+	multiErr = config.Device.ValidateDeviceConfigData(ctx.deviceDataValidator)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
@@ -323,7 +316,7 @@ func (plugin *Plugin) processConfig() error {
 func (plugin *Plugin) registerDevices() error {
 
 	// devices from dynamic registration
-	devices, err := Context.dynamicDeviceRegistrar(config.Plugin.DynamicRegistration.Config)
+	devices, err := ctx.dynamicDeviceRegistrar(config.Plugin.DynamicRegistration.Config)
 	if err != nil {
 		return err
 	}
@@ -351,7 +344,7 @@ func (plugin *Plugin) logStartupInfo() {
 
 	// Log registered devices
 	logger.Info("Registered Devices:")
-	for id, dev := range deviceMap {
+	for id, dev := range ctx.devices {
 		logger.Infof("  %v (%v)", id, dev.Kind)
 	}
 	logger.Info("--------------------------------")

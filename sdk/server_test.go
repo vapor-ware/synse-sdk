@@ -21,9 +21,7 @@ func TestNewServer(t *testing.T) {
 
 // TestServer_setup_TCP tests successfully setting up the server in TCP mode.
 func TestServer_setup_TCP(t *testing.T) {
-	defer func() {
-		postRunActions = []pluginAction{}
-	}()
+	defer resetContext()
 
 	s := NewServer(modeTCP, "test")
 	err := s.setup()
@@ -32,9 +30,7 @@ func TestServer_setup_TCP(t *testing.T) {
 
 // TestServer_setup_Unix tests successfully setting up the server in Unix mode.
 func TestServer_setup_Unix(t *testing.T) {
-	defer func() {
-		postRunActions = []pluginAction{}
-	}()
+	defer resetContext()
 
 	// Set up a temporary directory for test data.
 	test.SetupTestDir(t)
@@ -43,21 +39,19 @@ func TestServer_setup_Unix(t *testing.T) {
 	sockPath = test.TempDir
 
 	// first, check that there are no post-run actions
-	assert.Equal(t, 0, len(postRunActions))
+	assert.Equal(t, 0, len(ctx.postRunActions))
 
 	s := NewServer(modeUnix, "test")
 	err := s.setup()
 	assert.NoError(t, err)
 
 	// now, there should be one post run action
-	assert.Equal(t, 1, len(postRunActions))
+	assert.Equal(t, 1, len(ctx.postRunActions))
 }
 
 // TestServer_setup_Unknown tests successfully setting up the server in an unknown mode.
 func TestServer_setup_Unknown(t *testing.T) {
-	defer func() {
-		postRunActions = []pluginAction{}
-	}()
+	defer resetContext()
 
 	s := NewServer("foo", "test")
 	err := s.setup()
@@ -130,17 +124,16 @@ func TestServer_Capabilities(t *testing.T) {
 // TestServer_Capabilities2 tests the Capabilities method of the gRPC plugin service
 // when there are actual devices to get capabilities from.
 func TestServer_Capabilities2(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
-	deviceMap["foo"] = &Device{
+	defer resetContext()
+
+	ctx.devices["foo"] = &Device{
 		Kind: "foo",
 		Outputs: []*Output{
 			{OutputType: OutputType{Name: "output1"}},
 			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
-	deviceMap["bar"] = &Device{
+	ctx.devices["bar"] = &Device{
 		Kind: "bar",
 		Outputs: []*Output{
 			{OutputType: OutputType{Name: "output3"}},
@@ -161,17 +154,16 @@ func TestServer_Capabilities2(t *testing.T) {
 // TestServer_Capabilities3 tests the Capabilities method of the gRPC plugin service
 // when there is an error returned.
 func TestServer_Capabilities3(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
-	deviceMap["foo"] = &Device{
+	defer resetContext()
+
+	ctx.devices["foo"] = &Device{
 		Kind: "foo",
 		Outputs: []*Output{
 			{OutputType: OutputType{Name: "output1"}},
 			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
-	deviceMap["bar"] = &Device{
+	ctx.devices["bar"] = &Device{
 		Kind: "bar",
 		Outputs: []*Output{
 			{OutputType: OutputType{Name: "output3"}},
@@ -200,9 +192,8 @@ func TestServer_Devices(t *testing.T) {
 // TestServer_Devices_NoFilter tests the Devices method of the gRPC plugin service when
 // there are devices to get.
 func TestServer_Devices_NoFilter(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -235,9 +226,9 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
 	s := Server{}
 	req := &synse.DeviceFilter{}
@@ -254,9 +245,8 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 // TestServer_Devices_FilterRack tests the Devices method of the gRPC plugin service when
 // there are devices to get, and we filter on rack.
 func TestServer_Devices_FilterRack(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -289,9 +279,9 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
 	s := Server{}
 	req := &synse.DeviceFilter{
@@ -310,9 +300,8 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 // TestServer_Devices_FilterBoard tests the Devices method of the gRPC plugin service when
 // there are devices to get, and we filter on board.
 func TestServer_Devices_FilterBoard(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -345,9 +334,9 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
 	s := Server{}
 	req := &synse.DeviceFilter{
@@ -367,9 +356,8 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 // TestServer_Devices_FilterNoMatch tests the Devices method of the gRPC plugin service when
 // there are devices to get, but the filter does not match any of them.
 func TestServer_Devices_FilterNoMatch(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -402,9 +390,9 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
 	s := Server{}
 	req := &synse.DeviceFilter{
@@ -439,9 +427,8 @@ func TestServer_Devices_FilterDevice(t *testing.T) {
 // TestServer_Devices_Error tests the Devices method of the gRPC plugin service when
 // an error is returned because a device is specified.
 func TestServer_Devices_Error(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -474,9 +461,9 @@ func TestServer_Devices_Error(t *testing.T) {
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
 	s := Server{}
 	req := &synse.DeviceFilter{
@@ -528,9 +515,10 @@ func TestServer_Metainfo(t *testing.T) {
 func TestServer_Read(t *testing.T) {
 	defer func() {
 		DataManager = newDataManager()
-		deviceMap = map[string]*Device{}
+		resetContext()
 		config.reset()
 	}()
+
 	config.Plugin = &PluginConfig{
 		Settings: &PluginSettings{
 			Read: &ReadSettings{
@@ -538,7 +526,7 @@ func TestServer_Read(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = &Device{
+	ctx.devices["rack-board-device"] = &Device{
 		id:   "device",
 		Kind: "foo",
 		Location: &Location{
@@ -602,9 +590,10 @@ func TestServer_Read2(t *testing.T) {
 func TestServer_Read3(t *testing.T) {
 	defer func() {
 		DataManager = newDataManager()
-		deviceMap = map[string]*Device{}
+		resetContext()
 		config.reset()
 	}()
+
 	config.Plugin = &PluginConfig{
 		Settings: &PluginSettings{
 			Read: &ReadSettings{
@@ -612,7 +601,7 @@ func TestServer_Read3(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = &Device{
+	ctx.devices["rack-board-device"] = &Device{
 		id:   "device",
 		Kind: "foo",
 		Location: &Location{
@@ -712,10 +701,11 @@ func TestServer_Write2(t *testing.T) {
 func TestServer_Write3(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 	defer func() {
-		deviceMap = map[string]*Device{}
+		resetContext()
 		config.reset()
 		DataManager = newDataManager()
 	}()
+
 	DataManager.writeChannel = make(chan *WriteContext, 20)
 	config.Plugin = &PluginConfig{
 		Settings: &PluginSettings{
@@ -724,7 +714,7 @@ func TestServer_Write3(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = &Device{
+	ctx.devices["rack-board-device"] = &Device{
 		id:   "device",
 		Kind: "foo",
 		Location: &Location{
@@ -764,10 +754,11 @@ func TestServer_Write3(t *testing.T) {
 func TestServer_Write4(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 	defer func() {
-		deviceMap = map[string]*Device{}
+		resetContext()
 		config.reset()
 		DataManager = newDataManager()
 	}()
+
 	DataManager.writeChannel = make(chan *WriteContext, 20)
 	config.Plugin = &PluginConfig{
 		Settings: &PluginSettings{
@@ -776,7 +767,7 @@ func TestServer_Write4(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = &Device{
+	ctx.devices["rack-board-device"] = &Device{
 		id:   "device",
 		Kind: "foo",
 		Location: &Location{

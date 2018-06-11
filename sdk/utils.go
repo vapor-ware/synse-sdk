@@ -18,7 +18,7 @@ func makeIDString(rack, board, device string) string {
 // getTypeByName gets the output type with the given name. If an output type does
 // not exist with the given name, an error is returned.
 func getTypeByName(name string) (*OutputType, error) {
-	t, ok := outputTypeMap[name]
+	t, ok := ctx.outputTypes[name]
 	if !ok {
 		return nil, fmt.Errorf("no output type with name '%s' found", name)
 	}
@@ -45,7 +45,7 @@ func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 	filters := strings.Split(filter, ",")
 
 	var devices []*Device
-	for _, d := range deviceMap {
+	for _, d := range ctx.devices {
 		devices = append(devices, d)
 	}
 

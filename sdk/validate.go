@@ -272,7 +272,7 @@ func validateWriteInfo(request *synse.WriteInfo) error {
 
 // validateForRead validates that a device with the given device ID is readable.
 func validateForRead(deviceID string) error {
-	device := deviceMap[deviceID]
+	device := ctx.devices[deviceID]
 	if device == nil {
 		return fmt.Errorf("no device found with ID %s", deviceID)
 	}
@@ -286,7 +286,7 @@ func validateForRead(deviceID string) error {
 
 // validateForWrite validates that a device with the given device ID is writable.
 func validateForWrite(deviceID string) error {
-	device := deviceMap[deviceID]
+	device := ctx.devices[deviceID]
 	if device == nil {
 		return fmt.Errorf("no device found with ID %s", deviceID)
 	}

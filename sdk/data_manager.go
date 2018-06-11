@@ -203,11 +203,11 @@ func (manager *dataManager) serialRead() {
 	manager.rwLock.Lock()
 	defer manager.rwLock.Unlock()
 
-	for _, dev := range deviceMap {
+	for _, dev := range ctx.devices {
 		manager.readOne(dev)
 	}
 
-	for _, handler := range deviceHandlers {
+	for _, handler := range ctx.deviceHandlers {
 		manager.readBulk(handler)
 	}
 }
@@ -216,7 +216,7 @@ func (manager *dataManager) serialRead() {
 func (manager *dataManager) parallelRead() {
 	var waitGroup sync.WaitGroup
 
-	for _, dev := range deviceMap {
+	for _, dev := range ctx.devices {
 		// Increment the WaitGroup counter.
 		waitGroup.Add(1)
 
@@ -227,7 +227,7 @@ func (manager *dataManager) parallelRead() {
 		}(&waitGroup, dev)
 	}
 
-	for _, handler := range deviceHandlers {
+	for _, handler := range ctx.deviceHandlers {
 		// Increment the WaitGroup counter.
 		waitGroup.Add(1)
 
@@ -335,7 +335,7 @@ func (manager *dataManager) write(w *WriteContext) {
 	logger.Debugf("writing for %v (transaction %v)", w.device, w.transaction.id)
 	w.transaction.setStatusWriting()
 
-	device := deviceMap[w.ID()]
+	device := ctx.devices[w.ID()]
 	if device == nil {
 		w.transaction.setStateError()
 		msg := "no device found with ID " + w.ID()

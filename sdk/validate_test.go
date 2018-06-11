@@ -608,7 +608,7 @@ func TestValidateWriteRequestErr(t *testing.T) {
 // TestValidateForRead_1 tests validating a device for read, when the specified
 // device is not in the device map.
 func TestValidateForRead_1(t *testing.T) {
-	deviceMap = make(map[string]*Device)
+	defer resetContext()
 
 	err := validateForRead("foo")
 	assert.Error(t, err)
@@ -617,8 +617,9 @@ func TestValidateForRead_1(t *testing.T) {
 // TestValidateForRead_2 tests validating a device for read, when no read handler
 // is defined for the device.
 func TestValidateForRead_2(t *testing.T) {
-	deviceMap = make(map[string]*Device)
-	deviceMap["abc"] = &Device{
+	defer resetContext()
+
+	ctx.devices["abc"] = &Device{
 		Handler: &DeviceHandler{},
 	}
 
@@ -629,8 +630,9 @@ func TestValidateForRead_2(t *testing.T) {
 // TestValidateForRead_3 tests validating a device for read, when it does exist
 // in the device map and does have a read handler defined.
 func TestValidateForRead_3(t *testing.T) {
-	deviceMap = make(map[string]*Device)
-	deviceMap["abc"] = &Device{
+	defer resetContext()
+
+	ctx.devices["abc"] = &Device{
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) { return nil, nil },
 		},
@@ -643,7 +645,7 @@ func TestValidateForRead_3(t *testing.T) {
 // TestValidateForWrite_1 tests validating a device for write, when the specified
 // device is not in the device map.
 func TestValidateForWrite_1(t *testing.T) {
-	deviceMap = make(map[string]*Device)
+	defer resetContext()
 
 	err := validateForWrite("foo")
 	assert.Error(t, err)
@@ -652,8 +654,9 @@ func TestValidateForWrite_1(t *testing.T) {
 // TestValidateForWrite_2 tests validating a device for write, when no write handler
 // is defined for the device.
 func TestValidateForWrite_2(t *testing.T) {
-	deviceMap = make(map[string]*Device)
-	deviceMap["abc"] = &Device{
+	defer resetContext()
+
+	ctx.devices["abc"] = &Device{
 		Handler: &DeviceHandler{},
 	}
 
@@ -664,8 +667,9 @@ func TestValidateForWrite_2(t *testing.T) {
 // TestValidateForWrite_3 tests validating a device for write, when it does exist
 // in the device map and does have a write handler defined.
 func TestValidateForWrite_3(t *testing.T) {
-	deviceMap = make(map[string]*Device)
-	deviceMap["abc"] = &Device{
+	defer resetContext()
+
+	ctx.devices["abc"] = &Device{
 		Handler: &DeviceHandler{
 			Write: func(d *Device, data *WriteData) error { return nil },
 		},

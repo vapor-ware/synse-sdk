@@ -262,7 +262,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	var dynamicCtxs []*ConfigContext
 
 	// Get device configs from dynamic registration
-	dynamicCfgs, err := Context.dynamicDeviceConfigRegistrar(config.Plugin.DynamicRegistration.Config)
+	dynamicCfgs, err := ctx.dynamicDeviceConfigRegistrar(config.Plugin.DynamicRegistration.Config)
 
 	// If the error is not a "config not found" error, then we will return it.
 	_, notFoundErr = err.(*errors.ConfigsNotFound)

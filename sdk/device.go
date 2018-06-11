@@ -10,23 +10,8 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-var (
-	// The deviceMap holds all of the known devices configured for the plugin.
-	deviceMap map[string]*Device
-
-	// The deviceHandlers list holds all of the DeviceHandlers that are registered
-	// with the plugin.
-	deviceHandlers []*DeviceHandler
-)
-
 // The current (latest) version of the device config scheme.
 var currentDeviceSchemeVersion = "1.0"
-
-func init() {
-	// Initialize the global variables so they are never nil.
-	deviceMap = map[string]*Device{}
-	deviceHandlers = []*DeviceHandler{}
-}
 
 // DeviceHandler specifies the read and write handlers for a Device
 // based on its type and model.
@@ -77,7 +62,7 @@ func (deviceHandler *DeviceHandler) supportsBulkRead() bool {
 func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
 	var devices []*Device
 
-	for _, v := range deviceMap {
+	for _, v := range ctx.devices {
 		if v.Handler == deviceHandler {
 			devices = append(devices, v)
 		}
@@ -87,7 +72,7 @@ func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
 
 // getHandlerForDevice gets the DeviceHandler for a device, based on the handler name.
 func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
-	for _, handler := range deviceHandlers {
+	for _, handler := range ctx.deviceHandlers {
 		if handler.Name == handlerName {
 			return handler, nil
 		}
@@ -359,7 +344,7 @@ func (device *Device) IsWritable() bool {
 // ID generates the deterministic ID for the Device using its config values.
 func (device *Device) ID() string {
 	if device.id == "" {
-		protocolComp := Context.deviceIdentifier(device.Data)
+		protocolComp := ctx.deviceIdentifier(device.Data)
 		device.id = newUID(device.Plugin, device.Kind, protocolComp)
 	}
 	return device.id
@@ -397,13 +382,13 @@ func (device *Device) encode() *synse.Device {
 // If duplicate IDs are detected, the plugin will terminate.
 func updateDeviceMap(devices []*Device) {
 	for _, d := range devices {
-		if _, hasDevice := deviceMap[d.GUID()]; hasDevice {
+		if _, hasDevice := ctx.devices[d.GUID()]; hasDevice {
 			// If we have devices with the same ID, there is something very wrong
 			// happening and we will not want to proceed, since we won't be able
 			// to route to devices correctly.
 			logger.Fatalf("duplicate device id found: %s", d.GUID())
 		}
-		deviceMap[d.GUID()] = d
+		ctx.devices[d.GUID()] = d
 	}
 }
 

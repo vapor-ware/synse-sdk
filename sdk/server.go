@@ -40,7 +40,7 @@ func NewServer(network, address string) *Server {
 // is running in "unix" mode.
 func (server *Server) setup() error {
 	// Set the server cleanup function as a post-run action for the plugin.
-	postRunActions = append(postRunActions, func(plugin *Plugin) error {
+	ctx.postRunActions = append(ctx.postRunActions, func(plugin *Plugin) error {
 		return server.cleanup()
 	})
 
@@ -170,7 +170,7 @@ func (server *Server) Capabilities(request *synse.Empty, stream synse.Plugin_Cap
 	logger.Debug("gRPC server: capabilities")
 	capabilitiesMap := map[string]*synse.DeviceCapability{}
 
-	for _, device := range deviceMap {
+	for _, device := range ctx.devices {
 		_, hasKind := capabilitiesMap[device.Kind]
 		if !hasKind {
 			var outputs []string
@@ -207,7 +207,7 @@ func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_D
 		return fmt.Errorf("filter specifies board with no rack - must specifiy rack as well")
 	}
 
-	for _, device := range deviceMap {
+	for _, device := range ctx.devices {
 		if rack != "" {
 			if device.Location.Rack != rack {
 				continue

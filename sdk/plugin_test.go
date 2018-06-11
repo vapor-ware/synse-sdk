@@ -57,9 +57,7 @@ func TestNewPlugin(t *testing.T) {
 
 // TestPlugin_RegisterOutputTypes tests registering the output types for the plugin.
 func TestPlugin_RegisterOutputTypes(t *testing.T) {
-	defer func() {
-		outputTypeMap = map[string]*OutputType{}
-	}()
+	defer resetContext()
 
 	types := []*OutputType{
 		{Name: "foo"},
@@ -67,19 +65,17 @@ func TestPlugin_RegisterOutputTypes(t *testing.T) {
 		{Name: "baz"},
 	}
 	plugin := NewPlugin()
-	assert.Equal(t, 0, len(outputTypeMap))
+	assert.Equal(t, 0, len(ctx.outputTypes))
 
 	err := plugin.RegisterOutputTypes(types...)
 	assert.NoError(t, err)
-	assert.Equal(t, 3, len(outputTypeMap))
+	assert.Equal(t, 3, len(ctx.outputTypes))
 }
 
 // TestPlugin_RegisterOutputTypesError tests registering the output types for the
 // plugin when duplicate types are specified.
 func TestPlugin_RegisterOutputTypesError(t *testing.T) {
-	defer func() {
-		outputTypeMap = map[string]*OutputType{}
-	}()
+	defer resetContext()
 
 	types := []*OutputType{
 		{Name: "foo"},
@@ -87,18 +83,16 @@ func TestPlugin_RegisterOutputTypesError(t *testing.T) {
 		{Name: "foo"},
 	}
 	plugin := NewPlugin()
-	assert.Equal(t, 0, len(outputTypeMap))
+	assert.Equal(t, 0, len(ctx.outputTypes))
 
 	err := plugin.RegisterOutputTypes(types...)
 	assert.Error(t, err)
-	assert.True(t, len(outputTypeMap) > 0)
+	assert.True(t, len(ctx.outputTypes) > 0)
 }
 
 // TestPlugin_RegisterPreRunActions tests registering pre-run actions.
 func TestPlugin_RegisterPreRunActions(t *testing.T) {
-	defer func() {
-		preRunActions = []pluginAction{}
-	}()
+	defer resetContext()
 
 	actions := []pluginAction{
 		func(_ *Plugin) error { return nil },
@@ -108,16 +102,14 @@ func TestPlugin_RegisterPreRunActions(t *testing.T) {
 
 	plugin := NewPlugin()
 
-	assert.Equal(t, 0, len(preRunActions))
+	assert.Equal(t, 0, len(ctx.preRunActions))
 	plugin.RegisterPreRunActions(actions...)
-	assert.Equal(t, 3, len(preRunActions))
+	assert.Equal(t, 3, len(ctx.preRunActions))
 }
 
 // TestPlugin_RegisterPostRunActions tests registering post-run actions.
 func TestPlugin_RegisterPostRunActions(t *testing.T) {
-	defer func() {
-		postRunActions = []pluginAction{}
-	}()
+	defer resetContext()
 
 	actions := []pluginAction{
 		func(_ *Plugin) error { return nil },
@@ -127,61 +119,55 @@ func TestPlugin_RegisterPostRunActions(t *testing.T) {
 
 	plugin := NewPlugin()
 
-	assert.Equal(t, 0, len(postRunActions))
+	assert.Equal(t, 0, len(ctx.postRunActions))
 	plugin.RegisterPostRunActions(actions...)
-	assert.Equal(t, 3, len(postRunActions))
+	assert.Equal(t, 3, len(ctx.postRunActions))
 }
 
 // TestPlugin_RegisterDeviceSetupActions tests registering device setup actions.
 func TestPlugin_RegisterDeviceSetupActions(t *testing.T) {
-	defer func() {
-		deviceSetupActions = map[string][]deviceAction{}
-	}()
+	defer resetContext()
 
 	action := func(_ *Plugin, _ *Device) error { return nil }
 
 	plugin := NewPlugin()
 
-	assert.Equal(t, 0, len(deviceSetupActions))
+	assert.Equal(t, 0, len(ctx.deviceSetupActions))
 	plugin.RegisterDeviceSetupActions("kind=test", action, action, action)
-	assert.Equal(t, 1, len(deviceSetupActions))
-	assert.Equal(t, 3, len(deviceSetupActions["kind=test"]))
+	assert.Equal(t, 1, len(ctx.deviceSetupActions))
+	assert.Equal(t, 3, len(ctx.deviceSetupActions["kind=test"]))
 }
 
 // TestPlugin_RegisterDeviceSetupActions2 tests registering device setup actions when
 // some already exist.
 func TestPlugin_RegisterDeviceSetupActions2(t *testing.T) {
-	defer func() {
-		deviceSetupActions = map[string][]deviceAction{}
-	}()
+	defer resetContext()
 
 	action := func(_ *Plugin, _ *Device) error { return nil }
 
 	// add something to the device setup actions to start with
-	deviceSetupActions["kind=test"] = []deviceAction{action}
+	ctx.deviceSetupActions["kind=test"] = []deviceAction{action}
 
 	plugin := NewPlugin()
 
-	assert.Equal(t, 1, len(deviceSetupActions))
+	assert.Equal(t, 1, len(ctx.deviceSetupActions))
 	plugin.RegisterDeviceSetupActions("kind=test", action)
-	assert.Equal(t, 1, len(deviceSetupActions))
-	assert.Equal(t, 2, len(deviceSetupActions["kind=test"]))
+	assert.Equal(t, 1, len(ctx.deviceSetupActions))
+	assert.Equal(t, 2, len(ctx.deviceSetupActions["kind=test"]))
 }
 
 // TestPlugin_RegisterDeviceHandlers tests registering DeviceHandlers with the plugin.
 func TestPlugin_RegisterDeviceHandlers(t *testing.T) {
-	defer func() {
-		deviceHandlers = []*DeviceHandler{}
-	}()
+	defer resetContext()
 
 	fooHandler := &DeviceHandler{Name: "foo"}
 	barHandler := &DeviceHandler{Name: "bar"}
 
 	plugin := NewPlugin()
 
-	assert.Equal(t, 0, len(deviceHandlers))
+	assert.Equal(t, 0, len(ctx.deviceHandlers))
 	plugin.RegisterDeviceHandlers(fooHandler, barHandler)
-	assert.Equal(t, 2, len(deviceHandlers))
+	assert.Equal(t, 2, len(ctx.deviceHandlers))
 }
 
 // TestPlugin_logStartupInfo tests logging out info which is done on startup.
