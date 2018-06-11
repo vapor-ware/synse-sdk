@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"fmt"
-
 	"strings"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"

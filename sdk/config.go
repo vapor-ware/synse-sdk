@@ -2,12 +2,190 @@ package sdk
 
 import (
 	"fmt"
-
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
+	"strings"
+	"strconv"
 )
+
+
+// ConfigComponent is an interface that all structs that define configuration
+// components should implement.
+//
+// This interface implements a Validate function which is used by the
+// SchemeValidator in order to validate each struct that makes up a configuration.
+type ConfigComponent interface {
+	Validate(*errors.MultiError)
+}
+
+// ConfigBase is an interface that the base configuration struct should
+// implement. This allows the SchemeValidator to get the SchemeVersion
+// for that given configuration.
+type ConfigBase interface {
+	GetVersion() (*ConfigVersion, error)
+}
+
+// ConfigContext is a structure that associates context with configuration info.
+//
+// The context around some bit of configuration is useful in logging/errors, as
+// it lets us know which config we are talking about.
+type ConfigContext struct {
+	// Source is where the config came from.
+	Source string
+
+	// Config is the configuration itself. This should be a configuration struct
+	// that implements Base. That is to say, the config held in this context
+	// should be the root config struct for that config type. This will allow us
+	// to get the scheme version of the configuration.
+	Config ConfigBase
+}
+
+// NewConfigContext creates a new Context instance.
+func NewConfigContext(source string, config ConfigBase) *ConfigContext {
+	return &ConfigContext{
+		Source: source,
+		Config: config,
+	}
+}
+
+// IsDeviceConfig checks whether the config in this context is a DeviceConfig.
+func (ctx *ConfigContext) IsDeviceConfig() bool {
+	_, ok := ctx.Config.(*DeviceConfig)
+	return ok
+}
+
+// IsPluginConfig checks whether the config in the context is a PluginConfig.
+func (ctx *ConfigContext) IsPluginConfig() bool {
+	_, ok := ctx.Config.(*PluginConfig)
+	return ok
+}
+
+// IsOutputTypeConfig checks whether the config in the context is an OutputType config.
+func (ctx *ConfigContext) IsOutputTypeConfig() bool {
+	_, ok := ctx.Config.(*OutputType)
+	return ok
+}
+
+
+
+const (
+	tagAddedIn      = "addedIn"
+	tagDeprecatedIn = "deprecatedIn"
+	tagRemovedIn    = "removedIn"
+)
+
+// ConfigVersion is a representation of a configuration scheme version
+// that can be compared to other SchemeVersions.
+type ConfigVersion struct {
+	Major int
+	Minor int
+}
+
+// NewVersion creates a new instance of a Version.
+func NewVersion(versionString string) (*ConfigVersion, error) {
+	var min, maj int
+	var err error
+
+	if versionString == "" {
+		return nil, fmt.Errorf("no version info found")
+	}
+
+	s := strings.Split(versionString, ".")
+	switch len(s) {
+	case 1:
+		maj, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, err
+		}
+		min = 0
+	case 2:
+		maj, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, err
+		}
+		min, err = strconv.Atoi(s[1])
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("too many version components - should only have MAJOR[.MINOR]")
+	}
+
+	return &ConfigVersion{
+		Major: maj,
+		Minor: min,
+	}, nil
+}
+
+// String returns a string representation of the scheme version.
+func (version *ConfigVersion) String() string {
+	return fmt.Sprintf("%d.%d", version.Major, version.Minor)
+}
+
+// IsLessThan returns true if the Version is less than the Version
+// provided as a parameter.
+func (version *ConfigVersion) IsLessThan(other *ConfigVersion) bool {
+	if version.Major < other.Major {
+		return true
+	}
+	if version.Major == other.Major && version.Minor < other.Minor {
+		return true
+	}
+	return false
+}
+
+// IsGreaterOrEqualTo returns true if the ConfigVersion is greater than or equal to
+// the Version provided as a parameter.
+func (version *ConfigVersion) IsGreaterOrEqualTo(other *ConfigVersion) bool {
+	if version.Major > other.Major {
+		return true
+	}
+	if version.Major == other.Major && version.Minor >= other.Minor {
+		return true
+	}
+	return false
+}
+
+// IsEqual returns true if the Version is equal to the Version provided
+// as a parameter.
+func (version *ConfigVersion) IsEqual(other *ConfigVersion) bool {
+	return version.Major == other.Major && version.Minor == other.Minor
+}
+
+// SchemeVersion is a struct that is used to extract the configuration
+// scheme version from any config file.
+type SchemeVersion struct {
+	// Version is the config version scheme specified in the config file.
+	Version string `yaml:"version,omitempty" addedIn:"1.0"`
+
+	// scheme is the Version that represents the SchemeVersion's Version.
+	scheme *ConfigVersion
+}
+
+// parse parses the Version field into a Version.
+func (schemeVersion *SchemeVersion) parse() error {
+	scheme, err := NewVersion(schemeVersion.Version)
+	if err != nil {
+		return err
+	}
+	schemeVersion.scheme = scheme
+	return nil
+}
+
+// GetVersion gets the Version associated with the version specified
+// in the configuration.
+func (schemeVersion *SchemeVersion) GetVersion() (*ConfigVersion, error) {
+	if schemeVersion.scheme == nil {
+		err := schemeVersion.parse()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return schemeVersion.scheme, nil
+}
+
 
 // processDeviceConfigs searches for, reads, and validates the device configuration(s).
 // Its behavior will vary depending on the device config policies that are set. If
