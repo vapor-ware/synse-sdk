@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -103,13 +102,13 @@ func TestServer_Version(t *testing.T) {
 	resp, err := s.Version(context.Background(), req)
 
 	assert.NoError(t, err)
-	assert.Equal(t, Version.Arch, resp.Arch)
-	assert.Equal(t, Version.OS, resp.Os)
-	assert.Equal(t, Version.SDKVersion, resp.SdkVersion)
-	assert.Equal(t, Version.BuildDate, resp.BuildDate)
-	assert.Equal(t, Version.GitCommit, resp.GitCommit)
-	assert.Equal(t, Version.GitTag, resp.GitTag)
-	assert.Equal(t, Version.PluginVersion, resp.PluginVersion)
+	assert.Equal(t, version.Arch, resp.Arch)
+	assert.Equal(t, version.OS, resp.Os)
+	assert.Equal(t, version.SDKVersion, resp.SdkVersion)
+	assert.Equal(t, version.BuildDate, resp.BuildDate)
+	assert.Equal(t, version.GitCommit, resp.GitCommit)
+	assert.Equal(t, version.GitTag, resp.GitTag)
+	assert.Equal(t, version.PluginVersion, resp.PluginVersion)
 }
 
 // TODO - implement health checks
@@ -137,14 +136,14 @@ func TestServer_Capabilities2(t *testing.T) {
 	deviceMap["foo"] = &Device{
 		Kind: "foo",
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	deviceMap["bar"] = &Device{
 		Kind: "bar",
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 
@@ -168,14 +167,14 @@ func TestServer_Capabilities3(t *testing.T) {
 	deviceMap["foo"] = &Device{
 		Kind: "foo",
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	deviceMap["bar"] = &Device{
 		Kind: "bar",
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 
@@ -211,8 +210,8 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -222,7 +221,7 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -232,7 +231,7 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
@@ -265,8 +264,8 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -276,7 +275,7 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -286,7 +285,7 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
@@ -321,8 +320,8 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -332,7 +331,7 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -342,7 +341,7 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
@@ -378,8 +377,8 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -389,7 +388,7 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -399,7 +398,7 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
@@ -450,8 +449,8 @@ func TestServer_Devices_Error(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -461,7 +460,7 @@ func TestServer_Devices_Error(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -471,7 +470,7 @@ func TestServer_Devices_Error(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
@@ -515,14 +514,14 @@ func TestServer_Metainfo(t *testing.T) {
 	assert.Equal(t, metainfo.Description, resp.GetDescription())
 	assert.Equal(t, metainfo.VCS, resp.GetVcs())
 
-	version := resp.GetVersion()
-	assert.Equal(t, Version.Arch, version.Arch)
-	assert.Equal(t, Version.OS, version.Os)
-	assert.Equal(t, Version.SDKVersion, version.SdkVersion)
-	assert.Equal(t, Version.BuildDate, version.BuildDate)
-	assert.Equal(t, Version.GitCommit, version.GitCommit)
-	assert.Equal(t, Version.GitTag, version.GitTag)
-	assert.Equal(t, Version.PluginVersion, version.PluginVersion)
+	v := resp.GetVersion()
+	assert.Equal(t, version.Arch, v.Arch)
+	assert.Equal(t, version.OS, v.Os)
+	assert.Equal(t, version.SDKVersion, v.SdkVersion)
+	assert.Equal(t, version.BuildDate, v.BuildDate)
+	assert.Equal(t, version.GitCommit, v.GitCommit)
+	assert.Equal(t, version.GitTag, v.GitTag)
+	assert.Equal(t, version.PluginVersion, v.PluginVersion)
 }
 
 // TestServer_Read tests the Read method of the gRPC plugin service.
@@ -530,11 +529,11 @@ func TestServer_Read(t *testing.T) {
 	defer func() {
 		DataManager = newDataManager()
 		deviceMap = map[string]*Device{}
-		PluginConfig = &config.PluginConfig{}
+		config.reset()
 	}()
-	PluginConfig = &config.PluginConfig{
-		Settings: &config.PluginSettings{
-			Read: &config.ReadSettings{
+	config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Read: &ReadSettings{
 				Enabled: true,
 			},
 		},
@@ -547,8 +546,8 @@ func TestServer_Read(t *testing.T) {
 			Board: "board",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 		Handler: &DeviceHandler{
 			Read: func(device *Device) ([]*Reading, error) {
@@ -604,11 +603,11 @@ func TestServer_Read3(t *testing.T) {
 	defer func() {
 		DataManager = newDataManager()
 		deviceMap = map[string]*Device{}
-		PluginConfig = &config.PluginConfig{}
+		config.reset()
 	}()
-	PluginConfig = &config.PluginConfig{
-		Settings: &config.PluginSettings{
-			Read: &config.ReadSettings{
+	config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Read: &ReadSettings{
 				Enabled: true,
 			},
 		},
@@ -621,8 +620,8 @@ func TestServer_Read3(t *testing.T) {
 			Board: "board",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 		Handler: &DeviceHandler{
 			Read: func(device *Device) ([]*Reading, error) {
@@ -714,13 +713,13 @@ func TestServer_Write3(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 	defer func() {
 		deviceMap = map[string]*Device{}
-		PluginConfig = &config.PluginConfig{}
+		config.reset()
 		DataManager = newDataManager()
 	}()
 	DataManager.writeChannel = make(chan *WriteContext, 20)
-	PluginConfig = &config.PluginConfig{
-		Settings: &config.PluginSettings{
-			Write: &config.WriteSettings{
+	config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Write: &WriteSettings{
 				Enabled: true,
 			},
 		},
@@ -733,8 +732,8 @@ func TestServer_Write3(t *testing.T) {
 			Board: "board",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 		Handler: &DeviceHandler{
 			Write: func(device *Device, data *WriteData) error {
@@ -766,13 +765,13 @@ func TestServer_Write4(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 	defer func() {
 		deviceMap = map[string]*Device{}
-		PluginConfig = &config.PluginConfig{}
+		config.reset()
 		DataManager = newDataManager()
 	}()
 	DataManager.writeChannel = make(chan *WriteContext, 20)
-	PluginConfig = &config.PluginConfig{
-		Settings: &config.PluginSettings{
-			Write: &config.WriteSettings{
+	config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Write: &WriteSettings{
 				Enabled: true,
 			},
 		},
@@ -785,8 +784,8 @@ func TestServer_Write4(t *testing.T) {
 			Board: "board",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 		Handler: &DeviceHandler{
 			Write: func(device *Device, data *WriteData) error {

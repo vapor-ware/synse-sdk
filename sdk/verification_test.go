@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
@@ -18,10 +17,10 @@ func TestVerificationInit(t *testing.T) {
 
 // TestVerifyConfigs tests verifying the unified device config.
 func TestVerifyConfigs(t *testing.T) {
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations:     []*config.Location{},
-		Devices:       []*config.DeviceKind{},
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations:     []*LocationConfig{},
+		Devices:       []*DeviceKind{},
 	}
 
 	err := VerifyConfigs(cfg)
@@ -31,33 +30,33 @@ func TestVerifyConfigs(t *testing.T) {
 // Test_verifyDeviceConfigLocations_Ok tests that there are no conflicting locations
 func Test_verifyDeviceConfigLocations_Ok(t *testing.T) {
 	defer func() {
-		deviceConfigLocations = map[string]*config.Location{}
+		deviceConfigLocations = map[string]*LocationConfig{}
 	}()
 
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			}, {
 				Name:  "bar",
-				Rack:  &config.LocationData{Name: "test"},
-				Board: &config.LocationData{Name: "test"},
+				Rack:  &LocationData{Name: "test"},
+				Board: &LocationData{Name: "test"},
 			},
 			{
 				Name:  "baz",
-				Rack:  &config.LocationData{Name: "1"},
-				Board: &config.LocationData{Name: "2"},
+				Rack:  &LocationData{Name: "1"},
+				Board: &LocationData{Name: "2"},
 			},
 		},
-		Devices: []*config.DeviceKind{},
+		Devices: []*DeviceKind{},
 	}
 
 	err := errors.NewMultiError("test")
@@ -68,29 +67,29 @@ func Test_verifyDeviceConfigLocations_Ok(t *testing.T) {
 // Test_verifyDeviceConfigLocations_Error tests that there are conflicting locations
 func Test_verifyDeviceConfigLocations_Error(t *testing.T) {
 	defer func() {
-		deviceConfigLocations = map[string]*config.Location{}
+		deviceConfigLocations = map[string]*LocationConfig{}
 	}()
 
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "different"},
-				Board: &config.LocationData{Name: "different"},
+				Rack:  &LocationData{Name: "different"},
+				Board: &LocationData{Name: "different"},
 			},
 			{
 				Name:  "bar",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{},
+		Devices: []*DeviceKind{},
 	}
 
 	err := errors.NewMultiError("test")
@@ -102,13 +101,13 @@ func Test_verifyDeviceConfigLocations_Error(t *testing.T) {
 // Test_verifyDeviceConfigDeviceKinds_Ok tests that there are no duplicate device kinds defined.
 func Test_verifyDeviceConfigDeviceKinds_Ok(t *testing.T) {
 	defer func() {
-		deviceConfigKinds = map[string]*config.DeviceKind{}
+		deviceConfigKinds = map[string]*DeviceKind{}
 	}()
 
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations:     []*config.Location{},
-		Devices: []*config.DeviceKind{
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations:     []*LocationConfig{},
+		Devices: []*DeviceKind{
 			{Name: "test"},
 			{Name: "foo"},
 			{Name: "bar"},
@@ -123,13 +122,13 @@ func Test_verifyDeviceConfigDeviceKinds_Ok(t *testing.T) {
 // Test_verifyDeviceConfigDeviceKinds_Error tests that there are duplicate device kinds defined.
 func Test_verifyDeviceConfigDeviceKinds_Error(t *testing.T) {
 	defer func() {
-		deviceConfigKinds = map[string]*config.DeviceKind{}
+		deviceConfigKinds = map[string]*DeviceKind{}
 	}()
 
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations:     []*config.Location{},
-		Devices: []*config.DeviceKind{
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations:     []*LocationConfig{},
+		Devices: []*DeviceKind{
 			{Name: "test"},
 			{Name: "foo"},
 			{Name: "bar"},
@@ -150,24 +149,24 @@ func Test_verifyDeviceConfigInstances_Ok(t *testing.T) {
 	defer delete(deviceConfigLocations, "bar")
 
 	// add the expected locations to the location map
-	deviceConfigLocations["foo"] = &config.Location{
+	deviceConfigLocations["foo"] = &LocationConfig{
 		Name:  "foo",
-		Rack:  &config.LocationData{Name: "rack"},
-		Board: &config.LocationData{Name: "board"},
+		Rack:  &LocationData{Name: "rack"},
+		Board: &LocationData{Name: "board"},
 	}
-	deviceConfigLocations["bar"] = &config.Location{
+	deviceConfigLocations["bar"] = &LocationConfig{
 		Name:  "bar",
-		Rack:  &config.LocationData{Name: "test"},
-		Board: &config.LocationData{Name: "test"},
+		Rack:  &LocationData{Name: "test"},
+		Board: &LocationData{Name: "test"},
 	}
 
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations:     []*config.Location{},
-		Devices: []*config.DeviceKind{
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations:     []*LocationConfig{},
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{Location: "foo"},
 					{Location: "foo"},
 					{Location: "bar"},
@@ -175,7 +174,7 @@ func Test_verifyDeviceConfigInstances_Ok(t *testing.T) {
 			},
 			{
 				Name: "foo",
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{Location: "bar"},
 					{Location: "foo"},
 					{Location: "bar"},
@@ -195,19 +194,19 @@ func Test_verifyDeviceConfigInstances_Error(t *testing.T) {
 	defer delete(deviceConfigLocations, "foo")
 
 	// add some expected locations to the location map
-	deviceConfigLocations["foo"] = &config.Location{
+	deviceConfigLocations["foo"] = &LocationConfig{
 		Name:  "foo",
-		Rack:  &config.LocationData{Name: "rack"},
-		Board: &config.LocationData{Name: "board"},
+		Rack:  &LocationData{Name: "rack"},
+		Board: &LocationData{Name: "board"},
 	}
 
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations:     []*config.Location{},
-		Devices: []*config.DeviceKind{
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations:     []*LocationConfig{},
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{Location: "foo"},
 					{Location: ""},    // err: empty definition
 					{Location: "bar"}, // err: doesn't exist
@@ -215,7 +214,7 @@ func Test_verifyDeviceConfigInstances_Error(t *testing.T) {
 			},
 			{
 				Name: "foo",
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{Location: "bar"}, // err: doesn't exist
 					{Location: "foo"},
 					{Location: "foo"},
@@ -233,33 +232,33 @@ func Test_verifyDeviceConfigInstances_Error(t *testing.T) {
 // Test_verifyDeviceConfigOutputs_Ok tests verifying no issues with device outputs.
 func Test_verifyDeviceConfigOutputs_Ok(t *testing.T) {
 	defer func() {
-		outputTypeMap = map[string]*config.OutputType{}
+		outputTypeMap = map[string]*OutputType{}
 	}()
 
 	// add some expected outputs
-	outputTypeMap["foo"] = &config.OutputType{Name: "foo"}
-	outputTypeMap["bar"] = &config.OutputType{Name: "bar"}
+	outputTypeMap["foo"] = &OutputType{Name: "foo"}
+	outputTypeMap["bar"] = &OutputType{Name: "bar"}
 
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations:     []*config.Location{},
-		Devices: []*config.DeviceKind{
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations:     []*LocationConfig{},
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{Type: "foo"},
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Location: "foo",
-						Outputs: []*config.DeviceOutput{
+						Outputs: []*DeviceOutput{
 							{Type: "foo"},
 							{Type: "bar"},
 						},
 					},
 					{
 						Location: "foo",
-						Outputs: []*config.DeviceOutput{
+						Outputs: []*DeviceOutput{
 							{Type: "foo"},
 							{Type: "bar"},
 						},
@@ -268,14 +267,14 @@ func Test_verifyDeviceConfigOutputs_Ok(t *testing.T) {
 			},
 			{
 				Name: "foo",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{Type: "foo"},
 					{Type: "bar"},
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Location: "bar",
-						Outputs: []*config.DeviceOutput{
+						Outputs: []*DeviceOutput{
 							{Type: "foo"},
 						},
 					},
@@ -292,32 +291,32 @@ func Test_verifyDeviceConfigOutputs_Ok(t *testing.T) {
 // Test_verifyDeviceConfigOutputs_Error tests verification errors with device outputs.
 func Test_verifyDeviceConfigOutputs_Error(t *testing.T) {
 	defer func() {
-		outputTypeMap = map[string]*config.OutputType{}
+		outputTypeMap = map[string]*OutputType{}
 	}()
 
 	// add some expected outputs
-	outputTypeMap["foo"] = &config.OutputType{Name: "foo"}
+	outputTypeMap["foo"] = &OutputType{Name: "foo"}
 
-	cfg := &config.DeviceConfig{
-		SchemeVersion: config.SchemeVersion{Version: "1.0"},
-		Locations:     []*config.Location{},
-		Devices: []*config.DeviceKind{
+	cfg := &DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations:     []*LocationConfig{},
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{Type: "foo"},
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Location: "foo",
-						Outputs: []*config.DeviceOutput{
+						Outputs: []*DeviceOutput{
 							{Type: "foo"},
 							{Type: "bar"}, // err: doesn't exist
 						},
 					},
 					{
 						Location: "foo",
-						Outputs: []*config.DeviceOutput{
+						Outputs: []*DeviceOutput{
 							{Type: "foo"},
 							{Type: "bar"}, // err: doesn't exist
 						},
@@ -326,14 +325,14 @@ func Test_verifyDeviceConfigOutputs_Error(t *testing.T) {
 			},
 			{
 				Name: "foo",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{Type: "foo"},
 					{Type: "bar"}, // err: doesn't exist
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Location: "bar",
-						Outputs: []*config.DeviceOutput{
+						Outputs: []*DeviceOutput{
 							{Type: "foo"},
 						},
 					},

@@ -1,4 +1,4 @@
-package config
+package sdk
 
 import (
 	"fmt"
@@ -39,8 +39,8 @@ var (
 //
 // All ConfigContexts returned by this function will have their IsOutputTypeConfig
 // function return true.
-func GetOutputTypeConfigsFromFile() ([]*Context, error) {
-	var cfgs []*Context
+func GetOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
+	var cfgs []*ConfigContext
 
 	// Search for output type config files. No name is specified as an arg here because
 	// output type config files do not require any particular name.
@@ -67,8 +67,8 @@ func GetOutputTypeConfigsFromFile() ([]*Context, error) {
 //
 // All ConfigContexts returned by this function will have their IsDeviceConfig
 // function return true.
-func GetDeviceConfigsFromFile() ([]*Context, error) {
-	var cfgs []*Context
+func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
+	var cfgs []*ConfigContext
 
 	// Search for device config files. No name is specified as an arg here because
 	// device config files do not require any particular name.
@@ -96,7 +96,7 @@ func GetDeviceConfigsFromFile() ([]*Context, error) {
 //
 // The ConfigContext returned by this function will have its IsPluginConfig
 // function return true.
-func GetPluginConfigFromFile() (*Context, error) {
+func GetPluginConfigFromFile() (*ConfigContext, error) {
 	// Search for the plugin config file. It should have the name "config".
 	files, err := findConfigs(pluginConfigSearchPaths, EnvPluginConfig, pluginConfigFileName)
 	if err != nil {

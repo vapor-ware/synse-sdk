@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // TestNewPlugin tests creating a new plugin.
@@ -58,10 +57,10 @@ func TestNewPlugin(t *testing.T) {
 // TestPlugin_RegisterOutputTypes tests registering the output types for the plugin.
 func TestPlugin_RegisterOutputTypes(t *testing.T) {
 	defer func() {
-		outputTypeMap = map[string]*config.OutputType{}
+		outputTypeMap = map[string]*OutputType{}
 	}()
 
-	types := []*config.OutputType{
+	types := []*OutputType{
 		{Name: "foo"},
 		{Name: "bar"},
 		{Name: "baz"},
@@ -78,10 +77,10 @@ func TestPlugin_RegisterOutputTypes(t *testing.T) {
 // plugin when duplicate types are specified.
 func TestPlugin_RegisterOutputTypesError(t *testing.T) {
 	defer func() {
-		outputTypeMap = map[string]*config.OutputType{}
+		outputTypeMap = map[string]*OutputType{}
 	}()
 
-	types := []*config.OutputType{
+	types := []*OutputType{
 		{Name: "foo"},
 		{Name: "bar"},
 		{Name: "foo"},

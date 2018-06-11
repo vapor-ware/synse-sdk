@@ -1,4 +1,4 @@
-package config
+package sdk
 
 import (
 	"os"
@@ -179,7 +179,7 @@ board:
 	// Add data to the temporary test directory
 	filename := test.WriteTempFile(t, "foo.yml", data, 0666)
 
-	config := &Location{}
+	config := &LocationConfig{}
 	err := unmarshalConfigFile(filename, config)
 	assert.NoError(t, err)
 
@@ -201,7 +201,7 @@ func Test_unmarshalConfigFile3(t *testing.T) {
 	// Add data to the temporary test directory
 	filename := test.WriteTempFile(t, "foo.yml", "", 0666)
 
-	config := &Location{}
+	config := &LocationConfig{}
 	err := unmarshalConfigFile(filename, config)
 	assert.NoError(t, err)
 
@@ -227,7 +227,7 @@ version: "1.0"
 	// Add data to the temporary test directory
 	filename := test.WriteTempFile(t, "foo.yml", data, 0666)
 
-	config := &Location{}
+	config := &LocationConfig{}
 	err := unmarshalConfigFile(filename, config)
 	assert.NoError(t, err)
 
@@ -256,7 +256,7 @@ board:
 	// Add data to the temporary test directory
 	filename := test.WriteTempFile(t, "foo.yml", data, 0666)
 
-	config := &Location{}
+	config := &LocationConfig{}
 	err := unmarshalConfigFile(filename, config)
 	assert.Error(t, err)
 
@@ -268,7 +268,7 @@ board:
 
 // Test_unmarshalConfigFile6 tests unmarshalling data from a file that doesn't exist.
 func TestUnmarshalConfigFile6(t *testing.T) {
-	config := &Location{}
+	config := &LocationConfig{}
 	err := unmarshalConfigFile("/foo/bar/baz.yaml", config)
 	assert.Error(t, err)
 

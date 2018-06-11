@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/oldconfig"
 )
 
 var (
@@ -15,10 +15,10 @@ var (
 
 var (
 	// The output for temperature devices.
-	temperatureOutput = config.OutputType{
+	temperatureOutput = oldconfig.OutputType{
 		Name:      "temperature",
 		Precision: 2,
-		Unit: config.Unit{
+		Unit: oldconfig.Unit{
 			Name:   "celsius",
 			Symbol: "C",
 		},

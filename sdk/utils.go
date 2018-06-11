@@ -6,8 +6,6 @@ import (
 	"io"
 	"strings"
 	"time"
-
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // makeIDString makes a compound string out of the given rack, board, and
@@ -19,7 +17,7 @@ func makeIDString(rack, board, device string) string {
 
 // getTypeByName gets the output type with the given name. If an output type does
 // not exist with the given name, an error is returned.
-func getTypeByName(name string) (*config.OutputType, error) {
+func getTypeByName(name string) (*OutputType, error) {
 	t, ok := outputTypeMap[name]
 	if !ok {
 		return nil, fmt.Errorf("no output type with name '%s' found", name)

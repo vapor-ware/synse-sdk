@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -77,9 +76,9 @@ func TestDecodeWriteData(t *testing.T) {
 // TestNewReading tests creating a new Reading.
 func TestNewReading(t *testing.T) {
 	output := &Output{
-		OutputType: config.OutputType{
+		OutputType: OutputType{
 			Name: "test",
-			Unit: config.Unit{
+			Unit: Unit{
 				Name:   "abc",
 				Symbol: "A",
 			},

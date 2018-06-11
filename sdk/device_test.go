@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
@@ -174,7 +173,7 @@ func TestDevice_GetOutput(t *testing.T) {
 	device := &Device{
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{Name: "foo"},
+				OutputType: OutputType{Name: "foo"},
 			},
 		},
 	}
@@ -186,7 +185,7 @@ func TestDevice_GetOutput(t *testing.T) {
 // TestMakeDevices tests making a single device.
 func TestMakeDevices(t *testing.T) {
 	// Add an output to the output map
-	outputTypeMap["something"] = &config.OutputType{
+	outputTypeMap["something"] = &OutputType{
 		Name: "something",
 	}
 	defer delete(outputTypeMap, "something")
@@ -200,23 +199,23 @@ func TestMakeDevices(t *testing.T) {
 	}()
 
 	// Create the device config from which Devices will be made
-	cfg := &config.DeviceConfig{
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{
 						Type: "something",
 					},
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Info:     "test info",
 						Location: "foo",
@@ -233,15 +232,15 @@ func TestMakeDevices(t *testing.T) {
 
 // TestMakeDevices2 tests making devices when no device kinds are specified
 func TestMakeDevices2(t *testing.T) {
-	cfg := &config.DeviceConfig{
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{},
+		Devices: []*DeviceKind{},
 	}
 
 	devices, err := makeDevices(cfg)
@@ -251,23 +250,23 @@ func TestMakeDevices2(t *testing.T) {
 
 // TestMakeDevices3 tests making devices when no device instances are specified
 func TestMakeDevices3(t *testing.T) {
-	cfg := &config.DeviceConfig{
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{
 						Type: "something",
 					},
 				},
-				Instances: []*config.DeviceInstance{},
+				Instances: []*DeviceInstance{},
 			},
 		},
 	}
@@ -280,22 +279,22 @@ func TestMakeDevices3(t *testing.T) {
 // TestMakeDevices4 tests making a single device, when the instance output is invalid.
 func TestMakeDevices4(t *testing.T) {
 	// Create the device config from which Devices will be made
-	cfg := &config.DeviceConfig{
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Info:     "test info",
 						Location: "foo",
-						Outputs: []*config.DeviceOutput{
+						Outputs: []*DeviceOutput{
 							{
 								Type: "something",
 							},
@@ -315,29 +314,29 @@ func TestMakeDevices4(t *testing.T) {
 // defined.
 func TestMakeDevices5(t *testing.T) {
 	// Add an output to the output map
-	outputTypeMap["something"] = &config.OutputType{
+	outputTypeMap["something"] = &OutputType{
 		Name: "something",
 	}
 	defer delete(outputTypeMap, "something")
 
 	// Create the device config from which Devices will be made
-	cfg := &config.DeviceConfig{
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{
 						Type: "something",
 					},
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Info:     "test info",
 						Location: "foo",
@@ -356,29 +355,29 @@ func TestMakeDevices5(t *testing.T) {
 // match up.
 func TestMakeDevices6(t *testing.T) {
 	// Add an output to the output map
-	outputTypeMap["something"] = &config.OutputType{
+	outputTypeMap["something"] = &OutputType{
 		Name: "something",
 	}
 	defer delete(outputTypeMap, "something")
 
 	// Create the device config from which Devices will be made
-	cfg := &config.DeviceConfig{
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{
 						Type: "something",
 					},
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Info:     "test info",
 						Location: "baz",
@@ -397,7 +396,7 @@ func TestMakeDevices6(t *testing.T) {
 // an override handler.
 func TestMakeDevices7(t *testing.T) {
 	// Add an output to the output map
-	outputTypeMap["something"] = &config.OutputType{
+	outputTypeMap["something"] = &OutputType{
 		Name: "something",
 	}
 	defer delete(outputTypeMap, "something")
@@ -411,24 +410,24 @@ func TestMakeDevices7(t *testing.T) {
 	}()
 
 	// Create the device config from which Devices will be made
-	cfg := &config.DeviceConfig{
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{
+		Devices: []*DeviceKind{
 			{
 				Name:        "test",
 				HandlerName: "override",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{
 						Type: "something",
 					},
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Info:     "test info",
 						Location: "foo",
@@ -447,7 +446,7 @@ func TestMakeDevices7(t *testing.T) {
 // an override handler.
 func TestMakeDevices8(t *testing.T) {
 	// Add an output to the output map
-	outputTypeMap["something"] = &config.OutputType{
+	outputTypeMap["something"] = &OutputType{
 		Name: "something",
 	}
 	defer delete(outputTypeMap, "something")
@@ -461,23 +460,23 @@ func TestMakeDevices8(t *testing.T) {
 	}()
 
 	// Create the device config from which Devices will be made
-	cfg := &config.DeviceConfig{
-		Locations: []*config.Location{
+	cfg := &DeviceConfig{
+		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
-				Rack:  &config.LocationData{Name: "rack"},
-				Board: &config.LocationData{Name: "board"},
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
 			},
 		},
-		Devices: []*config.DeviceKind{
+		Devices: []*DeviceKind{
 			{
 				Name: "test",
-				Outputs: []*config.DeviceOutput{
+				Outputs: []*DeviceOutput{
 					{
 						Type: "something",
 					},
 				},
-				Instances: []*config.DeviceInstance{
+				Instances: []*DeviceInstance{
 					{
 						Info:        "test info",
 						Location:    "foo",
@@ -581,7 +580,7 @@ func TestDeviceReadOk(t *testing.T) {
 	device := Device{
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{Name: "foo"},
+				OutputType: OutputType{Name: "foo"},
 			},
 		},
 		Location: &Location{
@@ -663,42 +662,42 @@ func TestLocation_encode(t *testing.T) {
 	assert.Equal(t, "bar", out.GetBoard())
 }
 
-// TestNewLocationFromConfig tests successfully getting a Location from config
-func TestNewLocationFromConfig(t *testing.T) {
-	cfg := &config.Location{
+// TestLocationConfig_Resolve tests successfully getting a Location from config
+func TestLocationConfig_Resolve(t *testing.T) {
+	cfg := &LocationConfig{
 		Name:  "test",
-		Rack:  &config.LocationData{Name: "rack"},
-		Board: &config.LocationData{Name: "board"},
+		Rack:  &LocationData{Name: "rack"},
+		Board: &LocationData{Name: "board"},
 	}
 
-	loc, err := NewLocationFromConfig(cfg)
+	loc, err := cfg.Resolve()
 	assert.NoError(t, err)
 	assert.Equal(t, "rack", loc.Rack)
 	assert.Equal(t, "board", loc.Board)
 }
 
-// TestNewLocationFromConfig2 tests getting a Location from config with bad rack
-func TestNewLocationFromConfig2(t *testing.T) {
-	cfg := &config.Location{
+// TestLocationConfig_Resolve2 tests getting a Location from config with bad rack
+func TestLocationConfig_Resolve2(t *testing.T) {
+	cfg := &LocationConfig{
 		Name:  "test",
-		Rack:  &config.LocationData{FromEnv: "NOT_AN_ENV"},
-		Board: &config.LocationData{Name: "board"},
+		Rack:  &LocationData{FromEnv: "NOT_AN_ENV"},
+		Board: &LocationData{Name: "board"},
 	}
 
-	loc, err := NewLocationFromConfig(cfg)
+	loc, err := cfg.Resolve()
 	assert.Error(t, err)
 	assert.Nil(t, loc)
 }
 
-// TestNewLocationFromConfig3 tests getting a Location from config with bad board
-func TestNewLocationFromConfig3(t *testing.T) {
-	cfg := &config.Location{
+// TestLocationConfig_Resolve3 tests getting a Location from config with bad board
+func TestLocationConfig_Resolve3(t *testing.T) {
+	cfg := &LocationConfig{
 		Name:  "test",
-		Rack:  &config.LocationData{Name: "rack"},
-		Board: &config.LocationData{FromEnv: "NOT_AN_ENV"},
+		Rack:  &LocationData{Name: "rack"},
+		Board: &LocationData{FromEnv: "NOT_AN_ENV"},
 	}
 
-	loc, err := NewLocationFromConfig(cfg)
+	loc, err := cfg.Resolve()
 	assert.Error(t, err)
 	assert.Nil(t, loc)
 }
@@ -706,7 +705,7 @@ func TestNewLocationFromConfig3(t *testing.T) {
 // TestOutput_encode tests successfully converting an output to its grpc message.
 func TestOutput_encode(t *testing.T) {
 	output := Output{
-		OutputType: config.OutputType{
+		OutputType: OutputType{
 			Name:      "foo",
 			Precision: 2,
 		},
@@ -720,7 +719,7 @@ func TestOutput_encode(t *testing.T) {
 // with bad scaling factor.
 func TestOutput_encode2(t *testing.T) {
 	output := Output{
-		OutputType: config.OutputType{
+		OutputType: OutputType{
 			Name:          "foo",
 			Precision:     2,
 			ScalingFactor: "abc",
@@ -744,9 +743,9 @@ func TestDevice_encode(t *testing.T) {
 		},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "output",
-					Unit: config.Unit{
+					Unit: Unit{
 						Name:   "x",
 						Symbol: "X",
 					},
@@ -785,8 +784,8 @@ func Test_updateDeviceMap(t *testing.T) {
 
 // Test_getInstanceOutputs tests getting instance output when none are defined.
 func Test_getInstanceOutputs(t *testing.T) {
-	kind := &config.DeviceKind{}
-	instance := &config.DeviceInstance{}
+	kind := &DeviceKind{}
+	instance := &DeviceInstance{}
 
 	outputs, err := getInstanceOutputs(kind, instance)
 	assert.NoError(t, err)
@@ -795,17 +794,17 @@ func Test_getInstanceOutputs(t *testing.T) {
 
 // Test_getInstanceOutputs2 tests getting instance output when the Kind defines them.
 func Test_getInstanceOutputs2(t *testing.T) {
-	outputTypeMap["test"] = &config.OutputType{Name: "test"}
+	outputTypeMap["test"] = &OutputType{Name: "test"}
 	defer delete(outputTypeMap, "test")
 
-	kind := &config.DeviceKind{
-		Outputs: []*config.DeviceOutput{
+	kind := &DeviceKind{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "test",
 			},
 		},
 	}
-	instance := &config.DeviceInstance{}
+	instance := &DeviceInstance{}
 
 	outputs, err := getInstanceOutputs(kind, instance)
 	assert.NoError(t, err)
@@ -814,12 +813,12 @@ func Test_getInstanceOutputs2(t *testing.T) {
 
 // Test_getInstanceOutputs3 tests getting instance output when the Instance defines them.
 func Test_getInstanceOutputs3(t *testing.T) {
-	outputTypeMap["test"] = &config.OutputType{Name: "test"}
+	outputTypeMap["test"] = &OutputType{Name: "test"}
 	defer delete(outputTypeMap, "test")
 
-	kind := &config.DeviceKind{}
-	instance := &config.DeviceInstance{
-		Outputs: []*config.DeviceOutput{
+	kind := &DeviceKind{}
+	instance := &DeviceInstance{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "test",
 			},
@@ -833,20 +832,20 @@ func Test_getInstanceOutputs3(t *testing.T) {
 
 // Test_getInstanceOutputs4 tests getting instance output when the Kind and Instance defines them.
 func Test_getInstanceOutputs4(t *testing.T) {
-	outputTypeMap["foo"] = &config.OutputType{Name: "foo"}
-	outputTypeMap["bar"] = &config.OutputType{Name: "bar"}
+	outputTypeMap["foo"] = &OutputType{Name: "foo"}
+	outputTypeMap["bar"] = &OutputType{Name: "bar"}
 	defer delete(outputTypeMap, "foo")
 	defer delete(outputTypeMap, "bar")
 
-	kind := &config.DeviceKind{
-		Outputs: []*config.DeviceOutput{
+	kind := &DeviceKind{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "foo",
 			},
 		},
 	}
-	instance := &config.DeviceInstance{
-		Outputs: []*config.DeviceOutput{
+	instance := &DeviceInstance{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "bar",
 			},
@@ -860,18 +859,18 @@ func Test_getInstanceOutputs4(t *testing.T) {
 
 // Test_getInstanceOutputs5 tests getting instance output when duplicates are defined.
 func Test_getInstanceOutputs5(t *testing.T) {
-	outputTypeMap["test"] = &config.OutputType{Name: "test"}
+	outputTypeMap["test"] = &OutputType{Name: "test"}
 	defer delete(outputTypeMap, "test")
 
-	kind := &config.DeviceKind{
-		Outputs: []*config.DeviceOutput{
+	kind := &DeviceKind{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "test",
 			},
 		},
 	}
-	instance := &config.DeviceInstance{
-		Outputs: []*config.DeviceOutput{
+	instance := &DeviceInstance{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "test",
 			},
@@ -886,21 +885,21 @@ func Test_getInstanceOutputs5(t *testing.T) {
 // Test_getInstanceOutputs6 tests getting instance output when the Kind and Instance defines them,
 // but the instance should not inherit from the kind..
 func Test_getInstanceOutputs6(t *testing.T) {
-	outputTypeMap["foo"] = &config.OutputType{Name: "foo"}
-	outputTypeMap["bar"] = &config.OutputType{Name: "bar"}
+	outputTypeMap["foo"] = &OutputType{Name: "foo"}
+	outputTypeMap["bar"] = &OutputType{Name: "bar"}
 	defer delete(outputTypeMap, "foo")
 	defer delete(outputTypeMap, "bar")
 
-	kind := &config.DeviceKind{
-		Outputs: []*config.DeviceOutput{
+	kind := &DeviceKind{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "foo",
 			},
 		},
 	}
-	instance := &config.DeviceInstance{
+	instance := &DeviceInstance{
 		DisableOutputInheritance: true,
-		Outputs: []*config.DeviceOutput{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "bar",
 			},
@@ -915,14 +914,14 @@ func Test_getInstanceOutputs6(t *testing.T) {
 // Test_getInstanceOutputs7 tests getting instance output when the Kind defines them,
 // but there is no corresponding type.
 func Test_getInstanceOutputs7(t *testing.T) {
-	kind := &config.DeviceKind{
-		Outputs: []*config.DeviceOutput{
+	kind := &DeviceKind{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "test",
 			},
 		},
 	}
-	instance := &config.DeviceInstance{}
+	instance := &DeviceInstance{}
 
 	outputs, err := getInstanceOutputs(kind, instance)
 	assert.Error(t, err)
@@ -932,9 +931,9 @@ func Test_getInstanceOutputs7(t *testing.T) {
 // Test_getInstanceOutputs8 tests getting instance output when the Instance defines them,
 // but there is no corresponding type.
 func Test_getInstanceOutputs8(t *testing.T) {
-	kind := &config.DeviceKind{}
-	instance := &config.DeviceInstance{
-		Outputs: []*config.DeviceOutput{
+	kind := &DeviceKind{}
+	instance := &DeviceInstance{
+		Outputs: []*DeviceOutput{
 			{
 				Type: "test",
 			},

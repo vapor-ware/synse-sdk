@@ -123,7 +123,7 @@ func (server *Server) Test(ctx context.Context, request *synse.Empty) (*synse.St
 // Version is the handler for the Synse GRPC Plugin service's `Version` RPC method.
 func (server *Server) Version(ctx context.Context, request *synse.Empty) (*synse.VersionInfo, error) {
 	logger.Debug("gRPC server: version")
-	return Version.Encode(), nil
+	return version.Encode(), nil
 }
 
 // Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
@@ -233,7 +233,7 @@ func (server *Server) Metainfo(ctx context.Context, request *synse.Empty) (*syns
 		Maintainer:  metainfo.Maintainer,
 		Description: metainfo.Description,
 		Vcs:         metainfo.VCS,
-		Version:     Version.Encode(),
+		Version:     version.Encode(),
 	}, nil
 }
 

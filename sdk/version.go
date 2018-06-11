@@ -9,12 +9,12 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// SDKVersion specifies the version of the Synse Plugin SDK.
-const SDKVersion = "1.0.0"
+// Version specifies the version of the Synse Plugin SDK.
+const Version = "1.0.0"
 
-// Version is a reference to a BinVersion that can be used to get
+// version is a reference to a BinVersion that can be used to get
 // the version info for a plugin.
-var Version *BinVersion
+var version *BinVersion
 
 var (
 	// BuildDate is the timestamp for when the build happened.
@@ -34,10 +34,10 @@ var (
 )
 
 func init() {
-	Version = &BinVersion{
+	version = &BinVersion{
 		Arch:          runtime.GOARCH,
 		OS:            runtime.GOOS,
-		SDKVersion:    SDKVersion,
+		SDKVersion:    Version,
 		BuildDate:     setField(BuildDate),
 		GitCommit:     setField(GitCommit),
 		GitTag:        setField(GitTag),

@@ -2,14 +2,28 @@ package sdk
 
 import (
 	"fmt"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"strconv"
+	"strings"
+
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
-	"strings"
-	"strconv"
 )
 
+var config = Config{}
+
+// Config is a struct that holds all of the configs
+type Config struct {
+	Device     *DeviceConfig
+	Plugin     *PluginConfig
+	OutputType *OutputType
+}
+
+func (config *Config) reset() {
+	config.Device = nil
+	config.Plugin = nil
+	config.OutputType = nil
+}
 
 // ConfigComponent is an interface that all structs that define configuration
 // components should implement.
@@ -67,8 +81,6 @@ func (ctx *ConfigContext) IsOutputTypeConfig() bool {
 	_, ok := ctx.Config.(*OutputType)
 	return ok
 }
-
-
 
 const (
 	tagAddedIn      = "addedIn"
@@ -186,7 +198,6 @@ func (schemeVersion *SchemeVersion) GetVersion() (*ConfigVersion, error) {
 	return schemeVersion.scheme, nil
 }
 
-
 // processDeviceConfigs searches for, reads, and validates the device configuration(s).
 // Its behavior will vary depending on the device config policies that are set. If
 // device config is processed successfully, it will be set to the global Device variable.
@@ -199,10 +210,10 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	deviceDynamicPolicy := policies.GetDeviceConfigDynamicPolicy()
 	logger.Debugf("device dynamic config policy: %s", deviceDynamicPolicy.String())
 
-	var deviceCtxs []*config.Context
+	var deviceCtxs []*ConfigContext
 
 	// Now, try getting the device config(s) from file.
-	fileCtxs, err := config.GetDeviceConfigsFromFile()
+	fileCtxs, err := GetDeviceConfigsFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
 	_, notFoundErr := err.(*errors.ConfigsNotFound)
@@ -221,7 +232,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 
 	case policies.DeviceConfigFileOptional:
 		if err != nil {
-			fileCtxs = []*config.Context{}
+			fileCtxs = []*ConfigContext{}
 			logger.Debug("no device configuration config files found")
 		}
 
@@ -234,7 +245,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 				"device config file(s) found, but its use is prohibited via policy. " +
 					"the device config files will be ignored.",
 			)
-			fileCtxs = []*config.Context{}
+			fileCtxs = []*ConfigContext{}
 		}
 
 	default:
@@ -248,7 +259,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	// device config contexts.
 	deviceCtxs = append(deviceCtxs, fileCtxs...)
 
-	var dynamicCtxs []*config.Context
+	var dynamicCtxs []*ConfigContext
 
 	// Get device configs from dynamic registration
 	dynamicCfgs, err := Context.dynamicDeviceConfigRegistrar(config.Plugin.DynamicRegistration.Config)
@@ -260,7 +271,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	}
 
 	for _, cfg := range dynamicCfgs {
-		dynamicCtxs = append(dynamicCtxs, config.NewConfigContext("dynamic registration", cfg))
+		dynamicCtxs = append(dynamicCtxs, NewConfigContext("dynamic registration", cfg))
 	}
 
 	switch deviceDynamicPolicy {
@@ -274,7 +285,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 
 	case policies.DeviceConfigDynamicOptional:
 		if err != nil {
-			dynamicCtxs = []*config.Context{}
+			dynamicCtxs = []*ConfigContext{}
 			logger.Debug("no dynamic device configuration(s) found")
 		}
 
@@ -287,7 +298,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 				"dynamic device config(s) found, but its use is prohibited via policy. " +
 					"the device config(s) will be ignored.",
 			)
-			dynamicCtxs = []*config.Context{}
+			dynamicCtxs = []*ConfigContext{}
 		}
 
 	default:
@@ -304,20 +315,20 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	// Validate the device configs
 	for _, ctx := range deviceCtxs {
 		// Validate config scheme
-		multiErr := config.Validator.Validate(ctx)
+		multiErr := Validator.Validate(ctx)
 		if multiErr.HasErrors() {
 			return multiErr
 		}
 	}
 
 	// Unify all the device configs
-	unifiedCtx, err := config.UnifyDeviceConfigs(deviceCtxs)
+	unifiedCtx, err := UnifyDeviceConfigs(deviceCtxs)
 	if err != nil {
 		return err
 	}
 
 	// With the config validated and unified, we can now assign it to the global Device variable.
-	config.Device = unifiedCtx.Config.(*config.DeviceConfig)
+	config.Device = unifiedCtx.Config.(*DeviceConfig)
 	return nil
 }
 
@@ -331,7 +342,7 @@ func processPluginConfig() error { // nolint: gocyclo
 	logger.Debugf("plugin config file policy: %s", pluginFilePolicy.String())
 
 	// Now, try getting the plugin config from file.
-	pluginCtx, err := config.GetPluginConfigFromFile()
+	pluginCtx, err := GetPluginConfigFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
 	_, notFoundErr := err.(*errors.ConfigsNotFound)
@@ -350,11 +361,11 @@ func processPluginConfig() error { // nolint: gocyclo
 
 	case policies.PluginConfigFileOptional:
 		if err != nil {
-			ctx, e := config.NewDefaultPluginConfig()
+			ctx, e := NewDefaultPluginConfig()
 			if e != nil {
 				return e
 			}
-			pluginCtx = config.NewConfigContext("default", ctx)
+			pluginCtx = NewConfigContext("default", ctx)
 		}
 
 	case policies.PluginConfigFileProhibited:
@@ -371,7 +382,7 @@ func processPluginConfig() error { // nolint: gocyclo
 			)
 			// The user should have specified the config, so we will take
 			// that config and wrap it in a context for validation.
-			pluginCtx = config.NewConfigContext("user defined", config.Plugin)
+			pluginCtx = NewConfigContext("user defined", config.Plugin)
 		}
 
 	default:
@@ -382,13 +393,13 @@ func processPluginConfig() error { // nolint: gocyclo
 	}
 
 	// Validate the plugin config
-	multiErr := config.Validator.Validate(pluginCtx)
+	multiErr := Validator.Validate(pluginCtx)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
 
 	// With the config validated, we can now assign it to the global Plugin variable.
-	config.Plugin = pluginCtx.Config.(*config.PluginConfig)
+	config.Plugin = pluginCtx.Config.(*PluginConfig)
 	return nil
 }
 
@@ -396,13 +407,13 @@ func processPluginConfig() error { // nolint: gocyclo
 // configuration from file. Its behavior will vary depending on the output type
 // config policy that is set. If output type config is processed successfully,
 // the found output type configs are returned.
-func processOutputTypeConfig() ([]*config.OutputType, error) { // nolint: gocyclo
+func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 	// Get the plugin's policy for output type config files.
 	outputTypeFilePolicy := policies.GetTypeConfigFilePolicy()
 	logger.Debugf("output type config file policy: %s", outputTypeFilePolicy.String())
 
 	// Now, try getting the output type config(s) from file.
-	outputTypeCtxs, err := config.GetOutputTypeConfigsFromFile()
+	outputTypeCtxs, err := GetOutputTypeConfigsFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
 	_, notFoundErr := err.(*errors.ConfigsNotFound)
@@ -421,7 +432,7 @@ func processOutputTypeConfig() ([]*config.OutputType, error) { // nolint: gocycl
 
 	case policies.TypeConfigFileOptional:
 		if err != nil {
-			outputTypeCtxs = []*config.Context{}
+			outputTypeCtxs = []*ConfigContext{}
 			logger.Debug("no type configuration config files found")
 		}
 
@@ -434,7 +445,7 @@ func processOutputTypeConfig() ([]*config.OutputType, error) { // nolint: gocycl
 				"output type config file(s) found, but its use is prohibited via policy. " +
 					"the output type config files will be ignored.",
 			)
-			outputTypeCtxs = []*config.Context{}
+			outputTypeCtxs = []*ConfigContext{}
 		}
 
 	default:
@@ -444,16 +455,56 @@ func processOutputTypeConfig() ([]*config.OutputType, error) { // nolint: gocycl
 		)
 	}
 
-	var outputs []*config.OutputType
+	var outputs []*OutputType
 
 	// Validate the plugin config
 	for _, outputTypeCtx := range outputTypeCtxs {
-		multiErr := config.Validator.Validate(outputTypeCtx)
+		multiErr := Validator.Validate(outputTypeCtx)
 		if multiErr.HasErrors() {
 			return nil, multiErr
 		}
-		cfg := outputTypeCtx.Config.(*config.OutputType)
+		cfg := outputTypeCtx.Config.(*OutputType)
 		outputs = append(outputs, cfg)
 	}
 	return outputs, nil
+}
+
+// UnifyDeviceConfigs will take a slice of ConfigContext which represents
+// DeviceConfigs and unify them into a single ConfigContext for a DeviceConfig.
+//
+// If any of the ConfigContexts given as a parameter do not represent a
+// DeviceConfig, an error is returned.
+func UnifyDeviceConfigs(ctxs []*ConfigContext) (*ConfigContext, error) {
+
+	// FIXME (etd): figure out how to either:
+	//  i. merge the source info into the ConfigContext
+	// ii. map each component to its original context so we know exactly where
+	//     a specific field/config component originated from.
+
+	// If there are no contexts, we can't unify.
+	if len(ctxs) == 0 {
+		return nil, fmt.Errorf("no ConfigContexts specified for unification")
+	}
+
+	var context *ConfigContext
+
+	for _, ctx := range ctxs {
+		if !ctx.IsDeviceConfig() {
+			return nil, fmt.Errorf("config context does not represent a device config")
+		}
+		if context == nil {
+			context = ctx
+		} else {
+			base := context.Config.(*DeviceConfig)
+			source := ctx.Config.(*DeviceConfig)
+
+			// Merge DeviceConfig.Locations
+			base.Locations = append(base.Locations, source.Locations...)
+
+			// Merge DeviceConfig.Devices
+			base.Devices = append(base.Devices, source.Devices...)
+		}
+	}
+
+	return context, nil
 }

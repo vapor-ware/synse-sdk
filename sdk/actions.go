@@ -6,6 +6,8 @@ import (
 )
 
 var (
+	// FIXME: move to context?
+
 	// preRunActions holds all of the known plugin actions to run prior to starting
 	// up the plugin server and data manager.
 	preRunActions []pluginAction

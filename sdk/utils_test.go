@@ -1,18 +1,10 @@
 package sdk
 
 import (
-	//"io/ioutil"
-	//"os"
-	//"path/filepath"
-	//"sort"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	//"github.com/vapor-ware/synse-sdk/internal/test"
-	//"github.com/vapor-ware/synse-sdk/sdk/config"
-	"sort"
-
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // TestMakeIDString tests making a compound ID string out of the device
@@ -258,7 +250,7 @@ func TestGetCurrentTime(t *testing.T) {
 
 // Test_getTypeByNameOk tests getting a type that exists.
 func Test_getTypeByNameOk(t *testing.T) {
-	outputTypeMap["foo"] = &config.OutputType{Name: "foo"}
+	outputTypeMap["foo"] = &OutputType{Name: "foo"}
 	defer delete(outputTypeMap, "foo")
 
 	ot, err := getTypeByName("foo")

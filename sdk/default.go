@@ -3,8 +3,6 @@ package sdk
 import (
 	"fmt"
 	"sort"
-
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // defaultDeviceIdentifier is the default implementation that fulfils the DeviceIdentifier
@@ -48,8 +46,8 @@ func defaultDynamicDeviceRegistration(_ map[string]interface{}) ([]*Device, erro
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
-func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*config.DeviceConfig, error) {
-	return []*config.DeviceConfig{}, nil
+func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*DeviceConfig, error) {
+	return []*DeviceConfig{}, nil
 }
 
 // defaultDeviceDataValidator is the default implementation that fulfils the

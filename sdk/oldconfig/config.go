@@ -1,4 +1,4 @@
-package config
+package oldconfig
 
 import (
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
