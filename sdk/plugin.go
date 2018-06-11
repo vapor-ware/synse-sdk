@@ -263,13 +263,13 @@ func (plugin *Plugin) resolveFlags() {
 func (plugin *Plugin) processConfig() error {
 
 	// Resolve the plugin config.
-	err := config.ProcessPluginConfig()
+	err := processPluginConfig()
 	if err != nil {
 		return err
 	}
 
 	// Resolve the output type config(s).
-	outputTypes, err := config.ProcessOutputTypeConfig()
+	outputTypes, err := processOutputTypeConfig()
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func (plugin *Plugin) processConfig() error {
 	}
 
 	// Resolve the device config(s).
-	err = config.ProcessDeviceConfigs(Context.dynamicDeviceConfigRegistrar)
+	err = processDeviceConfigs()
 	if err != nil {
 		return err
 	}
