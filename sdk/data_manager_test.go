@@ -24,9 +24,9 @@ func TestNewDataManager(t *testing.T) {
 // TestDeviceManager_setupError tests calling setup on the DataManager when there
 // is no global plugin config. This should result in error.
 func TestDataManager_setupError(t *testing.T) {
-	defer config.reset()
+	defer Config.reset()
 
-	config.Plugin = nil
+	Config.Plugin = nil
 	err := DataManager.setup()
 	assert.Error(t, err)
 }
@@ -34,9 +34,9 @@ func TestDataManager_setupError(t *testing.T) {
 // TestDataManager_WritesEnabled tests that writes are enabled in the dataManager
 // when they are enabled in the config.
 func TestDataManager_WritesEnabled(t *testing.T) {
-	defer config.reset()
+	defer Config.reset()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -62,9 +62,9 @@ func TestDataManager_WritesEnabled(t *testing.T) {
 // TestDataManager_readNoLimiter tests reading a device when a limiter is
 // not configured.
 func TestDataManager_readOneOkNoLimiter(t *testing.T) {
-	defer config.reset()
+	defer Config.reset()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -114,9 +114,9 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 // TestDataManager_readOkWithLimiter tests reading a device when a limiter is
 // configured.
 func TestDataManager_readOneOkWithLimiter(t *testing.T) {
-	defer config.reset()
+	defer Config.reset()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -166,9 +166,9 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 
 // TestDataManager_readErr tests reading a device that results in error.
 func TestDataManager_readOneErr(t *testing.T) {
-	defer config.reset()
+	defer Config.reset()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -212,11 +212,11 @@ func TestDataManager_readOneErr(t *testing.T) {
 // not configured.
 func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -285,11 +285,11 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 // configured.
 func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -358,11 +358,11 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 // TestDataManager_readBulkError tests bulk reading a device when reading returns an error.
 func TestDataManager_readBulkError(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -412,11 +412,11 @@ func TestDataManager_readBulkError(t *testing.T) {
 // TestDataManager_serialReadSingle tests reading a single device serially.
 func TestDataManager_serialReadSingle(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -468,11 +468,11 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 // TestDataManager_serialReadSingleBulk tests reading a single device in bulk serially.
 func TestDataManager_serialReadSingleBulk(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -540,11 +540,11 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 // TestDataManager_parallelReadSingle tests reading a single device in parallel.
 func TestDataManager_parallelReadSingle(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -597,11 +597,11 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 // TestDataManager_parallelReadSingleBulk tests reading a single device in bulk in parallel.
 func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -670,11 +670,11 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 // TestDataManager_serialReadMultiple tests reading multiple devices serially.
 func TestDataManager_serialReadMultiple(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -760,11 +760,11 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 // TestDataManager_parallelReadSingle tests reading multiple devices in parallel.
 func TestDataManager_parallelReadMultiple(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -850,12 +850,12 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 // TestDataManager_writeOkNoLimiter tests writing to a device with no limiter configured.
 func TestDataManager_writeOkNoLimiter(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -911,12 +911,12 @@ func TestDataManager_writeOkNoLimiter(t *testing.T) {
 // TestDataManager_writeOkWithLimiter tests writing to a device with a limiter configured.
 func TestDataManager_writeOkWithLimiter(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -973,12 +973,12 @@ func TestDataManager_writeOkWithLimiter(t *testing.T) {
 // TestDataManager_writeNoDevice tests writing to a device when that device cannot be found.
 func TestDataManager_writeNoDevice(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -1015,12 +1015,12 @@ func TestDataManager_writeNoDevice(t *testing.T) {
 // TestDataManager_writeError tests writing to a device when the write errors.
 func TestDataManager_writeError(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -1076,12 +1076,12 @@ func TestDataManager_writeError(t *testing.T) {
 // TestDataManager_serialWriteSingle tests writing to a single device in serial.
 func TestDataManager_serialWriteSingle(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -1140,12 +1140,12 @@ func TestDataManager_serialWriteSingle(t *testing.T) {
 // TestDataManager_serialWriteMultiple tests writing to multiple devices in serial.
 func TestDataManager_serialWriteMultiple(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -1226,12 +1226,12 @@ func TestDataManager_serialWriteMultiple(t *testing.T) {
 // TestDataManager_parallelWriteSingle tests writing to a single device in parallel.
 func TestDataManager_parallelWriteSingle(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",
@@ -1290,12 +1290,12 @@ func TestDataManager_parallelWriteSingle(t *testing.T) {
 // TestDataManager_parallelWriteMultiple tests writing to multiple devices in parallel.
 func TestDataManager_parallelWriteMultiple(t *testing.T) {
 	defer func() {
-		config.reset()
+		Config.reset()
 		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		Network: &NetworkSettings{
 			Type:    "tcp",

@@ -84,19 +84,19 @@ func (manager *dataManager) run() error {
 func (manager *dataManager) setup() error {
 	logger.Info("Initializing dataManager goroutines..")
 
-	if config.Plugin == nil {
+	if Config.Plugin == nil {
 		return fmt.Errorf("plugin config not set, cannot setup data manager")
 	}
 
 	// Initialize the read and write channels
-	manager.readChannel = make(chan *ReadContext, config.Plugin.Settings.Read.Buffer)
-	manager.writeChannel = make(chan *WriteContext, config.Plugin.Settings.Write.Buffer)
+	manager.readChannel = make(chan *ReadContext, Config.Plugin.Settings.Read.Buffer)
+	manager.writeChannel = make(chan *WriteContext, Config.Plugin.Settings.Write.Buffer)
 
 	// Initialize the limiter, if configured
-	if config.Plugin.Limiter != nil && config.Plugin.Limiter != (&LimiterSettings{}) {
+	if Config.Plugin.Limiter != nil && Config.Plugin.Limiter != (&LimiterSettings{}) {
 		manager.limiter = rate.NewLimiter(
-			rate.Limit(config.Plugin.Limiter.Rate),
-			config.Plugin.Limiter.Burst,
+			rate.Limit(Config.Plugin.Limiter.Rate),
+			Config.Plugin.Limiter.Burst,
 		)
 	}
 	return nil
@@ -105,24 +105,24 @@ func (manager *dataManager) setup() error {
 // writesEnabled checks to see whether writing is enabled for the plugin based on
 // the configuration.
 func (manager *dataManager) writesEnabled() bool {
-	return config.Plugin.Settings.Write.Enabled
+	return Config.Plugin.Settings.Write.Enabled
 }
 
 // goRead starts the goroutine for reading from configured devices.
 func (manager *dataManager) goRead() {
 	// If reads are not enabled, there is nothing to do here.
-	if !config.Plugin.Settings.Read.Enabled {
+	if !Config.Plugin.Settings.Read.Enabled {
 		logger.Info("plugin reads disabled in config - will not start the read goroutine")
 		return
 	}
 
 	logger.Info("plugin reads enabled - starting the read goroutine")
 	go func() {
-		interval, _ := config.Plugin.Settings.Read.GetInterval()
+		interval, _ := Config.Plugin.Settings.Read.GetInterval()
 		for {
 			// Perform the reads. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
-			switch mode := config.Plugin.Settings.Mode; mode {
+			switch mode := Config.Plugin.Settings.Mode; mode {
 			case "serial":
 				// Get device readings in serial
 				manager.serialRead()
@@ -252,11 +252,11 @@ func (manager *dataManager) goWrite() {
 
 	logger.Info("plugin writes enabled - starting the write goroutine")
 	go func() {
-		interval, _ := config.Plugin.Settings.Write.GetInterval()
+		interval, _ := Config.Plugin.Settings.Write.GetInterval()
 		for {
 			// Perform the writes. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
-			switch mode := config.Plugin.Settings.Mode; mode {
+			switch mode := Config.Plugin.Settings.Mode; mode {
 			case "serial":
 				// Write to devices in serial
 				manager.serialWrite()
@@ -282,7 +282,7 @@ func (manager *dataManager) serialWrite() {
 
 	// Check for any pending writes and, if any exist, attempt to fulfill
 	// the writes and update their transaction state accordingly.
-	for i := 0; i < config.Plugin.Settings.Write.Max; i++ {
+	for i := 0; i < Config.Plugin.Settings.Write.Max; i++ {
 		select {
 		case w := <-manager.writeChannel:
 			manager.write(w)
@@ -299,7 +299,7 @@ func (manager *dataManager) parallelWrite() {
 
 	// Check for any pending writes and, if any exist, attempt to fulfill
 	// the writes and update their transaction state accordingly.
-	for i := 0; i < config.Plugin.Settings.Write.Max; i++ {
+	for i := 0; i < Config.Plugin.Settings.Write.Max; i++ {
 		select {
 		case w := <-manager.writeChannel:
 			// Increment the WaitGroup counter.

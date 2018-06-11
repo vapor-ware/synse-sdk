@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/oldconfig"
 )
 
 // The Plugin metadata. At a minimum, all plugins need a name. This information
@@ -25,17 +24,17 @@ var (
 // A single device could support multiple outputs, but at a minimum requires one.
 var (
 	// The output for temperature devices.
-	temperatureOutput = oldconfig.OutputType{
+	temperatureOutput = sdk.OutputType{
 		Name:      "simple.temperature",
 		Precision: 2,
-		Unit: oldconfig.Unit{
+		Unit: sdk.Unit{
 			Name:   "celsius",
 			Symbol: "C",
 		},
 	}
 
 	// The output for LED devices.
-	ledOutput = oldconfig.OutputType{
+	ledOutput = sdk.OutputType{
 		Name: "simple.led",
 	}
 )

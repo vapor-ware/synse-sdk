@@ -14,11 +14,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	modeUnix = "unix"
-	modeTCP  = "tcp"
-)
-
 // Server implements the Synse Plugin gRPC server. It is used by the
 // plugin to communicate via gRPC over tcp or unix socket to Synse Server.
 type Server struct {
@@ -45,7 +40,7 @@ func (server *Server) setup() error {
 	})
 
 	switch server.network {
-	case modeUnix:
+	case networkTypeUnix:
 		if !strings.HasPrefix(server.address, sockPath) {
 			server.address = fmt.Sprintf("%s/%s", sockPath, server.address)
 		}
@@ -67,7 +62,7 @@ func (server *Server) setup() error {
 		}
 		return nil
 
-	case modeTCP:
+	case networkTypeTCP:
 		// There is nothing for us to do in this case.
 		return nil
 
@@ -80,13 +75,13 @@ func (server *Server) setup() error {
 // running in. If running in 'unix' mode, it will remove the socket.
 func (server *Server) cleanup() error {
 	switch server.network {
-	case modeUnix:
+	case networkTypeUnix:
 		if err := os.Remove(server.address); !os.IsNotExist(err) {
 			return err
 		}
 		return nil
 
-	case modeTCP:
+	case networkTypeTCP:
 		// There is nothing for us to do in this case.
 		return nil
 

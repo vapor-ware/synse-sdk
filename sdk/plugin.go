@@ -143,7 +143,7 @@ func (plugin *Plugin) Run() error { // nolint: gocyclo
 	// ** "Making" steps **
 
 	// Set up the transaction cache
-	ttl, err := config.Plugin.Settings.Transaction.GetTTL()
+	ttl, err := Config.Plugin.Settings.Transaction.GetTTL()
 	if err != nil {
 		return err
 	}
@@ -151,8 +151,8 @@ func (plugin *Plugin) Run() error { // nolint: gocyclo
 
 	// Initialize a gRPC server for the Plugin to use.
 	plugin.server = NewServer(
-		config.Plugin.Network.Type,
-		config.Plugin.Network.Address,
+		Config.Plugin.Network.Type,
+		Config.Plugin.Network.Address,
 	)
 
 	// ** "Action" steps **
@@ -188,7 +188,7 @@ func (plugin *Plugin) Run() error { // nolint: gocyclo
 	// "Starting" steps **
 
 	// If the default health checks are enabled, register them now
-	if config.Plugin.Health.UseDefaults {
+	if Config.Plugin.Health.UseDefaults {
 		health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
 		health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
 	}
@@ -294,11 +294,11 @@ func (plugin *Plugin) processConfig() error {
 	// Verify the unified config, and validate plugin-specific data.
 	// FIXME: if we reorganize the SDK a bit, we can move the below to the above
 	// function, but for now it needs to live here.
-	multiErr := VerifyConfigs(config.Device)
+	multiErr := VerifyConfigs(Config.Device)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
-	multiErr = config.Device.ValidateDeviceConfigData(ctx.deviceDataValidator)
+	multiErr = Config.Device.ValidateDeviceConfigData(ctx.deviceDataValidator)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
@@ -316,7 +316,7 @@ func (plugin *Plugin) processConfig() error {
 func (plugin *Plugin) registerDevices() error {
 
 	// devices from dynamic registration
-	devices, err := ctx.dynamicDeviceRegistrar(config.Plugin.DynamicRegistration.Config)
+	devices, err := ctx.dynamicDeviceRegistrar(Config.Plugin.DynamicRegistration.Config)
 	if err != nil {
 		return err
 	}
@@ -324,7 +324,7 @@ func (plugin *Plugin) registerDevices() error {
 
 	// devices from config. the config here is the unified device config which
 	// is joined from file and from dynamic registration, if set.
-	devices, err = makeDevices(config.Device)
+	devices, err = makeDevices(Config.Device)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"fmt"
-
 	"reflect"
 
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
@@ -280,7 +279,6 @@ func validateForRead(deviceID string) error {
 	if !device.IsReadable() {
 		return fmt.Errorf("reading not enabled for device %s (no read handler)", deviceID)
 	}
-
 	return nil
 }
 
@@ -294,6 +292,5 @@ func validateForWrite(deviceID string) error {
 	if !device.IsWritable() {
 		return fmt.Errorf("writing not enabled for device %s (no write handler)", deviceID)
 	}
-
 	return nil
 }

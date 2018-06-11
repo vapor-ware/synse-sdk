@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/oldconfig"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
@@ -19,10 +18,10 @@ var (
 
 var (
 	// The output for temperature devices.
-	temperatureOutput = oldconfig.OutputType{
+	temperatureOutput = sdk.OutputType{
 		Name:      "temperature",
 		Precision: 2,
-		Unit: oldconfig.Unit{
+		Unit: sdk.Unit{
 			Name:   "celsius",
 			Symbol: "C",
 		},
@@ -57,8 +56,8 @@ func ProtocolIdentifier(data map[string]interface{}) string {
 // "dynamic registration" by definition, but it is a valid usage. A more appropriate
 // example could be taking an IP from the configuration, and using that to hit some
 // endpoint which would give back all the information on the devices it manages.
-func DynamicDeviceConfig(cfg map[string]interface{}) ([]*oldconfig.DeviceConfig, error) {
-	var res []*oldconfig.DeviceConfig
+func DynamicDeviceConfig(cfg map[string]interface{}) ([]*sdk.DeviceConfig, error) {
+	var res []*sdk.DeviceConfig
 
 	// create a new device - here, we are using the base address and appending
 	// index of the loop to create the id of the device. we are hardcoding in
@@ -67,31 +66,31 @@ func DynamicDeviceConfig(cfg map[string]interface{}) ([]*oldconfig.DeviceConfig,
 	// we only have the temperature device prototype. in a real case, this info
 	// should be gathered from whatever the real source of auto-enumeration is,
 	// e.g. for IPMI - the SDR records.
-	d := oldconfig.DeviceConfig{
-		SchemeVersion: oldconfig.SchemeVersion{
+	d := sdk.DeviceConfig{
+		SchemeVersion: sdk.SchemeVersion{
 			Version: "1.0",
 		},
-		Locations: []*oldconfig.Location{
+		Locations: []*sdk.LocationConfig{
 			{
 				Name:  "foobar",
-				Rack:  &oldconfig.LocationData{Name: "foo"},
-				Board: &oldconfig.LocationData{Name: "bar"},
+				Rack:  &sdk.LocationData{Name: "foo"},
+				Board: &sdk.LocationData{Name: "bar"},
 			},
 		},
-		Devices: []*oldconfig.DeviceKind{
+		Devices: []*sdk.DeviceKind{
 			{
 				Name: "temperature",
 				Metadata: map[string]string{
 					"model": "temp2010",
 				},
-				Instances: []*oldconfig.DeviceInstance{
+				Instances: []*sdk.DeviceInstance{
 					{
 						Info:     "test device",
 						Location: "foobar",
 						Data: map[string]interface{}{
 							"id": fmt.Sprint(cfg["base"]),
 						},
-						Outputs: []*oldconfig.DeviceOutput{
+						Outputs: []*sdk.DeviceOutput{
 							{
 								Type: "temperature",
 							},

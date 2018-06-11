@@ -10,16 +10,19 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
-var config = Config{}
+// Config holds the configuration for a plugin, its device configs, and
+// its type configs.
+var Config = config{}
 
-// Config is a struct that holds all of the configs
-type Config struct {
+// config is a struct that holds all of the configs.
+type config struct {
 	Device     *DeviceConfig
 	Plugin     *PluginConfig
 	OutputType *OutputType
 }
 
-func (config *Config) reset() {
+// reset clears the config struct.
+func (config *config) reset() {
 	config.Device = nil
 	config.Plugin = nil
 	config.OutputType = nil
@@ -216,9 +219,11 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	fileCtxs, err := GetDeviceConfigsFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
-	_, notFoundErr := err.(*errors.ConfigsNotFound)
-	if !notFoundErr {
-		return err
+	if err != nil {
+		_, notFoundErr := err.(*errors.ConfigsNotFound)
+		if !notFoundErr {
+			return err
+		}
 	}
 
 	switch deviceFilePolicy {
@@ -254,6 +259,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 			"unsupported device config file policy",
 		)
 	}
+	logger.Debugf("policy validation successful: %s", deviceFilePolicy.String())
 
 	// Now, we can append whatever config contexts we got from file to the slice of all
 	// device config contexts.
@@ -262,12 +268,14 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	var dynamicCtxs []*ConfigContext
 
 	// Get device configs from dynamic registration
-	dynamicCfgs, err := ctx.dynamicDeviceConfigRegistrar(config.Plugin.DynamicRegistration.Config)
+	dynamicCfgs, err := ctx.dynamicDeviceConfigRegistrar(Config.Plugin.DynamicRegistration.Config)
 
 	// If the error is not a "config not found" error, then we will return it.
-	_, notFoundErr = err.(*errors.ConfigsNotFound)
-	if !notFoundErr {
-		return err
+	if err != nil {
+		_, notFoundErr := err.(*errors.ConfigsNotFound)
+		if !notFoundErr {
+			return err
+		}
 	}
 
 	for _, cfg := range dynamicCfgs {
@@ -307,6 +315,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 			"unsupported dynamic device config policy",
 		)
 	}
+	logger.Debugf("policy validation successful: %s", deviceDynamicPolicy.String())
 
 	// Now, we can append whatever config contexts we got from dynamic registration to the slice
 	// of all device config contexts.
@@ -328,7 +337,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	}
 
 	// With the config validated and unified, we can now assign it to the global Device variable.
-	config.Device = unifiedCtx.Config.(*DeviceConfig)
+	Config.Device = unifiedCtx.Config.(*DeviceConfig)
 	return nil
 }
 
@@ -345,9 +354,11 @@ func processPluginConfig() error { // nolint: gocyclo
 	pluginCtx, err := GetPluginConfigFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
-	_, notFoundErr := err.(*errors.ConfigsNotFound)
-	if !notFoundErr {
-		return err
+	if err != nil {
+		_, notFoundErr := err.(*errors.ConfigsNotFound)
+		if !notFoundErr {
+			return err
+		}
 	}
 
 	switch pluginFilePolicy {
@@ -382,7 +393,7 @@ func processPluginConfig() error { // nolint: gocyclo
 			)
 			// The user should have specified the config, so we will take
 			// that config and wrap it in a context for validation.
-			pluginCtx = NewConfigContext("user defined", config.Plugin)
+			pluginCtx = NewConfigContext("user defined", Config.Plugin)
 		}
 
 	default:
@@ -391,6 +402,7 @@ func processPluginConfig() error { // nolint: gocyclo
 			"unsupported plugin config file policy",
 		)
 	}
+	logger.Debugf("policy validation successful: %s", pluginFilePolicy.String())
 
 	// Validate the plugin config
 	multiErr := Validator.Validate(pluginCtx)
@@ -399,7 +411,7 @@ func processPluginConfig() error { // nolint: gocyclo
 	}
 
 	// With the config validated, we can now assign it to the global Plugin variable.
-	config.Plugin = pluginCtx.Config.(*PluginConfig)
+	Config.Plugin = pluginCtx.Config.(*PluginConfig)
 	return nil
 }
 
@@ -416,9 +428,11 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 	outputTypeCtxs, err := GetOutputTypeConfigsFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
-	_, notFoundErr := err.(*errors.ConfigsNotFound)
-	if !notFoundErr {
-		return nil, err
+	if err != nil {
+		_, notFoundErr := err.(*errors.ConfigsNotFound)
+		if !notFoundErr {
+			return nil, err
+		}
 	}
 
 	switch outputTypeFilePolicy {
@@ -454,6 +468,7 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 			"unsupported output type config file policy",
 		)
 	}
+	logger.Debugf("policy validation successful: %s", outputTypeFilePolicy.String())
 
 	var outputs []*OutputType
 

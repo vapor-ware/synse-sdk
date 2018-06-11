@@ -23,7 +23,7 @@ func TestNewServer(t *testing.T) {
 func TestServer_setup_TCP(t *testing.T) {
 	defer resetContext()
 
-	s := NewServer(modeTCP, "test")
+	s := NewServer(networkTypeTCP, "test")
 	err := s.setup()
 	assert.NoError(t, err)
 }
@@ -41,7 +41,7 @@ func TestServer_setup_Unix(t *testing.T) {
 	// first, check that there are no post-run actions
 	assert.Equal(t, 0, len(ctx.postRunActions))
 
-	s := NewServer(modeUnix, "test")
+	s := NewServer(networkTypeUnix, "test")
 	err := s.setup()
 	assert.NoError(t, err)
 
@@ -60,14 +60,14 @@ func TestServer_setup_Unknown(t *testing.T) {
 
 // TestServer_cleanup_TCP tests cleaning up the server in TCP mode.
 func TestServer_cleanup_TCP(t *testing.T) {
-	s := NewServer(modeTCP, "test")
+	s := NewServer(networkTypeTCP, "test")
 	err := s.cleanup()
 	assert.NoError(t, err)
 }
 
 // TestServer_cleanup_Unix tests cleaning up the server in Unix mode.
 func TestServer_cleanup_Unix(t *testing.T) {
-	s := NewServer(modeUnix, "test")
+	s := NewServer(networkTypeUnix, "test")
 	err := s.cleanup()
 	assert.NoError(t, err)
 }
@@ -516,10 +516,10 @@ func TestServer_Read(t *testing.T) {
 	defer func() {
 		DataManager = newDataManager()
 		resetContext()
-		config.reset()
+		Config.reset()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		Settings: &PluginSettings{
 			Read: &ReadSettings{
 				Enabled: true,
@@ -591,10 +591,10 @@ func TestServer_Read3(t *testing.T) {
 	defer func() {
 		DataManager = newDataManager()
 		resetContext()
-		config.reset()
+		Config.reset()
 	}()
 
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		Settings: &PluginSettings{
 			Read: &ReadSettings{
 				Enabled: true,
@@ -702,12 +702,12 @@ func TestServer_Write3(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 	defer func() {
 		resetContext()
-		config.reset()
+		Config.reset()
 		DataManager = newDataManager()
 	}()
 
 	DataManager.writeChannel = make(chan *WriteContext, 20)
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		Settings: &PluginSettings{
 			Write: &WriteSettings{
 				Enabled: true,
@@ -755,12 +755,12 @@ func TestServer_Write4(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 	defer func() {
 		resetContext()
-		config.reset()
+		Config.reset()
 		DataManager = newDataManager()
 	}()
 
 	DataManager.writeChannel = make(chan *WriteContext, 20)
-	config.Plugin = &PluginConfig{
+	Config.Plugin = &PluginConfig{
 		Settings: &PluginSettings{
 			Write: &WriteSettings{
 				Enabled: true,

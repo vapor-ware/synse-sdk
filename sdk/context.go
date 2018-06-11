@@ -59,6 +59,6 @@ func newPluginContext() *PluginContext {
 
 // resetContext is a utility function that is used as a test helper to clear the plugin
 // context. This should not be used outside of testing.
-func resetContext() {
+func resetContext() { // nolint
 	ctx = newPluginContext()
 }
