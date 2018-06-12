@@ -10,10 +10,6 @@ var (
 	// deviceConfigLocations is a map to track the locations for the unified
 	// DeviceConfig. The key is the name of the Location.
 	deviceConfigLocations map[string]*LocationConfig
-
-	// deviceConfigKinds is a map to track the devices (DeviceKind) for the
-	// unified DeviceConfig. The key is the name of the DeviceKind.
-	deviceConfigKinds map[string]*DeviceKind
 )
 
 // verifyConfigs verifies that all device configurations that the plugin has
@@ -37,17 +33,12 @@ func verifyConfigs(unifiedDeviceConfig *DeviceConfig) *errors.MultiError {
 
 	// Reset the tracking state for every run of config verification
 	deviceConfigLocations = map[string]*LocationConfig{}
-	deviceConfigKinds = map[string]*DeviceKind{}
 
 	// Verify that there are no conflicting device configurations. We want to
 	// do this first. This has the side-effect of building the deviceConfigLocations
 	// map, which we will use later to verify that all DeviceInstances reference a
 	// known location.
 	verifyDeviceConfigLocations(unifiedDeviceConfig, multiErr)
-
-	// Verify that there are no duplicate DeviceKinds specified. We do not
-	// allow the same DeviceKind to be defined across multiple files.
-	verifyDeviceConfigDeviceKinds(unifiedDeviceConfig, multiErr)
 
 	// Verify that all device instances reference a valid location.
 	verifyDeviceConfigInstances(unifiedDeviceConfig, multiErr)
@@ -81,28 +72,6 @@ func verifyDeviceConfigLocations(deviceConfig *DeviceConfig, multiErr *errors.Mu
 				),
 			)
 		}
-	}
-}
-
-// verifyDeviceConfigDeviceKinds verifies that there are no duplicate DeviceKinds
-// specified in the unified DeviceConfig.
-func verifyDeviceConfigDeviceKinds(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
-	for _, kind := range deviceConfig.Devices {
-		_, hasKind := deviceConfigKinds[kind.Name]
-
-		// If we do not already have the DeviceKind cached, add it.
-		if !hasKind {
-			deviceConfigKinds[kind.Name] = kind
-			continue
-		}
-
-		// If it is already specified, this is a conflict.
-		multiErr.Add(
-			errors.NewVerificationConflictError(
-				"device",
-				fmt.Sprintf("found duplicate DeviceKind name: %s", kind.Name),
-			),
-		)
 	}
 }
 

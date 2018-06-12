@@ -90,51 +90,6 @@ func Test_verifyDeviceConfigLocations_Error(t *testing.T) {
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 }
 
-// Test_verifyDeviceConfigDeviceKinds_Ok tests that there are no duplicate device kinds defined.
-func Test_verifyDeviceConfigDeviceKinds_Ok(t *testing.T) {
-	defer func() {
-		deviceConfigKinds = map[string]*DeviceKind{}
-	}()
-
-	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
-		Locations:     []*LocationConfig{},
-		Devices: []*DeviceKind{
-			{Name: "test"},
-			{Name: "foo"},
-			{Name: "bar"},
-		},
-	}
-
-	err := errors.NewMultiError("test")
-	verifyDeviceConfigDeviceKinds(cfg, err)
-	assert.NoError(t, err.Err())
-}
-
-// Test_verifyDeviceConfigDeviceKinds_Error tests that there are duplicate device kinds defined.
-func Test_verifyDeviceConfigDeviceKinds_Error(t *testing.T) {
-	defer func() {
-		deviceConfigKinds = map[string]*DeviceKind{}
-	}()
-
-	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
-		Locations:     []*LocationConfig{},
-		Devices: []*DeviceKind{
-			{Name: "test"},
-			{Name: "foo"},
-			{Name: "bar"},
-			{Name: "foo"},
-			{Name: "test"},
-		},
-	}
-
-	err := errors.NewMultiError("test")
-	verifyDeviceConfigDeviceKinds(cfg, err)
-	assert.Error(t, err.Err())
-	assert.Equal(t, 2, len(err.Errors), err.Error())
-}
-
 // Test_verifyDeviceConfigInstances_Ok tests that the device instances are all correct.
 func Test_verifyDeviceConfigInstances_Ok(t *testing.T) {
 	defer delete(deviceConfigLocations, "foo")

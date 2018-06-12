@@ -3,6 +3,8 @@ package sdk
 import (
 	"testing"
 
+	"fmt"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
@@ -936,7 +938,7 @@ func Test_processDeviceConfigs_File_None_Optional(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{},
 		},
 	}
 
@@ -961,7 +963,7 @@ func Test_processDeviceConfigs_File_None_Required(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{},
 		},
 	}
 
@@ -986,7 +988,7 @@ func Test_processDeviceConfigs_File_None_Prohibited(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{},
 		},
 	}
 
@@ -1011,7 +1013,9 @@ func Test_processDeviceConfigs_Dynamic_None_Optional(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 
@@ -1040,7 +1044,9 @@ func Test_processDeviceConfigs_Dynamic_None_Required(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 
@@ -1069,7 +1075,9 @@ func Test_processDeviceConfigs_Dynamic_None_Prohibited(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 
@@ -1100,7 +1108,7 @@ func Test_processDeviceConfigs_File_One_Optional(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{},
 		},
 	}
 
@@ -1127,7 +1135,7 @@ func Test_processDeviceConfigs_File_One_Required(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{},
 		},
 	}
 
@@ -1154,7 +1162,7 @@ func Test_processDeviceConfigs_File_One_Prohibited(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{},
 		},
 	}
 
@@ -1179,7 +1187,9 @@ func Test_processDeviceConfigs_Dynamic_One_Optional(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 
@@ -1223,7 +1233,9 @@ func Test_processDeviceConfigs_Dynamic_One_Required(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 
@@ -1267,7 +1279,9 @@ func Test_processDeviceConfigs_Dynamic_One_Prohibited(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 
@@ -1313,7 +1327,9 @@ func Test_processDeviceConfig_withErrors(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 
@@ -1339,7 +1355,9 @@ func Test_processDeviceConfig_withErrors2(t *testing.T) {
 
 	Config.Plugin = &PluginConfig{
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 
@@ -1350,4 +1368,52 @@ func Test_processDeviceConfig_withErrors2(t *testing.T) {
 	err := processDeviceConfigs()
 	assert.Error(t, err)
 	assert.Nil(t, Config.Device)
+}
+
+// Test_processDeviceConfigs_Dynamic_Multiple_Optional tests getting device config(s) from dynamic
+// registration when multiple configs are returned and the policy is optional.
+func Test_processDeviceConfigs_Dynamic_Multiple_Optional(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: []map[string]interface{}{
+				{"kind": "foo"},
+				{"kind": "bar"},
+			},
+		},
+	}
+
+	ctx.dynamicDeviceConfigRegistrar = func(i map[string]interface{}) ([]*DeviceConfig, error) {
+		kind := fmt.Sprint(i["kind"])
+		return []*DeviceConfig{
+			{
+				SchemeVersion: SchemeVersion{Version: currentDeviceSchemeVersion},
+				Locations: []*LocationConfig{{
+					Name:  "foo",
+					Rack:  &LocationData{Name: "rack"},
+					Board: &LocationData{Name: "board"},
+				}},
+				Devices: []*DeviceKind{{
+					Name: kind,
+					Instances: []*DeviceInstance{{
+						Location: "foo",
+					}},
+				}},
+			},
+		}, nil
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 2, len(Config.Device.Devices))
 }

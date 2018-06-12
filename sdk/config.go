@@ -268,31 +268,39 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	var dynamicCtxs []*ConfigContext
 
 	// Get device configs from dynamic registration
-	dynamicCfgs, err := ctx.dynamicDeviceConfigRegistrar(Config.Plugin.DynamicRegistration.Config)
-
-	// If the error is not a "config not found" error, then we will return it.
-	if err != nil {
-		_, notFoundErr := err.(*errors.ConfigsNotFound)
-		if !notFoundErr {
-			return err
+	multiErr := errors.NewMultiError("dynamic device config registration")
+	for _, dynamicData := range Config.Plugin.DynamicRegistration.Config {
+		dynamicCfgs, e := ctx.dynamicDeviceConfigRegistrar(dynamicData)
+		if e != nil {
+			multiErr.Add(e)
+			continue
+		}
+		for _, cfg := range dynamicCfgs {
+			dynamicCtxs = append(dynamicCtxs, NewConfigContext("dynamic registration", cfg))
 		}
 	}
 
-	for _, cfg := range dynamicCfgs {
-		dynamicCtxs = append(dynamicCtxs, NewConfigContext("dynamic registration", cfg))
+	// If any of the errors is not a "config not found" error, then we will return it.
+	if multiErr.HasErrors() {
+		for _, err := range multiErr.Errors {
+			_, notFoundErr := err.(*errors.ConfigsNotFound)
+			if !notFoundErr {
+				return multiErr
+			}
+		}
 	}
 
 	switch deviceDynamicPolicy {
 	case policies.DeviceConfigDynamicRequired:
-		if err != nil {
+		if multiErr.Err() != nil || len(dynamicCtxs) == 0 {
 			return errors.NewPolicyViolationError(
 				deviceDynamicPolicy.String(),
-				fmt.Sprintf("dynamic device config(s) required, but none found: %v", err),
+				fmt.Sprintf("dynamic device config(s) required, but none found: %v", multiErr),
 			)
 		}
 
 	case policies.DeviceConfigDynamicOptional:
-		if err != nil {
+		if multiErr.Err() != nil {
 			dynamicCtxs = []*ConfigContext{}
 			logger.Debug("no dynamic device configuration(s) found")
 		}
@@ -301,7 +309,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 		// If dynamic device configs are prohibited, we will log a warning
 		// if any are found, but we will ultimately not fail. Instead, we
 		// will just pass along an empty config.
-		if err == nil && len(dynamicCfgs) > 0 {
+		if multiErr.Err() == nil && len(dynamicCtxs) > 0 {
 			logger.Warn(
 				"dynamic device config(s) found, but its use is prohibited via policy. " +
 					"the device config(s) will be ignored.",
@@ -324,7 +332,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	// Validate the device configs
 	for _, ctx := range deviceCtxs {
 		// Validate config scheme
-		multiErr := validator.Validate(ctx)
+		multiErr = validator.Validate(ctx)
 		if multiErr.HasErrors() {
 			return multiErr
 		}
@@ -346,7 +354,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 
 	// Verify that the data defined in the configs is correct, references resolve, etc.
 	cfg := unifiedCtx.Config.(*DeviceConfig)
-	multiErr := verifyConfigs(cfg)
+	multiErr = verifyConfigs(cfg)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
@@ -541,13 +549,39 @@ func unifyDeviceConfigs(ctxs []*ConfigContext) (*ConfigContext, error) {
 			base := context.Config.(*DeviceConfig)
 			source := ctx.Config.(*DeviceConfig)
 
-			// Merge DeviceConfig.Locations
+			// Merge DeviceConfig.Locations - config verification will ensure that these
+			// are unique.
 			base.Locations = append(base.Locations, source.Locations...)
 
-			// Merge DeviceConfig.Devices
-			base.Devices = append(base.Devices, source.Devices...)
+			// Merge DeviceConfig.Devices - generally deviceKinds should not be defined in
+			// multiple files, but if doing dynamic registration, it likely will come in this
+			// way. as a result, we will need to merge instance/output data for device kinds with
+			// the same name..
+			// FIXME: without checking that the device kinds are actually the same, there
+			// there may be some dragons lurking here.
+			mergeDeviceKinds(&base.Devices, &source.Devices)
 		}
 	}
-
 	return context, nil
+}
+
+// mergeDeviceKinds will add the device kinds from the `source` into the `base` if
+// a device kind with that name does not exist in the base, and will merge the device
+// kind fields if it does exist.
+func mergeDeviceKinds(base, source *[]*DeviceKind) {
+	exists := map[string]*DeviceKind{}
+	for _, kind := range *base {
+		exists[kind.Name] = kind
+	}
+
+	for _, kind := range *source {
+		k, found := exists[kind.Name]
+		if !found {
+			// If it is not found, add it to the base slice
+			*base = append(*base, kind)
+		} else {
+			// Otherwise, just update the kind that is already in the base slice
+			k.Instances = append(k.Instances, kind.Instances...)
+		}
+	}
 }
