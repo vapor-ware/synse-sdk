@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/vapor-ware/synse-sdk/internal/test"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
 // TestNewConfigContext tests creating a new Context.
@@ -495,7 +498,7 @@ func TestConfigVersion_GetSchemeVersion_Error(t *testing.T) {
 // TestUnifyDeviceConfigs_NoConfigs tests unifying configs when no
 // configs are given.
 func TestUnifyDeviceConfigs_NoConfigs(t *testing.T) {
-	ctx, err := UnifyDeviceConfigs([]*ConfigContext{})
+	ctx, err := unifyDeviceConfigs([]*ConfigContext{})
 	assert.Error(t, err)
 	assert.Nil(t, ctx)
 }
@@ -503,7 +506,7 @@ func TestUnifyDeviceConfigs_NoConfigs(t *testing.T) {
 // TestUnifyDeviceConfigs_NoDeviceConfig tests unifying configs when the
 // contexts specified do not contain DeviceConfigs.
 func TestUnifyDeviceConfigs_NoDeviceConfig(t *testing.T) {
-	ctx, err := UnifyDeviceConfigs([]*ConfigContext{
+	ctx, err := unifyDeviceConfigs([]*ConfigContext{
 		{
 			Source: "test",
 			Config: &PluginConfig{},
@@ -517,7 +520,7 @@ func TestUnifyDeviceConfigs_NoDeviceConfig(t *testing.T) {
 // TestUnifyDeviceConfigs tests unifying configs when there is only one config
 // to unify.
 func TestUnifyDeviceConfigs(t *testing.T) {
-	ctx, err := UnifyDeviceConfigs([]*ConfigContext{
+	ctx, err := unifyDeviceConfigs([]*ConfigContext{
 		{
 			Source: "test",
 			Config: &DeviceConfig{
@@ -546,7 +549,7 @@ func TestUnifyDeviceConfigs(t *testing.T) {
 // TestUnifyDeviceConfigs2 tests unifying configs when there are multiple
 // configs to unify.
 func TestUnifyDeviceConfigs2(t *testing.T) {
-	ctx, err := UnifyDeviceConfigs([]*ConfigContext{
+	ctx, err := unifyDeviceConfigs([]*ConfigContext{
 		{
 			Source: "test",
 			Config: &DeviceConfig{
@@ -608,4 +611,743 @@ func TestUnifyDeviceConfigs2(t *testing.T) {
 	cfg := ctx.Config.(*DeviceConfig)
 	assert.Equal(t, 4, len(cfg.Devices))
 	assert.Equal(t, 4, len(cfg.Locations))
+}
+
+// Test_processOutputTypeConfig_None_Optional tests getting output type config from file when
+// no files are found and the policy is optional.
+func Test_processOutputTypeConfig_None_Optional(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.TypeConfigFileOptional)
+
+	outputs, err := processOutputTypeConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(outputs))
+}
+
+// Test_processOutputTypeConfig_None_Required tests getting output type config from file when
+// no files are found and the policy is required.
+func Test_processOutputTypeConfig_None_Required(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.TypeConfigFileRequired)
+
+	outputs, err := processOutputTypeConfig()
+	assert.Error(t, err)
+	assert.IsType(t, &errors.PolicyViolationError{}, err)
+	assert.Nil(t, outputs)
+}
+
+// Test_processOutputTypeConfig_None_Prohibited tests getting output type config from file when
+// no files are found and the policy is prohibited.
+func Test_processOutputTypeConfig_None_Prohibited(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.TypeConfigFileProhibited)
+
+	outputs, err := processOutputTypeConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(outputs))
+}
+
+// Test_processOutputTypeConfig_One_Optional tests getting output type config from file when
+// one file is found and the policy is optional.
+func Test_processOutputTypeConfig_One_Optional(t *testing.T) {
+	test.SetEnv(t, EnvOutputTypeConfig, "testdata/output_type/ok.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvOutputTypeConfig)
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.TypeConfigFileOptional)
+
+	outputs, err := processOutputTypeConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(outputs))
+}
+
+// Test_processOutputTypeConfig_One_Required tests getting output type config from file when
+// one file is found and the policy is required.
+func Test_processOutputTypeConfig_One_Required(t *testing.T) {
+	test.SetEnv(t, EnvOutputTypeConfig, "testdata/output_type/ok.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvOutputTypeConfig)
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.TypeConfigFileRequired)
+
+	outputs, err := processOutputTypeConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(outputs))
+}
+
+// Test_processOutputTypeConfig_One_Prohibited tests getting output type config from file when
+// one file is found and the policy is prohibited.
+func Test_processOutputTypeConfig_One_Prohibited(t *testing.T) {
+	test.SetEnv(t, EnvOutputTypeConfig, "testdata/output_type/ok.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvOutputTypeConfig)
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.TypeConfigFileProhibited)
+
+	outputs, err := processOutputTypeConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(outputs))
+}
+
+// Test_processOutputTypeConfig_withErrors tests getting output type configs when the
+// configs have validation errors.
+func Test_processOutputTypeConfig_withErrors(t *testing.T) {
+	test.SetEnv(t, EnvOutputTypeConfig, "testdata/output_type/invalid.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvOutputTypeConfig)
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.TypeConfigFileOptional)
+
+	outputs, err := processOutputTypeConfig()
+	assert.Error(t, err)
+	assert.Nil(t, outputs)
+}
+
+// Test_processOutputTypeConfig_withErrors2 tests getting output type configs when there
+// is an error finding configs.
+func Test_processOutputTypeConfig_withErrors2(t *testing.T) {
+	test.SetEnv(t, EnvOutputTypeConfig, "testdata/output_type/nonexistent.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvOutputTypeConfig)
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.TypeConfigFileOptional)
+
+	outputs, err := processOutputTypeConfig()
+	assert.Error(t, err)
+	assert.Nil(t, outputs)
+}
+
+// Test_processPluginConfig_None_Optional tests getting plugin config from file when
+// no files are found and the policy is optional.
+func Test_processPluginConfig_None_Optional(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	policies.Add(policies.PluginConfigFileOptional)
+
+	assert.Nil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Plugin) // default gets set
+}
+
+// Test_processPluginConfig_None_Required tests getting plugin config from file when
+// no files are found and the policy is required.
+func Test_processPluginConfig_None_Required(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	policies.Add(policies.PluginConfigFileRequired)
+
+	assert.Nil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.Error(t, err)
+	assert.IsType(t, &errors.PolicyViolationError{}, err)
+	assert.Nil(t, Config.Plugin)
+}
+
+// Test_processPluginConfig_None_Prohibited tests getting plugin config from file when
+// no files are found and the policy is prohibited.
+func Test_processPluginConfig_None_Prohibited(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	policies.Add(policies.PluginConfigFileProhibited)
+
+	assert.Nil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.Error(t, err)
+	assert.IsType(t, &errors.PolicyViolationError{}, err)
+	assert.Nil(t, Config.Plugin)
+}
+
+// Test_processPluginConfig_None_Prohibited2 tests getting plugin config from file when
+// no files are found and the policy is prohibited.
+func Test_processPluginConfig_None_Prohibited2(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	policies.Add(policies.PluginConfigFileProhibited)
+
+	// here we set the plugin config manually since it is prohibited via file
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Network: &NetworkSettings{
+			Type:    "tcp",
+			Address: "foo.bar.baz",
+		},
+	}
+
+	assert.NotNil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Plugin)
+}
+
+// Test_processPluginConfig_One_Optional tests getting plugin config from file when
+// one file is found and the policy is optional.
+func Test_processPluginConfig_One_Optional(t *testing.T) {
+	test.SetEnv(t, EnvPluginConfig, "testdata/plugin/ok/config.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvPluginConfig)
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	policies.Add(policies.PluginConfigFileOptional)
+
+	assert.Nil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Plugin)
+}
+
+// Test_processPluginConfig_One_Required tests getting plugin config from file when
+// one file is found and the policy is required.
+func Test_processPluginConfig_One_Required(t *testing.T) {
+	test.SetEnv(t, EnvPluginConfig, "testdata/plugin/ok/config.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvPluginConfig)
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	policies.Add(policies.PluginConfigFileRequired)
+
+	assert.Nil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Plugin)
+}
+
+// Test_processPluginConfig_One_Prohibited tests getting plugin config from file when
+// one file is found and the policy is prohibited.
+func Test_processPluginConfig_One_Prohibited(t *testing.T) {
+	test.SetEnv(t, EnvPluginConfig, "testdata/plugin/ok/config.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvPluginConfig)
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	policies.Add(policies.PluginConfigFileProhibited)
+
+	// here we set the plugin config manually since it is prohibited via file
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Network: &NetworkSettings{
+			Type:    "tcp",
+			Address: "foo.bar.baz",
+		},
+	}
+
+	assert.NotNil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Plugin)
+}
+
+// Test_processPluginConfig_withErrors tests getting plugin config when the
+// configs have validation errors.
+func Test_processPluginConfig_withErrors(t *testing.T) {
+	test.SetEnv(t, EnvPluginConfig, "testdata/plugin/invalid/config.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvPluginConfig)
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.PluginConfigFileOptional)
+
+	assert.Nil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.Error(t, err)
+	assert.Nil(t, Config.Plugin)
+}
+
+// Test_processPluginConfig_withErrors2 tests getting plugin config when there
+// is an error finding configs.
+func Test_processPluginConfig_withErrors2(t *testing.T) {
+	test.SetEnv(t, EnvPluginConfig, "testdata/output_type/nonexistent/config.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvPluginConfig)
+		resetContext()
+		policies.Clear()
+	}()
+
+	policies.Add(policies.PluginConfigFileOptional)
+
+	assert.Nil(t, Config.Plugin)
+	err := processPluginConfig()
+	assert.Error(t, err)
+	assert.Nil(t, Config.Plugin)
+}
+
+// Test_processDeviceConfigs_File_None_Optional tests getting device config(s) from file when
+// no files are found and the policy is optional.
+func Test_processDeviceConfigs_File_None_Optional(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 0, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_File_None_Required tests getting device config(s) from file when
+// no files are found and the policy is required.
+func Test_processDeviceConfigs_File_None_Required(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	policies.Add(policies.DeviceConfigFileRequired)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.Error(t, err)
+	assert.IsType(t, &errors.PolicyViolationError{}, err)
+	assert.Nil(t, Config.Device)
+}
+
+// Test_processDeviceConfigs_File_None_Prohibited tests getting device config(s) from file when
+// no files are found and the policy is prohibited.
+func Test_processDeviceConfigs_File_None_Prohibited(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	policies.Add(policies.DeviceConfigFileProhibited)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 0, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_Dynamic_None_Optional tests getting device config(s) from dynamic
+// registration when nothing is returned and the policy is optional.
+func Test_processDeviceConfigs_Dynamic_None_Optional(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	ctx.dynamicDeviceConfigRegistrar = func(i map[string]interface{}) ([]*DeviceConfig, error) {
+		return nil, errors.NewConfigsNotFoundError([]string{"test"})
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 0, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_Dynamic_None_Required tests getting device config(s) from dynamic
+// registration when nothing is returned and the policy is required.
+func Test_processDeviceConfigs_Dynamic_None_Required(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	ctx.dynamicDeviceConfigRegistrar = func(i map[string]interface{}) ([]*DeviceConfig, error) {
+		return nil, errors.NewConfigsNotFoundError([]string{"test"})
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicRequired)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.Error(t, err)
+	assert.IsType(t, &errors.PolicyViolationError{}, err)
+	assert.Nil(t, Config.Device)
+}
+
+// Test_processDeviceConfigs_Dynamic_None_Prohibited tests getting device config(s) from dynamic
+// registration when nothing is returned and the policy is prohibited.
+func Test_processDeviceConfigs_Dynamic_None_Prohibited(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	ctx.dynamicDeviceConfigRegistrar = func(i map[string]interface{}) ([]*DeviceConfig, error) {
+		return nil, errors.NewConfigsNotFoundError([]string{"test"})
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicProhibited)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 0, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_File_One_Optional tests getting device config(s) from file when
+// one file is found and the policy is optional.
+func Test_processDeviceConfigs_File_One_Optional(t *testing.T) {
+	test.SetEnv(t, EnvDeviceConfig, "testdata/device/ok.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvDeviceConfig)
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 1, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_File_One_Required tests getting device config(s) from file when
+// one file is found and the policy is required.
+func Test_processDeviceConfigs_File_One_Required(t *testing.T) {
+	test.SetEnv(t, EnvDeviceConfig, "testdata/device/ok.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvDeviceConfig)
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	policies.Add(policies.DeviceConfigFileRequired)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 1, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_File_One_Prohibited tests getting device config(s) from file when
+// one file is found and the policy is prohibited.
+func Test_processDeviceConfigs_File_One_Prohibited(t *testing.T) {
+	test.SetEnv(t, EnvDeviceConfig, "testdata/device/ok.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvDeviceConfig)
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	policies.Add(policies.DeviceConfigFileProhibited)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 0, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_Dynamic_One_Optional tests getting device config(s) from dynamic
+// registration when one config is returned and the policy is optional.
+func Test_processDeviceConfigs_Dynamic_One_Optional(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	ctx.dynamicDeviceConfigRegistrar = func(i map[string]interface{}) ([]*DeviceConfig, error) {
+		return []*DeviceConfig{
+			{
+				SchemeVersion: SchemeVersion{Version: currentDeviceSchemeVersion},
+				Locations: []*LocationConfig{{
+					Name:  "foo",
+					Rack:  &LocationData{Name: "rack"},
+					Board: &LocationData{Name: "board"},
+				}},
+				Devices: []*DeviceKind{{
+					Name: "test",
+					Instances: []*DeviceInstance{{
+						Location: "foo",
+					}},
+				}},
+			},
+		}, nil
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 1, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_Dynamic_One_Required tests getting device config(s) from dynamic
+// registration when one config is returned and the policy is required.
+func Test_processDeviceConfigs_Dynamic_One_Required(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	ctx.dynamicDeviceConfigRegistrar = func(i map[string]interface{}) ([]*DeviceConfig, error) {
+		return []*DeviceConfig{
+			{
+				SchemeVersion: SchemeVersion{Version: currentDeviceSchemeVersion},
+				Locations: []*LocationConfig{{
+					Name:  "foo",
+					Rack:  &LocationData{Name: "rack"},
+					Board: &LocationData{Name: "board"},
+				}},
+				Devices: []*DeviceKind{{
+					Name: "test",
+					Instances: []*DeviceInstance{{
+						Location: "foo",
+					}},
+				}},
+			},
+		}, nil
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicRequired)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 1, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfigs_Dynamic_One_Prohibited tests getting device config(s) from dynamic
+// registration when one config is returned and the policy is prohibited.
+func Test_processDeviceConfigs_Dynamic_One_Prohibited(t *testing.T) {
+	defer func() {
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	ctx.dynamicDeviceConfigRegistrar = func(i map[string]interface{}) ([]*DeviceConfig, error) {
+		return []*DeviceConfig{
+			{
+				SchemeVersion: SchemeVersion{Version: currentDeviceSchemeVersion},
+				Locations: []*LocationConfig{{
+					Name:  "foo",
+					Rack:  &LocationData{Name: "rack"},
+					Board: &LocationData{Name: "board"},
+				}},
+				Devices: []*DeviceKind{{
+					Name: "test",
+					Instances: []*DeviceInstance{{
+						Location: "foo",
+					}},
+				}},
+			},
+		}, nil
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicProhibited)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.NoError(t, err)
+	assert.NotNil(t, Config.Device)
+	assert.Equal(t, 0, len(Config.Device.Devices))
+}
+
+// Test_processDeviceConfig_withErrors tests getting device config when the
+// configs have validation errors.
+func Test_processDeviceConfig_withErrors(t *testing.T) {
+	test.SetEnv(t, EnvDeviceConfig, "testdata/device/invalid.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvDeviceConfig)
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.Error(t, err)
+	assert.Nil(t, Config.Device)
+}
+
+// Test_processDeviceConfig_withErrors2 tests getting device config when there
+// is an error finding configs.
+func Test_processDeviceConfig_withErrors2(t *testing.T) {
+	test.SetEnv(t, EnvDeviceConfig, "testdata/device/nonexistent.yml")
+	defer func() {
+		test.RemoveEnv(t, EnvDeviceConfig)
+		resetContext()
+		policies.Clear()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+
+	policies.Add(policies.DeviceConfigFileOptional)
+	policies.Add(policies.DeviceConfigDynamicOptional)
+
+	assert.Nil(t, Config.Device)
+	err := processDeviceConfigs()
+	assert.Error(t, err)
+	assert.Nil(t, Config.Device)
 }

@@ -170,21 +170,6 @@ func TestPlugin_RegisterDeviceHandlers(t *testing.T) {
 	assert.Equal(t, 2, len(ctx.deviceHandlers))
 }
 
-// TestPlugin_logStartupInfo tests logging out info which is done on startup.
-// There isn't much to check here other than it runs and completes without
-// any issues.
-func TestPlugin_logStartupInfo(t *testing.T) {
-	plugin := NewPlugin()
-	plugin.logStartupInfo()
-}
-
-// TestPlugin_resolveFlags tests resolving flags. In this case, no flags are
-// set, so it should ultimately do nothing.
-func TestPlugin_resolveFlags(t *testing.T) {
-	plugin := NewPlugin()
-	plugin.resolveFlags()
-}
-
 // TestNewDefaultPluginConfig tests getting a default plugin config.
 func TestNewDefaultPluginConfig(t *testing.T) {
 	cfg, err := NewDefaultPluginConfig()

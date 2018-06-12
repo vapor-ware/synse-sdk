@@ -1,7 +1,6 @@
 package sdk
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -73,7 +72,7 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 // functions here can be used for device-specific setup actions.
 //
 // The filter parameter should be the filter to apply to devices. Currently
-// filtering is only supported for device kind. Filter strings are specified in
+// filtering is supported for device kind and type. Filter strings are specified in
 // the format "key=value,key=value". The filter
 //     "kind=temperature,kind=ABC123"
 // would only match devices whose kind was temperature or ABC123.
@@ -88,8 +87,8 @@ func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...devic
 // RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
 //
 // These DeviceHandlers are then matched with the Device instances
-// by their type/model and provide the read/write functionality for the
-// Devices. If a DeviceHandler for a Device is not registered here, the
+// by their name and provide the read/write functionality for the
+// Devices. If a DeviceHandler is not registered for a Device, the
 // Device will not be usable by the plugin.
 func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 	ctx.deviceHandlers = append(ctx.deviceHandlers, handlers...)
@@ -100,62 +99,12 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // Before the gRPC server is started, and before the read and write goroutines
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
-func (plugin *Plugin) Run() error { // nolint: gocyclo
-	// Register system calls for graceful stopping.
-	signal.Notify(plugin.quit, syscall.SIGTERM)
-	signal.Notify(plugin.quit, syscall.SIGINT)
-	go plugin.OnQuit()
-
-	// The plugin name must be set as metainfo, since it is used in the Device
-	// model. Check if it is set here. If not, return an error.
-	if metainfo.Name == "" {
-		return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
-	}
-
-	// ** "Config" steps **
-
-	// Check for command line flags. If any flags are set that require an
-	// action, that action will be resolved here.
-	plugin.resolveFlags()
-
-	// Check for configuration policies. If no policy was set by the plugin,
-	// this will fall back on the default policies.
-	err := policies.Check()
+func (plugin *Plugin) Run() error {
+	// Perform pre-run setup
+	err := plugin.setup()
 	if err != nil {
 		return err
 	}
-
-	// Read in all configs and verify that they are correct.
-	err = plugin.processConfig()
-	if err != nil {
-		return err
-	}
-
-	// ** "Registration" steps **
-
-	// Initialize Device instances for each of the devices configured with
-	// the plugin.
-	err = plugin.registerDevices()
-	if err != nil {
-		return err
-	}
-
-	// ** "Making" steps **
-
-	// Set up the transaction cache
-	ttl, err := Config.Plugin.Settings.Transaction.GetTTL()
-	if err != nil {
-		return err
-	}
-	setupTransactionCache(ttl)
-
-	// Initialize a gRPC server for the Plugin to use.
-	plugin.server = newServer(
-		Config.Plugin.Network.Type,
-		Config.Plugin.Network.Address,
-	)
-
-	// ** "Action" steps **
 
 	// Before we start the dataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
@@ -174,7 +123,7 @@ func (plugin *Plugin) Run() error { // nolint: gocyclo
 	}
 
 	// Log info at plugin startup
-	plugin.logStartupInfo()
+	logStartupInfo()
 
 	// If the --dry-run flag is set, we will end here. The gRPC server and
 	// data manager do not get started up in the dry run.
@@ -203,14 +152,18 @@ func (plugin *Plugin) Run() error { // nolint: gocyclo
 	return plugin.server.Serve()
 }
 
-// OnQuit is a function that waits for a signal to terminate the plugin's run
+// onQuit is a function that waits for a signal to terminate the plugin's run
 // and run cleanup/post-run actions prior to terminating.
-func (plugin *Plugin) OnQuit() {
+func (plugin *Plugin) onQuit() {
 	sig := <-plugin.quit
 	logger.Infof("Stopping plugin (%s)...", sig.String())
 
 	// TODO: any other stop/cleanup actions should go here (closing channels, etc)
 
+	// Immediately stop the gRPC server.
+	plugin.server.Stop()
+
+	// Execute post-run actions.
 	multiErr := execPostRun(plugin)
 	if multiErr.HasErrors() {
 		logger.Error(multiErr)
@@ -221,29 +174,56 @@ func (plugin *Plugin) OnQuit() {
 	os.Exit(0)
 }
 
-// FIXME: its not clear that these private functions need to hang off the Plugin struct..
+// setup performs the pre-run setup actions for a plugin.
+func (plugin *Plugin) setup() error {
+	// Register system calls for graceful stopping.
+	signal.Notify(plugin.quit, syscall.SIGTERM)
+	signal.Notify(plugin.quit, syscall.SIGINT)
+	go plugin.onQuit()
 
-// resolveFlags parses flags passed to the plugin.
-//
-// Not all flags will result in an action, so not all flags are checked
-// here. Only the flags that cause immediate actions will be processed here.
-// Only SDK supported flags are parsed here. If a plugin specifies additional
-// flags, they should be resolved in their own pre-run action.
-func (plugin *Plugin) resolveFlags() {
-	flag.Parse()
-
-	// --help is already provided by the flag package, so we don't have
-	// to handle that here.
-
-	if flagDebug {
-		logger.SetLogLevel(true)
+	// The plugin name must be set as metainfo, since it is used in the Device
+	// model. Check if it is set here. If not, return an error.
+	if metainfo.Name == "" {
+		return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
 	}
 
-	// Print out the version info for the plugin.
-	if flagVersion {
-		fmt.Println(version.Format())
-		os.Exit(0)
+	// Check for command line flags. If any flags are set that require an
+	// action, that action will be resolved here.
+	parseFlags()
+
+	// Check for configuration policies. If no policy was set by the plugin,
+	// this will fall back on the default policies.
+	err := policies.Check()
+	if err != nil {
+		return err
 	}
+
+	// Read in all configs and verify that they are correct.
+	err = plugin.processConfig()
+	if err != nil {
+		return err
+	}
+
+	// Initialize Device instances for each of the devices configured with
+	// the plugin.
+	err = registerDevices()
+	if err != nil {
+		return err
+	}
+
+	// Set up the transaction cache
+	ttl, err := Config.Plugin.Settings.Transaction.GetTTL()
+	if err != nil {
+		return err
+	}
+	setupTransactionCache(ttl)
+
+	// Initialize a gRPC server for the Plugin to use.
+	plugin.server = newServer(
+		Config.Plugin.Network.Type,
+		Config.Plugin.Network.Address,
+	)
+	return nil
 }
 
 // processConfig handles plugin configuration in a number of steps. The behavior
@@ -291,63 +271,8 @@ func (plugin *Plugin) processConfig() error {
 		return err
 	}
 
-	// Verify the unified config, and validate plugin-specific data.
-	// FIXME: if we reorganize the SDK a bit, we can move the below to the above
-	// function, but for now it needs to live here.
-	multiErr := verifyConfigs(Config.Device)
-	if multiErr.HasErrors() {
-		return multiErr
-	}
-	multiErr = Config.Device.ValidateDeviceConfigData(ctx.deviceDataValidator)
-	if multiErr.HasErrors() {
-		return multiErr
-	}
-
 	logger.Debug("finished processing configuration(s) for run")
 	return nil
-}
-
-// registerDevices registers devices with the plugin. Devices are registered
-// from multiple configuration sources: from file and from any dynamic registration
-// functions supplied by the plugin.
-//
-// In both cases, the config sources are converted into the SDK's Device instances
-// which represent the physical/virtual devices that the plugin will manage.
-func (plugin *Plugin) registerDevices() error {
-
-	// devices from dynamic registration
-	devices, err := ctx.dynamicDeviceRegistrar(Config.Plugin.DynamicRegistration.Config)
-	if err != nil {
-		return err
-	}
-	updateDeviceMap(devices)
-
-	// devices from config. the config here is the unified device config which
-	// is joined from file and from dynamic registration, if set.
-	devices, err = makeDevices(Config.Device)
-	if err != nil {
-		return err
-	}
-	updateDeviceMap(devices)
-
-	return nil
-}
-
-// logStartupInfo is used to log plugin info at plugin startup. This will log
-// the plugin metadata, version info, and registered devices.
-func (plugin *Plugin) logStartupInfo() {
-	// Log plugin metadata
-	metainfo.log()
-
-	// Log plugin version info
-	version.Log()
-
-	// Log registered devices
-	logger.Info("Registered Devices:")
-	for id, dev := range ctx.devices {
-		logger.Infof("  %v (%v)", id, dev.Kind)
-	}
-	logger.Info("--------------------------------")
 }
 
 // The current (latest) version of the plugin config scheme.
@@ -380,7 +305,7 @@ type PluginConfig struct {
 	Settings *PluginSettings `default:"{}" yaml:"settings,omitempty" addedIn:"1.0"`
 
 	// Network specifies the networking configuration for the plugin.
-	Network *NetworkSettings `default:"{}" yaml:"network,omitempty" addedIn:"1.0"`
+	Network *NetworkSettings `default:"{\"type\": \"tcp\", \"address\": \"localhost:5001\"}" yaml:"network,omitempty" addedIn:"1.0"`
 
 	// DynamicRegistration specifies configuration settings and data
 	// for how the plugin should handle dynamic device registration.

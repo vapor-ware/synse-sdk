@@ -16,11 +16,6 @@ var (
 	deviceConfigKinds map[string]*DeviceKind
 )
 
-func init() {
-	deviceConfigLocations = map[string]*LocationConfig{}
-	deviceConfigKinds = map[string]*DeviceKind{}
-}
-
 // verifyConfigs verifies that all device configurations that the plugin has
 // found are correct.
 //
@@ -39,6 +34,10 @@ func init() {
 // whole picture of what exists.
 func verifyConfigs(unifiedDeviceConfig *DeviceConfig) *errors.MultiError {
 	var multiErr = errors.NewMultiError("config verification")
+
+	// Reset the tracking state for every run of config verification
+	deviceConfigLocations = map[string]*LocationConfig{}
+	deviceConfigKinds = map[string]*DeviceKind{}
 
 	// Verify that there are no conflicting device configurations. We want to
 	// do this first. This has the side-effect of building the deviceConfigLocations

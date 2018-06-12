@@ -19,6 +19,7 @@ import (
 type server struct {
 	network string
 	address string
+	grpc    *grpc.Server
 }
 
 // newServer creates a new instance of a server. This should be used
@@ -91,22 +92,31 @@ func (server *server) cleanup() error {
 }
 
 // Serve sets up the gRPC server and runs it.
-func (server *server) Serve() (err error) {
-	err = server.setup()
+func (server *server) Serve() error {
+	err := server.setup()
 	if err != nil {
-		return
+		return err
 	}
 
 	lis, err := net.Listen(server.network, server.address)
 	if err != nil {
-		return
+		return err
 	}
 
 	svr := grpc.NewServer()
 	synse.RegisterPluginServer(svr, server)
+	server.grpc = svr
 
 	logger.Infof("grpc listening on %s:%s", server.network, server.address)
 	return svr.Serve(lis)
+}
+
+// Stop stops the GRPC server from serving and immediately terminates all open
+// connections and listeners.
+func (server *server) Stop() {
+	if server.grpc != nil {
+		server.grpc.Stop()
+	}
 }
 
 // Test is the handler for the Synse GRPC Plugin service's `Test` RPC method.
