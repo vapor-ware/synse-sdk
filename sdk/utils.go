@@ -100,11 +100,13 @@ func registerDevices() error {
 	// devices from dynamic registration
 	policy := policies.GetDeviceConfigDynamicPolicy()
 	if policy != policies.DeviceConfigDynamicProhibited {
-		devices, err := ctx.dynamicDeviceRegistrar(Config.Plugin.DynamicRegistration.Config)
-		if err != nil {
-			return err
+		for _, data := range Config.Plugin.DynamicRegistration.Config {
+			devices, err := ctx.dynamicDeviceRegistrar(data)
+			if err != nil {
+				return err
+			}
+			updateDeviceMap(devices)
 		}
-		updateDeviceMap(devices)
 	}
 
 	// devices from config. the config here is the unified device config which

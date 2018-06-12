@@ -417,7 +417,7 @@ type DynamicRegistrationSettings struct {
 	// plugin-specific data that can be used to dynamically register new devices.
 	// As an example, this could hold the information for connecting with a server,
 	// or it could contain a bus address, etc.
-	Config map[string]interface{} `default:"{}" yaml:"config,omitempty" addedIn:"1.0"`
+	Config []map[string]interface{} `default:"[]" yaml:"config,omitempty" addedIn:"1.0"`
 }
 
 // Validate validates that the DynamicRegistrationSettings has no configuration errors.
