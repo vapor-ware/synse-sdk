@@ -250,8 +250,8 @@ func processDeviceConfigs() error { // nolint: gocyclo
 				"device config file(s) found, but its use is prohibited via policy. " +
 					"the device config files will be ignored.",
 			)
-			fileCtxs = []*ConfigContext{}
 		}
+		fileCtxs = []*ConfigContext{}
 
 	default:
 		return errors.NewPolicyViolationError(
@@ -306,8 +306,8 @@ func processDeviceConfigs() error { // nolint: gocyclo
 				"dynamic device config(s) found, but its use is prohibited via policy. " +
 					"the device config(s) will be ignored.",
 			)
-			dynamicCtxs = []*ConfigContext{}
 		}
+		dynamicCtxs = []*ConfigContext{}
 
 	default:
 		return errors.NewPolicyViolationError(
@@ -330,14 +330,36 @@ func processDeviceConfigs() error { // nolint: gocyclo
 		}
 	}
 
-	// Unify all the device configs
-	unifiedCtx, err := UnifyDeviceConfigs(deviceCtxs)
-	if err != nil {
-		return err
+	// Unify the device configs. If there are no device configs
+	// at this point, we'll just create an empty one.
+	var unifiedCtx *ConfigContext
+	if len(deviceCtxs) == 0 {
+		unifiedCtx = NewConfigContext("empty", &DeviceConfig{
+			SchemeVersion: SchemeVersion{Version: currentDeviceSchemeVersion},
+		})
+	} else {
+		unifiedCtx, err = unifyDeviceConfigs(deviceCtxs)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Verify that the data defined in the configs is correct, references resolve, etc.
+	cfg := unifiedCtx.Config.(*DeviceConfig)
+	multiErr := verifyConfigs(cfg)
+	if multiErr.HasErrors() {
+		return multiErr
+	}
+
+	// Validate that the `Data` fields in the config are correct using the plugin-specified
+	// validator, since `Data` is plugin-specific.
+	multiErr = cfg.ValidateDeviceConfigData(ctx.deviceDataValidator)
+	if multiErr.HasErrors() {
+		return multiErr
 	}
 
 	// With the config validated and unified, we can now assign it to the global Device variable.
-	Config.Device = unifiedCtx.Config.(*DeviceConfig)
+	Config.Device = cfg
 	return nil
 }
 
@@ -391,10 +413,16 @@ func processPluginConfig() error { // nolint: gocyclo
 				"plugin config file found, but its use is prohibited via policy. " +
 					"you must ensure that the plugin has its config set manually.",
 			)
-			// The user should have specified the config, so we will take
-			// that config and wrap it in a context for validation.
-			pluginCtx = NewConfigContext("user defined", Config.Plugin)
 		}
+		// The user should have specified the config, so we will take
+		// that config and wrap it in a context for validation.
+		if Config.Plugin == nil {
+			return errors.NewPolicyViolationError(
+				pluginFilePolicy.String(),
+				"plugin config prohibited via file and not set manually",
+			)
+		}
+		pluginCtx = NewConfigContext("user defined", Config.Plugin)
 
 	default:
 		return errors.NewPolicyViolationError(
@@ -484,12 +512,12 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 	return outputs, nil
 }
 
-// UnifyDeviceConfigs will take a slice of ConfigContext which represents
+// unifyDeviceConfigs will take a slice of ConfigContext which represents
 // DeviceConfigs and unify them into a single ConfigContext for a DeviceConfig.
 //
 // If any of the ConfigContexts given as a parameter do not represent a
 // DeviceConfig, an error is returned.
-func UnifyDeviceConfigs(ctxs []*ConfigContext) (*ConfigContext, error) {
+func unifyDeviceConfigs(ctxs []*ConfigContext) (*ConfigContext, error) {
 
 	// FIXME (etd): figure out how to either:
 	//  i. merge the source info into the ConfigContext

@@ -1,0 +1,4 @@
+version: 1.0
+network:
+  type: unknown
+  address: localhost:5432

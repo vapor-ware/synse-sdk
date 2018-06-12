@@ -5,8 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -79,6 +82,26 @@ func TestServer_cleanup_Unknown(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// TestServer_Serve tests serving when there is a setup error.
+func TestServer_Serve(t *testing.T) {
+	defer resetContext()
+
+	s := newServer("foo", "bar")
+	defer s.Stop()
+	err := s.Serve()
+	assert.Error(t, err)
+}
+
+// TestServer_Serve2 tests serving when there is an error creating a net listener.
+func TestServer_Serve2(t *testing.T) {
+	defer resetContext()
+
+	s := newServer("tcp", "bar")
+	defer s.Stop()
+	err := s.Serve()
+	assert.Error(t, err)
+}
+
 // TestServer_Test tests the Test method of the gRPC plugin service.
 func TestServer_Test(t *testing.T) {
 	s := server{}
@@ -105,10 +128,81 @@ func TestServer_Version(t *testing.T) {
 	assert.Equal(t, version.PluginVersion, resp.PluginVersion)
 }
 
-// TODO - implement health checks
-//func TestServer_Health(t *testing.T) {
-//
-//}
+// TestServer_Health tests the Health method of the gRPC plugin service when
+// there are no health checks defined.
+func TestServer_Health(t *testing.T) {
+	s := server{}
+	req := &synse.Empty{}
+	resp, err := s.Health(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Timestamp)
+	assert.Equal(t, synse.PluginHealth_OK, resp.Status)
+	assert.Equal(t, 0, len(resp.Checks))
+}
+
+// TestServer_Health2 tests the Health method of the gRPC plugin service when
+// there is a passing health check.
+func TestServer_Health2(t *testing.T) {
+	defer func() {
+		health.DefaultCatalog = health.NewCatalog()
+	}()
+
+	health.Register("foo", health.NewChecker("foo"))
+
+	s := server{}
+	req := &synse.Empty{}
+	resp, err := s.Health(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Timestamp)
+	assert.Equal(t, synse.PluginHealth_OK, resp.Status)
+	assert.Equal(t, 1, len(resp.Checks))
+}
+
+// TestServer_Health3 tests the Health method of the gRPC plugin service when
+// there is a failing health check.
+func TestServer_Health3(t *testing.T) {
+	defer func() {
+		health.DefaultCatalog = health.NewCatalog()
+	}()
+
+	checker := health.NewChecker("foo")
+	checker.Update(fmt.Errorf("err"))
+	health.Register("foo", checker)
+
+	s := server{}
+	req := &synse.Empty{}
+	resp, err := s.Health(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Timestamp)
+	assert.Equal(t, synse.PluginHealth_FAILING, resp.Status)
+	assert.Equal(t, 1, len(resp.Checks))
+}
+
+// TestServer_Health4 tests the Health method of the gRPC plugin service when
+// there is a failing health check and a passing health check.
+func TestServer_Health4(t *testing.T) {
+	defer func() {
+		health.DefaultCatalog = health.NewCatalog()
+	}()
+
+	health.Register("foo", health.NewChecker("foo"))
+
+	checker := health.NewChecker("foo")
+	checker.Update(fmt.Errorf("err"))
+	health.Register("bar", checker)
+
+	s := server{}
+	req := &synse.Empty{}
+	resp, err := s.Health(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Timestamp)
+	assert.Equal(t, synse.PluginHealth_PARTIALLY_DEGRADED, resp.Status)
+	assert.Equal(t, 2, len(resp.Checks))
+}
 
 // TestServer_Capabilities tests the Capabilities method of the gRPC plugin service.
 func TestServer_Capabilities(t *testing.T) {

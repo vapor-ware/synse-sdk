@@ -124,6 +124,20 @@ func Add(policy ConfigPolicy) {
 	defaultManager.Add(policy)
 }
 
+// Clear clears the policy manager of all policies and settings.
+func (m *manager) Clear() {
+	m.policies = []ConfigPolicy{}
+	m.pluginConfigFilePolicy = NoPolicy
+	m.deviceConfigFilePolicy = NoPolicy
+	m.deviceConfigDynamicPolicy = NoPolicy
+	m.typeConfigFilePolicy = NoPolicy
+}
+
+// Clear clears the SDK's policy manager of all policies and settings.
+func Clear() {
+	defaultManager.Clear()
+}
+
 // Set sets multiple policies for the manager to track.
 func (m *manager) Set(policies []ConfigPolicy) {
 	m.policies = append(m.policies, policies...)

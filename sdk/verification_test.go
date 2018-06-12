@@ -7,14 +7,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
-// TestVerificationInit tests that the init function initialized things correctly.
-func TestVerificationInit(t *testing.T) {
-	assert.NotNil(t, deviceConfigLocations)
-	assert.Empty(t, deviceConfigLocations)
-	assert.NotNil(t, deviceConfigKinds)
-	assert.Empty(t, deviceConfigKinds)
-}
-
 // TestVerifyConfigs tests verifying the unified device config.
 func TestVerifyConfigs(t *testing.T) {
 	cfg := &DeviceConfig{

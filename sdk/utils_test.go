@@ -4,6 +4,8 @@ import (
 	"sort"
 	"testing"
 
+	"fmt"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -264,4 +266,140 @@ func Test_getTypeByNameErr(t *testing.T) {
 	ot, err := GetTypeByName("bar")
 	assert.Error(t, err)
 	assert.Nil(t, ot)
+}
+
+// Test_logStartupInfo tests logging out info which is done on startup.
+// There isn't much to check here other than it runs and completes without
+// any issues.
+func Test_logStartupInfo(t *testing.T) {
+	logStartupInfo()
+}
+
+// Test_registerDevices tests registering devices with the plugin when there
+// are no devices to register.
+func Test_registerDevices(t *testing.T) {
+	defer func() {
+		resetContext()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+	Config.Device = &DeviceConfig{
+		Devices: []*DeviceKind{},
+	}
+
+	assert.Equal(t, 0, len(ctx.devices))
+	err := registerDevices()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(ctx.devices))
+}
+
+// Test_registerDevices2 tests registering devices with the plugin when
+// dynamic registration results in an error.
+func Test_registerDevices2(t *testing.T) {
+	defer func() {
+		resetContext()
+		Config.reset()
+	}()
+
+	ctx.dynamicDeviceRegistrar = func(i map[string]interface{}) ([]*Device, error) {
+		return nil, fmt.Errorf("test")
+	}
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+	Config.Device = &DeviceConfig{
+		Devices: []*DeviceKind{},
+	}
+
+	assert.Equal(t, 0, len(ctx.devices))
+	err := registerDevices()
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(ctx.devices))
+}
+
+// Test_registerDevices3 tests registering devices with the plugin when there
+// is a device config, but it is invalid.
+func Test_registerDevices3(t *testing.T) {
+	defer func() {
+		resetContext()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+	Config.Device = &DeviceConfig{
+		Devices: []*DeviceKind{
+			{
+				Name: "foo",
+				Instances: []*DeviceInstance{
+					{
+						Location: "bar",
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, 0, len(ctx.devices))
+	err := registerDevices()
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(ctx.devices))
+}
+
+// Test_registerDevices4 tests registering devices with the plugin when there
+// is a device config and it is valid.
+func Test_registerDevices4(t *testing.T) {
+	defer func() {
+		resetContext()
+		Config.reset()
+	}()
+
+	ctx.deviceHandlers = []*DeviceHandler{
+		{Name: "foo"},
+	}
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: map[string]interface{}{},
+		},
+	}
+	Config.Device = &DeviceConfig{
+		Locations: []*LocationConfig{
+			{
+				Name:  "bar",
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
+			},
+		},
+		Devices: []*DeviceKind{
+			{
+				Name: "foo",
+				Instances: []*DeviceInstance{
+					{
+						Location: "bar",
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, 0, len(ctx.devices))
+	err := registerDevices()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ctx.devices))
 }

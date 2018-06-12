@@ -6,6 +6,9 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
 // GetCurrentTime return the current time (time.Now()) as a string formatted
@@ -87,4 +90,46 @@ func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 		devices = devices[:i]
 	}
 	return devices, nil
+}
+
+// registerDevices registers devices with the plugin. Devices are created and
+// registered from the unified device configuration, and registered directly
+// from dynamic device registration.
+func registerDevices() error {
+
+	// devices from dynamic registration
+	policy := policies.GetDeviceConfigDynamicPolicy()
+	if policy != policies.DeviceConfigDynamicProhibited {
+		devices, err := ctx.dynamicDeviceRegistrar(Config.Plugin.DynamicRegistration.Config)
+		if err != nil {
+			return err
+		}
+		updateDeviceMap(devices)
+	}
+
+	// devices from config. the config here is the unified device config which
+	// is joined from file and from dynamic registration, if set.
+	devices, err := makeDevices(Config.Device)
+	if err != nil {
+		return err
+	}
+	updateDeviceMap(devices)
+
+	return nil
+}
+
+// logStartupInfo is used to log plugin info at startup. This will log
+// the plugin metadata, version info, and registered devices.
+func logStartupInfo() {
+	// Log plugin metadata
+	metainfo.log()
+	// Log plugin version info
+	version.Log()
+
+	// Log registered devices
+	logger.Info("Registered Devices:")
+	for id, dev := range ctx.devices {
+		logger.Infof("  %v (%v)", id, dev.Kind)
+	}
+	logger.Info("--------------------------------")
 }
