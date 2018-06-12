@@ -43,14 +43,17 @@ out of the project repo root.
 
     $ make help
     build           Build the SDK locally
+    check-examples  Check that the examples run without failing.
     ci              Run CI checks locally (build, test, lint)
     clean           Remove temporary files
     cover           Run tests and open the coverage report
-    dep             Ensure and prune dependencies. Do not update existing dependencies.
-    dep-update      Ensure and prune dependencies. Update existing dependencies.
-    docs            Build the docs (via Slate)
+    dep             Ensure and prune dependencies
+    dep-update      Ensure, update, and prune dependencies
+    docs            Build the docs locally
     examples        Build the examples
     fmt             Run goimports on all go files
+    github-tag      Create and push a tag with the current version
+    godoc           Run godoc to get a local version of docs on port 8080
     help            Print usage information
     lint            Lint project source files
     setup           Install the build and development dependencies

@@ -5,6 +5,16 @@ Advanced Usage
 This page describes some of the more advanced features of the SDK for plugin development.
 
 
+- Dynamic Registration
+- Pre Run Actions
+- Post Run Actions
+- Device Setup Actions
+- Health Checks
+- Configuration Policies
+
+
+
+
 .. _deviceEnumerationHandler:
 
 Device Enumeration Handler

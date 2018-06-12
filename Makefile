@@ -2,7 +2,7 @@
 # Synse Plugin SDK
 #
 
-SDK_VERSION := $(shell cat sdk/version.go | grep 'const SDKVersion' | awk '{print $$4}')
+SDK_VERSION := $(shell cat sdk/version.go | grep 'const Version' | awk '{print $$4}')
 
 HAS_LINT := $(shell which gometalinter)
 HAS_DEP  := $(shell which dep)

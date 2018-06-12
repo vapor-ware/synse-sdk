@@ -30,11 +30,11 @@ it wants to read from, ``<rack id>/<board id>/<device id>``.
 
 This routing information is used by Synse Server to lookup the device and figure
 out which plugin owns that device and is responsible for its reads/writes. The
-lookup is done using a meta-info cache that is built by Synse Server on startup
-when it registers configured plugins and requests meta-info for the devices they
+lookup is done using a device-info cache that is built by Synse Server on startup
+when it registers configured plugins and requests device info for the devices they
 manage.
 
-Once Synse Server knows where the request is going, it sends over all relevent
+Once Synse Server knows where the request is going, it sends over all relevant
 information to that plugin via the `internal gRPC API <https://github.com/vapor-ware/synse-server-grpc>`_.
 Then, it is up to the plugin to fulfil the request using whatever protocol it
 implements and return the appropriate response back to Synse Server.
@@ -55,7 +55,7 @@ returned. If it does exist, that reading is returned.
 
 The reading cache itself is updated on an interval (as set via the plugin
 configuration) by a "reader" goroutine. This goroutine iterates through all of
-the configured Devices and, if they are readable, executes the read handler
+the registered Devices and, if they are readable, executes the read handler
 for that device. The reading cache is updated with the reading returned from
 that handler.
 
@@ -98,11 +98,10 @@ can happen simultaneously.
 Devices
 -------
 Within the SDK, a `Device <https://godoc.org/github.com/vapor-ware/synse-sdk/sdk#Device>`_
-is really just a model that holds the configuration information joined from
-a prototype config and a device instance config.
+represents the physical or virtual thing that the plugin is interfacing with.
 
-The Devices hold all of the meta-information for a device as well as references
-to their read and write handlers and identifier handler.
+The Device model holds the metadata, config information, and a reference to
+its DeviceHandler, which defines how it will be read from/written to.
 
 
 Readings
@@ -112,8 +111,7 @@ describes a single data point read from a device. It consists of the
 reading type, the reading value, and the time at which the reading was
 taken.
 
-When generating new readings within a Device's read handler, it is important
-to not initialize a ``Read`` struct directly, but instead to use the SDK's
-``NewReading`` function. This function will auto-populate the timestamp field
-with a timestamp in the RFC3339Nano format, which is the standard time format
-for plugins and Synse Server.
+When generating new readings within a Device's read handler, the timestamp should
+follow the RFC3339Nano format, which is the standard time format for plugins and
+Synse Server. Built-in helpers, such as ``NewReading`` or ``Output.MakeReading``,
+will provide a properly formatted timestamp.
