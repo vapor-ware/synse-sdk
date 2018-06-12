@@ -1,4 +1,4 @@
-package config
+package sdk
 
 import (
 	"testing"
@@ -528,7 +528,7 @@ func TestUnit_Encode(t *testing.T) {
 	}
 
 	for _, testCase := range testTable {
-		actual := testCase.unit.Encode()
+		actual := testCase.unit.encode()
 		assert.Equal(t, testCase.unit.Name, actual.GetName())
 		assert.Equal(t, testCase.unit.Symbol, actual.GetSymbol())
 	}

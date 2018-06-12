@@ -1,4 +1,4 @@
-package config
+package sdk
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
 )
@@ -32,14 +33,14 @@ var (
 	supportedExts = []string{".yml", ".yaml"}
 )
 
-// GetOutputTypeConfigsFromFile finds the files containing output type configurations
+// getOutputTypeConfigsFromFile finds the files containing output type configurations
 // and marshals them into an OutputType struct. These OutputTypes are wrapped in a
 // ConfigContext which provides the source file for the configuration as well.
 //
 // All ConfigContexts returned by this function will have their IsOutputTypeConfig
 // function return true.
-func GetOutputTypeConfigsFromFile() ([]*Context, error) {
-	var cfgs []*Context
+func getOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
+	var cfgs []*ConfigContext
 
 	// Search for output type config files. No name is specified as an arg here because
 	// output type config files do not require any particular name.
@@ -60,14 +61,14 @@ func GetOutputTypeConfigsFromFile() ([]*Context, error) {
 	return cfgs, nil
 }
 
-// GetDeviceConfigsFromFile finds the files containing device configurations and
+// getDeviceConfigsFromFile finds the files containing device configurations and
 // marshals them into a DeviceConfig struct. These DeviceConfigs are wrapped in a
 // ConfigContext which provides the source file for the configuration as well.
 //
 // All ConfigContexts returned by this function will have their IsDeviceConfig
 // function return true.
-func GetDeviceConfigsFromFile() ([]*Context, error) {
-	var cfgs []*Context
+func getDeviceConfigsFromFile() ([]*ConfigContext, error) {
+	var cfgs []*ConfigContext
 
 	// Search for device config files. No name is specified as an arg here because
 	// device config files do not require any particular name.
@@ -88,14 +89,14 @@ func GetDeviceConfigsFromFile() ([]*Context, error) {
 	return cfgs, nil
 }
 
-// GetPluginConfigFromFile finds the plugin configuration file, resolves plugin
+// getPluginConfigFromFile finds the plugin configuration file, resolves plugin
 // config defaults, and marshals the config data into a PluginConfig struct. The
 // PluginConfig is wrapped in a ConfigContext which provides the source file for
 // the configuration as well.
 //
 // The ConfigContext returned by this function will have its IsPluginConfig
 // function return true.
-func GetPluginConfigFromFile() (*Context, error) {
+func getPluginConfigFromFile() (*ConfigContext, error) {
 	// Search for the plugin config file. It should have the name "config".
 	files, err := findConfigs(pluginConfigSearchPaths, EnvPluginConfig, pluginConfigFileName)
 	if err != nil {
@@ -182,10 +183,7 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 
 	// If there are no configs after searching all paths, return an error
 	if len(configs) == 0 {
-		// TODO: this should probably be a specific config error so we can
-		// catch it later on. When configuration policies are implemented, this
-		// error might be ignored.
-		return nil, fmt.Errorf("no configuration files found in: %v", searchPaths)
+		return nil, errors.NewConfigsNotFoundError(searchPaths)
 	}
 	return
 }
@@ -230,7 +228,7 @@ func searchEnv(env, name string) (configs []string, err error) {
 		// Since the ENV is used for user-specified overrides, if we don't
 		// find anything here, we will return an error.
 		if len(configs) == 0 {
-			return configs, fmt.Errorf("no valid config files found in override path: %s", envValue)
+			return configs, errors.NewConfigsNotFoundError([]string{envValue})
 		}
 		return
 	}

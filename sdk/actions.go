@@ -5,28 +5,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
-var (
-	// preRunActions holds all of the known plugin actions to run prior to starting
-	// up the plugin server and data manager.
-	preRunActions []pluginAction
-
-	// postRunActions holds all of the known plugin actions to run after terminating
-	// the plugin server and data manager.
-	postRunActions []pluginAction
-
-	// deviceSetupActions holds all of the known device device setup actions to run
-	// prior to starting up the plugin server and data manager. The map key is the
-	// filter used to apply the deviceAction value to a Device instance.
-	deviceSetupActions map[string][]deviceAction
-)
-
-func init() {
-	// Initialize the global variables so they are never nil.
-	preRunActions = []pluginAction{}
-	postRunActions = []pluginAction{}
-	deviceSetupActions = map[string][]deviceAction{}
-}
-
 type pluginAction func(p *Plugin) error
 type deviceAction func(p *Plugin, d *Device) error
 
@@ -34,9 +12,9 @@ type deviceAction func(p *Plugin, d *Device) error
 func execPreRun(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("pre-run actions")
 
-	if len(preRunActions) > 0 {
+	if len(ctx.preRunActions) > 0 {
 		logger.Debug("Executing pre-run actions:")
-		for _, action := range preRunActions {
+		for _, action := range ctx.preRunActions {
 			logger.Debugf(" * %v", action)
 			err := action(plugin)
 			if err != nil {
@@ -52,9 +30,9 @@ func execPreRun(plugin *Plugin) *errors.MultiError {
 func execPostRun(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("post-run actions")
 
-	if len(postRunActions) > 0 {
+	if len(ctx.postRunActions) > 0 {
 		logger.Debug("Executing post-run actions:")
-		for _, action := range postRunActions {
+		for _, action := range ctx.postRunActions {
 			logger.Debug(" * %v", action)
 			err := action(plugin)
 			if err != nil {
@@ -69,9 +47,9 @@ func execPostRun(plugin *Plugin) *errors.MultiError {
 func execDeviceSetup(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("device setup actions")
 
-	if len(deviceSetupActions) > 0 {
+	if len(ctx.deviceSetupActions) > 0 {
 		logger.Debug("Executing device setup actions:")
-		for filter, acts := range deviceSetupActions {
+		for filter, acts := range ctx.deviceSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
 				logger.Errorf("Failed to filter devices for setup actions: %v", err)

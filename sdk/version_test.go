@@ -9,15 +9,15 @@ import (
 
 // TestVersionInit tests that the init function initialized things correctly.
 func TestVersionInit(t *testing.T) {
-	assert.NotNil(t, Version)
-	assert.Equal(t, "-", Version.BuildDate)
-	assert.Equal(t, "-", Version.GitCommit)
-	assert.Equal(t, "-", Version.GitTag)
-	assert.Equal(t, "-", Version.PluginVersion)
-	assert.Equal(t, "-", Version.GoVersion)
-	assert.Equal(t, SDKVersion, Version.SDKVersion)
-	assert.Equal(t, runtime.GOARCH, Version.Arch)
-	assert.Equal(t, runtime.GOOS, Version.OS)
+	assert.NotNil(t, version)
+	assert.Equal(t, "-", version.BuildDate)
+	assert.Equal(t, "-", version.GitCommit)
+	assert.Equal(t, "-", version.GitTag)
+	assert.Equal(t, "-", version.PluginVersion)
+	assert.Equal(t, "-", version.GoVersion)
+	assert.Equal(t, Version, version.SDKVersion)
+	assert.Equal(t, runtime.GOARCH, version.Arch)
+	assert.Equal(t, runtime.GOOS, version.OS)
 }
 
 // Test_setField tests setting a field value.
@@ -29,29 +29,29 @@ func Test_setField(t *testing.T) {
 	assert.Equal(t, "foo", f)
 }
 
-// TestBinVersion_Encode tests converting the BinVersion to the gRPC VersionInfo.
+// TestBinVersion_Encode tests converting the binVersion to the gRPC VersionInfo.
 func TestBinVersion_Encode(t *testing.T) {
-	vi := Version.Encode()
+	vi := version.Encode()
 	assert.NotNil(t, vi)
 	assert.Equal(t, "-", vi.PluginVersion)
 	assert.Equal(t, "-", vi.GitTag)
 	assert.Equal(t, "-", vi.GitCommit)
 	assert.Equal(t, "-", vi.BuildDate)
-	assert.Equal(t, SDKVersion, vi.SdkVersion)
+	assert.Equal(t, Version, vi.SdkVersion)
 	assert.Equal(t, runtime.GOOS, vi.Os)
 	assert.Equal(t, runtime.GOARCH, vi.Arch)
 }
 
 // TestBinVersion_Format tests producing a formatted string representation
-// of the BinVersion.
+// of the binVersion.
 func TestBinVersion_Format(t *testing.T) {
 	// since the values here will change based on when/where this is run,
 	// we can only verify that it produces something.
-	out := Version.Format()
+	out := version.Format()
 	assert.NotEmpty(t, out)
 }
 
-// TestBinVersion_Log tests logging out the BinVersion
+// TestBinVersion_Log tests logging out the binVersion
 func TestBinVersion_Log(t *testing.T) {
-	Version.Log()
+	version.Log()
 }

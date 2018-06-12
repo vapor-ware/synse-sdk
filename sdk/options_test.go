@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // TestCustomDeviceIdentifier tests creating a PluginOption for a custom
@@ -41,8 +40,8 @@ func TestCustomDynamicDeviceRegistration(t *testing.T) {
 // for a custom device config registration function.
 func TestCustomDynamicDeviceConfigRegistration(t *testing.T) {
 	opt := CustomDynamicDeviceConfigRegistration(
-		func(data map[string]interface{}) ([]*config.DeviceConfig, error) {
-			return []*config.DeviceConfig{}, nil
+		func(data map[string]interface{}) ([]*DeviceConfig, error) {
+			return []*DeviceConfig{}, nil
 		},
 	)
 	ctx := PluginContext{}

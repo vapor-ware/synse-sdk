@@ -3,26 +3,25 @@ package sdk
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
 var (
 	// deviceConfigLocations is a map to track the locations for the unified
 	// DeviceConfig. The key is the name of the Location.
-	deviceConfigLocations map[string]*config.Location
+	deviceConfigLocations map[string]*LocationConfig
 
 	// deviceConfigKinds is a map to track the devices (DeviceKind) for the
 	// unified DeviceConfig. The key is the name of the DeviceKind.
-	deviceConfigKinds map[string]*config.DeviceKind
+	deviceConfigKinds map[string]*DeviceKind
 )
 
 func init() {
-	deviceConfigLocations = map[string]*config.Location{}
-	deviceConfigKinds = map[string]*config.DeviceKind{}
+	deviceConfigLocations = map[string]*LocationConfig{}
+	deviceConfigKinds = map[string]*DeviceKind{}
 }
 
-// VerifyConfigs verifies that all device configurations that the plugin has
+// verifyConfigs verifies that all device configurations that the plugin has
 // found are correct.
 //
 // Config verification is different than config validation. In general,
@@ -38,7 +37,7 @@ func init() {
 // files to be specified, for certain configs. This means that we can not verify
 // that all the information in a given config is correct until we have the
 // whole picture of what exists.
-func VerifyConfigs(unifiedDeviceConfig *config.DeviceConfig) *errors.MultiError {
+func verifyConfigs(unifiedDeviceConfig *DeviceConfig) *errors.MultiError {
 	var multiErr = errors.NewMultiError("config verification")
 
 	// Verify that there are no conflicting device configurations. We want to
@@ -62,7 +61,7 @@ func VerifyConfigs(unifiedDeviceConfig *config.DeviceConfig) *errors.MultiError 
 
 // verifyDeviceConfigLocations verifies that there are no Locations specified
 // in the unified DeviceConfig that have conflicting data.
-func verifyDeviceConfigLocations(deviceConfig *config.DeviceConfig, multiErr *errors.MultiError) {
+func verifyDeviceConfigLocations(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
 	for _, location := range deviceConfig.Locations {
 		loc, hasName := deviceConfigLocations[location.Name]
 
@@ -88,7 +87,7 @@ func verifyDeviceConfigLocations(deviceConfig *config.DeviceConfig, multiErr *er
 
 // verifyDeviceConfigDeviceKinds verifies that there are no duplicate DeviceKinds
 // specified in the unified DeviceConfig.
-func verifyDeviceConfigDeviceKinds(deviceConfig *config.DeviceConfig, multiErr *errors.MultiError) {
+func verifyDeviceConfigDeviceKinds(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
 	for _, kind := range deviceConfig.Devices {
 		_, hasKind := deviceConfigKinds[kind.Name]
 
@@ -111,7 +110,7 @@ func verifyDeviceConfigDeviceKinds(deviceConfig *config.DeviceConfig, multiErr *
 // verifyDeviceConfigInstances verifies that the device instances all reference valid
 // locations. verifyDeviceConfigLocations needs to be called before this verification
 // function, as the deviceConfigLocations map is populated there.
-func verifyDeviceConfigInstances(deviceConfig *config.DeviceConfig, multiErr *errors.MultiError) {
+func verifyDeviceConfigInstances(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
 	for _, device := range deviceConfig.Devices {
 		for _, instance := range device.Instances {
 			if instance.Location == "" {
@@ -141,11 +140,11 @@ func verifyDeviceConfigInstances(deviceConfig *config.DeviceConfig, multiErr *er
 
 // verifyDeviceConfigOutputs verifies that the DeviceOutputs of DeviceKinds and
 // DeviceInstances reference valid output types.
-func verifyDeviceConfigOutputs(deviceConfig *config.DeviceConfig, multiErr *errors.MultiError) {
+func verifyDeviceConfigOutputs(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
 	for _, device := range deviceConfig.Devices {
 		// Check the device-level outputs
 		for _, output := range device.Outputs {
-			_, hasOutput := outputTypeMap[output.Type]
+			_, hasOutput := ctx.outputTypes[output.Type]
 			if !hasOutput {
 				multiErr.Add(
 					errors.NewVerificationInvalidError(
@@ -160,7 +159,7 @@ func verifyDeviceConfigOutputs(deviceConfig *config.DeviceConfig, multiErr *erro
 		// Check the instance-level outputs
 		for _, instance := range device.Instances {
 			for _, output := range instance.Outputs {
-				_, hasOutput := outputTypeMap[output.Type]
+				_, hasOutput := ctx.outputTypes[output.Type]
 				if !hasOutput {
 					multiErr.Add(
 						errors.NewVerificationInvalidError(

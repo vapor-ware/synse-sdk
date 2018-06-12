@@ -14,22 +14,17 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	modeUnix = "unix"
-	modeTCP  = "tcp"
-)
-
-// Server implements the Synse Plugin gRPC server. It is used by the
-// plugin to communicate via gRPC over tcp or unix socket to Synse Server.
-type Server struct {
+// server implements the Synse Plugin gRPC server. It is used by the
+// plugin to communicate via gRPC over tcp or unix socket to Synse server.
+type server struct {
 	network string
 	address string
 }
 
-// NewServer creates a new instance of a Server. This should be used
+// newServer creates a new instance of a server. This should be used
 // by the plugin to create its server instance.
-func NewServer(network, address string) *Server {
-	return &Server{
+func newServer(network, address string) *server {
+	return &server{
 		network: network,
 		address: address,
 	}
@@ -38,14 +33,14 @@ func NewServer(network, address string) *Server {
 // setup runs any steps needed to set up the environment for the server to run.
 // In particular, this makes sure that the proper directories exist if the server
 // is running in "unix" mode.
-func (server *Server) setup() error {
+func (server *server) setup() error {
 	// Set the server cleanup function as a post-run action for the plugin.
-	postRunActions = append(postRunActions, func(plugin *Plugin) error {
+	ctx.postRunActions = append(ctx.postRunActions, func(plugin *Plugin) error {
 		return server.cleanup()
 	})
 
 	switch server.network {
-	case modeUnix:
+	case networkTypeUnix:
 		if !strings.HasPrefix(server.address, sockPath) {
 			server.address = fmt.Sprintf("%s/%s", sockPath, server.address)
 		}
@@ -67,7 +62,7 @@ func (server *Server) setup() error {
 		}
 		return nil
 
-	case modeTCP:
+	case networkTypeTCP:
 		// There is nothing for us to do in this case.
 		return nil
 
@@ -78,15 +73,15 @@ func (server *Server) setup() error {
 
 // cleanup cleans up the server. The action it takes will depend on the mode it is
 // running in. If running in 'unix' mode, it will remove the socket.
-func (server *Server) cleanup() error {
+func (server *server) cleanup() error {
 	switch server.network {
-	case modeUnix:
+	case networkTypeUnix:
 		if err := os.Remove(server.address); !os.IsNotExist(err) {
 			return err
 		}
 		return nil
 
-	case modeTCP:
+	case networkTypeTCP:
 		// There is nothing for us to do in this case.
 		return nil
 
@@ -96,7 +91,7 @@ func (server *Server) cleanup() error {
 }
 
 // Serve sets up the gRPC server and runs it.
-func (server *Server) Serve() (err error) {
+func (server *server) Serve() (err error) {
 	err = server.setup()
 	if err != nil {
 		return
@@ -115,19 +110,19 @@ func (server *Server) Serve() (err error) {
 }
 
 // Test is the handler for the Synse GRPC Plugin service's `Test` RPC method.
-func (server *Server) Test(ctx context.Context, request *synse.Empty) (*synse.Status, error) {
+func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.Status, error) {
 	logger.Debug("gRPC server: test")
 	return &synse.Status{Ok: true}, nil
 }
 
 // Version is the handler for the Synse GRPC Plugin service's `Version` RPC method.
-func (server *Server) Version(ctx context.Context, request *synse.Empty) (*synse.VersionInfo, error) {
+func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.VersionInfo, error) {
 	logger.Debug("gRPC server: version")
-	return Version.Encode(), nil
+	return version.Encode(), nil
 }
 
 // Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
-func (server *Server) Health(ctx context.Context, request *synse.Empty) (*synse.PluginHealth, error) {
+func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.PluginHealth, error) {
 	logger.Debug("gRPC server: health")
 	statuses := health.GetStatus()
 
@@ -166,11 +161,11 @@ func (server *Server) Health(ctx context.Context, request *synse.Empty) (*synse.
 }
 
 // Capabilities is the handler for the Synse GRPC Plugin service's `Capabilities` RPC method.
-func (server *Server) Capabilities(request *synse.Empty, stream synse.Plugin_CapabilitiesServer) error {
+func (server *server) Capabilities(request *synse.Empty, stream synse.Plugin_CapabilitiesServer) error {
 	logger.Debug("gRPC server: capabilities")
 	capabilitiesMap := map[string]*synse.DeviceCapability{}
 
-	for _, device := range deviceMap {
+	for _, device := range ctx.devices {
 		_, hasKind := capabilitiesMap[device.Kind]
 		if !hasKind {
 			var outputs []string
@@ -193,7 +188,7 @@ func (server *Server) Capabilities(request *synse.Empty, stream synse.Plugin_Cap
 }
 
 // Devices is the handler for the Synse GRPC Plugin service's `Devices` RPC method.
-func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_DevicesServer) error {
+func (server *server) Devices(request *synse.DeviceFilter, stream synse.Plugin_DevicesServer) error {
 	logger.Debug("gRPC server: devices")
 	var (
 		rack   = request.GetRack()
@@ -207,7 +202,7 @@ func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_D
 		return fmt.Errorf("filter specifies board with no rack - must specifiy rack as well")
 	}
 
-	for _, device := range deviceMap {
+	for _, device := range ctx.devices {
 		if rack != "" {
 			if device.Location.Rack != rack {
 				continue
@@ -226,19 +221,19 @@ func (server *Server) Devices(request *synse.DeviceFilter, stream synse.Plugin_D
 }
 
 // Metainfo is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
-func (server *Server) Metainfo(ctx context.Context, request *synse.Empty) (*synse.Metadata, error) {
+func (server *server) Metainfo(ctx context.Context, request *synse.Empty) (*synse.Metadata, error) {
 	logger.Debug("gRPC server: metainfo")
 	return &synse.Metadata{
 		Name:        metainfo.Name,
 		Maintainer:  metainfo.Maintainer,
 		Description: metainfo.Description,
 		Vcs:         metainfo.VCS,
-		Version:     Version.Encode(),
+		Version:     version.Encode(),
 	}, nil
 }
 
 // Read is the handler for the Synse GRPC Plugin service's `Read` RPC method.
-func (server *Server) Read(request *synse.DeviceFilter, stream synse.Plugin_ReadServer) error {
+func (server *server) Read(request *synse.DeviceFilter, stream synse.Plugin_ReadServer) error {
 	logger.Debug("gRPC server: read")
 	responses, err := DataManager.Read(request)
 	if err != nil {
@@ -253,7 +248,7 @@ func (server *Server) Read(request *synse.DeviceFilter, stream synse.Plugin_Read
 }
 
 // Write is the handler for the Synse GRPC Plugin service's `Write` RPC method.
-func (server *Server) Write(ctx context.Context, request *synse.WriteInfo) (*synse.Transactions, error) {
+func (server *server) Write(ctx context.Context, request *synse.WriteInfo) (*synse.Transactions, error) {
 	logger.Debug("gRPC server: write")
 	transactions, err := DataManager.Write(request)
 	if err != nil {
@@ -265,7 +260,7 @@ func (server *Server) Write(ctx context.Context, request *synse.WriteInfo) (*syn
 }
 
 // Transaction is the handler for the Synse GRPC Plugin service's `Transaction` RPC method.
-func (server *Server) Transaction(request *synse.TransactionFilter, stream synse.Plugin_TransactionServer) error {
+func (server *server) Transaction(request *synse.TransactionFilter, stream synse.Plugin_TransactionServer) error {
 	logger.Debug("gRPC server: transaction")
 
 	// If there is no ID with the incoming request, return all cached transactions.

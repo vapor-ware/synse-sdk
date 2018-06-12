@@ -9,12 +9,12 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// SDKVersion specifies the version of the Synse Plugin SDK.
-const SDKVersion = "1.0.0"
+// Version specifies the version of the Synse Plugin SDK.
+const Version = "1.0.0"
 
-// Version is a reference to a BinVersion that can be used to get
+// version is a reference to a binVersion that is used by the SDK to get
 // the version info for a plugin.
-var Version *BinVersion
+var version *binVersion
 
 var (
 	// BuildDate is the timestamp for when the build happened.
@@ -34,10 +34,10 @@ var (
 )
 
 func init() {
-	Version = &BinVersion{
+	version = &binVersion{
 		Arch:          runtime.GOARCH,
 		OS:            runtime.GOOS,
-		SDKVersion:    SDKVersion,
+		SDKVersion:    Version,
 		BuildDate:     setField(BuildDate),
 		GitCommit:     setField(GitCommit),
 		GitTag:        setField(GitTag),
@@ -46,11 +46,11 @@ func init() {
 	}
 }
 
-// BinVersion describes the version of the binary for a plugin.
+// binVersion describes the version of the binary for a plugin.
 //
 // This should be populated via build-time args passed in for
 // the corresponding variables.
-type BinVersion struct {
+type binVersion struct {
 	Arch          string
 	BuildDate     string
 	GitCommit     string
@@ -61,8 +61,8 @@ type BinVersion struct {
 	SDKVersion    string
 }
 
-// Encode converts the BinVersion to its corresponding Synse GRPC VersionInfo message.
-func (version *BinVersion) Encode() *synse.VersionInfo {
+// encode converts the binVersion to its corresponding Synse GRPC VersionInfo message.
+func (version *binVersion) Encode() *synse.VersionInfo {
 	return &synse.VersionInfo{
 		PluginVersion: version.PluginVersion,
 		SdkVersion:    version.SDKVersion,
@@ -74,8 +74,8 @@ func (version *BinVersion) Encode() *synse.VersionInfo {
 	}
 }
 
-// Format returns a formatted string with all of the BinVersion info.
-func (version *BinVersion) Format() string {
+// Format returns a formatted string with all of the binVersion info.
+func (version *binVersion) Format() string {
 	var info bytes.Buffer
 
 	out := `Version Info:
@@ -93,8 +93,8 @@ func (version *BinVersion) Format() string {
 	return info.String()
 }
 
-// Log logs out the BinVersion at info level.
-func (version *BinVersion) Log() {
+// Log logs out the binVersion at info level.
+func (version *binVersion) Log() {
 	logger.Info("Version Info:")
 	logger.Infof("  Plugin Version: %s", version.PluginVersion)
 	logger.Infof("  SDK Version:    %s", version.SDKVersion)

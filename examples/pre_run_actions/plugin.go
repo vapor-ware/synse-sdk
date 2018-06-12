@@ -24,14 +24,14 @@ func ProtocolIdentifier(data map[string]interface{}) string {
 // preRunAction1 defines a function we will use as a pre-run action.
 func preRunAction1(_ *sdk.Plugin) error {
 	logger.Debug("preRunAction1 -> adding to config context")
-	sdk.PluginConfig.Context["example_ctx"] = true
+	sdk.Config.Plugin.Context["example_ctx"] = true
 	return nil
 }
 
 // preRunAction2 defines a function we will use as a pre-run action.
 func preRunAction2(_ *sdk.Plugin) error {
 	logger.Debug("preRunAction2 -> displaying plugin config")
-	logger.Debug(sdk.PluginConfig)
+	logger.Debug(sdk.Config.Plugin)
 	return nil
 }
 

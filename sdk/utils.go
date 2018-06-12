@@ -6,25 +6,34 @@ import (
 	"io"
 	"strings"
 	"time"
-
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
+
+// GetCurrentTime return the current time (time.Now()) as a string formatted
+// with the RFC3339Nano layout. This should be the format of all timestamps
+// returned by the SDK.
+//
+// The SDK uses this function to generate all of its timestamps. It is highly
+// recommended that plugins use this as well for timestamp generation.
+func GetCurrentTime() string {
+	return time.Now().Format(time.RFC3339Nano)
+}
+
+// GetTypeByName gets the output type with the given name from the collection of
+// output types registered with the SDK for the plugin. If an output type with the
+// given name does not exist, an error is returned.
+func GetTypeByName(name string) (*OutputType, error) {
+	t, ok := ctx.outputTypes[name]
+	if !ok {
+		return nil, fmt.Errorf("no output type with name '%s' found", name)
+	}
+	return t, nil
+}
 
 // makeIDString makes a compound string out of the given rack, board, and
 // device identifier strings. This string should be a globally unique identifier
 // for a given device.
 func makeIDString(rack, board, device string) string {
 	return strings.Join([]string{rack, board, device}, "-")
-}
-
-// getTypeByName gets the output type with the given name. If an output type does
-// not exist with the given name, an error is returned.
-func getTypeByName(name string) (*config.OutputType, error) {
-	t, ok := outputTypeMap[name]
-	if !ok {
-		return nil, fmt.Errorf("no output type with name '%s' found", name)
-	}
-	return t, nil
 }
 
 // newUID creates a new unique identifier for a Device. This id should be
@@ -47,7 +56,7 @@ func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 	filters := strings.Split(filter, ",")
 
 	var devices []*Device
-	for _, d := range deviceMap {
+	for _, d := range ctx.devices {
 		devices = append(devices, d)
 	}
 
@@ -78,14 +87,4 @@ func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 		devices = devices[:i]
 	}
 	return devices, nil
-}
-
-// GetCurrentTime return the current time (time.Now()) as a string formatted
-// with the RFC3339Nano layout. This should be the format of all timestamps
-// returned by the SDK.
-//
-// The SDK uses this function to generate all of its timestamps. It is highly
-// recommended that plugins use this as well for timestamp generation.
-func GetCurrentTime() string {
-	return time.Now().Format(time.RFC3339Nano)
 }

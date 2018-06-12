@@ -1,41 +1,42 @@
 package sdk
 
-import (
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-)
-
-// DeviceIdentifier is a function that produces a string that can be used to
-// identify a device deterministically. The returned string should be a composite
-// from the Device's config data.
-type DeviceIdentifier func(map[string]interface{}) string
-
-// DynamicDeviceRegistrar is a function that takes a Plugin config's "dynamic
-// registration" data and generates Device instances from it. How this is done
-// is specific to the plugin/protocol.
-type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
-
-// DynamicDeviceConfigRegistrar is a function that takes a Plugin config's "dynamic
-// registration" data and generates DeviceConfig instances from it. How this is done
-// is specific to the plugin/protocol.
-type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceConfig, error)
-
-// DeviceDataValidator is a function that takes the `Data` field of a device config
-// and performs some validation on it. This allows users to provide validation on the
-// plugin-specific config fields.
-type DeviceDataValidator func(map[string]interface{}) error
-
-// Context is the global context for the plugin. It stores various plugin settings,
-// including handler functions for customizable plugin functionality.
-var Context = newPluginContext()
+// ctx is the global context for the plugin. It stores various plugin settings,
+// data, and handler functions for customizable plugin functionality.
+var ctx = newPluginContext()
 
 // PluginContext holds context information for the plugin. Having the context
 // global allows simpler access, without having to pass references to the plugin
 // through many of our functions.
 type PluginContext struct {
+	// The handler functions that can extend/modify a plugin's behavior.
+	// These can be set via PluginOptions, or can use a default handler.
 	deviceIdentifier             DeviceIdentifier
 	dynamicDeviceRegistrar       DynamicDeviceRegistrar
 	dynamicDeviceConfigRegistrar DynamicDeviceConfigRegistrar
 	deviceDataValidator          DeviceDataValidator
+
+	// outputTypes is a map where the the key is the name of the output type
+	// and the value is the corresponding OutputType.
+	outputTypes map[string]*OutputType
+
+	// devices holds all of the known devices configured for the plugin.
+	devices map[string]*Device
+
+	// deviceHandlers holds all of the DeviceHandlers that are registered with the plugin.
+	deviceHandlers []*DeviceHandler
+
+	/// preRunActions holds all of the known plugin actions to run prior to starting
+	// up the plugin server and data manager.
+	preRunActions []pluginAction
+
+	// postRunActions holds all of the known plugin actions to run after terminating
+	// the plugin server and data manager.
+	postRunActions []pluginAction
+
+	// deviceSetupActions holds all of the known device device setup actions to run
+	// prior to starting up the plugin server and data manager. The map key is the
+	// filter used to apply the deviceAction value to a Device instance.
+	deviceSetupActions map[string][]deviceAction
 }
 
 // newPluginContext creates a new instance of the plugin context, supplying the default
@@ -46,5 +47,18 @@ func newPluginContext() *PluginContext {
 		dynamicDeviceRegistrar:       defaultDynamicDeviceRegistration,
 		dynamicDeviceConfigRegistrar: defaultDynamicDeviceConfigRegistration,
 		deviceDataValidator:          defaultDeviceDataValidator,
+
+		outputTypes:        map[string]*OutputType{},
+		devices:            map[string]*Device{},
+		deviceHandlers:     []*DeviceHandler{},
+		preRunActions:      []pluginAction{},
+		postRunActions:     []pluginAction{},
+		deviceSetupActions: map[string][]deviceAction{},
 	}
+}
+
+// resetContext is a utility function that is used as a test helper to clear the plugin
+// context. This should not be used outside of testing.
+func resetContext() { // nolint
+	ctx = newPluginContext()
 }

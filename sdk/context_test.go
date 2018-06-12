@@ -8,14 +8,14 @@ import (
 
 // Test_newPluginContext tests creating a new instance of a plugin context.
 func Test_newPluginContext(t *testing.T) {
-	ctx := newPluginContext()
+	context := newPluginContext()
 
-	assert.NotNil(t, ctx)
-	assert.IsType(t, &PluginContext{}, ctx)
+	assert.NotNil(t, context)
+	assert.IsType(t, &PluginContext{}, context)
 
 	// Can't compare function pointers, so just make sure its not nil for noe
-	assert.NotNil(t, ctx.deviceIdentifier)
-	assert.NotNil(t, ctx.dynamicDeviceRegistrar)
-	assert.NotNil(t, ctx.dynamicDeviceConfigRegistrar)
-	assert.NotNil(t, ctx.deviceDataValidator)
+	assert.NotNil(t, context.deviceIdentifier)
+	assert.NotNil(t, context.dynamicDeviceRegistrar)
+	assert.NotNil(t, context.dynamicDeviceConfigRegistrar)
+	assert.NotNil(t, context.deviceDataValidator)
 }

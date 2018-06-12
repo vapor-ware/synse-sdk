@@ -1,33 +1,35 @@
 package outputs
 
-import "github.com/vapor-ware/synse-sdk/sdk/config"
+import (
+	"github.com/vapor-ware/synse-sdk/sdk"
+)
 
 var (
 	// AirflowOutput is the output for airflow devices.
-	AirflowOutput = config.OutputType{
+	AirflowOutput = sdk.OutputType{
 		Name:      "airflow",
 		Precision: 2,
-		Unit: config.Unit{
+		Unit: sdk.Unit{
 			Name:   "cubic feet per meter",
 			Symbol: "CFM",
 		},
 	}
 
 	// TemperatureOutput is the output for temperature devices.
-	TemperatureOutput = config.OutputType{
+	TemperatureOutput = sdk.OutputType{
 		Name:      "temperature",
 		Precision: 2,
-		Unit: config.Unit{
+		Unit: sdk.Unit{
 			Name:   "celsius",
 			Symbol: "C",
 		},
 	}
 
 	// VoltageOutput is the output for voltage devices.
-	VoltageOutput = config.OutputType{
+	VoltageOutput = sdk.OutputType{
 		Name:      "voltage",
 		Precision: 5,
-		Unit: config.Unit{
+		Unit: sdk.Unit{
 			Name:   "volts",
 			Symbol: "V",
 		},

@@ -1,4 +1,4 @@
-package config
+package sdk
 
 const (
 	// EnvDeviceConfig is the environment variable that can be used to

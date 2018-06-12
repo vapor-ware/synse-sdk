@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -25,10 +24,9 @@ func TestNewDataManager(t *testing.T) {
 // TestDeviceManager_setupError tests calling setup on the DataManager when there
 // is no global plugin config. This should result in error.
 func TestDataManager_setupError(t *testing.T) {
-	defer func() {
-		PluginConfig = &config.PluginConfig{}
-	}()
-	PluginConfig = nil
+	defer Config.reset()
+
+	Config.Plugin = nil
 	err := DataManager.setup()
 	assert.Error(t, err)
 }
@@ -36,29 +34,27 @@ func TestDataManager_setupError(t *testing.T) {
 // TestDataManager_WritesEnabled tests that writes are enabled in the dataManager
 // when they are enabled in the config.
 func TestDataManager_WritesEnabled(t *testing.T) {
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	defer Config.reset()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read: &config.ReadSettings{
+		Settings: &PluginSettings{
+			Read: &ReadSettings{
 				Buffer: 200,
 			},
-			Write: &config.WriteSettings{
+			Write: &WriteSettings{
 				Enabled: true,
 				Buffer:  200,
 			},
-			Transaction: &config.TransactionSettings{
+			Transaction: &TransactionSettings{
 				TTL: "2s",
 			},
 		},
 	}
-	defer func() {
-		// reset the plugin config
-		PluginConfig = &config.PluginConfig{}
-	}()
 
 	assert.True(t, DataManager.writesEnabled())
 }
@@ -66,22 +62,20 @@ func TestDataManager_WritesEnabled(t *testing.T) {
 // TestDataManager_readNoLimiter tests reading a device when a limiter is
 // not configured.
 func TestDataManager_readOneOkNoLimiter(t *testing.T) {
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	defer Config.reset()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
-	defer func() {
-		// reset the plugin config
-		PluginConfig = &config.PluginConfig{}
-	}()
 
 	// Create the device to read
 	device := &Device{
@@ -89,7 +83,7 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -120,23 +114,21 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 // TestDataManager_readOkWithLimiter tests reading a device when a limiter is
 // configured.
 func TestDataManager_readOneOkWithLimiter(t *testing.T) {
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	defer Config.reset()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
-		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
 	}
-	defer func() {
-		// reset the plugin config
-		PluginConfig = &config.PluginConfig{}
-	}()
 
 	// Create the device to read
 	device := &Device{
@@ -144,7 +136,7 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -174,22 +166,20 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 
 // TestDataManager_readErr tests reading a device that results in error.
 func TestDataManager_readOneErr(t *testing.T) {
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	defer Config.reset()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
-	defer func() {
-		// reset the plugin config
-		PluginConfig = &config.PluginConfig{}
-	}()
 
 	// Create the device to read
 	device := &Device{
@@ -197,7 +187,7 @@ func TestDataManager_readOneErr(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -222,21 +212,20 @@ func TestDataManager_readOneErr(t *testing.T) {
 // not configured.
 func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -257,7 +246,7 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 			return ctxs, nil
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -267,14 +256,14 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 		Handler:  handler,
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
 		},
 	}
 
-	deviceMap["test-device-1"] = device
+	ctx.devices["test-device-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -296,23 +285,22 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 // configured.
 func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
-		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
 	}
 
 	handler := &DeviceHandler{
@@ -332,7 +320,7 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 			return ctxs, nil
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -342,14 +330,14 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 		Handler:  handler,
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
 		},
 	}
 
-	deviceMap["test-device-1"] = device
+	ctx.devices["test-device-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -370,21 +358,20 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 // TestDataManager_readBulkError tests bulk reading a device when reading returns an error.
 func TestDataManager_readBulkError(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -393,7 +380,7 @@ func TestDataManager_readBulkError(t *testing.T) {
 			return nil, fmt.Errorf("test error")
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -403,14 +390,14 @@ func TestDataManager_readBulkError(t *testing.T) {
 		Handler:  handler,
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
 		},
 	}
 
-	deviceMap["test-device-1"] = device
+	ctx.devices["test-device-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -424,22 +411,23 @@ func TestDataManager_readBulkError(t *testing.T) {
 
 // TestDataManager_serialReadSingle tests reading a single device serially.
 func TestDataManager_serialReadSingle(t *testing.T) {
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	defer func() {
+		Config.reset()
+		resetContext()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
-	defer func() {
-		// reset the plugin config
-		PluginConfig = &config.PluginConfig{}
-	}()
 
 	// Create the device to read
 	device := &Device{
@@ -447,7 +435,7 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -459,8 +447,7 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 		},
 	}
 
-	deviceMap["test-id-1"] = device
-	defer delete(deviceMap, "test-id-1")
+	ctx.devices["test-id-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -481,21 +468,20 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 // TestDataManager_serialReadSingleBulk tests reading a single device in bulk serially.
 func TestDataManager_serialReadSingleBulk(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -516,7 +502,7 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 			return ctxs, nil
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -524,7 +510,7 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -533,8 +519,7 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 		bulkRead: true,
 	}
 
-	deviceMap["test-id-1"] = device
-	defer delete(deviceMap, "test-id-1")
+	ctx.devices["test-id-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -554,22 +539,23 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 
 // TestDataManager_parallelReadSingle tests reading a single device in parallel.
 func TestDataManager_parallelReadSingle(t *testing.T) {
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	defer func() {
+		Config.reset()
+		resetContext()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
-	defer func() {
-		// reset the plugin config
-		PluginConfig = &config.PluginConfig{}
-	}()
 
 	// Create the device to read
 	device := &Device{
@@ -577,7 +563,7 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -590,8 +576,7 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 	}
 
 	// Clear the global device map then add the device to it
-	deviceMap["test-id-1"] = device
-	defer delete(deviceMap, "test-id-1")
+	ctx.devices["test-id-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -612,21 +597,20 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 // TestDataManager_parallelReadSingleBulk tests reading a single device in bulk in parallel.
 func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceHandlers = []*DeviceHandler{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -647,7 +631,7 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 			return ctxs, nil
 		},
 	}
-	deviceHandlers = []*DeviceHandler{handler}
+	ctx.deviceHandlers = []*DeviceHandler{handler}
 
 	// Create the device to read
 	device := &Device{
@@ -655,7 +639,7 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -665,8 +649,7 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 	}
 
 	// Clear the global device map then add the device to it
-	deviceMap["test-id-1"] = device
-	defer delete(deviceMap, "test-id-1")
+	ctx.devices["test-id-1"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -687,19 +670,20 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 // TestDataManager_serialReadMultiple tests reading multiple devices serially.
 func TestDataManager_serialReadMultiple(t *testing.T) {
 	defer func() {
-		// reset the plugin config
-		PluginConfig = &config.PluginConfig{}
+		Config.reset()
+		resetContext()
 	}()
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -709,7 +693,7 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -725,7 +709,7 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -741,7 +725,7 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -753,13 +737,9 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		},
 	}
 
-	deviceMap = make(map[string]*Device)
-	deviceMap["test-id-1"] = device1
-	deviceMap["test-id-2"] = device2
-	deviceMap["test-id-3"] = device3
-	defer delete(deviceMap, "test-id-1")
-	defer delete(deviceMap, "test-id-2")
-	defer delete(deviceMap, "test-id-3")
+	ctx.devices["test-id-1"] = device1
+	ctx.devices["test-id-2"] = device2
+	ctx.devices["test-id-3"] = device3
 
 	d := newDataManager()
 	err := d.setup()
@@ -780,19 +760,20 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 // TestDataManager_parallelReadSingle tests reading multiple devices in parallel.
 func TestDataManager_parallelReadMultiple(t *testing.T) {
 	defer func() {
-		// reset the plugin config
-		PluginConfig = &config.PluginConfig{}
+		Config.reset()
+		resetContext()
 	}()
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -802,7 +783,7 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -818,7 +799,7 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -834,7 +815,7 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -846,13 +827,9 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		},
 	}
 
-	deviceMap = make(map[string]*Device)
-	deviceMap["test-id-1"] = device1
-	deviceMap["test-id-2"] = device2
-	deviceMap["test-id-3"] = device3
-	defer delete(deviceMap, "test-id-1")
-	defer delete(deviceMap, "test-id-2")
-	defer delete(deviceMap, "test-id-3")
+	ctx.devices["test-id-1"] = device1
+	ctx.devices["test-id-2"] = device2
+	ctx.devices["test-id-3"] = device3
 
 	d := newDataManager()
 	err := d.setup()
@@ -873,21 +850,21 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 // TestDataManager_writeOkNoLimiter tests writing to a device with no limiter configured.
 func TestDataManager_writeOkNoLimiter(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -897,7 +874,7 @@ func TestDataManager_writeOkNoLimiter(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -908,7 +885,7 @@ func TestDataManager_writeOkNoLimiter(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -934,23 +911,23 @@ func TestDataManager_writeOkNoLimiter(t *testing.T) {
 // TestDataManager_writeOkWithLimiter tests writing to a device with a limiter configured.
 func TestDataManager_writeOkWithLimiter(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
-		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
 	}
 
 	// Create the device to read
@@ -959,7 +936,7 @@ func TestDataManager_writeOkWithLimiter(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -970,7 +947,7 @@ func TestDataManager_writeOkWithLimiter(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -996,21 +973,21 @@ func TestDataManager_writeOkWithLimiter(t *testing.T) {
 // TestDataManager_writeNoDevice tests writing to a device when that device cannot be found.
 func TestDataManager_writeNoDevice(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -1038,21 +1015,21 @@ func TestDataManager_writeNoDevice(t *testing.T) {
 // TestDataManager_writeError tests writing to a device when the write errors.
 func TestDataManager_writeError(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
 
@@ -1062,7 +1039,7 @@ func TestDataManager_writeError(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -1073,7 +1050,7 @@ func TestDataManager_writeError(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -1099,23 +1076,23 @@ func TestDataManager_writeError(t *testing.T) {
 // TestDataManager_serialWriteSingle tests writing to a single device in serial.
 func TestDataManager_serialWriteSingle(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200, Max: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200, Max: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
-		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
 	}
 
 	// Create the device to read
@@ -1124,7 +1101,7 @@ func TestDataManager_serialWriteSingle(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -1135,7 +1112,7 @@ func TestDataManager_serialWriteSingle(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -1163,23 +1140,23 @@ func TestDataManager_serialWriteSingle(t *testing.T) {
 // TestDataManager_serialWriteMultiple tests writing to multiple devices in serial.
 func TestDataManager_serialWriteMultiple(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200, Max: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200, Max: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
-		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
 	}
 
 	// Create the device to read
@@ -1188,7 +1165,7 @@ func TestDataManager_serialWriteMultiple(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -1199,7 +1176,7 @@ func TestDataManager_serialWriteMultiple(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -1249,23 +1226,23 @@ func TestDataManager_serialWriteMultiple(t *testing.T) {
 // TestDataManager_parallelWriteSingle tests writing to a single device in parallel.
 func TestDataManager_parallelWriteSingle(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200, Max: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200, Max: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
-		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
 	}
 
 	// Create the device to read
@@ -1274,7 +1251,7 @@ func TestDataManager_parallelWriteSingle(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -1285,7 +1262,7 @@ func TestDataManager_parallelWriteSingle(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()
@@ -1313,23 +1290,23 @@ func TestDataManager_parallelWriteSingle(t *testing.T) {
 // TestDataManager_parallelWriteMultiple tests writing to multiple devices in parallel.
 func TestDataManager_parallelWriteMultiple(t *testing.T) {
 	defer func() {
-		PluginConfig = &config.PluginConfig{}
-		deviceMap = map[string]*Device{}
+		Config.reset()
+		resetContext()
 	}()
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	PluginConfig = &config.PluginConfig{
-		SchemeVersion: config.SchemeVersion{Version: "test"},
-		Network: &config.NetworkSettings{
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
 		},
-		Settings: &config.PluginSettings{
-			Read:        &config.ReadSettings{Buffer: 200},
-			Write:       &config.WriteSettings{Buffer: 200, Max: 200},
-			Transaction: &config.TransactionSettings{TTL: "2s"},
+		Settings: &PluginSettings{
+			Read:        &ReadSettings{Buffer: 200},
+			Write:       &WriteSettings{Buffer: 200, Max: 200},
+			Transaction: &TransactionSettings{TTL: "2s"},
 		},
-		Limiter: &config.LimiterSettings{Rate: 200, Burst: 200},
+		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
 	}
 
 	// Create the device to read
@@ -1338,7 +1315,7 @@ func TestDataManager_parallelWriteMultiple(t *testing.T) {
 		Location: &Location{Rack: "rack", Board: "board"},
 		Outputs: []*Output{
 			{
-				OutputType: config.OutputType{
+				OutputType: OutputType{
 					Name: "foo",
 				},
 			},
@@ -1349,7 +1326,7 @@ func TestDataManager_parallelWriteMultiple(t *testing.T) {
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = device
+	ctx.devices["rack-board-device"] = device
 
 	d := newDataManager()
 	err := d.setup()

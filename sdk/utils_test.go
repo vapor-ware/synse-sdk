@@ -1,18 +1,10 @@
 package sdk
 
 import (
-	//"io/ioutil"
-	//"os"
-	//"path/filepath"
-	//"sort"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	//"github.com/vapor-ware/synse-sdk/internal/test"
-	//"github.com/vapor-ware/synse-sdk/sdk/config"
-	"sort"
-
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // TestMakeIDString tests making a compound ID string out of the device
@@ -124,15 +116,14 @@ func TestFilterDevices(t *testing.T) {
 		Handler: &DeviceHandler{},
 	}
 
+	defer resetContext()
+
 	// Populate the device map with the test devices.
-	deviceMap = map[string]*Device{
+	ctx.devices = map[string]*Device{
 		"dev1": dev1,
 		"dev2": dev2,
 		"dev3": dev3,
 	}
-	defer delete(deviceMap, "dev1")
-	defer delete(deviceMap, "dev2")
-	defer delete(deviceMap, "dev3")
 
 	// Set up the test cases
 	var filterDevicesTestTable = []struct {
@@ -223,13 +214,13 @@ func TestFilterDevicesErr(t *testing.T) {
 		Handler: &DeviceHandler{},
 	}
 
+	defer resetContext()
+
 	// Populate the device map with the test devices.
-	deviceMap = map[string]*Device{
+	ctx.devices = map[string]*Device{
 		"dev1": dev1,
 		"dev2": dev2,
 	}
-	defer delete(deviceMap, "dev1")
-	defer delete(deviceMap, "dev2")
 
 	// Set up the test cases
 	var filterDevicesTestTable = []string{
@@ -258,10 +249,11 @@ func TestGetCurrentTime(t *testing.T) {
 
 // Test_getTypeByNameOk tests getting a type that exists.
 func Test_getTypeByNameOk(t *testing.T) {
-	outputTypeMap["foo"] = &config.OutputType{Name: "foo"}
-	defer delete(outputTypeMap, "foo")
+	defer resetContext()
 
-	ot, err := getTypeByName("foo")
+	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
+
+	ot, err := GetTypeByName("foo")
 	assert.NoError(t, err)
 	assert.NotNil(t, ot)
 	assert.Equal(t, "foo", ot.Name)
@@ -269,7 +261,7 @@ func Test_getTypeByNameOk(t *testing.T) {
 
 // Test_getTypeByNameErr tests getting a type that doesn't exist.
 func Test_getTypeByNameErr(t *testing.T) {
-	ot, err := getTypeByName("bar")
+	ot, err := GetTypeByName("bar")
 	assert.Error(t, err)
 	assert.Nil(t, ot)
 }

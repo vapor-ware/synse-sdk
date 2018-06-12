@@ -3,7 +3,6 @@ package sdk
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -20,7 +19,7 @@ type Reading struct {
 	Info string
 
 	// Unit describes the unit of measure for the reading.
-	Unit config.Unit
+	Unit Unit
 
 	// Value is the reading value itself.
 	Value interface{}
@@ -44,7 +43,7 @@ func (reading *Reading) encode() *synse.Reading { // nolint: gocyclo
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
 		Info:      reading.Info,
-		Unit:      reading.Unit.Encode(),
+		Unit:      reading.Unit.encode(),
 	}
 
 	switch t := reading.Value.(type) {

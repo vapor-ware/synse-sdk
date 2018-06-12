@@ -7,35 +7,30 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// TestNewServer tests that a Server is returned when the constructor
+// TestNewServer tests that a server is returned when the constructor
 // is called.
 func TestNewServer(t *testing.T) {
-	s := NewServer("foo", "bar")
-	assert.IsType(t, &Server{}, s)
+	s := newServer("foo", "bar")
+	assert.IsType(t, &server{}, s)
 	assert.Equal(t, "foo", s.network)
 	assert.Equal(t, "bar", s.address)
 }
 
 // TestServer_setup_TCP tests successfully setting up the server in TCP mode.
 func TestServer_setup_TCP(t *testing.T) {
-	defer func() {
-		postRunActions = []pluginAction{}
-	}()
+	defer resetContext()
 
-	s := NewServer(modeTCP, "test")
+	s := newServer(networkTypeTCP, "test")
 	err := s.setup()
 	assert.NoError(t, err)
 }
 
 // TestServer_setup_Unix tests successfully setting up the server in Unix mode.
 func TestServer_setup_Unix(t *testing.T) {
-	defer func() {
-		postRunActions = []pluginAction{}
-	}()
+	defer resetContext()
 
 	// Set up a temporary directory for test data.
 	test.SetupTestDir(t)
@@ -44,51 +39,49 @@ func TestServer_setup_Unix(t *testing.T) {
 	sockPath = test.TempDir
 
 	// first, check that there are no post-run actions
-	assert.Equal(t, 0, len(postRunActions))
+	assert.Equal(t, 0, len(ctx.postRunActions))
 
-	s := NewServer(modeUnix, "test")
+	s := newServer(networkTypeUnix, "test")
 	err := s.setup()
 	assert.NoError(t, err)
 
 	// now, there should be one post run action
-	assert.Equal(t, 1, len(postRunActions))
+	assert.Equal(t, 1, len(ctx.postRunActions))
 }
 
 // TestServer_setup_Unknown tests successfully setting up the server in an unknown mode.
 func TestServer_setup_Unknown(t *testing.T) {
-	defer func() {
-		postRunActions = []pluginAction{}
-	}()
+	defer resetContext()
 
-	s := NewServer("foo", "test")
+	s := newServer("foo", "test")
 	err := s.setup()
 	assert.Error(t, err)
 }
 
 // TestServer_cleanup_TCP tests cleaning up the server in TCP mode.
 func TestServer_cleanup_TCP(t *testing.T) {
-	s := NewServer(modeTCP, "test")
+	s := newServer(networkTypeTCP, "test")
 	err := s.cleanup()
 	assert.NoError(t, err)
 }
 
 // TestServer_cleanup_Unix tests cleaning up the server in Unix mode.
 func TestServer_cleanup_Unix(t *testing.T) {
-	s := NewServer(modeUnix, "test")
+	s := newServer(networkTypeUnix, "test")
 	err := s.cleanup()
 	assert.NoError(t, err)
 }
 
 // TestServer_cleanup_Unknown tests cleaning up the server in an unknown mode.
 func TestServer_cleanup_Unknown(t *testing.T) {
-	s := NewServer("foo", "test")
+	s := newServer("foo", "test")
 	err := s.cleanup()
 	assert.Error(t, err)
 }
 
 // TestServer_Test tests the Test method of the gRPC plugin service.
 func TestServer_Test(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	resp, err := s.Test(context.Background(), req)
 
@@ -98,18 +91,18 @@ func TestServer_Test(t *testing.T) {
 
 // TestServer_Version tests the Version method of the gRPC plugin service.
 func TestServer_Version(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	resp, err := s.Version(context.Background(), req)
 
 	assert.NoError(t, err)
-	assert.Equal(t, Version.Arch, resp.Arch)
-	assert.Equal(t, Version.OS, resp.Os)
-	assert.Equal(t, Version.SDKVersion, resp.SdkVersion)
-	assert.Equal(t, Version.BuildDate, resp.BuildDate)
-	assert.Equal(t, Version.GitCommit, resp.GitCommit)
-	assert.Equal(t, Version.GitTag, resp.GitTag)
-	assert.Equal(t, Version.PluginVersion, resp.PluginVersion)
+	assert.Equal(t, version.Arch, resp.Arch)
+	assert.Equal(t, version.OS, resp.Os)
+	assert.Equal(t, version.SDKVersion, resp.SdkVersion)
+	assert.Equal(t, version.BuildDate, resp.BuildDate)
+	assert.Equal(t, version.GitCommit, resp.GitCommit)
+	assert.Equal(t, version.GitTag, resp.GitTag)
+	assert.Equal(t, version.PluginVersion, resp.PluginVersion)
 }
 
 // TODO - implement health checks
@@ -119,7 +112,7 @@ func TestServer_Version(t *testing.T) {
 
 // TestServer_Capabilities tests the Capabilities method of the gRPC plugin service.
 func TestServer_Capabilities(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	mock := test.NewMockCapabilitiesStream()
 	err := s.Capabilities(req, mock)
@@ -131,24 +124,23 @@ func TestServer_Capabilities(t *testing.T) {
 // TestServer_Capabilities2 tests the Capabilities method of the gRPC plugin service
 // when there are actual devices to get capabilities from.
 func TestServer_Capabilities2(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
-	deviceMap["foo"] = &Device{
+	defer resetContext()
+
+	ctx.devices["foo"] = &Device{
 		Kind: "foo",
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
-	deviceMap["bar"] = &Device{
+	ctx.devices["bar"] = &Device{
 		Kind: "bar",
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	mock := test.NewMockCapabilitiesStream()
 	err := s.Capabilities(req, mock)
@@ -162,24 +154,23 @@ func TestServer_Capabilities2(t *testing.T) {
 // TestServer_Capabilities3 tests the Capabilities method of the gRPC plugin service
 // when there is an error returned.
 func TestServer_Capabilities3(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
-	deviceMap["foo"] = &Device{
+	defer resetContext()
+
+	ctx.devices["foo"] = &Device{
 		Kind: "foo",
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
-	deviceMap["bar"] = &Device{
+	ctx.devices["bar"] = &Device{
 		Kind: "bar",
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	mock := &test.MockCapabilitiesStreamErr{}
 	err := s.Capabilities(req, mock)
@@ -189,7 +180,7 @@ func TestServer_Capabilities3(t *testing.T) {
 
 // TestServer_Devices tests the Devices method of the gRPC plugin service.
 func TestServer_Devices(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{}
 	mock := test.NewMockDevicesStream()
 	err := s.Devices(req, mock)
@@ -201,9 +192,8 @@ func TestServer_Devices(t *testing.T) {
 // TestServer_Devices_NoFilter tests the Devices method of the gRPC plugin service when
 // there are devices to get.
 func TestServer_Devices_NoFilter(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -211,8 +201,8 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -222,7 +212,7 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -232,15 +222,15 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{}
 	mock := test.NewMockDevicesStream()
 	err := s.Devices(req, mock)
@@ -255,9 +245,8 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 // TestServer_Devices_FilterRack tests the Devices method of the gRPC plugin service when
 // there are devices to get, and we filter on rack.
 func TestServer_Devices_FilterRack(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -265,8 +254,8 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -276,7 +265,7 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -286,15 +275,15 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack: "rack-1",
 	}
@@ -311,9 +300,8 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 // TestServer_Devices_FilterBoard tests the Devices method of the gRPC plugin service when
 // there are devices to get, and we filter on board.
 func TestServer_Devices_FilterBoard(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -321,8 +309,8 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -332,7 +320,7 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -342,15 +330,15 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:  "rack-1",
 		Board: "board-1",
@@ -368,9 +356,8 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 // TestServer_Devices_FilterNoMatch tests the Devices method of the gRPC plugin service when
 // there are devices to get, but the filter does not match any of them.
 func TestServer_Devices_FilterNoMatch(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -378,8 +365,8 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -389,7 +376,7 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -399,15 +386,15 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack: "rack-3",
 	}
@@ -424,7 +411,7 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 // TestServer_Devices_FilterDevice tests the Devices method of the gRPC plugin service when
 // there are devices to get, and we filter on device. We disallow filtering on device.
 func TestServer_Devices_FilterDevice(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:   "rack-1",
 		Board:  "board-1",
@@ -440,9 +427,8 @@ func TestServer_Devices_FilterDevice(t *testing.T) {
 // TestServer_Devices_Error tests the Devices method of the gRPC plugin service when
 // an error is returned because a device is specified.
 func TestServer_Devices_Error(t *testing.T) {
-	defer func() {
-		deviceMap = map[string]*Device{}
-	}()
+	defer resetContext()
+
 	foo := &Device{
 		Kind: "foo",
 		Location: &Location{
@@ -450,8 +436,8 @@ func TestServer_Devices_Error(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 	}
 	bar := &Device{
@@ -461,7 +447,7 @@ func TestServer_Devices_Error(t *testing.T) {
 			Board: "board-2",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output3"}},
+			{OutputType: OutputType{Name: "output3"}},
 		},
 	}
 	baz := &Device{
@@ -471,15 +457,15 @@ func TestServer_Devices_Error(t *testing.T) {
 			Board: "board-1",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output4"}},
+			{OutputType: OutputType{Name: "output4"}},
 		},
 	}
 
-	deviceMap["foo"] = foo
-	deviceMap["bar"] = bar
-	deviceMap["baz"] = baz
+	ctx.devices["foo"] = foo
+	ctx.devices["bar"] = bar
+	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:  "rack-1",
 		Board: "board-1",
@@ -493,7 +479,7 @@ func TestServer_Devices_Error(t *testing.T) {
 // TestServer_Devices_Error2 tests the Devices method of the gRPC plugin service when
 // an error is returned because a board is specified with no rack.
 func TestServer_Devices_Error2(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Board: "board",
 	}
@@ -505,7 +491,7 @@ func TestServer_Devices_Error2(t *testing.T) {
 
 // TestServer_Metainfo tests the Metainfo method of the gRPC plugin service.
 func TestServer_Metainfo(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	resp, err := s.Metainfo(context.Background(), req)
 
@@ -515,31 +501,32 @@ func TestServer_Metainfo(t *testing.T) {
 	assert.Equal(t, metainfo.Description, resp.GetDescription())
 	assert.Equal(t, metainfo.VCS, resp.GetVcs())
 
-	version := resp.GetVersion()
-	assert.Equal(t, Version.Arch, version.Arch)
-	assert.Equal(t, Version.OS, version.Os)
-	assert.Equal(t, Version.SDKVersion, version.SdkVersion)
-	assert.Equal(t, Version.BuildDate, version.BuildDate)
-	assert.Equal(t, Version.GitCommit, version.GitCommit)
-	assert.Equal(t, Version.GitTag, version.GitTag)
-	assert.Equal(t, Version.PluginVersion, version.PluginVersion)
+	v := resp.GetVersion()
+	assert.Equal(t, version.Arch, v.Arch)
+	assert.Equal(t, version.OS, v.Os)
+	assert.Equal(t, version.SDKVersion, v.SdkVersion)
+	assert.Equal(t, version.BuildDate, v.BuildDate)
+	assert.Equal(t, version.GitCommit, v.GitCommit)
+	assert.Equal(t, version.GitTag, v.GitTag)
+	assert.Equal(t, version.PluginVersion, v.PluginVersion)
 }
 
 // TestServer_Read tests the Read method of the gRPC plugin service.
 func TestServer_Read(t *testing.T) {
 	defer func() {
 		DataManager = newDataManager()
-		deviceMap = map[string]*Device{}
-		PluginConfig = &config.PluginConfig{}
+		resetContext()
+		Config.reset()
 	}()
-	PluginConfig = &config.PluginConfig{
-		Settings: &config.PluginSettings{
-			Read: &config.ReadSettings{
+
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Read: &ReadSettings{
 				Enabled: true,
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = &Device{
+	ctx.devices["rack-board-device"] = &Device{
 		id:   "device",
 		Kind: "foo",
 		Location: &Location{
@@ -547,8 +534,8 @@ func TestServer_Read(t *testing.T) {
 			Board: "board",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 		Handler: &DeviceHandler{
 			Read: func(device *Device) ([]*Reading, error) {
@@ -569,7 +556,7 @@ func TestServer_Read(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:   "rack",
 		Board:  "board",
@@ -585,7 +572,7 @@ func TestServer_Read(t *testing.T) {
 // TestServer_Read2 tests the Read method of the gRPC plugin service when
 // the filter does not match anything.
 func TestServer_Read2(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:   "rack",
 		Board:  "board",
@@ -603,17 +590,18 @@ func TestServer_Read2(t *testing.T) {
 func TestServer_Read3(t *testing.T) {
 	defer func() {
 		DataManager = newDataManager()
-		deviceMap = map[string]*Device{}
-		PluginConfig = &config.PluginConfig{}
+		resetContext()
+		Config.reset()
 	}()
-	PluginConfig = &config.PluginConfig{
-		Settings: &config.PluginSettings{
-			Read: &config.ReadSettings{
+
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Read: &ReadSettings{
 				Enabled: true,
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = &Device{
+	ctx.devices["rack-board-device"] = &Device{
 		id:   "device",
 		Kind: "foo",
 		Location: &Location{
@@ -621,8 +609,8 @@ func TestServer_Read3(t *testing.T) {
 			Board: "board",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 		Handler: &DeviceHandler{
 			Read: func(device *Device) ([]*Reading, error) {
@@ -643,7 +631,7 @@ func TestServer_Read3(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:   "rack",
 		Board:  "board",
@@ -658,7 +646,7 @@ func TestServer_Read3(t *testing.T) {
 // TestServer_Read4 tests the Read method of the gRPC plugin service when
 // a bad device filter is specified.
 func TestServer_Read4(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{ // missing device to read
 		Rack:  "rack",
 		Board: "board",
@@ -672,7 +660,7 @@ func TestServer_Read4(t *testing.T) {
 // TestServer_Write tests the Write method of the gRPC plugin service when
 // the specified device isn't found.
 func TestServer_Write(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.WriteInfo{
 		DeviceFilter: &synse.DeviceFilter{
 			Rack:   "rack",
@@ -692,7 +680,7 @@ func TestServer_Write(t *testing.T) {
 // TestServer_Write2 tests the Write method of the gRPC plugin service
 // when a bad device filter is specified.
 func TestServer_Write2(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.WriteInfo{
 		DeviceFilter: &synse.DeviceFilter{ // missing device
 			Rack:  "rack",
@@ -713,19 +701,20 @@ func TestServer_Write2(t *testing.T) {
 func TestServer_Write3(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 	defer func() {
-		deviceMap = map[string]*Device{}
-		PluginConfig = &config.PluginConfig{}
+		resetContext()
+		Config.reset()
 		DataManager = newDataManager()
 	}()
+
 	DataManager.writeChannel = make(chan *WriteContext, 20)
-	PluginConfig = &config.PluginConfig{
-		Settings: &config.PluginSettings{
-			Write: &config.WriteSettings{
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Write: &WriteSettings{
 				Enabled: true,
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = &Device{
+	ctx.devices["rack-board-device"] = &Device{
 		id:   "device",
 		Kind: "foo",
 		Location: &Location{
@@ -733,8 +722,8 @@ func TestServer_Write3(t *testing.T) {
 			Board: "board",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 		Handler: &DeviceHandler{
 			Write: func(device *Device, data *WriteData) error {
@@ -743,7 +732,7 @@ func TestServer_Write3(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.WriteInfo{
 		DeviceFilter: &synse.DeviceFilter{
 			Rack:   "rack",
@@ -765,19 +754,20 @@ func TestServer_Write3(t *testing.T) {
 func TestServer_Write4(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 	defer func() {
-		deviceMap = map[string]*Device{}
-		PluginConfig = &config.PluginConfig{}
+		resetContext()
+		Config.reset()
 		DataManager = newDataManager()
 	}()
+
 	DataManager.writeChannel = make(chan *WriteContext, 20)
-	PluginConfig = &config.PluginConfig{
-		Settings: &config.PluginSettings{
-			Write: &config.WriteSettings{
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Write: &WriteSettings{
 				Enabled: true,
 			},
 		},
 	}
-	deviceMap["rack-board-device"] = &Device{
+	ctx.devices["rack-board-device"] = &Device{
 		id:   "device",
 		Kind: "foo",
 		Location: &Location{
@@ -785,8 +775,8 @@ func TestServer_Write4(t *testing.T) {
 			Board: "board",
 		},
 		Outputs: []*Output{
-			{OutputType: config.OutputType{Name: "output1"}},
-			{OutputType: config.OutputType{Name: "output2"}},
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
 		},
 		Handler: &DeviceHandler{
 			Write: func(device *Device, data *WriteData) error {
@@ -795,7 +785,7 @@ func TestServer_Write4(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.WriteInfo{
 		DeviceFilter: &synse.DeviceFilter{
 			Rack:   "rack",
@@ -817,7 +807,7 @@ func TestServer_Write4(t *testing.T) {
 func TestServer_Transaction(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{}
 	mock := test.NewMockTransactionStream()
 	err := s.Transaction(req, mock)
@@ -834,7 +824,7 @@ func TestServer_Transaction2(t *testing.T) {
 	t1 := newTransaction()
 	t2 := newTransaction()
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{}
 	mock := test.NewMockTransactionStream()
 	err := s.Transaction(req, mock)
@@ -853,7 +843,7 @@ func TestServer_Transaction3(t *testing.T) {
 	t1 := newTransaction()
 	t2 := newTransaction()
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{Id: t1.id}
 	mock := test.NewMockTransactionStream()
 	err := s.Transaction(req, mock)
@@ -872,7 +862,7 @@ func TestServer_Transaction4(t *testing.T) {
 	t1 := newTransaction()
 	t2 := newTransaction()
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{Id: "abc"}
 	mock := test.NewMockTransactionStream()
 	err := s.Transaction(req, mock)
@@ -891,7 +881,7 @@ func TestServer_Transaction5(t *testing.T) {
 	_ = newTransaction()
 	_ = newTransaction()
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{}
 	mock := &test.MockTransactionStreamErr{}
 	err := s.Transaction(req, mock)
