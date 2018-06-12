@@ -2,7 +2,10 @@ package sdk
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
+
+	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 // defaultDeviceIdentifier is the default implementation that fulfils the DeviceIdentifier
@@ -22,11 +25,18 @@ func defaultDeviceIdentifier(data map[string]interface{}) string {
 	sort.Strings(keys)
 
 	for _, key := range keys {
+		value := data[key]
+
+		// Check if the value is a map. If so, ignore it. Since maps are
+		// not ordered, we cannot use them to create a stable device id.
+		rv := reflect.ValueOf(value)
+		if rv.Kind() == reflect.Map {
+			logger.Debug("default device identifier - data value is map; skipping")
+			continue
+		}
+
 		// Instead of implementing our own type checking and casting, just
 		// use Sprint. Note that this may be meaningless for complex types.
-		// TODO: write tests/check to see how this behaves with things like
-		//  maps/lists. I have a feeling that maps will not produce a deterministic
-		//  string because they are unordered, so we may need custom handling for that.
 		identifier += fmt.Sprint(data[key])
 	}
 	return identifier
