@@ -75,7 +75,7 @@ func (outputType *OutputType) GetScalingFactor() (float64, error) {
 // are applied): multiply scaling factor.
 //
 // Precision is not applied at this level, but will instead be applied
-// in Synse Server before the corresponding reading is returned to the
+// in Synse server before the corresponding reading is returned to the
 // user.
 func (outputType *OutputType) Apply(value interface{}) interface{} { // nolint: gocyclo
 	scalingFactor, err := outputType.GetScalingFactor()
@@ -126,11 +126,11 @@ type Unit struct {
 
 // Validate validates that the Unit has no configuration errors.
 func (unit Unit) Validate(multiErr *errors.MultiError) {
-	// nothing to validate here -- neither are required.
+	// nothing to validate
 }
 
-// Encode translates the SDK Unit type to the corresponding gRPC Unit type.
-func (unit *Unit) Encode() *synse.Unit {
+// encode translates the SDK Unit type to the corresponding gRPC Unit type.
+func (unit *Unit) encode() *synse.Unit {
 	return &synse.Unit{
 		Name:   unit.Name,
 		Symbol: unit.Symbol,

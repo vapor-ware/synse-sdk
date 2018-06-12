@@ -253,7 +253,7 @@ func Test_getTypeByNameOk(t *testing.T) {
 
 	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
 
-	ot, err := getTypeByName("foo")
+	ot, err := GetTypeByName("foo")
 	assert.NoError(t, err)
 	assert.NotNil(t, ot)
 	assert.Equal(t, "foo", ot.Name)
@@ -261,7 +261,7 @@ func Test_getTypeByNameOk(t *testing.T) {
 
 // Test_getTypeByNameErr tests getting a type that doesn't exist.
 func Test_getTypeByNameErr(t *testing.T) {
-	ot, err := getTypeByName("bar")
+	ot, err := GetTypeByName("bar")
 	assert.Error(t, err)
 	assert.Nil(t, ot)
 }

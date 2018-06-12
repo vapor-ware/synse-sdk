@@ -282,13 +282,13 @@ func (output *Output) encode() *synse.Output {
 		Type:          output.Type(),
 		Precision:     int32(output.Precision),
 		ScalingFactor: sf,
-		Unit:          output.Unit.Encode(),
+		Unit:          output.Unit.encode(),
 	}
 }
 
 // NewOutputFromConfig creates a new Output from the DeviceOutput config struct.
 func NewOutputFromConfig(config *DeviceOutput) (*Output, error) {
-	t, err := getTypeByName(config.Type)
+	t, err := GetTypeByName(config.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +481,7 @@ func (config *DeviceConfig) GetLocation(name string) (*LocationConfig, error) {
 
 // LocationConfig defines a location (rack, board) which will be associated with
 // DeviceInstances. The locational information defined here is used by Synse
-// Server to route commands to the proper device instance.
+// server to route commands to the proper device instance.
 type LocationConfig struct {
 	Name  string        `yaml:"name,omitempty"  addedIn:"1.0"`
 	Rack  *LocationData `yaml:"rack,omitempty"  addedIn:"1.0"`
@@ -656,7 +656,7 @@ type DeviceInstance struct {
 	Info string `yaml:"info,omitempty" addedIn:"1.0"`
 
 	// Location is a string that references a named location entry from the
-	// "locations" section of the config. It is required, as Synse Server,
+	// "locations" section of the config. It is required, as Synse server,
 	// the consumer of the plugins, routes requests based on this locational
 	// information.
 	//

@@ -10,11 +10,11 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// TestNewServer tests that a Server is returned when the constructor
+// TestNewServer tests that a server is returned when the constructor
 // is called.
 func TestNewServer(t *testing.T) {
-	s := NewServer("foo", "bar")
-	assert.IsType(t, &Server{}, s)
+	s := newServer("foo", "bar")
+	assert.IsType(t, &server{}, s)
 	assert.Equal(t, "foo", s.network)
 	assert.Equal(t, "bar", s.address)
 }
@@ -23,7 +23,7 @@ func TestNewServer(t *testing.T) {
 func TestServer_setup_TCP(t *testing.T) {
 	defer resetContext()
 
-	s := NewServer(networkTypeTCP, "test")
+	s := newServer(networkTypeTCP, "test")
 	err := s.setup()
 	assert.NoError(t, err)
 }
@@ -41,7 +41,7 @@ func TestServer_setup_Unix(t *testing.T) {
 	// first, check that there are no post-run actions
 	assert.Equal(t, 0, len(ctx.postRunActions))
 
-	s := NewServer(networkTypeUnix, "test")
+	s := newServer(networkTypeUnix, "test")
 	err := s.setup()
 	assert.NoError(t, err)
 
@@ -53,35 +53,35 @@ func TestServer_setup_Unix(t *testing.T) {
 func TestServer_setup_Unknown(t *testing.T) {
 	defer resetContext()
 
-	s := NewServer("foo", "test")
+	s := newServer("foo", "test")
 	err := s.setup()
 	assert.Error(t, err)
 }
 
 // TestServer_cleanup_TCP tests cleaning up the server in TCP mode.
 func TestServer_cleanup_TCP(t *testing.T) {
-	s := NewServer(networkTypeTCP, "test")
+	s := newServer(networkTypeTCP, "test")
 	err := s.cleanup()
 	assert.NoError(t, err)
 }
 
 // TestServer_cleanup_Unix tests cleaning up the server in Unix mode.
 func TestServer_cleanup_Unix(t *testing.T) {
-	s := NewServer(networkTypeUnix, "test")
+	s := newServer(networkTypeUnix, "test")
 	err := s.cleanup()
 	assert.NoError(t, err)
 }
 
 // TestServer_cleanup_Unknown tests cleaning up the server in an unknown mode.
 func TestServer_cleanup_Unknown(t *testing.T) {
-	s := NewServer("foo", "test")
+	s := newServer("foo", "test")
 	err := s.cleanup()
 	assert.Error(t, err)
 }
 
 // TestServer_Test tests the Test method of the gRPC plugin service.
 func TestServer_Test(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	resp, err := s.Test(context.Background(), req)
 
@@ -91,7 +91,7 @@ func TestServer_Test(t *testing.T) {
 
 // TestServer_Version tests the Version method of the gRPC plugin service.
 func TestServer_Version(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	resp, err := s.Version(context.Background(), req)
 
@@ -112,7 +112,7 @@ func TestServer_Version(t *testing.T) {
 
 // TestServer_Capabilities tests the Capabilities method of the gRPC plugin service.
 func TestServer_Capabilities(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	mock := test.NewMockCapabilitiesStream()
 	err := s.Capabilities(req, mock)
@@ -140,7 +140,7 @@ func TestServer_Capabilities2(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	mock := test.NewMockCapabilitiesStream()
 	err := s.Capabilities(req, mock)
@@ -170,7 +170,7 @@ func TestServer_Capabilities3(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	mock := &test.MockCapabilitiesStreamErr{}
 	err := s.Capabilities(req, mock)
@@ -180,7 +180,7 @@ func TestServer_Capabilities3(t *testing.T) {
 
 // TestServer_Devices tests the Devices method of the gRPC plugin service.
 func TestServer_Devices(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{}
 	mock := test.NewMockDevicesStream()
 	err := s.Devices(req, mock)
@@ -230,7 +230,7 @@ func TestServer_Devices_NoFilter(t *testing.T) {
 	ctx.devices["bar"] = bar
 	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{}
 	mock := test.NewMockDevicesStream()
 	err := s.Devices(req, mock)
@@ -283,7 +283,7 @@ func TestServer_Devices_FilterRack(t *testing.T) {
 	ctx.devices["bar"] = bar
 	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack: "rack-1",
 	}
@@ -338,7 +338,7 @@ func TestServer_Devices_FilterBoard(t *testing.T) {
 	ctx.devices["bar"] = bar
 	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:  "rack-1",
 		Board: "board-1",
@@ -394,7 +394,7 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 	ctx.devices["bar"] = bar
 	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack: "rack-3",
 	}
@@ -411,7 +411,7 @@ func TestServer_Devices_FilterNoMatch(t *testing.T) {
 // TestServer_Devices_FilterDevice tests the Devices method of the gRPC plugin service when
 // there are devices to get, and we filter on device. We disallow filtering on device.
 func TestServer_Devices_FilterDevice(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:   "rack-1",
 		Board:  "board-1",
@@ -465,7 +465,7 @@ func TestServer_Devices_Error(t *testing.T) {
 	ctx.devices["bar"] = bar
 	ctx.devices["baz"] = baz
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:  "rack-1",
 		Board: "board-1",
@@ -479,7 +479,7 @@ func TestServer_Devices_Error(t *testing.T) {
 // TestServer_Devices_Error2 tests the Devices method of the gRPC plugin service when
 // an error is returned because a board is specified with no rack.
 func TestServer_Devices_Error2(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Board: "board",
 	}
@@ -491,7 +491,7 @@ func TestServer_Devices_Error2(t *testing.T) {
 
 // TestServer_Metainfo tests the Metainfo method of the gRPC plugin service.
 func TestServer_Metainfo(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.Empty{}
 	resp, err := s.Metainfo(context.Background(), req)
 
@@ -556,7 +556,7 @@ func TestServer_Read(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:   "rack",
 		Board:  "board",
@@ -572,7 +572,7 @@ func TestServer_Read(t *testing.T) {
 // TestServer_Read2 tests the Read method of the gRPC plugin service when
 // the filter does not match anything.
 func TestServer_Read2(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:   "rack",
 		Board:  "board",
@@ -631,7 +631,7 @@ func TestServer_Read3(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{
 		Rack:   "rack",
 		Board:  "board",
@@ -646,7 +646,7 @@ func TestServer_Read3(t *testing.T) {
 // TestServer_Read4 tests the Read method of the gRPC plugin service when
 // a bad device filter is specified.
 func TestServer_Read4(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.DeviceFilter{ // missing device to read
 		Rack:  "rack",
 		Board: "board",
@@ -660,7 +660,7 @@ func TestServer_Read4(t *testing.T) {
 // TestServer_Write tests the Write method of the gRPC plugin service when
 // the specified device isn't found.
 func TestServer_Write(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.WriteInfo{
 		DeviceFilter: &synse.DeviceFilter{
 			Rack:   "rack",
@@ -680,7 +680,7 @@ func TestServer_Write(t *testing.T) {
 // TestServer_Write2 tests the Write method of the gRPC plugin service
 // when a bad device filter is specified.
 func TestServer_Write2(t *testing.T) {
-	s := Server{}
+	s := server{}
 	req := &synse.WriteInfo{
 		DeviceFilter: &synse.DeviceFilter{ // missing device
 			Rack:  "rack",
@@ -732,7 +732,7 @@ func TestServer_Write3(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.WriteInfo{
 		DeviceFilter: &synse.DeviceFilter{
 			Rack:   "rack",
@@ -785,7 +785,7 @@ func TestServer_Write4(t *testing.T) {
 		},
 	}
 
-	s := Server{}
+	s := server{}
 	req := &synse.WriteInfo{
 		DeviceFilter: &synse.DeviceFilter{
 			Rack:   "rack",
@@ -807,7 +807,7 @@ func TestServer_Write4(t *testing.T) {
 func TestServer_Transaction(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{}
 	mock := test.NewMockTransactionStream()
 	err := s.Transaction(req, mock)
@@ -824,7 +824,7 @@ func TestServer_Transaction2(t *testing.T) {
 	t1 := newTransaction()
 	t2 := newTransaction()
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{}
 	mock := test.NewMockTransactionStream()
 	err := s.Transaction(req, mock)
@@ -843,7 +843,7 @@ func TestServer_Transaction3(t *testing.T) {
 	t1 := newTransaction()
 	t2 := newTransaction()
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{Id: t1.id}
 	mock := test.NewMockTransactionStream()
 	err := s.Transaction(req, mock)
@@ -862,7 +862,7 @@ func TestServer_Transaction4(t *testing.T) {
 	t1 := newTransaction()
 	t2 := newTransaction()
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{Id: "abc"}
 	mock := test.NewMockTransactionStream()
 	err := s.Transaction(req, mock)
@@ -881,7 +881,7 @@ func TestServer_Transaction5(t *testing.T) {
 	_ = newTransaction()
 	_ = newTransaction()
 
-	s := Server{}
+	s := server{}
 	req := &synse.TransactionFilter{}
 	mock := &test.MockTransactionStreamErr{}
 	err := s.Transaction(req, mock)

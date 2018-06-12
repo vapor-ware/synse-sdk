@@ -43,7 +43,7 @@ func (reading *Reading) encode() *synse.Reading { // nolint: gocyclo
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
 		Info:      reading.Info,
-		Unit:      reading.Unit.Encode(),
+		Unit:      reading.Unit.encode(),
 	}
 
 	switch t := reading.Value.(type) {

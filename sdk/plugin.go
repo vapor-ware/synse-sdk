@@ -16,9 +16,9 @@ import (
 )
 
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
-// as data providers and device controllers for Synse Server.
+// as data providers and device controllers for Synse server.
 type Plugin struct {
-	server *Server
+	server *server
 	quit   chan os.Signal
 }
 
@@ -150,7 +150,7 @@ func (plugin *Plugin) Run() error { // nolint: gocyclo
 	setupTransactionCache(ttl)
 
 	// Initialize a gRPC server for the Plugin to use.
-	plugin.server = NewServer(
+	plugin.server = newServer(
 		Config.Plugin.Network.Type,
 		Config.Plugin.Network.Address,
 	)
@@ -294,7 +294,7 @@ func (plugin *Plugin) processConfig() error {
 	// Verify the unified config, and validate plugin-specific data.
 	// FIXME: if we reorganize the SDK a bit, we can move the below to the above
 	// function, but for now it needs to live here.
-	multiErr := VerifyConfigs(Config.Device)
+	multiErr := verifyConfigs(Config.Device)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
@@ -409,7 +409,7 @@ func (config PluginConfig) Validate(multiErr *errors.MultiError) {
 	}
 
 	// If network is nil or an empty struct, error. We need to know how
-	// the plugin should communicate with Synse Server.
+	// the plugin should communicate with Synse server.
 	if config.Network == nil || config.Network == (&NetworkSettings{}) {
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network"))
 	}
@@ -658,5 +658,5 @@ type HealthSettings struct {
 
 // Validate validates that the HealthSettings has no configuration errors.
 func (settings HealthSettings) Validate(multiErr *errors.MultiError) {
-	// Nothing to validate here.
+	// Nothing to validate
 }

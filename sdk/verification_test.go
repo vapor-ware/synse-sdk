@@ -23,7 +23,7 @@ func TestVerifyConfigs(t *testing.T) {
 		Devices:       []*DeviceKind{},
 	}
 
-	err := VerifyConfigs(cfg)
+	err := verifyConfigs(cfg)
 	assert.NoError(t, err.Err())
 }
 

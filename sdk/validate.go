@@ -9,12 +9,12 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// Validator is the global SchemeValidator that is used to validate plugin
+// validator is the global schemeValidator that is used to validate plugin
 // configuration files.
-var Validator = &SchemeValidator{}
+var validator = &schemeValidator{}
 
-// SchemeValidator is used to validate the scheme of a config.
-type SchemeValidator struct {
+// schemeValidator is used to validate the scheme of a config.
+type schemeValidator struct {
 	// context is the ConfigContext, which references the configuration
 	// currently being validated.
 	context *ConfigContext
@@ -47,7 +47,7 @@ type SchemeValidator struct {
 // This function takes a Context, which provides both the SchemeVersion to
 // validate against, and the config to validate. The "source" from the context is
 // used to attribute to the errors in the event that any are found.
-func (validator *SchemeValidator) Validate(context *ConfigContext) *errors.MultiError {
+func (validator *schemeValidator) Validate(context *ConfigContext) *errors.MultiError {
 	// Once we're done validating, we'll want to clear the state from this validation.
 	defer validator.clearState()
 
@@ -79,14 +79,14 @@ func (validator *SchemeValidator) Validate(context *ConfigContext) *errors.Multi
 }
 
 // clearState clears the state tracked for a single validation run.
-func (validator *SchemeValidator) clearState() {
+func (validator *schemeValidator) clearState() {
 	validator.context = nil
 	validator.errors = nil
 	validator.version = nil
 }
 
 // validate is the entry point for validation.
-func (validator *SchemeValidator) validate(config interface{}) {
+func (validator *schemeValidator) validate(config interface{}) {
 	val := reflect.ValueOf(config)
 
 	if val.Kind() == reflect.Interface || val.Kind() == reflect.Ptr {
@@ -109,7 +109,7 @@ func (validator *SchemeValidator) validate(config interface{}) {
 
 // walk is in intermediary step in config validation that will attempt to
 // walk down into any nested fields/collections.
-func (validator *SchemeValidator) walk(v reflect.Value) {
+func (validator *schemeValidator) walk(v reflect.Value) {
 	switch v.Kind() {
 	case reflect.Struct:
 		validator.walkStructFields(v)
@@ -135,7 +135,7 @@ func (validator *SchemeValidator) walk(v reflect.Value) {
 //
 // If the field is a nested struct or a collection of nested structs, it will
 // be validated as well.
-func (validator *SchemeValidator) walkStructFields(v reflect.Value) {
+func (validator *schemeValidator) walkStructFields(v reflect.Value) {
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		field := v.Field(i)
@@ -158,7 +158,7 @@ func (validator *SchemeValidator) walkStructFields(v reflect.Value) {
 
 // validateField validates that a field of a struct is valid for the config's
 // version scheme.
-func (validator *SchemeValidator) validateField(field reflect.Value, structField reflect.StructField) { // nolint: gocyclo
+func (validator *schemeValidator) validateField(field reflect.Value, structField reflect.StructField) { // nolint: gocyclo
 	version := validator.version
 
 	// We should only care about validation if the field is set.
@@ -218,7 +218,7 @@ func (validator *SchemeValidator) validateField(field reflect.Value, structField
 }
 
 // isEmptyValue checks if a value is its empty type.
-func (validator *SchemeValidator) isEmptyValue(v reflect.Value) bool { // nolint: gocyclo
+func (validator *schemeValidator) isEmptyValue(v reflect.Value) bool { // nolint: gocyclo
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
 		return v.Len() == 0

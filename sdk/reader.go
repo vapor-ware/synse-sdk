@@ -33,13 +33,13 @@ var (
 	supportedExts = []string{".yml", ".yaml"}
 )
 
-// GetOutputTypeConfigsFromFile finds the files containing output type configurations
+// getOutputTypeConfigsFromFile finds the files containing output type configurations
 // and marshals them into an OutputType struct. These OutputTypes are wrapped in a
 // ConfigContext which provides the source file for the configuration as well.
 //
 // All ConfigContexts returned by this function will have their IsOutputTypeConfig
 // function return true.
-func GetOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
+func getOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
 	var cfgs []*ConfigContext
 
 	// Search for output type config files. No name is specified as an arg here because
@@ -61,13 +61,13 @@ func GetOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
 	return cfgs, nil
 }
 
-// GetDeviceConfigsFromFile finds the files containing device configurations and
+// getDeviceConfigsFromFile finds the files containing device configurations and
 // marshals them into a DeviceConfig struct. These DeviceConfigs are wrapped in a
 // ConfigContext which provides the source file for the configuration as well.
 //
 // All ConfigContexts returned by this function will have their IsDeviceConfig
 // function return true.
-func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
+func getDeviceConfigsFromFile() ([]*ConfigContext, error) {
 	var cfgs []*ConfigContext
 
 	// Search for device config files. No name is specified as an arg here because
@@ -89,14 +89,14 @@ func GetDeviceConfigsFromFile() ([]*ConfigContext, error) {
 	return cfgs, nil
 }
 
-// GetPluginConfigFromFile finds the plugin configuration file, resolves plugin
+// getPluginConfigFromFile finds the plugin configuration file, resolves plugin
 // config defaults, and marshals the config data into a PluginConfig struct. The
 // PluginConfig is wrapped in a ConfigContext which provides the source file for
 // the configuration as well.
 //
 // The ConfigContext returned by this function will have its IsPluginConfig
 // function return true.
-func GetPluginConfigFromFile() (*ConfigContext, error) {
+func getPluginConfigFromFile() (*ConfigContext, error) {
 	// Search for the plugin config file. It should have the name "config".
 	files, err := findConfigs(pluginConfigSearchPaths, EnvPluginConfig, pluginConfigFileName)
 	if err != nil {

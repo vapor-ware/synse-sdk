@@ -29,7 +29,7 @@ func Test_setField(t *testing.T) {
 	assert.Equal(t, "foo", f)
 }
 
-// TestBinVersion_Encode tests converting the BinVersion to the gRPC VersionInfo.
+// TestBinVersion_Encode tests converting the binVersion to the gRPC VersionInfo.
 func TestBinVersion_Encode(t *testing.T) {
 	vi := version.Encode()
 	assert.NotNil(t, vi)
@@ -43,7 +43,7 @@ func TestBinVersion_Encode(t *testing.T) {
 }
 
 // TestBinVersion_Format tests producing a formatted string representation
-// of the BinVersion.
+// of the binVersion.
 func TestBinVersion_Format(t *testing.T) {
 	// since the values here will change based on when/where this is run,
 	// we can only verify that it produces something.
@@ -51,7 +51,7 @@ func TestBinVersion_Format(t *testing.T) {
 	assert.NotEmpty(t, out)
 }
 
-// TestBinVersion_Log tests logging out the BinVersion
+// TestBinVersion_Log tests logging out the binVersion
 func TestBinVersion_Log(t *testing.T) {
 	version.Log()
 }

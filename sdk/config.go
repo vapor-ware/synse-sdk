@@ -32,13 +32,13 @@ func (config *config) reset() {
 // components should implement.
 //
 // This interface implements a Validate function which is used by the
-// SchemeValidator in order to validate each struct that makes up a configuration.
+// schemeValidator in order to validate each struct that makes up a configuration.
 type ConfigComponent interface {
 	Validate(*errors.MultiError)
 }
 
 // ConfigBase is an interface that the base configuration struct should
-// implement. This allows the SchemeValidator to get the SchemeVersion
+// implement. This allows the schemeValidator to get the SchemeVersion
 // for that given configuration.
 type ConfigBase interface {
 	GetVersion() (*ConfigVersion, error)
@@ -216,7 +216,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	var deviceCtxs []*ConfigContext
 
 	// Now, try getting the device config(s) from file.
-	fileCtxs, err := GetDeviceConfigsFromFile()
+	fileCtxs, err := getDeviceConfigsFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
 	if err != nil {
@@ -324,7 +324,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	// Validate the device configs
 	for _, ctx := range deviceCtxs {
 		// Validate config scheme
-		multiErr := Validator.Validate(ctx)
+		multiErr := validator.Validate(ctx)
 		if multiErr.HasErrors() {
 			return multiErr
 		}
@@ -351,7 +351,7 @@ func processPluginConfig() error { // nolint: gocyclo
 	logger.Debugf("plugin config file policy: %s", pluginFilePolicy.String())
 
 	// Now, try getting the plugin config from file.
-	pluginCtx, err := GetPluginConfigFromFile()
+	pluginCtx, err := getPluginConfigFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
 	if err != nil {
@@ -405,7 +405,7 @@ func processPluginConfig() error { // nolint: gocyclo
 	logger.Debugf("policy validation successful: %s", pluginFilePolicy.String())
 
 	// Validate the plugin config
-	multiErr := Validator.Validate(pluginCtx)
+	multiErr := validator.Validate(pluginCtx)
 	if multiErr.HasErrors() {
 		return multiErr
 	}
@@ -425,7 +425,7 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 	logger.Debugf("output type config file policy: %s", outputTypeFilePolicy.String())
 
 	// Now, try getting the output type config(s) from file.
-	outputTypeCtxs, err := GetOutputTypeConfigsFromFile()
+	outputTypeCtxs, err := getOutputTypeConfigsFromFile()
 
 	// If the error is not a "config not found" error, then we will return it.
 	if err != nil {
@@ -474,7 +474,7 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 
 	// Validate the plugin config
 	for _, outputTypeCtx := range outputTypeCtxs {
-		multiErr := Validator.Validate(outputTypeCtx)
+		multiErr := validator.Validate(outputTypeCtx)
 		if multiErr.HasErrors() {
 			return nil, multiErr
 		}

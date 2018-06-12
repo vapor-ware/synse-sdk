@@ -86,9 +86,9 @@ func (n nestedStruct) Validate(multiError *errors.MultiError) {
 // after a Validation run. This prevents previous run state from persisting
 // to the next run.
 func checkValidationCleanup(t *testing.T) {
-	assert.Nil(t, Validator.context)
-	assert.Nil(t, Validator.errors)
-	assert.Nil(t, Validator.version)
+	assert.Nil(t, validator.context)
+	assert.Nil(t, validator.errors)
+	assert.Nil(t, validator.version)
 }
 
 //
@@ -105,7 +105,7 @@ func TestSchemeValidator_Validate_Simple_Ok(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.NoError(t, err.Err())
 
 	// check that validation cleanup was successful
@@ -123,7 +123,7 @@ func TestSchemeValidator_Validate_Simple_UnsupportedVersion(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 2, len(err.Errors), err.Error())
 
@@ -142,7 +142,7 @@ func TestSchemeValidator_Validate_Simple_DeprecatedVersion1(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.NoError(t, err.Err()) // deprecated logs warning, no error
 
 	// check that validation cleanup was successful
@@ -160,7 +160,7 @@ func TestSchemeValidator_Validate_Simple_DeprecatedVersion2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.NoError(t, err.Err()) // deprecated logs warning, no error
 
 	// check that validation cleanup was successful
@@ -178,7 +178,7 @@ func TestSchemeValidator_Validate_Simple_RemovedVersion1(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -197,7 +197,7 @@ func TestSchemeValidator_Validate_Simple_RemovedVersion2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -216,7 +216,7 @@ func TestSchemeValidator_Validate_Error(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -238,7 +238,7 @@ func TestSchemeValidator_Validate_Error2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -257,7 +257,7 @@ func TestSchemeValidator_Validate_Simple_BadConfigScheme(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -277,7 +277,7 @@ func TestSchemeValidator_Validate_Simple_BadAddedInTag(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -297,7 +297,7 @@ func TestSchemeValidator_Validate_Simple_BadDeprecatedInTag(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -317,7 +317,7 @@ func TestSchemeValidator_Validate_Simple_BadRemovedInTag(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 1, len(err.Errors), err.Error())
 
@@ -328,7 +328,7 @@ func TestSchemeValidator_Validate_Simple_BadRemovedInTag(t *testing.T) {
 // TestSchemeValidator_validate passes a bad value to the validate function, so we expect
 // it to fail.
 func TestSchemeValidator_validate(t *testing.T) {
-	defer Validator.clearState()
+	defer validator.clearState()
 
 	// Validate expects either an interface, pointer, or struct. If an interface
 	// or pointer, it should ultimately resolve down to a struct. Here we will
@@ -338,10 +338,10 @@ func TestSchemeValidator_validate(t *testing.T) {
 	// Since all of the setup is done in Validate (the exported function), we need to
 	// ensure we have all the pieces we need here manually.
 	multiErr := errors.NewMultiError("<validate test>")
-	Validator.errors = multiErr
-	Validator.context = NewConfigContext("test", &simpleTestConfig{})
+	validator.errors = multiErr
+	validator.context = NewConfigContext("test", &simpleTestConfig{})
 
-	Validator.validate(x)
+	validator.validate(x)
 
 	assert.Error(t, multiErr.Err())
 	assert.Equal(t, 1, len(multiErr.Errors), multiErr.Error())
@@ -364,7 +364,7 @@ func TestSchemeValidator_Validate_Complex_Ok(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.NoError(t, err.Err())
 
 	// check that validation cleanup was successful
@@ -389,7 +389,7 @@ func TestSchemeValidator_Validate_Complex_Ok2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.NoError(t, err.Err())
 
 	// check that validation cleanup was successful
@@ -427,7 +427,7 @@ func TestSchemeValidator_Validate_Complex_Error(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 2, len(err.Errors), err.Error())
 
@@ -466,7 +466,7 @@ func TestSchemeValidator_Validate_Complex_Error2(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 3, len(err.Errors), err.Error())
 
@@ -504,7 +504,7 @@ func TestSchemeValidator_Validate_Complex_Error3(t *testing.T) {
 		},
 	}
 
-	err := Validator.Validate(toValidate)
+	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
 	assert.Equal(t, 4, len(err.Errors), err.Error())
 

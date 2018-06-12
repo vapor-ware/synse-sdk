@@ -487,7 +487,7 @@ func TestGetDeviceConfigsFromFile(t *testing.T) {
 	test.SetEnv(t, EnvDeviceConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvDeviceConfig)
 
-	ctxs, err := GetDeviceConfigsFromFile()
+	ctxs, err := getDeviceConfigsFromFile()
 	assert.Error(t, err)
 	assert.Nil(t, ctxs)
 }
@@ -514,7 +514,7 @@ board:
 	test.SetEnv(t, EnvDeviceConfig, foo)
 	defer test.RemoveEnv(t, EnvDeviceConfig)
 
-	ctxs, err := GetDeviceConfigsFromFile()
+	ctxs, err := getDeviceConfigsFromFile()
 	assert.Error(t, err)
 	assert.Nil(t, ctxs)
 }
@@ -537,7 +537,7 @@ version: "1.0"
 	test.SetEnv(t, EnvDeviceConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvDeviceConfig)
 
-	ctxs, err := GetDeviceConfigsFromFile()
+	ctxs, err := getDeviceConfigsFromFile()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(ctxs))
 	assert.Equal(t, foo, ctxs[0].Source)
@@ -566,7 +566,7 @@ version: "1.0"
 	test.SetEnv(t, EnvDeviceConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvDeviceConfig)
 
-	ctxs, err := GetDeviceConfigsFromFile()
+	ctxs, err := getDeviceConfigsFromFile()
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(ctxs))
 
@@ -594,7 +594,7 @@ func TestGetPluginConfigFromFile(t *testing.T) {
 	test.SetEnv(t, EnvPluginConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvPluginConfig)
 
-	ctx, err := GetPluginConfigFromFile()
+	ctx, err := getPluginConfigFromFile()
 	assert.Error(t, err)
 	assert.Nil(t, ctx)
 }
@@ -621,7 +621,7 @@ board:
 	test.SetEnv(t, EnvPluginConfig, foo)
 	defer test.RemoveEnv(t, EnvPluginConfig)
 
-	ctx, err := GetPluginConfigFromFile()
+	ctx, err := getPluginConfigFromFile()
 	assert.Error(t, err)
 	assert.Nil(t, ctx)
 }
@@ -647,7 +647,7 @@ network:
 	test.SetEnv(t, EnvPluginConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvPluginConfig)
 
-	ctx, err := GetPluginConfigFromFile()
+	ctx, err := getPluginConfigFromFile()
 	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 
@@ -714,7 +714,7 @@ limiter:
 	test.SetEnv(t, EnvPluginConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvPluginConfig)
 
-	ctx, err := GetPluginConfigFromFile()
+	ctx, err := getPluginConfigFromFile()
 	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 
@@ -766,7 +766,7 @@ locations:
 	test.SetEnv(t, EnvPluginConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvPluginConfig)
 
-	ctx, err := GetPluginConfigFromFile()
+	ctx, err := getPluginConfigFromFile()
 	assert.Error(t, err)
 	assert.Nil(t, ctx)
 }
@@ -782,7 +782,7 @@ func TestGetOutputTypeConfigsFromFile(t *testing.T) {
 	test.SetEnv(t, EnvOutputTypeConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvOutputTypeConfig)
 
-	ctxs, err := GetOutputTypeConfigsFromFile()
+	ctxs, err := getOutputTypeConfigsFromFile()
 	assert.Error(t, err)
 	assert.Nil(t, ctxs)
 }
@@ -809,7 +809,7 @@ board:
 	test.SetEnv(t, EnvOutputTypeConfig, foo)
 	defer test.RemoveEnv(t, EnvOutputTypeConfig)
 
-	ctxs, err := GetOutputTypeConfigsFromFile()
+	ctxs, err := getOutputTypeConfigsFromFile()
 	assert.Error(t, err)
 	assert.Nil(t, ctxs)
 }
@@ -832,7 +832,7 @@ version: "1.0"
 	test.SetEnv(t, EnvOutputTypeConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvOutputTypeConfig)
 
-	ctxs, err := GetOutputTypeConfigsFromFile()
+	ctxs, err := getOutputTypeConfigsFromFile()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(ctxs))
 	assert.Equal(t, foo, ctxs[0].Source)
@@ -861,7 +861,7 @@ version: "1.0"
 	test.SetEnv(t, EnvOutputTypeConfig, test.TempDir)
 	defer test.RemoveEnv(t, EnvOutputTypeConfig)
 
-	ctxs, err := GetOutputTypeConfigsFromFile()
+	ctxs, err := getOutputTypeConfigsFromFile()
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(ctxs))
 
