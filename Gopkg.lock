@@ -59,7 +59,7 @@
   branch = "sdk-1.0"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
-  revision = "7922ce761ae1e8ea87f61527a88ae96f33ba43d9"
+  revision = "4a4c1ab03388660a10abfd90e5660da6c3269f5f"
 
 [[projects]]
   branch = "master"
@@ -88,7 +88,7 @@
     "unix",
     "windows"
   ]
-  revision = "bff228c7b664c5fce602223a05fb708fd8654986"
+  revision = "f4b713d59635e9af9041b0e1b1fd102d95812dbe"
 
 [[projects]]
   name = "golang.org/x/text"
