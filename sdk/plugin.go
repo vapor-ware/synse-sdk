@@ -40,14 +40,14 @@ func NewPlugin(options ...PluginOption) *Plugin {
 // file.
 func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
 	multiErr := errors.NewMultiError("registering output types")
-	logger.Debug("registering output types")
+	logger.Debug("[sdk] registering output types")
 	for _, outputType := range types {
 		_, hasType := ctx.outputTypes[outputType.Name]
 		if hasType {
 			multiErr.Add(fmt.Errorf("output type with name '%s' already exists", outputType.Name))
 			continue
 		}
-		logger.Debugf("adding type: %s", outputType.Name)
+		logger.Debugf("[sdk] adding type: %s", outputType.Name)
 		ctx.outputTypes[outputType.Name] = outputType
 	}
 	return multiErr.Err()
@@ -132,7 +132,7 @@ func (plugin *Plugin) Run() error {
 		os.Exit(0)
 	}
 
-	logger.Debug("starting plugin server and manager")
+	logger.Debug("[sdk] starting plugin server and manager")
 
 	// "Starting" steps **
 
@@ -156,7 +156,7 @@ func (plugin *Plugin) Run() error {
 // and run cleanup/post-run actions prior to terminating.
 func (plugin *Plugin) onQuit() {
 	sig := <-plugin.quit
-	logger.Infof("Stopping plugin (%s)...", sig.String())
+	logger.Infof("[sdk] Stopping plugin (%s)...", sig.String())
 
 	// TODO: any other stop/cleanup actions should go here (closing channels, etc)
 
@@ -271,7 +271,7 @@ func (plugin *Plugin) processConfig() error {
 		return err
 	}
 
-	logger.Debug("finished processing configuration(s) for run")
+	logger.Debug("[sdk] finished processing configuration(s) for run")
 	return nil
 }
 

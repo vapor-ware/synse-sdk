@@ -107,7 +107,7 @@ func (server *server) Serve() error {
 	synse.RegisterPluginServer(svr, server)
 	server.grpc = svr
 
-	logger.Infof("grpc listening on %s:%s", server.network, server.address)
+	logger.Infof("[grpc] listening on %s:%s", server.network, server.address)
 	return svr.Serve(lis)
 }
 
@@ -121,19 +121,19 @@ func (server *server) Stop() {
 
 // Test is the handler for the Synse GRPC Plugin service's `Test` RPC method.
 func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.Status, error) {
-	logger.Debug("gRPC server: test")
+	logger.WithField("request", request).Debug("[grpc] test rpc request")
 	return &synse.Status{Ok: true}, nil
 }
 
 // Version is the handler for the Synse GRPC Plugin service's `Version` RPC method.
 func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.VersionInfo, error) {
-	logger.Debug("gRPC server: version")
+	logger.WithField("request", request).Debug("[grpc] version rpc request")
 	return version.Encode(), nil
 }
 
 // Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
 func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.PluginHealth, error) {
-	logger.Debug("gRPC server: health")
+	logger.WithField("request", request).Debug("[grpc] health rpc request")
 	statuses := health.GetStatus()
 
 	// First, we need to determine the overall health of the plugin.
@@ -172,7 +172,7 @@ func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.
 
 // Capabilities is the handler for the Synse GRPC Plugin service's `Capabilities` RPC method.
 func (server *server) Capabilities(request *synse.Empty, stream synse.Plugin_CapabilitiesServer) error {
-	logger.Debug("gRPC server: capabilities")
+	logger.WithField("request", request).Debug("[grpc] capabilities rpc request")
 	capabilitiesMap := map[string]*synse.DeviceCapability{}
 
 	for _, device := range ctx.devices {
@@ -199,7 +199,7 @@ func (server *server) Capabilities(request *synse.Empty, stream synse.Plugin_Cap
 
 // Devices is the handler for the Synse GRPC Plugin service's `Devices` RPC method.
 func (server *server) Devices(request *synse.DeviceFilter, stream synse.Plugin_DevicesServer) error {
-	logger.Debug("gRPC server: devices")
+	logger.WithField("request", request).Debug("[grpc] devices rpc request")
 	var (
 		rack   = request.GetRack()
 		board  = request.GetBoard()
@@ -232,7 +232,7 @@ func (server *server) Devices(request *synse.DeviceFilter, stream synse.Plugin_D
 
 // Metainfo is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
 func (server *server) Metainfo(ctx context.Context, request *synse.Empty) (*synse.Metadata, error) {
-	logger.Debug("gRPC server: metainfo")
+	logger.WithField("request", request).Debug("[grpc] metainfo rpc request")
 	return &synse.Metadata{
 		Name:        metainfo.Name,
 		Maintainer:  metainfo.Maintainer,
@@ -244,7 +244,7 @@ func (server *server) Metainfo(ctx context.Context, request *synse.Empty) (*syns
 
 // Read is the handler for the Synse GRPC Plugin service's `Read` RPC method.
 func (server *server) Read(request *synse.DeviceFilter, stream synse.Plugin_ReadServer) error {
-	logger.Debug("gRPC server: read")
+	logger.WithField("request", request).Debug("[grpc] read rpc request")
 	responses, err := DataManager.Read(request)
 	if err != nil {
 		return err
@@ -259,7 +259,7 @@ func (server *server) Read(request *synse.DeviceFilter, stream synse.Plugin_Read
 
 // Write is the handler for the Synse GRPC Plugin service's `Write` RPC method.
 func (server *server) Write(ctx context.Context, request *synse.WriteInfo) (*synse.Transactions, error) {
-	logger.Debug("gRPC server: write")
+	logger.WithField("request", request).Debug("[grpc] write rpc request")
 	transactions, err := DataManager.Write(request)
 	if err != nil {
 		return nil, err
@@ -271,7 +271,7 @@ func (server *server) Write(ctx context.Context, request *synse.WriteInfo) (*syn
 
 // Transaction is the handler for the Synse GRPC Plugin service's `Transaction` RPC method.
 func (server *server) Transaction(request *synse.TransactionFilter, stream synse.Plugin_TransactionServer) error {
-	logger.Debug("gRPC server: transaction")
+	logger.WithField("request", request).Debug("[grpc] transaction rpc request")
 
 	// If there is no ID with the incoming request, return all cached transactions.
 	if request.Id == "" {

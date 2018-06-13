@@ -274,7 +274,7 @@ func (output *Output) MakeReading(value interface{}) *Reading {
 func (output *Output) encode() *synse.Output {
 	sf, err := output.GetScalingFactor()
 	if err != nil {
-		logger.Errorf("error getting scaling factor: %v", err)
+		logger.Errorf("[sdk] error getting scaling factor: %v", err)
 	}
 
 	return &synse.Output{
@@ -386,7 +386,7 @@ func updateDeviceMap(devices []*Device) {
 			// If we have devices with the same ID, there is something very wrong
 			// happening and we will not want to proceed, since we won't be able
 			// to route to devices correctly.
-			logger.Fatalf("duplicate device id found: %s", d.GUID())
+			logger.Fatalf("[sdk] duplicate device id found: %s", d.GUID())
 		}
 		ctx.devices[d.GUID()] = d
 	}

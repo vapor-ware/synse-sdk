@@ -253,7 +253,7 @@ func GetTypeConfigFilePolicy() ConfigPolicy {
 func (m *manager) Check() error {
 	err := checkConstraints(m.policies)
 	if err.HasErrors() {
-		logger.Error("applied config policies do not pass constraint checks")
+		logger.Error("[policies] applied config policies do not pass constraint checks")
 		return err
 	}
 	return nil

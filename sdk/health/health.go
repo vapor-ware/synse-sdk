@@ -61,7 +61,7 @@ func (catalog *Catalog) Register(name string, check Checker) {
 
 	_, hasCheck := catalog.checks[name]
 	if hasCheck {
-		logger.Fatalf("health check '%s' already exists", name)
+		logger.Fatalf("[health] health check '%s' already exists", name)
 	}
 	catalog.checks[name] = check
 }
@@ -73,7 +73,7 @@ func Register(name string, check Checker) {
 
 // RegisterPeriodicCheck registers a health check that will be run periodically.
 func (catalog *Catalog) RegisterPeriodicCheck(name string, interval time.Duration, check Check) {
-	logger.Debugf("registering periodic health check: %s", name)
+	logger.Debugf("[health] registering periodic health check: %s", name)
 	catalog.Register(name, PeriodicChecker(check, interval))
 }
 

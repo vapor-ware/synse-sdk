@@ -190,7 +190,7 @@ func (validator *schemeValidator) validateField(field reflect.Value, structField
 			} else {
 				if version.IsGreaterOrEqualTo(deprecatedInScheme) {
 					logger.Warnf(
-						"config field '%s' was deprecated in scheme version %s (current config scheme: %s)",
+						"[validation] config field '%s' was deprecated in scheme version %s (current config scheme: %s)",
 						structField.Name, deprecatedInScheme.String(), version.String(),
 					)
 				}
@@ -243,7 +243,7 @@ func (validator *schemeValidator) isEmptyValue(v reflect.Value) bool { // nolint
 		// so the struct is empty.
 		return true
 	default:
-		logger.Warnf("No case for empty value check: %v", v.Kind())
+		logger.Warnf("[validation] No case for empty value check: %v", v.Kind())
 	}
 	return false
 }

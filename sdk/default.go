@@ -31,7 +31,7 @@ func defaultDeviceIdentifier(data map[string]interface{}) string {
 		// not ordered, we cannot use them to create a stable device id.
 		rv := reflect.ValueOf(value)
 		if rv.Kind() == reflect.Map {
-			logger.Debug("default device identifier - data value is map; skipping")
+			logger.Debug("[sdk] default device identifier - data value is map; skipping")
 			continue
 		}
 

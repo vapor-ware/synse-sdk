@@ -13,12 +13,12 @@ func execPreRun(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("pre-run actions")
 
 	if len(ctx.preRunActions) > 0 {
-		logger.Debug("Executing pre-run actions:")
+		logger.Debug("[sdk] Executing pre-run actions:")
 		for _, action := range ctx.preRunActions {
 			logger.Debugf(" * %v", action)
 			err := action(plugin)
 			if err != nil {
-				logger.Errorf("Failed pre-run action %v: %v", action, err)
+				logger.Errorf("[sdk] Failed pre-run action %v: %v", action, err)
 				multiErr.Add(err)
 			}
 		}
@@ -31,7 +31,7 @@ func execPostRun(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("post-run actions")
 
 	if len(ctx.postRunActions) > 0 {
-		logger.Debug("Executing post-run actions:")
+		logger.Debug("[sdk] Executing post-run actions:")
 		for _, action := range ctx.postRunActions {
 			logger.Debug(" * %v", action)
 			err := action(plugin)
@@ -48,11 +48,11 @@ func execDeviceSetup(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("device setup actions")
 
 	if len(ctx.deviceSetupActions) > 0 {
-		logger.Debug("Executing device setup actions:")
+		logger.Debug("[sdk] Executing device setup actions:")
 		for filter, acts := range ctx.deviceSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
-				logger.Errorf("Failed to filter devices for setup actions: %v", err)
+				logger.Errorf("[sdk] Failed to filter devices for setup actions: %v", err)
 				multiErr.Add(err)
 				continue
 			}
@@ -61,7 +61,7 @@ func execDeviceSetup(plugin *Plugin) *errors.MultiError {
 				for _, action := range acts {
 					err := action(plugin, d)
 					if err != nil {
-						logger.Errorf("Failed device setup action %v: %v", action, err)
+						logger.Errorf("[sdk] Failed device setup action %v: %v", action, err)
 						multiErr.Add(err)
 						continue
 					}

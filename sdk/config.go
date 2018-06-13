@@ -207,11 +207,11 @@ func (schemeVersion *SchemeVersion) GetVersion() (*ConfigVersion, error) {
 func processDeviceConfigs() error { // nolint: gocyclo
 	// Get the plugin's policy for device config files.
 	deviceFilePolicy := policies.GetDeviceConfigFilePolicy()
-	logger.Debugf("device config file policy: %s", deviceFilePolicy.String())
+	logger.Debugf("[sdk] device config file policy: %s", deviceFilePolicy.String())
 
 	// Get the plugin's policy for dynamic device config.
 	deviceDynamicPolicy := policies.GetDeviceConfigDynamicPolicy()
-	logger.Debugf("device dynamic config policy: %s", deviceDynamicPolicy.String())
+	logger.Debugf("[sdk] device dynamic config policy: %s", deviceDynamicPolicy.String())
 
 	var deviceCtxs []*ConfigContext
 
@@ -238,7 +238,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	case policies.DeviceConfigFileOptional:
 		if err != nil {
 			fileCtxs = []*ConfigContext{}
-			logger.Debug("no device configuration config files found")
+			logger.Debug("[sdk] no device configuration config files found")
 		}
 
 	case policies.DeviceConfigFileProhibited:
@@ -247,7 +247,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 		// will just pass along an empty config.
 		if err == nil && len(fileCtxs) > 0 {
 			logger.Warn(
-				"device config file(s) found, but its use is prohibited via policy. " +
+				"[sdk]  device config file(s) found, but its use is prohibited via policy. " +
 					"the device config files will be ignored.",
 			)
 		}
@@ -259,7 +259,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 			"unsupported device config file policy",
 		)
 	}
-	logger.Debugf("policy validation successful: %s", deviceFilePolicy.String())
+	logger.Debugf("[sdk] policy validation successful: %s", deviceFilePolicy.String())
 
 	// Now, we can append whatever config contexts we got from file to the slice of all
 	// device config contexts.
@@ -302,7 +302,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	case policies.DeviceConfigDynamicOptional:
 		if multiErr.Err() != nil {
 			dynamicCtxs = []*ConfigContext{}
-			logger.Debug("no dynamic device configuration(s) found")
+			logger.Debug("[sdk] no dynamic device configuration(s) found")
 		}
 
 	case policies.DeviceConfigDynamicProhibited:
@@ -311,7 +311,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 		// will just pass along an empty config.
 		if multiErr.Err() == nil && len(dynamicCtxs) > 0 {
 			logger.Warn(
-				"dynamic device config(s) found, but its use is prohibited via policy. " +
+				"[sdk] dynamic device config(s) found, but its use is prohibited via policy. " +
 					"the device config(s) will be ignored.",
 			)
 		}
@@ -323,7 +323,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 			"unsupported dynamic device config policy",
 		)
 	}
-	logger.Debugf("policy validation successful: %s", deviceDynamicPolicy.String())
+	logger.Debugf("[sdk] policy validation successful: %s", deviceDynamicPolicy.String())
 
 	// Now, we can append whatever config contexts we got from dynamic registration to the slice
 	// of all device config contexts.
@@ -378,7 +378,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 func processPluginConfig() error { // nolint: gocyclo
 	// Get the plugin's policy for plugin config files.
 	pluginFilePolicy := policies.GetPluginConfigFilePolicy()
-	logger.Debugf("plugin config file policy: %s", pluginFilePolicy.String())
+	logger.Debugf("[sdk] plugin config file policy: %s", pluginFilePolicy.String())
 
 	// Now, try getting the plugin config from file.
 	pluginCtx, err := getPluginConfigFromFile()
@@ -418,7 +418,7 @@ func processPluginConfig() error { // nolint: gocyclo
 		// when the plugin config is prohibited.
 		if err == nil && pluginCtx != nil {
 			logger.Warn(
-				"plugin config file found, but its use is prohibited via policy. " +
+				"[sdk] plugin config file found, but its use is prohibited via policy. " +
 					"you must ensure that the plugin has its config set manually.",
 			)
 		}
@@ -438,7 +438,7 @@ func processPluginConfig() error { // nolint: gocyclo
 			"unsupported plugin config file policy",
 		)
 	}
-	logger.Debugf("policy validation successful: %s", pluginFilePolicy.String())
+	logger.Debugf("[sdk] policy validation successful: %s", pluginFilePolicy.String())
 
 	// Validate the plugin config
 	multiErr := validator.Validate(pluginCtx)
@@ -458,7 +458,7 @@ func processPluginConfig() error { // nolint: gocyclo
 func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 	// Get the plugin's policy for output type config files.
 	outputTypeFilePolicy := policies.GetTypeConfigFilePolicy()
-	logger.Debugf("output type config file policy: %s", outputTypeFilePolicy.String())
+	logger.Debugf("[sdk] output type config file policy: %s", outputTypeFilePolicy.String())
 
 	// Now, try getting the output type config(s) from file.
 	outputTypeCtxs, err := getOutputTypeConfigsFromFile()
@@ -483,7 +483,7 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 	case policies.TypeConfigFileOptional:
 		if err != nil {
 			outputTypeCtxs = []*ConfigContext{}
-			logger.Debug("no type configuration config files found")
+			logger.Debug("[sdk] no type configuration config files found")
 		}
 
 	case policies.TypeConfigFileProhibited:
@@ -492,7 +492,7 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 		// will just pass along an empty config.
 		if err == nil && len(outputTypeCtxs) > 0 {
 			logger.Warn(
-				"output type config file(s) found, but its use is prohibited via policy. " +
+				"[sdk] output type config file(s) found, but its use is prohibited via policy. " +
 					"the output type config files will be ignored.",
 			)
 			outputTypeCtxs = []*ConfigContext{}
@@ -504,7 +504,7 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 			"unsupported output type config file policy",
 		)
 	}
-	logger.Debugf("policy validation successful: %s", outputTypeFilePolicy.String())
+	logger.Debugf("[sdk] policy validation successful: %s", outputTypeFilePolicy.String())
 
 	var outputs []*OutputType
 
