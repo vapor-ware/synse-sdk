@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"text/template"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	logger "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 

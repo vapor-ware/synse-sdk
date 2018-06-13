@@ -1,10 +1,9 @@
 package sdk
 
 import (
+	"fmt"
 	"sort"
 	"testing"
-
-	"fmt"
 
 	"github.com/stretchr/testify/assert"
 )

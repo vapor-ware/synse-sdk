@@ -1,7 +1,7 @@
 package sdk
 
 import (
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	logger "github.com/Sirupsen/logrus"
 )
 
 // metainfo is the global variable that tracks plugin meta-information.

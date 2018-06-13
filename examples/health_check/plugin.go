@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"strconv"
-
 	"os"
+	"strconv"
 	"time"
 
+	logger "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 var (

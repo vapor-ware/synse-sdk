@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	logger "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"gopkg.in/yaml.v2"
 )
 

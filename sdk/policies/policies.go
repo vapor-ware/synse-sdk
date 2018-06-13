@@ -1,6 +1,8 @@
 package policies
 
-import "github.com/vapor-ware/synse-sdk/sdk/logger"
+import (
+	logger "github.com/Sirupsen/logrus"
+)
 
 // ConfigPolicy is a type that defines a behavior profile for the plugin
 // on how it should handle configurations and configuration errors.

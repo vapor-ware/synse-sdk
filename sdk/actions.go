@@ -1,8 +1,8 @@
 package sdk
 
 import (
+	logger "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 type pluginAction func(p *Plugin) error

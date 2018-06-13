@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	logger "github.com/Sirupsen/logrus"
 )
 
 // defaultDeviceIdentifier is the default implementation that fulfils the DeviceIdentifier

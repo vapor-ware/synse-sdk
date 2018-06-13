@@ -12,3 +12,11 @@ built-in support for managing device meta information and for the generation
 and management of transaction state for each incoming write request.
 */
 package sdk
+
+import (
+	logger "github.com/Sirupsen/logrus"
+)
+
+func init() {
+	logger.SetLevel(logger.InfoLevel)
+}

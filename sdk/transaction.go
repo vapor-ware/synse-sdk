@@ -3,9 +3,9 @@ package sdk
 import (
 	"time"
 
+	logger "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 

@@ -7,10 +7,10 @@ import (
 	"syscall"
 	"time"
 
+	logger "github.com/Sirupsen/logrus"
 	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
