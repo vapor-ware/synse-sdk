@@ -7,10 +7,10 @@ import (
 	"syscall"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
@@ -40,14 +40,15 @@ func NewPlugin(options ...PluginOption) *Plugin {
 // file.
 func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
 	multiErr := errors.NewMultiError("registering output types")
-	logger.Debug("registering output types")
+	log.Debug("[sdk] registering output types")
 	for _, outputType := range types {
 		_, hasType := ctx.outputTypes[outputType.Name]
 		if hasType {
+			log.WithField("type", outputType.Name).Error("[sdk] output type already exists")
 			multiErr.Add(fmt.Errorf("output type with name '%s' already exists", outputType.Name))
 			continue
 		}
-		logger.Debugf("adding type: %s", outputType.Name)
+		log.WithField("type", outputType.Name).Debug("[sdk] adding new output type")
 		ctx.outputTypes[outputType.Name] = outputType
 	}
 	return multiErr.Err()
@@ -128,27 +129,26 @@ func (plugin *Plugin) Run() error {
 	// If the --dry-run flag is set, we will end here. The gRPC server and
 	// data manager do not get started up in the dry run.
 	if flagDryRun {
-		logger.Info("dry-run successful")
+		log.Info("dry-run successful")
 		os.Exit(0)
 	}
 
-	logger.Debug("starting plugin server and manager")
-
-	// "Starting" steps **
+	log.Debug("[sdk] starting plugin run")
 
 	// If the default health checks are enabled, register them now
 	if Config.Plugin.Health.UseDefaults {
+		log.Debug("[sdk] registering default health checks")
 		health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
 		health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
 	}
 
-	// startDataManager
+	// Start the data manager
 	err = DataManager.run()
 	if err != nil {
 		return err
 	}
 
-	// startServer
+	// Start the gRPC server
 	return plugin.server.Serve()
 }
 
@@ -156,7 +156,7 @@ func (plugin *Plugin) Run() error {
 // and run cleanup/post-run actions prior to terminating.
 func (plugin *Plugin) onQuit() {
 	sig := <-plugin.quit
-	logger.Infof("Stopping plugin (%s)...", sig.String())
+	log.Infof("[sdk] stopping plugin (%s)...", sig.String())
 
 	// TODO: any other stop/cleanup actions should go here (closing channels, etc)
 
@@ -166,11 +166,11 @@ func (plugin *Plugin) onQuit() {
 	// Execute post-run actions.
 	multiErr := execPostRun(plugin)
 	if multiErr.HasErrors() {
-		logger.Error(multiErr)
+		log.Error(multiErr)
 		os.Exit(1)
 	}
 
-	logger.Info("[done]")
+	log.Info("[done]")
 	os.Exit(0)
 }
 
@@ -202,6 +202,11 @@ func (plugin *Plugin) setup() error {
 	err = plugin.processConfig()
 	if err != nil {
 		return err
+	}
+
+	// If the plugin config specifies debug mode, enable debug mode
+	if Config.Plugin.Debug {
+		log.SetLevel(log.DebugLevel)
 	}
 
 	// Initialize Device instances for each of the devices configured with
@@ -236,12 +241,14 @@ func (plugin *Plugin) setup() error {
 func (plugin *Plugin) processConfig() error {
 
 	// Resolve the plugin config.
+	log.Debug("[sdk] resolving plugin config")
 	err := processPluginConfig()
 	if err != nil {
 		return err
 	}
 
 	// Resolve the output type config(s).
+	log.Debug("[sdk] resolving output type config(s)")
 	outputTypes, err := processOutputTypeConfig()
 	if err != nil {
 		return err
@@ -266,12 +273,13 @@ func (plugin *Plugin) processConfig() error {
 	}
 
 	// Resolve the device config(s).
+	log.Debug("[sdk] resolving device config(s)")
 	err = processDeviceConfigs()
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("finished processing configuration(s) for run")
+	log.Debug("[sdk] finished processing configuration(s) for run")
 	return nil
 }
 
@@ -327,15 +335,14 @@ func (config PluginConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
 	_, err := config.GetVersion()
 	if err != nil {
-		// TODO -- using multiErr.Context["source"] assumes that all of the
-		// configs came from file. Need to see if there is a way to check
-		// viper for whether or not we know if the source is file or commandline.
+		log.WithField("config", config).Error("[validation] bad version")
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
 
 	// If network is nil or an empty struct, error. We need to know how
 	// the plugin should communicate with Synse server.
 	if config.Network == nil || config.Network == (&NetworkSettings{}) {
+		log.WithField("config", config).Error("[validation] no network")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network"))
 	}
 }
@@ -361,6 +368,7 @@ type PluginSettings struct {
 // Validate validates that the PluginSettings has no configuration errors.
 func (settings PluginSettings) Validate(multiErr *errors.MultiError) {
 	if settings.Mode != modeSerial && settings.Mode != modeParallel {
+		log.WithField("config", settings).Error("[validation] bad mode")
 		multiErr.Add(errors.NewInvalidValueError(
 			multiErr.Context["source"],
 			"settings.mode",
@@ -395,9 +403,11 @@ type NetworkSettings struct {
 // Validate validates that the NetworkSettings has no configuration errors.
 func (settings NetworkSettings) Validate(multiErr *errors.MultiError) {
 	if settings.Type == "" {
+		log.WithField("config", settings).Error("[validation] empty type")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network.type"))
 	} else {
 		if settings.Type != networkTypeTCP && settings.Type != networkTypeUnix {
+			log.WithField("config", settings).Error("[validation] bad type")
 			multiErr.Add(errors.NewInvalidValueError(
 				multiErr.Context["source"],
 				"network.type",
@@ -406,6 +416,7 @@ func (settings NetworkSettings) Validate(multiErr *errors.MultiError) {
 		}
 	}
 	if settings.Address == "" {
+		log.WithField("config", settings).Error("[validation] empty address")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network.address"))
 	}
 }
@@ -441,6 +452,7 @@ type LimiterSettings struct {
 // Validate validates that the LimiterSettings has no configuration errors.
 func (settings LimiterSettings) Validate(multiErr *errors.MultiError) {
 	if settings.Rate < 0 {
+		log.WithField("config", settings).Error("[validation] bad rate")
 		multiErr.Add(errors.NewInvalidValueError(
 			multiErr.Context["source"],
 			"limiter.rate",
@@ -449,6 +461,7 @@ func (settings LimiterSettings) Validate(multiErr *errors.MultiError) {
 	}
 
 	if settings.Burst < 0 {
+		log.WithField("config", settings).Error("[validation] bad burst")
 		multiErr.Add(errors.NewInvalidValueError(
 			multiErr.Context["source"],
 			"limiter.burst",
@@ -477,6 +490,7 @@ func (settings ReadSettings) Validate(multiErr *errors.MultiError) {
 	// Try parsing the interval to validate it is a correctly specified duration string.
 	_, err := settings.GetInterval()
 	if err != nil {
+		log.WithField("config", settings).Error("[validation] bad interval")
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
 
@@ -484,6 +498,7 @@ func (settings ReadSettings) Validate(multiErr *errors.MultiError) {
 	// was allowed, as a size of 0 could indicate "no read", but now we
 	// have the 'enabled' field, so we don't need to support this.
 	if settings.Buffer <= 0 {
+		log.WithField("config", settings).Error("[validation] bad read buffer")
 		multiErr.Add(errors.NewInvalidValueError(
 			multiErr.Context["source"],
 			"settings.read.buffer",
@@ -523,6 +538,7 @@ func (settings WriteSettings) Validate(multiErr *errors.MultiError) {
 	// Try parsing the interval to validate it is a correctly specified duration string.
 	_, err := settings.GetInterval()
 	if err != nil {
+		log.WithField("config", settings).Error("[validation] bad interval")
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
 
@@ -530,6 +546,7 @@ func (settings WriteSettings) Validate(multiErr *errors.MultiError) {
 	// was allowed, as a size of 0 could indicate "no write", but now we
 	// have the 'enabled' field, so we don't need to support this.
 	if settings.Buffer <= 0 {
+		log.WithField("config", settings).Error("[validation] bad write buffer")
 		multiErr.Add(errors.NewInvalidValueError(
 			multiErr.Context["source"],
 			"settings.write.buffer",
@@ -538,6 +555,7 @@ func (settings WriteSettings) Validate(multiErr *errors.MultiError) {
 	}
 
 	if settings.Max <= 0 {
+		log.WithField("config", settings).Error("[validation] bad write max")
 		multiErr.Add(errors.NewInvalidValueError(
 			multiErr.Context["source"],
 			"settings.write.max",
@@ -563,6 +581,7 @@ func (settings TransactionSettings) Validate(multiErr *errors.MultiError) {
 	// Try parsing the interval to validate it is a correctly specified duration string.
 	_, err := settings.GetTTL()
 	if err != nil {
+		log.WithField("config", settings).Error("[validation] bad ttl")
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
 }

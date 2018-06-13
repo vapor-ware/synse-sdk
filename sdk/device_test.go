@@ -2,12 +2,10 @@ package sdk
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"os"
-
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 

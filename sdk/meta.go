@@ -1,7 +1,7 @@
 package sdk
 
 import (
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	log "github.com/Sirupsen/logrus"
 )
 
 // metainfo is the global variable that tracks plugin meta-information.
@@ -17,11 +17,11 @@ type meta struct {
 
 // log logs out the plugin meta-info at INFO level.
 func (m *meta) log() {
-	logger.Info("Plugin Info:")
-	logger.Infof("  Name:        %s", m.Name)
-	logger.Infof("  Maintainer:  %s", m.Maintainer)
-	logger.Infof("  Description: %s", m.Description)
-	logger.Infof("  VCS:         %s", m.VCS)
+	log.Info("Plugin Info:")
+	log.Infof("  Name:        %s", m.Name)
+	log.Infof("  Maintainer:  %s", m.Maintainer)
+	log.Infof("  Description: %s", m.Description)
+	log.Infof("  VCS:         %s", m.VCS)
 }
 
 // SetPluginMeta sets the meta-information for a plugin.

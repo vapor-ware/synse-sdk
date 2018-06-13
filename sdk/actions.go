@@ -1,8 +1,8 @@
 package sdk
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 type pluginAction func(p *Plugin) error
@@ -12,13 +12,13 @@ type deviceAction func(p *Plugin, d *Device) error
 func execPreRun(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("pre-run actions")
 
+	log.Debugf("[sdk] executing %d pre-run action(s)", len(ctx.preRunActions))
 	if len(ctx.preRunActions) > 0 {
-		logger.Debug("Executing pre-run actions:")
 		for _, action := range ctx.preRunActions {
-			logger.Debugf(" * %v", action)
+			log.Debugf(" * %v", action)
 			err := action(plugin)
 			if err != nil {
-				logger.Errorf("Failed pre-run action %v: %v", action, err)
+				log.Errorf("[sdk] failed pre-run action %v: %v", action, err)
 				multiErr.Add(err)
 			}
 		}
@@ -30,10 +30,10 @@ func execPreRun(plugin *Plugin) *errors.MultiError {
 func execPostRun(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("post-run actions")
 
+	log.Debugf("[sdk] executing %d post-run action(s)", len(ctx.postRunActions))
 	if len(ctx.postRunActions) > 0 {
-		logger.Debug("Executing post-run actions:")
 		for _, action := range ctx.postRunActions {
-			logger.Debug(" * %v", action)
+			log.Debug(" * %v", action)
 			err := action(plugin)
 			if err != nil {
 				multiErr.Add(err)
@@ -47,21 +47,21 @@ func execPostRun(plugin *Plugin) *errors.MultiError {
 func execDeviceSetup(plugin *Plugin) *errors.MultiError {
 	var multiErr = errors.NewMultiError("device setup actions")
 
+	log.Debugf("[sdk] executing %d device setup action(s)", len(ctx.deviceSetupActions))
 	if len(ctx.deviceSetupActions) > 0 {
-		logger.Debug("Executing device setup actions:")
 		for filter, acts := range ctx.deviceSetupActions {
 			devices, err := filterDevices(filter)
 			if err != nil {
-				logger.Errorf("Failed to filter devices for setup actions: %v", err)
+				log.Errorf("[sdk] failed to filter devices for setup actions: %v", err)
 				multiErr.Add(err)
 				continue
 			}
-			logger.Debugf("* %v (%v devices match filter %v)", acts, len(devices), filter)
+			log.Debugf("* %v (%v devices match filter %v)", acts, len(devices), filter)
 			for _, d := range devices {
 				for _, action := range acts {
 					err := action(plugin, d)
 					if err != nil {
-						logger.Errorf("Failed device setup action %v: %v", action, err)
+						log.Errorf("[sdk] failed device setup action %v: %v", action, err)
 						multiErr.Add(err)
 						continue
 					}

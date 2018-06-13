@@ -1,6 +1,8 @@
 package policies
 
-import "github.com/vapor-ware/synse-sdk/sdk/logger"
+import (
+	log "github.com/Sirupsen/logrus"
+)
 
 // ConfigPolicy is a type that defines a behavior profile for the plugin
 // on how it should handle configurations and configuration errors.
@@ -251,9 +253,10 @@ func GetTypeConfigFilePolicy() ConfigPolicy {
 func (m *manager) Check() error {
 	err := checkConstraints(m.policies)
 	if err.HasErrors() {
-		logger.Error("applied config policies do not pass constraint checks")
+		log.Error("[policies] applied config policies do not pass constraint checks")
 		return err
 	}
+	log.Debug("[policies] plugin policies pass constraint checks")
 	return nil
 }
 
