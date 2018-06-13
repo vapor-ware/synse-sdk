@@ -42,7 +42,7 @@ func setupTransactionCache(ttl time.Duration) {
 func newTransaction() *transaction {
 	if transactionCache == nil {
 		// FIXME - need to update log so we can specify our own exiter to test this..
-		log.Fatalf("[transaction] transaction cache was not initialized; likely an issue in plugin setup")
+		log.Fatalf("[sdk] transaction cache was not initialized; likely an issue in plugin setup")
 	}
 
 	id := xid.New().String()
@@ -66,14 +66,14 @@ func newTransaction() *transaction {
 // we will terminate the plugin, as it is indicative of an improper plugin setup.
 func getTransaction(id string) *transaction {
 	if transactionCache == nil {
-		log.Fatalf("[transaction] transaction cache was not initialized; likely an issue in plugin setup")
+		log.Fatalf("[sdk] transaction cache was not initialized; likely an issue in plugin setup")
 	}
 
 	t, found := transactionCache.Get(id)
 	if found {
 		return t.(*transaction)
 	}
-	log.Debugf("[transaction] transaction %s not found", id)
+	log.WithField("id", id).Info("[sdk] transaction not found")
 	return nil
 }
 
@@ -102,42 +102,42 @@ func (t *transaction) encode() *synse.WriteResponse {
 
 // setStateOk sets the transaction to be in the 'ok' state.
 func (t *transaction) setStateOk() {
-	log.Debugf("[transaction] transaction %v: setting STATE to 'ok'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction state set to OK")
 	t.updated = GetCurrentTime()
 	t.state = stateOk
 }
 
 // setStateError sets the transaction to be in the 'error' state.
 func (t *transaction) setStateError() {
-	log.Debugf("[transaction] transaction %v: setting STATE to 'error'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction state set to ERROR")
 	t.updated = GetCurrentTime()
 	t.state = stateError
 }
 
 // setStatusUnknown sets the transaction status to 'unknown'.
 func (t *transaction) setStatusUnknown() {
-	log.Debugf("[transaction] transaction %v: setting STATUS to 'unknown'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction state set to UNKNOWN")
 	t.updated = GetCurrentTime()
 	t.status = statusUnknown
 }
 
 // setStatusPending sets the transaction status to 'pending'.
 func (t *transaction) setStatusPending() {
-	log.Debugf("[transaction] transaction %v: setting STATUS to 'pending'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction status set to PENDING")
 	t.updated = GetCurrentTime()
 	t.status = statusPending
 }
 
 // setStatusWriting sets the transaction status to 'writing'.
 func (t *transaction) setStatusWriting() {
-	log.Debugf("[transaction] transaction %v: setting STATUS to 'writing'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction status set to WRITING")
 	t.updated = GetCurrentTime()
 	t.status = statusWriting
 }
 
 // setStatusDone sets the transaction status to 'done'.
 func (t *transaction) setStatusDone() {
-	log.Debugf("[transaction] transaction %v: setting STATUS to 'done'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction status set to DONE")
 	t.updated = GetCurrentTime()
 	t.status = statusDone
 }

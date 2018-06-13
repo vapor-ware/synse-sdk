@@ -256,6 +256,7 @@ func (m *manager) Check() error {
 		log.Error("[policies] applied config policies do not pass constraint checks")
 		return err
 	}
+	log.Debug("[policies] plugin policies pass constraint checks")
 	return nil
 }
 

@@ -57,7 +57,6 @@ func getOutputTypeConfigsFromFile() ([]*ConfigContext, error) {
 		}
 		cfgs = append(cfgs, NewConfigContext(file, config))
 	}
-
 	return cfgs, nil
 }
 
@@ -85,7 +84,6 @@ func getDeviceConfigsFromFile() ([]*ConfigContext, error) {
 		}
 		cfgs = append(cfgs, NewConfigContext(file, config))
 	}
-
 	return cfgs, nil
 }
 
@@ -164,9 +162,8 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 	// will be the source of the configs. This does not guarantee that those
 	// files are actually config files though -- that will be determined
 	// when marshaling the data into the appropriate structs.
+	log.WithField("paths", searchPaths).Debug("[sdk] searching paths for config(s)")
 	for _, path := range searchPaths {
-		log.Debugf("[sdk] searching for configs in: %s", path)
-
 		configs, err = searchDir(path, name)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -176,7 +173,7 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 		}
 
 		if len(configs) != 0 {
-			log.Debugf("[sdk] config(s) found")
+			log.WithField("path", path).Debugf("[sdk] found %d config(s)", len(configs))
 			break
 		}
 	}
@@ -200,8 +197,12 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 // If it is not set, it will be considered valid if its extension is in the list
 // of supported extensions.
 func searchEnv(env, name string) (configs []string, err error) {
+	envLog := log.WithField("env", env)
+	envLog.Debug("[sdk] searching env for config")
+
 	// If there is no ENV provided, there is nothing to search for.
 	if env == "" {
+		envLog.Debug("[sdk] env not set")
 		return
 	}
 
@@ -209,6 +210,7 @@ func searchEnv(env, name string) (configs []string, err error) {
 
 	// If no value is set for the env, there is nothing to search for.
 	if envValue == "" {
+		envLog.Debug("[sdk] no value for env")
 		return
 	}
 
@@ -217,6 +219,7 @@ func searchEnv(env, name string) (configs []string, err error) {
 		return
 	}
 
+	envLog.Debugf("[sdk] found valid env value: %s", envValue)
 	// If the environment variable specifies a directory, get all the valid
 	// config files from that directory.
 	if info.IsDir() {
@@ -239,8 +242,8 @@ func searchEnv(env, name string) (configs []string, err error) {
 		return configs, fmt.Errorf("environment-specified config '%s' is not a valid config file", envValue)
 	}
 
-	log.Debugf("[sdk] found valid config file: %s", envValue)
 	configs = append(configs, envValue)
+	envLog.Debugf("[sdk] found %d config(s) from env value", len(configs))
 	return
 }
 
@@ -258,7 +261,7 @@ func searchDir(dirpath, name string) ([]string, error) {
 	for _, f := range contents {
 		if isValidConfig(f, name) {
 			name := filepath.Join(dirpath, f.Name())
-			log.Debugf("[sdk] found valid config file: %s", name)
+			log.WithField("file", name).Debug("[sdk] found valid config file")
 			files = append(files, name)
 		}
 	}

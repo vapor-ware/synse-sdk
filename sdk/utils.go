@@ -105,6 +105,7 @@ func registerDevices() error {
 			if err != nil {
 				return err
 			}
+			log.Debugf("[sdk] adding %d devices from dynamic registration", len(devices))
 			updateDeviceMap(devices)
 		}
 	}
@@ -115,6 +116,7 @@ func registerDevices() error {
 	if err != nil {
 		return err
 	}
+	log.Debugf("[sdk] adding %d devices from config", len(devices))
 	updateDeviceMap(devices)
 
 	return nil

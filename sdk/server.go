@@ -39,6 +39,7 @@ func (server *server) setup() error {
 	ctx.postRunActions = append(ctx.postRunActions, func(plugin *Plugin) error {
 		return server.cleanup()
 	})
+	log.WithField("mode", server.network).Debug("[grpc] setting up server")
 
 	switch server.network {
 	case networkTypeUnix:
@@ -75,6 +76,7 @@ func (server *server) setup() error {
 // cleanup cleans up the server. The action it takes will depend on the mode it is
 // running in. If running in 'unix' mode, it will remove the socket.
 func (server *server) cleanup() error {
+	log.Info("[grpc] cleaning up server")
 	switch server.network {
 	case networkTypeUnix:
 		if err := os.Remove(server.address); !os.IsNotExist(err) {
@@ -114,6 +116,7 @@ func (server *server) Serve() error {
 // Stop stops the GRPC server from serving and immediately terminates all open
 // connections and listeners.
 func (server *server) Stop() {
+	log.Info("[grpc] stopping server")
 	if server.grpc != nil {
 		server.grpc.Stop()
 	}
