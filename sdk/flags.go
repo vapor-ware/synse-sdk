@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 var (
@@ -33,7 +33,7 @@ func parseFlags() {
 
 	// --debug will enable debug logging.
 	if flagDebug {
-		logger.SetLevel(logger.DebugLevel)
+		log.SetLevel(log.DebugLevel)
 	}
 
 	// --version will print out version info and then exit.

@@ -1,7 +1,7 @@
 package policies
 
 import (
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 // ConfigPolicy is a type that defines a behavior profile for the plugin
@@ -253,7 +253,7 @@ func GetTypeConfigFilePolicy() ConfigPolicy {
 func (m *manager) Check() error {
 	err := checkConstraints(m.policies)
 	if err.HasErrors() {
-		logger.Error("[policies] applied config policies do not pass constraint checks")
+		log.Error("[policies] applied config policies do not pass constraint checks")
 		return err
 	}
 	return nil

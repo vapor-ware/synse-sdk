@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -165,7 +165,7 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 	// files are actually config files though -- that will be determined
 	// when marshaling the data into the appropriate structs.
 	for _, path := range searchPaths {
-		logger.Debugf("[sdk] searching for configs in: %s", path)
+		log.Debugf("[sdk] searching for configs in: %s", path)
 
 		configs, err = searchDir(path, name)
 		if err != nil {
@@ -176,7 +176,7 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 		}
 
 		if len(configs) != 0 {
-			logger.Debugf("[sdk] config(s) found")
+			log.Debugf("[sdk] config(s) found")
 			break
 		}
 	}
@@ -239,7 +239,7 @@ func searchEnv(env, name string) (configs []string, err error) {
 		return configs, fmt.Errorf("environment-specified config '%s' is not a valid config file", envValue)
 	}
 
-	logger.Debugf("[sdk] found valid config file: %s", envValue)
+	log.Debugf("[sdk] found valid config file: %s", envValue)
 	configs = append(configs, envValue)
 	return
 }
@@ -258,7 +258,7 @@ func searchDir(dirpath, name string) ([]string, error) {
 	for _, f := range contents {
 		if isValidConfig(f, name) {
 			name := filepath.Join(dirpath, f.Name())
-			logger.Debugf("[sdk] found valid config file: %s", name)
+			log.Debugf("[sdk] found valid config file: %s", name)
 			files = append(files, name)
 		}
 	}

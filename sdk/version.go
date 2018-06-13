@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"text/template"
 
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -95,14 +95,14 @@ func (version *binVersion) Format() string {
 
 // Log logs out the binVersion at info level.
 func (version *binVersion) Log() {
-	logger.Info("Version Info:")
-	logger.Infof("  Plugin Version: %s", version.PluginVersion)
-	logger.Infof("  SDK Version:    %s", version.SDKVersion)
-	logger.Infof("  Git Commit:     %s", version.GitCommit)
-	logger.Infof("  Git Tag:        %s", version.GitTag)
-	logger.Infof("  Build Date:     %s", version.BuildDate)
-	logger.Infof("  Go Version:     %s", version.GoVersion)
-	logger.Infof("  OS/Arch:        %s/%s", version.OS, version.Arch)
+	log.Info("Version Info:")
+	log.Infof("  Plugin Version: %s", version.PluginVersion)
+	log.Infof("  SDK Version:    %s", version.SDKVersion)
+	log.Infof("  Git Commit:     %s", version.GitCommit)
+	log.Infof("  Git Tag:        %s", version.GitTag)
+	log.Infof("  Build Date:     %s", version.BuildDate)
+	log.Infof("  Go Version:     %s", version.GoVersion)
+	log.Infof("  OS/Arch:        %s/%s", version.OS, version.Arch)
 }
 
 // setField is a helper function that checks whether a field is set.

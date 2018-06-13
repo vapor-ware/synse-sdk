@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
@@ -129,9 +129,9 @@ func logStartupInfo() {
 	version.Log()
 
 	// Log registered devices
-	logger.Info("Registered Devices:")
+	log.Info("Registered Devices:")
 	for id, dev := range ctx.devices {
-		logger.Infof("  %v (%v)", id, dev.Kind)
+		log.Infof("  %v (%v)", id, dev.Kind)
 	}
-	logger.Info("--------------------------------")
+	log.Info("--------------------------------")
 }

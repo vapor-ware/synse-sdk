@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
@@ -274,7 +274,7 @@ func (output *Output) MakeReading(value interface{}) *Reading {
 func (output *Output) encode() *synse.Output {
 	sf, err := output.GetScalingFactor()
 	if err != nil {
-		logger.Errorf("[sdk] error getting scaling factor: %v", err)
+		log.Errorf("[sdk] error getting scaling factor: %v", err)
 	}
 
 	return &synse.Output{
@@ -386,7 +386,7 @@ func updateDeviceMap(devices []*Device) {
 			// If we have devices with the same ID, there is something very wrong
 			// happening and we will not want to proceed, since we won't be able
 			// to route to devices correctly.
-			logger.Fatalf("[sdk] duplicate device id found: %s", d.GUID())
+			log.Fatalf("[sdk] duplicate device id found: %s", d.GUID())
 		}
 		ctx.devices[d.GUID()] = d
 	}
@@ -579,7 +579,7 @@ func (locData *LocationData) Get() (string, error) {
 		// If we already have the location info from the Name field, we
 		// will not resolve the FromEnv field and will log out a warning.
 		if location != "" {
-			logger.Warnf("location fields 'fromEnv' and 'name' are both specified, ignoring 'fromEnv': %+v", locData)
+			log.Warnf("location fields 'fromEnv' and 'name' are both specified, ignoring 'fromEnv': %+v", locData)
 		} else {
 			l, ok := os.LookupEnv(locData.FromEnv)
 			if !ok {

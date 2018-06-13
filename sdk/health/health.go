@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -61,7 +61,7 @@ func (catalog *Catalog) Register(name string, check Checker) {
 
 	_, hasCheck := catalog.checks[name]
 	if hasCheck {
-		logger.Fatalf("[health] health check '%s' already exists", name)
+		log.Fatalf("[health] health check '%s' already exists", name)
 	}
 	catalog.checks[name] = check
 }
@@ -73,7 +73,7 @@ func Register(name string, check Checker) {
 
 // RegisterPeriodicCheck registers a health check that will be run periodically.
 func (catalog *Catalog) RegisterPeriodicCheck(name string, interval time.Duration, check Check) {
-	logger.Debugf("[health] registering periodic health check: %s", name)
+	log.Debugf("[health] registering periodic health check: %s", name)
 	catalog.Register(name, PeriodicChecker(check, interval))
 }
 

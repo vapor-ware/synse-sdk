@@ -14,9 +14,9 @@ and management of transaction state for each incoming write request.
 package sdk
 
 import (
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 func init() {
-	logger.SetLevel(logger.InfoLevel)
+	log.SetLevel(log.InfoLevel)
 }

@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
@@ -40,14 +40,14 @@ func NewPlugin(options ...PluginOption) *Plugin {
 // file.
 func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
 	multiErr := errors.NewMultiError("registering output types")
-	logger.Debug("[sdk] registering output types")
+	log.Debug("[sdk] registering output types")
 	for _, outputType := range types {
 		_, hasType := ctx.outputTypes[outputType.Name]
 		if hasType {
 			multiErr.Add(fmt.Errorf("output type with name '%s' already exists", outputType.Name))
 			continue
 		}
-		logger.Debugf("[sdk] adding type: %s", outputType.Name)
+		log.Debugf("[sdk] adding type: %s", outputType.Name)
 		ctx.outputTypes[outputType.Name] = outputType
 	}
 	return multiErr.Err()
@@ -128,11 +128,11 @@ func (plugin *Plugin) Run() error {
 	// If the --dry-run flag is set, we will end here. The gRPC server and
 	// data manager do not get started up in the dry run.
 	if flagDryRun {
-		logger.Info("dry-run successful")
+		log.Info("dry-run successful")
 		os.Exit(0)
 	}
 
-	logger.Debug("[sdk] starting plugin server and manager")
+	log.Debug("[sdk] starting plugin server and manager")
 
 	// "Starting" steps **
 
@@ -156,7 +156,7 @@ func (plugin *Plugin) Run() error {
 // and run cleanup/post-run actions prior to terminating.
 func (plugin *Plugin) onQuit() {
 	sig := <-plugin.quit
-	logger.Infof("[sdk] Stopping plugin (%s)...", sig.String())
+	log.Infof("[sdk] Stopping plugin (%s)...", sig.String())
 
 	// TODO: any other stop/cleanup actions should go here (closing channels, etc)
 
@@ -166,11 +166,11 @@ func (plugin *Plugin) onQuit() {
 	// Execute post-run actions.
 	multiErr := execPostRun(plugin)
 	if multiErr.HasErrors() {
-		logger.Error(multiErr)
+		log.Error(multiErr)
 		os.Exit(1)
 	}
 
-	logger.Info("[done]")
+	log.Info("[done]")
 	os.Exit(0)
 }
 
@@ -271,7 +271,7 @@ func (plugin *Plugin) processConfig() error {
 		return err
 	}
 
-	logger.Debug("[sdk] finished processing configuration(s) for run")
+	log.Debug("[sdk] finished processing configuration(s) for run")
 	return nil
 }
 
