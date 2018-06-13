@@ -239,6 +239,7 @@ func (server *server) Metainfo(ctx context.Context, request *synse.Empty) (*syns
 	return &synse.Metadata{
 		Name:        metainfo.Name,
 		Maintainer:  metainfo.Maintainer,
+		Tag:         metainfo.Tag,
 		Description: metainfo.Description,
 		Vcs:         metainfo.VCS,
 		Version:     version.Encode(),
