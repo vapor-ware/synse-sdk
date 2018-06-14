@@ -22,6 +22,7 @@ type meta struct {
 // log logs out the plugin meta-info at INFO level.
 func (m *meta) log() {
 	log.Info("Plugin Info:")
+	log.Infof("  Tag:         %s", m.Tag)
 	log.Infof("  Name:        %s", m.Name)
 	log.Infof("  Maintainer:  %s", m.Maintainer)
 	log.Infof("  Description: %s", m.Description)
@@ -39,7 +40,7 @@ func SetPluginMeta(name, maintainer, desc, vcs string) {
 	}
 }
 
-// makeTag creates the tag used in the plugin metainformation.
+// makeTag creates the tag used in the plugin meta information.
 func makeTag(name, maintainer string) string {
 	tag := fmt.Sprintf("%s/%s", maintainer, name)
 	tag = strings.ToLower(tag)
