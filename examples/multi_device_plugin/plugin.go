@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	pluginName       = "Multi-Device Plugin"
-	pluginMaintainer = "Vapor IO"
+	pluginName       = "multi device plugin"
+	pluginMaintainer = "vaporio"
 	pluginDesc       = "An example plugin that demonstrates registering multiple devices"
 )
 

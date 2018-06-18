@@ -6,90 +6,111 @@ This page describes some of the more advanced features of the SDK for plugin dev
 
 
 - Dynamic Registration
-- Pre Run Actions
-- Post Run Actions
-- Device Setup Actions
+√ Pre Run Actions
+√ Post Run Actions
+√ Device Setup Actions
 - Health Checks
 - Configuration Policies
-- Plugin options
+√ Plugin Options
+√ C backend
+√ Command line args
 
 
 
+Command Line Arguments
+----------------------
+The SDK has some built-in command line arguments for plugins. These can be seen by running
+the plugin with the ``--help`` flag.
 
-.. _deviceEnumerationHandler:
+.. code-block:: none
 
-Device Enumeration Handler
---------------------------
-The `Device Enumeration <https://godoc.org/github.com/vapor-ware/synse-sdk/sdk#DeviceEnumerator>`_ Handler,
+    $ ./plugin --help
+    Usage of ./plugin:
+      -debug
+            run the plugin with debug logging
+      -dry-run
+            perform a dry run to verify the plugin is functional
+      -version
+            print plugin version information
+
+
+A plugin can add its own command line args if it needs to as well. This can be done simply
+by defining the flags that the plugin needs, e.g.
 
 .. code-block:: go
 
-    type DeviceEnumerator func(map[string]interface{}) ([]*config.DeviceConfig, error)
+    import (
+        "flag"
+    )
 
+    var customFlag bool
 
-is a handler that allows a plugin to register device instances programmatically, not through
-pre-defined YAML. A good use case for this is IPMI, where the plugin will know which BMCs to
-reach out to, but not which devices are on the BMCs. Instead of manually going through and
-constructing the configuration for each server, this can be done through a device enumeration
-handler that connects with the BMC, get all devices it has, and then initialize plugin Device
-instances for those found devices.
+    func init() {
+        flag.BoolVar(&customFlag, "custom", false, "some custom functionality")
+    }
 
-The ``map[string]interface{}`` that is the input parameter to the ``DeviceEnumerator`` function
-type is the map defined in the plugin configuration under the ``auto_enumerate`` key. Any values
-can be specified there, under any nesting, but it is up to the plugin writer to parse them correctly.
-
-
-For more, see the `Auto Enumerate Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/auto_enumerate>`_.
+This flag will be parsed on plugin ``Run()``, so it can only be used after the plugin
+has been run.
 
 
 Pre Run Actions
 ---------------
-Pre Run Actions are actions that the plugin should perform before it starts to
-run the gRPC server and start the read/write goroutines. These are actions that
-should be used for plugin-wide setup actions, should a plugin require it. This could
-be performing some kind of authentication, verifying that some backend exists and is
-reachable, etc.
+Pre Run Actions are actions that the plugin will perform before it starts to
+run the gRPC server and start the data manager's read/write goroutines. These actions
+can be used for plugin-wide setup, should a plugin require it. For example, this could
+be used to perform some kind of authentication, verifying that some backend exists and is
+reachable, or to do additional config validation, etc.
 
-Pre Run Actions should be defined as part of plugin initialization and should
-be registered with the plugin before it is run.
-
-A pre run action should fulfil the ``pluginAction`` type
+Pre Run Actions should fulfil the ``pluginAction`` type and should be registered with the
+plugin before it is run. An (abridged) example:
 
 .. code-block:: go
 
-    type pluginAction func(p *Plugin) error
-
-The ``pluginAction`` should then be registered with the plugin via the
-`plugin.RegisterPreRunActions <https://godoc.org/github.com/vapor-ware/synse-sdk/sdk#Plugin.RegisterPreRunActions>`_
-function.
-
-An (abridged) example:
-
-.. code-block:: go
-
-    // preRunAction defines a function we will run before the
+    // preRunAction defines a function that will run before the
     // plugin starts its main run logic.
     func preRunAction(p *sdk.Plugin) error {
         return backend.VerifyRunning()  // do some action
     }
 
-
     func main() {
-        // Create a new Plugin
-        plugin, err := sdk.NewPlugin(handlers, nil)
-        if err != nil {
-            log.Fatal(err)
-        }
+        plugin  := sdk.NewPlugin()
 
-        // Register the action with the plugin.
         plugin.RegisterPreRunActions(
             preRunAction,
         )
     }
 
 
-For more, see the `Pre Run Actions Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/pre_run_actions>`_.
+For more, see the `Device Actions Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/device_actions>`_.
 
+Post Run Actions
+----------------
+Post Run Actions are actions that the plugin will perform after it is shut down gracefully.
+A graceful shutdown of a plugin is done by passing the SIGTERM or SIGINT signal to the plugin.
+These actions can be used for plugin-wide shutdown/cleanup, such as cleaning up state, terminating
+connections, etc.
+
+Post Run Actions should fulfil the ``pluginAction`` type and should be registered with the
+plugin before it is run. An (abridged) example:
+
+.. code-block:: go
+
+    // postRunAction defines a function that will run after the plugin
+    // has gracefully terminated.
+    func postRunAction(p *sdk.Plugin) error {
+        return db.closeConnection() // do some action
+    }
+
+    func main() {
+        plugin := sdk.NewPlugin()
+
+        plugin.RegisterPostRunActions(
+            postRunAction,
+        )
+    }
+
+
+For more, see the `Device Actions Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/device_actions>`_.
 
 Device Setup Actions
 --------------------
@@ -98,21 +119,11 @@ or write to them. As an example, this could be performing some type of authentic
 or setting some bit in a register. The action itself is plugin (and protocol) specific
 and does not matter to the SDK.
 
-Device Setup Actions should be defined as part of plugin initialization and should
-be registered with the plugin before it is run.
+Device Setup Actions should fulfil the ``deviceAction`` type and should be registered with
+the plugin before it is run.
 
-A device setup action should fulfil the ``deviceAction`` type
-
-.. code-block:: go
-
-    type deviceAction func(p *Plugin, d *Device) error
-
-
-The ``deviceAction`` should then be registered with the plugin via the
-`plugin.RegisterDeviceSetupActions <https://godoc.org/github.com/vapor-ware/synse-sdk/sdk#Plugin.RegisterDeviceSetupActions>`_
-function.
-
-An (abridged) example:
+When a device setup action is registered, it should be registered with a filter. This filter
+is used to identify which devices the action should apply to. An (abridged) example:
 
 .. code-block:: go
 
@@ -122,13 +133,9 @@ An (abridged) example:
         return utils.Validate(d) // do some action
     }
 
-
     func main() {
         // Create a new Plugin
-        plugin, err := sdk.NewPlugin(handlers, nil)
-        if err != nil {
-            log.Fatal(err)
-        }
+        plugin := sdk.NewPlugin()
 
         // Register the action with all devices that have
         // the type "airflow".
@@ -139,7 +146,44 @@ An (abridged) example:
     }
 
 
-For more, see the `Pre Run Actions Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/pre_run_actions>`_.
+For more, see the `Device Actions Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/device_actions>`_.
+
+Plugin Options
+--------------
+As other sections here describe in more detail, there may be cases where a plugin would want
+to override some default plugin functionality. As an example, the SDK provides a default device
+identifier function. What this function does is take the config for a particular device and creates
+a hash out of that config info in order to create a deterministic ID for the device.
+
+The premise of the ID determinism is that a device config will generally define how to address that
+device (e.g. for a serial device, it could be the serial bus, channel, etc). If the config changes,
+we are talking to something different, so we assume that a change in config equates to a change in
+device identity.
+
+Obviously, this is not always the case, which is where having a custom identifier function becomes
+useful. If we wanted to only take a subset of the device config, we could define a simple device
+identifier override function, but in order to register it with the plugin, we'd need to use a Plugin
+Option.
+
+Plugin Options are passed to the plugin when it is initialized via ``sdk.NewPlugin``.
+
+.. code-block:: go
+
+    // ProtocolIdentifier gets the unique identifiers out of the plugin-specific
+    // configuration to be used in UID generation.
+    func ProtocolIdentifier(data map[string]interface{}) string {
+    	return fmt.Sprint(data["id"])
+    }
+
+    func main() {
+        plugin := sdk.NewPlugin(
+            sdk.CustomDeviceIdentifier(ProtocolIdentifier),
+        )
+    }
+
+An example of this can be found in the
+`Device Actions Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/device_actions>`_.
+
 
 C Backend
 ---------

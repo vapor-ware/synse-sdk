@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	pluginName       = "Dynamic Registration Plugin"
-	pluginMaintainer = "Vapor IO"
+	pluginName       = "dynamic registration plugin"
+	pluginMaintainer = "vaporio"
 	pluginDesc       = "An example plugin that demonstrates dynamically registering devices"
 )
 

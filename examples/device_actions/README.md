@@ -1,20 +1,14 @@
-### Pre Run Action(s) Plugin
+### Device Action Plugin
 
 This directory contains an example of a somewhat simple plugin, though more
 complex than the "simple plugin". It dispatches reads and writes to perform
 different actions based on the characteristics of the device specified for
-read or write. Additionally, it specifies pre-run actions for the plugin as
+read or write. Additionally, it specifies different actions for the plugin as
 well as setup actions for the devices. The actions registered here are simple,
 but more complex examples should easily extend from them.
 
-In this case, there are two different kinds of devices. While they are
-different types (temperature, airflow), they could all be the same
-type with different models. In this example, we are differentiating between
-devices only by looking at the model, but it shouldn't be hard to extend this
-to use a different device feature or compound features, e.g. model and type. 
-
 Since this example is primarily to look at the plugin setup, the reads are kept
-very simple for each device model. 
+very simple for each device. 
 - The airflow device always returns a reading of 100.
 - The temperature device always returns a reading of 10.
 

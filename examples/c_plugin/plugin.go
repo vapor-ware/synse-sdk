@@ -8,7 +8,7 @@ import (
 
 var (
 	pluginName       = "C Plugin"
-	pluginMaintainer = "Vapor IO"
+	pluginMaintainer = "vaporio"
 	pluginDesc       = "An example plugin that demonstrates C code integration"
 )
 
