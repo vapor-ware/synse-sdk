@@ -11,6 +11,7 @@ This page describes some of the more advanced features of the SDK for plugin dev
 - Device Setup Actions
 - Health Checks
 - Configuration Policies
+- Plugin options
 
 
 
