@@ -5,18 +5,6 @@ Advanced Usage
 This page describes some of the more advanced features of the SDK for plugin development.
 
 
-- Dynamic Registration
-√ Pre Run Actions
-√ Post Run Actions
-√ Device Setup Actions
-- Health Checks
-- Configuration Policies
-√ Plugin Options
-√ C backend
-√ Command line args
-
-
-
 Command Line Arguments
 ----------------------
 The SDK has some built-in command line arguments for plugins. These can be seen by running
@@ -183,6 +171,116 @@ Plugin Options are passed to the plugin when it is initialized via ``sdk.NewPlug
 
 An example of this can be found in the
 `Device Actions Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/device_actions>`_.
+
+Dynamic Registration
+--------------------
+Dynamic Registration is when devices are configured not from config YAML files, but
+dynamically at runtime. There are two kinds of dynamic registration functions:
+
+- one that creates DeviceConfig(s) (e.g. it creates the configuration for a device)
+- one that creates Device(s) (e.g. it creates the device directly)
+
+By default, a plugin will not do any dynamic device registration. In enable dynamic registration
+for a plugin, the dynamic registration function will have to be defined, and then it will
+have to be passed to the plugin constructor via a PluginOption.
+
+Dynamic registration can be useful when you do not know what devices may exist at any given
+time. A good example of this is IPMI. While you should know the BMC IP address, you may not
+know all the devices on all your BMCs. Even if you do, it would be cumbersome to have to manually
+enumerate these in a config file.
+
+With device enumeration, you can just create a function that will query the BMC for its
+devices and then use that response to generate the devices (or the device configs) at runtime.
+
+An extremely simple example of this can be found in the
+`Dynamic Registration Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/dynamic_registration>`_.
+
+Configuration Policies
+----------------------
+The SDK exposes different configuration policies that a plugin can set to modify its
+behavior. By default, the policies dictate that
+
+- plugin config is optional (e.g. a plugin can use defaults)
+- device config(s) are required (e.g. YAML files must be specified for device configs)
+- dynamic device config(s) are optional
+- output type config file(s) are optional
+
+For many plugins, the default policies will be good enough. Some plugins may require some
+explicit configuration, so to enforce it, they can set the appropriate policy. As an example,
+there could be a hypothetical plugin that will only allow the pre-defined output types, will
+not allow device configs from file, requires devices to be registered from dynamic registration.
+The config policies allow that behavior to be enforced, and cause the plugin to terminate if
+any of the policies are violated.
+
+Below is a table that lists all of the current config policies. There can only be one (or none)
+policy chosen from each column below at any given time, e.g. you cannot have ``PluginConfigFileOptional``
+and ``PluginConfigFileRequired`` specified at the same time.
+
+==========================   ==========================   =============================   =========================
+Plugin (File)                Device Config (File)         Device Config (Dynamic)         Output Type Config (File)
+==========================   ==========================   =============================   =========================
+PluginConfigFileOptional     DeviceConfigFileOptional     DeviceConfigDynamicOptional     TypeConfigFileOptional
+PluginConfigFileRequired     DeviceConfigFileRequired     DeviceConfigDynamicRequired     TypeConfigFileRequired
+PluginConfigFileProhibited   DeviceConfigFileProhibited   DeviceConfigDynamicProhibited   TypeConfigFileProhibited
+==========================   ==========================   =============================   =========================
+
+Setting config policies for the plugin is simple:
+
+.. code-block:: go
+
+    import (
+        "github.com/vapor-ware/synse-sdk/sdk"
+        "github.com/vapor-ware/synse-sdk/sdk/policies"
+    )
+
+    func main() {
+        plugin := sdk.NewPlugin()
+
+        policies.Add(policies.DeviceConfigFileOptional)
+        policies.Add(policies.TypeConfigFileOptional)
+    }
+
+
+An example of this can be found in the
+`Dynamic Registration Example Plugin <https://github.com/vapor-ware/synse-sdk/tree/master/examples/dynamic_registration>`_.
+
+Health Checks
+-------------
+The SDK supports plugin health checks. The health of the plugin derived from these checks is
+surfaced via the Synse gRPC API, and can be seen via the Synse Server HTTP API.
+
+A health check is just a function that returns an error. When run, if the function returns
+``nil``, the check passed. If an error is returned, the check has failed. Health checks can
+be registered and run in different ways, but the SDK only natively supports *periodic* checks
+currently.
+
+Writing and registering a health check is simple. As an example, we could define a health check
+that will periodically hit a URL to see if it is reachable:
+
+.. code-block:: go
+
+    import (
+        "github.com/vapor-ware/synse-sdk/sdk"
+        "github.com/vapor-ware/synse-sdk/sdk/health"
+    )
+
+    func checkURL() error {
+        resp, err := http.Get(someURL)
+        if err != nil {
+            return err
+        }
+        if !resp.Ok {
+            return fmt.Errorf("Got non-200 response from URL")
+        }
+        return nil
+    }
+
+    func main() {
+        plugin := sdk.NewPlugin()
+
+        health.RegisterPeriodicCheck("example health check", 30*time.Second, checkURL)
+    }
+
 
 
 C Backend
