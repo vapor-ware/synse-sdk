@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
@@ -100,11 +100,14 @@ func registerDevices() error {
 	// devices from dynamic registration
 	policy := policies.GetDeviceConfigDynamicPolicy()
 	if policy != policies.DeviceConfigDynamicProhibited {
-		devices, err := ctx.dynamicDeviceRegistrar(Config.Plugin.DynamicRegistration.Config)
-		if err != nil {
-			return err
+		for _, data := range Config.Plugin.DynamicRegistration.Config {
+			devices, err := ctx.dynamicDeviceRegistrar(data)
+			if err != nil {
+				return err
+			}
+			log.Debugf("[sdk] adding %d devices from dynamic registration", len(devices))
+			updateDeviceMap(devices)
 		}
-		updateDeviceMap(devices)
 	}
 
 	// devices from config. the config here is the unified device config which
@@ -113,6 +116,7 @@ func registerDevices() error {
 	if err != nil {
 		return err
 	}
+	log.Debugf("[sdk] adding %d devices from config", len(devices))
 	updateDeviceMap(devices)
 
 	return nil
@@ -127,9 +131,9 @@ func logStartupInfo() {
 	version.Log()
 
 	// Log registered devices
-	logger.Info("Registered Devices:")
+	log.Info("Registered Devices:")
 	for id, dev := range ctx.devices {
-		logger.Infof("  %v (%v)", id, dev.Kind)
+		log.Infof("  %v (%v)", id, dev.Kind)
 	}
-	logger.Info("--------------------------------")
+	log.Info("--------------------------------")
 }

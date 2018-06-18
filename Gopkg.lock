@@ -56,16 +56,16 @@
   version = "v1.2.2"
 
 [[projects]]
-  branch = "sdk-1.0"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
-  revision = "7922ce761ae1e8ea87f61527a88ae96f33ba43d9"
+  revision = "e0c079f1b85081c6a536fb7c5c63cf9b9370c22e"
+  version = "1.0.0"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "8ac0e0d97ce45cd83d1d7243c060cb8461dda5e9"
+  revision = "027cca12c2d63e3d62b670d901e8a2c95854feec"
 
 [[projects]]
   branch = "master"
@@ -88,7 +88,7 @@
     "unix",
     "windows"
   ]
-  revision = "bff228c7b664c5fce602223a05fb708fd8654986"
+  revision = "6c888cc515d3ed83fc103cf1d84468aad274b0a7"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -163,6 +163,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c9b54575073feec38009821728ac9d973ead34691eb87b13b00a20215b958962"
+  inputs-digest = "ec08dd130d5e4387e6fca85468d4bcfdf6861ea2320fb0a87254eab511c19342"
   solver-name = "gps-cdcl"
   solver-version = 1

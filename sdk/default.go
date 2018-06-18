@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	log "github.com/Sirupsen/logrus"
 )
 
 // defaultDeviceIdentifier is the default implementation that fulfils the DeviceIdentifier
@@ -31,7 +31,7 @@ func defaultDeviceIdentifier(data map[string]interface{}) string {
 		// not ordered, we cannot use them to create a stable device id.
 		rv := reflect.ValueOf(value)
 		if rv.Kind() == reflect.Map {
-			logger.Debug("default device identifier - data value is map; skipping")
+			log.Debug("[sdk] default device identifier - data value is map; skipping")
 			continue
 		}
 

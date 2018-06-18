@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -274,7 +274,7 @@ func (output *Output) MakeReading(value interface{}) *Reading {
 func (output *Output) encode() *synse.Output {
 	sf, err := output.GetScalingFactor()
 	if err != nil {
-		logger.Errorf("error getting scaling factor: %v", err)
+		log.Errorf("[sdk] error getting scaling factor: %v", err)
 	}
 
 	return &synse.Output{
@@ -386,7 +386,7 @@ func updateDeviceMap(devices []*Device) {
 			// If we have devices with the same ID, there is something very wrong
 			// happening and we will not want to proceed, since we won't be able
 			// to route to devices correctly.
-			logger.Fatalf("duplicate device id found: %s", d.GUID())
+			log.Fatalf("[sdk] duplicate device id found: %s", d.GUID())
 		}
 		ctx.devices[d.GUID()] = d
 	}
@@ -463,6 +463,7 @@ func (config DeviceConfig) Validate(multiErr *errors.MultiError) {
 	// A version must be specified and it must be of the correct format.
 	_, err := config.GetVersion()
 	if err != nil {
+		log.WithField("config", config).Error("[validation] bad version")
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
 }
@@ -492,16 +493,19 @@ type LocationConfig struct {
 func (location LocationConfig) Validate(multiErr *errors.MultiError) {
 	// All locations must have a name.
 	if location.Name == "" {
+		log.WithField("config", location).Error("[validation] empty name")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "location.name"))
 	}
 
 	// Something must be specified for rack
 	if location.Rack == nil || *location.Rack == (LocationData{}) {
+		log.WithField("config", location).Error("[validation] empty rack")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "location.rack"))
 	}
 
 	// Something must be specified for board
 	if location.Board == nil || *location.Board == (LocationData{}) {
+		log.WithField("config", location).Error("[validation] empty board")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "location.board"))
 	}
 }
@@ -551,7 +555,8 @@ type LocationData struct {
 // Validate validates that the LocationData has no configuration errors.
 func (locData LocationData) Validate(multiErr *errors.MultiError) {
 	if locData.Name == "" && locData.FromEnv == "" {
-		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "LocationDat.{type,fromEnv}"))
+		log.WithField("config", locData).Error("[validation] bad config")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "LocationData.{type,fromEnv}"))
 	}
 	value, err := locData.Get()
 	if err != nil {
@@ -579,7 +584,7 @@ func (locData *LocationData) Get() (string, error) {
 		// If we already have the location info from the Name field, we
 		// will not resolve the FromEnv field and will log out a warning.
 		if location != "" {
-			logger.Warnf("location fields 'fromEnv' and 'name' are both specified, ignoring 'fromEnv': %+v", locData)
+			log.Warnf("location fields 'fromEnv' and 'name' are both specified, ignoring 'fromEnv': %+v", locData)
 		} else {
 			l, ok := os.LookupEnv(locData.FromEnv)
 			if !ok {
@@ -645,6 +650,7 @@ type DeviceKind struct {
 // Validate validates that the DeviceKind has no configuration errors.
 func (deviceKind DeviceKind) Validate(multiErr *errors.MultiError) {
 	if deviceKind.Name == "" {
+		log.WithField("config", deviceKind).Error("[validation] empty name")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "deviceKind.name"))
 	}
 }
@@ -695,6 +701,7 @@ type DeviceInstance struct {
 func (deviceInstance DeviceInstance) Validate(multiErr *errors.MultiError) {
 	// All device instances must be associated with a location
 	if deviceInstance.Location == "" {
+		log.WithField("config", deviceInstance).Error("[validation] empty location")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "deviceInstance.location"))
 	}
 }
@@ -726,6 +733,7 @@ type DeviceOutput struct {
 func (deviceOutput DeviceOutput) Validate(multiErr *errors.MultiError) {
 	// All device outputs need to be associated with an output type.
 	if deviceOutput.Type == "" {
+		log.WithField("config", deviceOutput).Error("[validation] empty type name")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "deviceOutput.type"))
 	}
 }

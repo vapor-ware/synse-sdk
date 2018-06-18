@@ -3,6 +3,7 @@ package sdk
 import (
 	"fmt"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
@@ -10,10 +11,6 @@ var (
 	// deviceConfigLocations is a map to track the locations for the unified
 	// DeviceConfig. The key is the name of the Location.
 	deviceConfigLocations map[string]*LocationConfig
-
-	// deviceConfigKinds is a map to track the devices (DeviceKind) for the
-	// unified DeviceConfig. The key is the name of the DeviceKind.
-	deviceConfigKinds map[string]*DeviceKind
 )
 
 // verifyConfigs verifies that all device configurations that the plugin has
@@ -33,11 +30,12 @@ var (
 // that all the information in a given config is correct until we have the
 // whole picture of what exists.
 func verifyConfigs(unifiedDeviceConfig *DeviceConfig) *errors.MultiError {
+	log.Debug("[sdk] verifying unified device config")
+
 	var multiErr = errors.NewMultiError("config verification")
 
 	// Reset the tracking state for every run of config verification
 	deviceConfigLocations = map[string]*LocationConfig{}
-	deviceConfigKinds = map[string]*DeviceKind{}
 
 	// Verify that there are no conflicting device configurations. We want to
 	// do this first. This has the side-effect of building the deviceConfigLocations
@@ -45,22 +43,20 @@ func verifyConfigs(unifiedDeviceConfig *DeviceConfig) *errors.MultiError {
 	// known location.
 	verifyDeviceConfigLocations(unifiedDeviceConfig, multiErr)
 
-	// Verify that there are no duplicate DeviceKinds specified. We do not
-	// allow the same DeviceKind to be defined across multiple files.
-	verifyDeviceConfigDeviceKinds(unifiedDeviceConfig, multiErr)
-
 	// Verify that all device instances reference a valid location.
 	verifyDeviceConfigInstances(unifiedDeviceConfig, multiErr)
 
 	// Verify that device kinds/instances reference valid output types.
 	verifyDeviceConfigOutputs(unifiedDeviceConfig, multiErr)
 
+	log.Debugf("[sdk] config verification found %d error(s)", len(multiErr.Errors))
 	return multiErr
 }
 
 // verifyDeviceConfigLocations verifies that there are no Locations specified
 // in the unified DeviceConfig that have conflicting data.
 func verifyDeviceConfigLocations(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
+	log.Debug("[sdk] verifying device config location data")
 	for _, location := range deviceConfig.Locations {
 		loc, hasName := deviceConfigLocations[location.Name]
 
@@ -74,6 +70,7 @@ func verifyDeviceConfigLocations(deviceConfig *DeviceConfig, multiErr *errors.Mu
 		// If we already have the location cached, make sure that this Location
 		// is the same as the existing one. If not, we have a conflict.
 		if !loc.Equals(location) {
+			log.WithField("name", loc.Name).Error("[sdk] duplicate location name")
 			multiErr.Add(
 				errors.NewVerificationConflictError(
 					"device",
@@ -84,35 +81,15 @@ func verifyDeviceConfigLocations(deviceConfig *DeviceConfig, multiErr *errors.Mu
 	}
 }
 
-// verifyDeviceConfigDeviceKinds verifies that there are no duplicate DeviceKinds
-// specified in the unified DeviceConfig.
-func verifyDeviceConfigDeviceKinds(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
-	for _, kind := range deviceConfig.Devices {
-		_, hasKind := deviceConfigKinds[kind.Name]
-
-		// If we do not already have the DeviceKind cached, add it.
-		if !hasKind {
-			deviceConfigKinds[kind.Name] = kind
-			continue
-		}
-
-		// If it is already specified, this is a conflict.
-		multiErr.Add(
-			errors.NewVerificationConflictError(
-				"device",
-				fmt.Sprintf("found duplicate DeviceKind name: %s", kind.Name),
-			),
-		)
-	}
-}
-
 // verifyDeviceConfigInstances verifies that the device instances all reference valid
 // locations. verifyDeviceConfigLocations needs to be called before this verification
 // function, as the deviceConfigLocations map is populated there.
 func verifyDeviceConfigInstances(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
+	log.Debug("[sdk] verifying device config instance data")
 	for _, device := range deviceConfig.Devices {
 		for _, instance := range device.Instances {
 			if instance.Location == "" {
+				log.Error("[sdk] instance config does not specify location")
 				multiErr.Add(
 					errors.NewVerificationInvalidError(
 						"device",
@@ -124,6 +101,7 @@ func verifyDeviceConfigInstances(deviceConfig *DeviceConfig, multiErr *errors.Mu
 
 			_, hasLocation := deviceConfigLocations[instance.Location]
 			if !hasLocation {
+				log.WithField("name", instance.Location).Error("[sdk] unknown location specified")
 				multiErr.Add(
 					errors.NewVerificationInvalidError(
 						"device",
@@ -140,11 +118,13 @@ func verifyDeviceConfigInstances(deviceConfig *DeviceConfig, multiErr *errors.Mu
 // verifyDeviceConfigOutputs verifies that the DeviceOutputs of DeviceKinds and
 // DeviceInstances reference valid output types.
 func verifyDeviceConfigOutputs(deviceConfig *DeviceConfig, multiErr *errors.MultiError) {
+	log.Debug("[sdk] verifying device config output type data")
 	for _, device := range deviceConfig.Devices {
 		// Check the device-level outputs
 		for _, output := range device.Outputs {
 			_, hasOutput := ctx.outputTypes[output.Type]
 			if !hasOutput {
+				log.WithField("name", output.Type).Error("[sdk] unknown output type specified")
 				multiErr.Add(
 					errors.NewVerificationInvalidError(
 						"device",
@@ -160,6 +140,7 @@ func verifyDeviceConfigOutputs(deviceConfig *DeviceConfig, multiErr *errors.Mult
 			for _, output := range instance.Outputs {
 				_, hasOutput := ctx.outputTypes[output.Type]
 				if !hasOutput {
+					log.WithField("name", output.Type).Error("[sdk] unknown output type specified")
 					multiErr.Add(
 						errors.NewVerificationInvalidError(
 							"device",

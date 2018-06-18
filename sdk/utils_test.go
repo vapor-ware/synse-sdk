@@ -1,10 +1,9 @@
 package sdk
 
 import (
+	"fmt"
 	"sort"
 	"testing"
-
-	"fmt"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -286,7 +285,9 @@ func Test_registerDevices(t *testing.T) {
 	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 	Config.Device = &DeviceConfig{
@@ -314,7 +315,9 @@ func Test_registerDevices2(t *testing.T) {
 	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 	Config.Device = &DeviceConfig{
@@ -338,7 +341,9 @@ func Test_registerDevices3(t *testing.T) {
 	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 	Config.Device = &DeviceConfig{
@@ -375,7 +380,9 @@ func Test_registerDevices4(t *testing.T) {
 	Config.Plugin = &PluginConfig{
 		SchemeVersion: SchemeVersion{Version: "test"},
 		DynamicRegistration: &DynamicRegistrationSettings{
-			Config: map[string]interface{}{},
+			Config: []map[string]interface{}{
+				{},
+			},
 		},
 	}
 	Config.Device = &DeviceConfig{

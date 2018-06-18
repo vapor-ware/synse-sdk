@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -51,12 +51,15 @@ func (validator *schemeValidator) Validate(context *ConfigContext) *errors.Multi
 	// Once we're done validating, we'll want to clear the state from this validation.
 	defer validator.clearState()
 
+	log.WithField("source", context.Source).Debug("[sdk] validating config")
+
 	// Before we start validating, apply the state to the validator.
 	validator.errors = errors.NewMultiError(context.Source)
 
 	version, err := context.Config.GetVersion()
 	if err != nil {
 		validator.errors.Add(errors.NewValidationError(context.Source, err.Error()))
+		log.WithField("source", context.Source).Errorf("[sdk] found %d validation errors", len(validator.errors.Errors))
 		return validator.errors
 	}
 	validator.context = context
@@ -74,6 +77,7 @@ func (validator *schemeValidator) Validate(context *ConfigContext) *errors.Multi
 	// Now, validate the configuration provided by the context.
 	validator.validate(context.Config)
 
+	log.WithField("source", context.Source).Debugf("[sdk] found %d validation errors", len(validator.errors.Errors))
 	// Return validation errors, if any were found.
 	return validator.errors
 }
@@ -189,8 +193,8 @@ func (validator *schemeValidator) validateField(field reflect.Value, structField
 				validator.errors.Add(err)
 			} else {
 				if version.IsGreaterOrEqualTo(deprecatedInScheme) {
-					logger.Warnf(
-						"config field '%s' was deprecated in scheme version %s (current config scheme: %s)",
+					log.Warnf(
+						"[sdk] config field '%s' was deprecated in scheme version %s (current config scheme: %s)",
 						structField.Name, deprecatedInScheme.String(), version.String(),
 					)
 				}
@@ -243,7 +247,7 @@ func (validator *schemeValidator) isEmptyValue(v reflect.Value) bool { // nolint
 		// so the struct is empty.
 		return true
 	default:
-		logger.Warnf("No case for empty value check: %v", v.Kind())
+		log.Errorf("[sdk] No case for empty value check: %v", v.Kind())
 	}
 	return false
 }

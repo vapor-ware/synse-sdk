@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
+	logger "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/examples/pre_run_actions/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 var (
