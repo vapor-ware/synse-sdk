@@ -124,10 +124,10 @@
   version = "v1.2.1"
 
 [[projects]]
-  branch = "master"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
-  revision = "fd81ba14a7fb8d8d1027ea868976948b5596a395"
+  revision = "1409f2f9101ba8301b6f079d36e68479f6557620"
+  version = "v0.0.1"
 
 [[projects]]
   branch = "master"
@@ -231,6 +231,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4945848211437201b2de89edc071326efac5649e6533be8aefc9460385643ffe"
+  inputs-digest = "76eea11677f43f7e7e121b5e9691f86ee01c71bd8af73c52a85df7fca96f1ac6"
   solver-name = "gps-cdcl"
   solver-version = 1
