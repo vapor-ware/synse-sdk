@@ -322,7 +322,7 @@ type PluginConfig struct {
 	// Limiter specifies settings for a rate limiter for reads/writes.
 	Limiter *LimiterSettings `yaml:"limiter,omitempty" addedIn:"1.0"`
 
-	// Health sepcifies the settings for health checking in the plugin.
+	// Health specifies the settings for health checking in the plugin.
 	Health *HealthSettings `default:"{}" yaml:"health,omitempty" addedIn:"1.0"`
 
 	// Context is a map that allows the plugin to specify any arbitrary
@@ -424,7 +424,7 @@ func (settings NetworkSettings) Validate(multiErr *errors.MultiError) {
 // DynamicRegistrationSettings specifies configuration and data for
 // the dynamic registration of devices.
 type DynamicRegistrationSettings struct {
-	// The plugin configuration for dynamic registration. This map holds the
+	// The plugin configuration for dynamic registration. This slice of maps holds the
 	// plugin-specific data that can be used to dynamically register new devices.
 	// As an example, this could hold the information for connecting with a server,
 	// or it could contain a bus address, etc.

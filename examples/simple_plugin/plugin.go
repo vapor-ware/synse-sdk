@@ -13,9 +13,8 @@ import (
 // gets registered with the plugin (below, in the main function) and is surfaced
 // to Synse Server to identify the plugin.
 var (
-	// FIXME: plugin names, namespacing. what is the "right" way to do this?
-	pluginName       = "Simple Plugin"
-	pluginMaintainer = "Vapor IO"
+	pluginName       = "simple plugin"
+	pluginMaintainer = "vaporio"
 	pluginDesc       = "A simple example plugin"
 )
 

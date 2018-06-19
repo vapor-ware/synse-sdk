@@ -23,4 +23,26 @@ Synse and plugins.
 
 ------------
 
-.
+**Synse SNMP Plugin** (`GitHub <https://github.com/vapor-ware/synse-snmp-plugin>`_)
+
+A general-purpose SNMP plugin for Synse Server.
+
+
+------------
+
+**Synse Modbus-IP Plugin** (`GitHub <https://github.com/vapor-ware/synse-modbus-ip-plugin>`_)
+
+A general-purpose Modbus-over-IP plugin for Synse Server.
+
+
+------------
+
+**Synse AMT Plugin** (`GitHub <https://github.com/vapor-ware/synse-amt-plugin>`_)
+
+Intel AMT plugin for Synse Server.
+
+------------
+
+**Synse IPMI Plugin** (`GitHub <https://github.com/vapor-ware/synse-ipmi-plugin>`_)
+
+A general-purpose IPMI plugin for Synse Server.

@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	pluginName       = "Health Check Plugin"
-	pluginMaintainer = "Vapor IO"
+	pluginName       = "health check plugin"
+	pluginMaintainer = "vaporio"
 	pluginDesc       = "A example plugin with health checks"
 )
 

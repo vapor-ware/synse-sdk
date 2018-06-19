@@ -5,13 +5,13 @@ import (
 	"log"
 
 	logger "github.com/Sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/examples/pre_run_actions/devices"
+	"github.com/vapor-ware/synse-sdk/examples/device_actions/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
 var (
-	pluginName       = "Pre-Run Action Plugin"
-	pluginMaintainer = "Vapor IO"
+	pluginName       = "device action plugin"
+	pluginMaintainer = "vaporio"
 	pluginDesc       = "An example plugin that demonstrates pre-run action capabilities"
 )
 

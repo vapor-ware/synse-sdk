@@ -1,5 +1,5 @@
 #
-# Pre Run Actions Plugin Example
+# Device Actions Plugin Example
 #
 
 PLUGIN_VERSION := 1.0
