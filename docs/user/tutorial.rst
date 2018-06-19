@@ -735,7 +735,7 @@ With Synse Server now running locally, we can interact with its HTTP API using `
               "id":"host",
               "devices":[
                 {
-                  "id":"65f660ac428556804060c13349e500de",
+                  "id":"baeb1223219e634446c4af115be089e7",
                   "info":"Virtual Memory Usage",
                   "type":"memory"
                 }
@@ -752,33 +752,39 @@ With Synse Server now running locally, we can interact with its HTTP API using `
 
 .. code-block:: console
 
-    $ curl localhost:5000/synse/2.1/read/local/host/65f660ac428556804060c13349e500de
+    $ curl localhost:5000/synse/2.1/read/local/host/baeb1223219e634446c4af115be089e7
     {
-      "type":"memory",
+      "kind":"memory",
       "data":{
         "total":{
-          "value":2096066560,
-          "timestamp":"2018-04-19T16:58:53.1370289Z",
+          "value":2096058368,
+          "timestamp":"2018-06-19T13:28:31.0881264Z",
           "unit":{
             "symbol":"B",
             "name":"bytes"
-          }
+          },
+          "type":"total",
+          "info":""
         },
         "free":{
-          "value":91377664,
-          "timestamp":"2018-04-19T16:58:53.1370605Z",
+          "value":211611648,
+          "timestamp":"2018-06-19T13:28:31.0881454Z",
           "unit":{
             "symbol":"B",
             "name":"bytes"
-          }
+          },
+          "type":"free",
+          "info":""
         },
         "percent_used":{
-          "value":23.1238824782,
-          "timestamp":"2018-04-19T16:58:53.137088Z",
+          "value":69.7154570841,
+          "timestamp":"2018-06-19T13:28:31.0881577Z",
           "unit":{
             "symbol":"%",
             "name":"percent"
-          }
+          },
+          "type":"percent_used",
+          "info":""
         }
       }
     }
