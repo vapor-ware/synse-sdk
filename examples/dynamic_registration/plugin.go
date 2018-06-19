@@ -61,10 +61,9 @@ func DynamicDeviceConfig(cfg map[string]interface{}) ([]*sdk.DeviceConfig, error
 
 	// create a new device - here, we are using the base address and appending
 	// index of the loop to create the id of the device. we are hardcoding in
-	// the type and model as temperature and temp2010, respectively, because
-	// we need the devices to match the prototypes were support. in this example,
-	// we only have the temperature device prototype. in a real case, this info
-	// should be gathered from whatever the real source of auto-enumeration is,
+	// the name as temperature and temp2010, respectively, because we need the
+	// devices to match to their device handlers. in a real case, all of this info
+	// should be gathered from whatever the real source of dynamic registration is,
 	// e.g. for IPMI - the SDR records.
 	d := sdk.DeviceConfig{
 		SchemeVersion: sdk.SchemeVersion{

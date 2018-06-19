@@ -643,7 +643,7 @@ type DeviceKind struct {
 
 	// HandlerName specifies the name of the DeviceHandler to match this DeviceKind
 	// with. By default, a DeviceKind will match with a DeviceHandler using its
-	// `Kind` field. This field can be set to override that behavior.
+	// `Name` field. This field can be set to override that behavior.
 	HandlerName string `yaml:"handlerName,omitempty" addedIn:"1.0"`
 }
 
@@ -692,7 +692,7 @@ type DeviceInstance struct {
 
 	// HandlerName specifies the name of the DeviceHandler to match this DeviceInstance
 	// with. By default, a DeviceInstance will match with a DeviceHandler using
-	// the `Kind` field of its DeviceKind. This field can be set to override
+	// the `Name` field of its DeviceKind. This field can be set to override
 	// that behavior.
 	HandlerName string `yaml:"handlerName,omitempty" addedIn:"1.0"`
 }

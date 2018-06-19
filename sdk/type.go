@@ -14,7 +14,7 @@ type OutputType struct {
 	// SchemeVersion is the version of the configuration scheme.
 	SchemeVersion `yaml:",inline"`
 
-	// Name is the name of the output type. Each reading type
+	// Name is the name of the output type. Each output type
 	// should have a unique name. Names can be namespaced with
 	// '.' as the delimiter.
 	Name string `yaml:"name,omitempty" addedIn:"1.0"`
