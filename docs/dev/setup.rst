@@ -30,6 +30,15 @@ Or via ``go get``
     $ go get -u github.com/vapor-ware/synse-sdk/sdk
     $ cd $GOPATH/src/github.com/vapor-ware/synse-sdk
 
+
+Finally, you will need to get the dependencies. We use ``dep`` for dependency
+vendoring. A makefile target is included to both get ``dep`` if you don't already
+have it and to update the vendored packages specified in ``Gopkg.lock``.
+
+.. code-block:: console
+
+    $ make dep
+
 Now, you should be ready to start developing on the SDK.
 
 
