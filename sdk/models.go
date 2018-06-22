@@ -27,14 +27,18 @@ type Reading struct {
 
 // NewReading creates a new instance of a Reading. This is the recommended method
 // for creating new readings.
-func NewReading(output *Output, value interface{}) *Reading {
+func NewReading(output *Output, value interface{}) (reading *Reading, err error) {
+	if output == nil {
+		return nil, fmt.Errorf("Unable to create reading. output is nil")
+	}
+
 	return &Reading{
 		Timestamp: GetCurrentTime(),
 		Type:      output.Type(),
 		Info:      output.Info,
 		Unit:      output.Unit,
 		Value:     output.Apply(value),
-	}
+	}, nil
 }
 
 // encode translates the Reading type to the corresponding gRPC Reading message.

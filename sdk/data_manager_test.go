@@ -89,7 +89,12 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				output := d.GetOutput("foo")
+				reading, err := output.MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -142,7 +147,12 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				output := d.GetOutput("foo")
+				reading, err := output.MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -232,13 +242,16 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
 			var ctxs []*ReadContext
 			for _, d := range devices {
+				output := d.GetOutput("foo")
+				reading, err := output.MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
 				ctx := &ReadContext{
-					Rack:   "rack",
-					Board:  "board",
-					Device: "device",
-					Reading: []*Reading{
-						d.GetOutput("foo").MakeReading("ok"),
-					},
+					Rack:    "rack",
+					Board:   "board",
+					Device:  "device",
+					Reading: []*Reading{reading},
 				}
 				ctxs = append(ctxs, ctx)
 			}
@@ -306,13 +319,16 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
 			var ctxs []*ReadContext
 			for _, d := range devices {
+				output := d.GetOutput("foo")
+				reading, err := output.MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
 				ctx := &ReadContext{
-					Rack:   "rack",
-					Board:  "board",
-					Device: "device",
-					Reading: []*Reading{
-						d.GetOutput("foo").MakeReading("ok"),
-					},
+					Rack:    "rack",
+					Board:   "board",
+					Device:  "device",
+					Reading: []*Reading{reading},
 				}
 				ctxs = append(ctxs, ctx)
 			}
@@ -441,7 +457,12 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				output := d.GetOutput("foo")
+				reading, err := output.MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -488,13 +509,16 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
 			var ctxs []*ReadContext
 			for _, d := range devices {
+				output := d.GetOutput("foo")
+				reading, err := output.MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
 				ctx := &ReadContext{
-					Rack:   "rack",
-					Board:  "board",
-					Device: "device",
-					Reading: []*Reading{
-						d.GetOutput("foo").MakeReading("ok"),
-					},
+					Rack:    "rack",
+					Board:   "board",
+					Device:  "device",
+					Reading: []*Reading{reading},
 				}
 				ctxs = append(ctxs, ctx)
 			}
@@ -569,7 +593,12 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				output := d.GetOutput("foo")
+				reading, err := output.MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -617,13 +646,15 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
 			var ctxs []*ReadContext
 			for _, d := range devices {
+				reading, err := d.GetOutput("foo").MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
 				ctx := &ReadContext{
-					Rack:   "rack",
-					Board:  "board",
-					Device: "device",
-					Reading: []*Reading{
-						d.GetOutput("foo").MakeReading("ok"),
-					},
+					Rack:    "rack",
+					Board:   "board",
+					Device:  "device",
+					Reading: []*Reading{reading},
 				}
 				ctxs = append(ctxs, ctx)
 			}
@@ -699,7 +730,11 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				reading, err := d.GetOutput("foo").MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -715,7 +750,11 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				reading, err := d.GetOutput("foo").MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -731,7 +770,11 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				reading, err := d.GetOutput("foo").MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -789,7 +832,11 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				reading, err := d.GetOutput("foo").MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -805,7 +852,11 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				reading, err := d.GetOutput("foo").MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}
@@ -821,7 +872,11 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(d *Device) ([]*Reading, error) {
-				return []*Reading{d.GetOutput("foo").MakeReading("ok")}, nil
+				reading, err := d.GetOutput("foo").MakeReading("ok")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}

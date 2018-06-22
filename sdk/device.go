@@ -268,7 +268,8 @@ type Output struct {
 }
 
 // MakeReading makes a reading for the Output. This is a wrapper around `NewReading`.
-func (output *Output) MakeReading(value interface{}) *Reading {
+func (output *Output) MakeReading(value interface{}) (reading *Reading, err error) {
+	log.Debugf("MakeReading: %T %+v", value, value)
 	return NewReading(output, value)
 }
 
@@ -308,7 +309,15 @@ func NewOutputFromConfig(config *DeviceOutput) (*Output, error) {
 // returned.
 // FIXME: should we update the unsupported command error to be more descriptive?
 func (device *Device) Read() (*ReadContext, error) {
-	if device.IsReadable() {
+	// Bulk read is handled elsewhere.
+	// Device may only support bulk read.
+	if device == nil {
+		return nil, fmt.Errorf("device is nil")
+	}
+	if device.Handler == nil {
+		return nil, fmt.Errorf("device.Handler is nil")
+	}
+	if device.Handler.Read != nil {
 		readings, err := device.Handler.Read(device)
 		if err != nil {
 			return nil, err
