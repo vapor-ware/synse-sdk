@@ -188,6 +188,9 @@ func (manager *dataManager) readBulk(handler *DeviceHandler) {
 	// do nothing. Individual reads are done via the readOne function.
 	if handler.supportsBulkRead() {
 		devices := handler.getDevicesForHandler()
+		if len(devices) == 0 {
+			return
+		}
 		resp, err := handler.BulkRead(devices)
 		if err != nil {
 			log.Errorf("[data manager] failed to bulk read from device handler for: %v: %v", handler.Name, err)
