@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"encoding/json"
+
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
@@ -35,6 +37,15 @@ type OutputType struct {
 	// supported. This can be the value itself, e.g. "0.01", or
 	// a mathematical representation of the value, e.g. "1e-2".
 	ScalingFactor string `yaml:"scalingFactor,omitempty" addedIn:"1.0"`
+}
+
+// JSON encodes the config as JSON. This can be useful for logging and debugging.
+func (outputType *OutputType) JSON() (string, error) {
+	bytes, err := json.Marshal(outputType)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 // Validate validates that the OutputType has no configuration errors.

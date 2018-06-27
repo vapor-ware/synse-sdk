@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"encoding/json"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
@@ -454,6 +456,15 @@ func (config *DeviceConfig) ValidateDeviceConfigData(validator func(map[string]i
 		}
 	}
 	return multiErr
+}
+
+// JSON encodes the config as JSON. This can be useful for logging and debugging.
+func (config *DeviceConfig) JSON() (string, error) {
+	bytes, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 // Validate validates that the DeviceConfig has no configuration errors.

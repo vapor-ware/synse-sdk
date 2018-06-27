@@ -224,6 +224,20 @@ func processDeviceConfigs() error { // nolint: gocyclo
 		}
 	}
 
+	// Regardless of whether we pass policy checks/config validation,
+	// we will want to see what the configs are, if in debug mode.
+	if log.GetLevel() == log.DebugLevel {
+		for i, ctx := range fileCtxs {
+			cfg := ctx.Config.(*DeviceConfig)
+			json, e := cfg.JSON()
+			if e != nil {
+				log.Errorf("[sdk] failed to marshal device config to json: %v", err)
+			} else {
+				log.Debugf("[sdk] device config from file [%d]: %v", i, json)
+			}
+		}
+	}
+
 	switch deviceFilePolicy {
 	case policies.DeviceConfigFileRequired:
 		if err != nil {
@@ -284,6 +298,20 @@ func processDeviceConfigs() error { // nolint: gocyclo
 			_, notFoundErr := err.(*errors.ConfigsNotFound)
 			if !notFoundErr {
 				return multiErr
+			}
+		}
+	}
+
+	// Regardless of whether we pass policy checks/config validation,
+	// we will want to see what the configs are, if in debug mode.
+	if log.GetLevel() == log.DebugLevel {
+		for i, ctx := range dynamicCtxs {
+			cfg := ctx.Config.(*DeviceConfig)
+			json, e := cfg.JSON()
+			if e != nil {
+				log.Errorf("[sdk] failed to marshal device config to json: %v", err)
+			} else {
+				log.Debugf("[sdk] device config from dynamic registration [%d]: %v", i, json)
 			}
 		}
 	}
@@ -388,6 +416,18 @@ func processPluginConfig() error { // nolint: gocyclo
 		}
 	}
 
+	// Regardless of whether we pass policy checks/config validation,
+	// we will want to see what the config is, if in debug mode.
+	if log.GetLevel() == log.DebugLevel {
+		cfg := pluginCtx.Config.(*PluginConfig)
+		json, e := cfg.JSON()
+		if e != nil {
+			log.Errorf("[sdk] failed to marshal plugin config to json: %v", err)
+		} else {
+			log.Debugf("[sdk] plugin config: %v", json)
+		}
+	}
+
 	switch pluginFilePolicy {
 	case policies.PluginConfigFileRequired:
 		if err != nil {
@@ -464,6 +504,20 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 		_, notFoundErr := err.(*errors.ConfigsNotFound)
 		if !notFoundErr {
 			return nil, err
+		}
+	}
+
+	// Regardless of whether we pass policy checks/config validation,
+	// we will want to see what the configs are, if in debug mode.
+	if log.GetLevel() == log.DebugLevel {
+		for i, ctx := range outputTypeCtxs {
+			cfg := ctx.Config.(*OutputType)
+			json, e := cfg.JSON()
+			if e != nil {
+				log.Errorf("[sdk] failed to marshal output type config to json: %v", err)
+			} else {
+				log.Debugf("[sdk] output type config [%d]: %v", i, json)
+			}
 		}
 	}
 

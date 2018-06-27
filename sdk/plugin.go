@@ -7,6 +7,8 @@ import (
 	"syscall"
 	"time"
 
+	"encoding/json"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/creasty/defaults"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
@@ -328,6 +330,15 @@ type PluginConfig struct {
 	// Context is a map that allows the plugin to specify any arbitrary
 	// data it may need.
 	Context map[string]interface{} `default:"{}" yaml:"context,omitempty" addedIn:"1.0"`
+}
+
+// JSON encodes the config as JSON. This can be useful for logging and debugging.
+func (config *PluginConfig) JSON() (string, error) {
+	bytes, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 // Validate validates that the PluginConfig has no configuration errors.
