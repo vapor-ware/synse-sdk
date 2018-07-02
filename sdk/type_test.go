@@ -533,3 +533,13 @@ func TestUnit_Encode(t *testing.T) {
 		assert.Equal(t, testCase.unit.Symbol, actual.GetSymbol())
 	}
 }
+
+// TestNilOutput verifies a parameter check for Output.
+func TestNilOutput(t *testing.T) {
+	var output *Output // nolint: megacheck
+	output = nil
+	_, err := output.MakeReading("should fail")
+	if err == nil {
+		t.Error("nil OutputType should fail")
+	}
+}

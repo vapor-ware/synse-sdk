@@ -9,8 +9,10 @@ var Air8884 = sdk.DeviceHandler{
 	Name: "airflow",
 
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-		return []*sdk.Reading{
-			device.GetOutput("airflow").MakeReading(100),
-		}, nil
+		reading, err := device.GetOutput("airflow").MakeReading(100)
+		if err != nil {
+			return nil, err
+		}
+		return []*sdk.Reading{reading}, nil
 	},
 }

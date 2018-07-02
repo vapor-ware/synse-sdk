@@ -34,9 +34,11 @@ var temperatureHandler = sdk.DeviceHandler{
 			log.Fatalf("invalid device ID - should be an integer in configuration")
 		}
 		value := cRead(id, device.Kind)
-		return []*sdk.Reading{
-			device.GetOutput("temperature").MakeReading(value),
-		}, nil
+		reading, err := device.GetOutput("temperature").MakeReading(value)
+		if err != nil {
+			return nil, err
+		}
+		return []*sdk.Reading{reading}, nil
 	},
 }
 

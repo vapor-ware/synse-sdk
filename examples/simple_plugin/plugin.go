@@ -46,10 +46,12 @@ var (
 		Name: "example.led",
 
 		Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
+			reading, err := device.GetOutput("simple.led").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas
+			if err != nil {
+				return nil, err
+			}
 			return []*sdk.Reading{
-				device.GetOutput("simple.led").MakeReading(
-					strconv.Itoa(rand.Int()), // nolint: gas
-				),
+				reading,
 			}, nil
 		},
 		Write: func(device *sdk.Device, data *sdk.WriteData) error {
@@ -65,11 +67,11 @@ var (
 		Name: "example.temperature",
 
 		Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-			return []*sdk.Reading{
-				device.GetOutput("simple.temperature").MakeReading(
-					strconv.Itoa(rand.Int()), // nolint: gas
-				),
-			}, nil
+			reading, err := device.GetOutput("simple.temperature").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas
+			if err != nil {
+				return nil, err
+			}
+			return []*sdk.Reading{reading}, nil
 		},
 		Write: func(device *sdk.Device, data *sdk.WriteData) error {
 			fmt.Printf("[temperature handler]: WRITE (%v)\n", device.ID())

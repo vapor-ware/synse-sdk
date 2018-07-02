@@ -86,7 +86,10 @@ func TestNewReading(t *testing.T) {
 		Info: "foobar",
 	}
 
-	reading := NewReading(output, 42)
+	reading, err := NewReading(output, 42)
+	if err != nil {
+		t.Error(err)
+	}
 	assert.Equal(t, "test", reading.Type)
 	assert.Equal(t, "foobar", reading.Info)
 	assert.Equal(t, "abc", reading.Unit.Name)

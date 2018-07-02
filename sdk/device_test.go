@@ -578,9 +578,11 @@ func TestDeviceReadOk(t *testing.T) {
 		},
 		Handler: &DeviceHandler{
 			Read: func(device *Device) ([]*Reading, error) {
-				return []*Reading{
-					device.GetOutput("foo").MakeReading("value"),
-				}, nil
+				reading, err := device.GetOutput("foo").MakeReading("value")
+				if err != nil {
+					return nil, err
+				}
+				return []*Reading{reading}, nil
 			},
 		},
 	}

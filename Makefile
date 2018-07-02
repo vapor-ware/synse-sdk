@@ -88,7 +88,7 @@ endif
 		--disable=gotype --disable=interfacer \
 		--tests \
 		--vendor \
-		--sort=severity \
+		--sort=path --sort=line \
 		--aggregate \
 		--deadline=5m
 
