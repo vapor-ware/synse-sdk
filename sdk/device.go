@@ -269,7 +269,6 @@ type Output struct {
 
 // MakeReading makes a reading for the Output. This is a wrapper around `NewReading`.
 func (output *Output) MakeReading(value interface{}) (reading *Reading, err error) {
-	log.Debugf("MakeReading: %T %+v", value, value)
 	return NewReading(output, value)
 }
 
