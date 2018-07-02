@@ -193,9 +193,15 @@ func (plugin *Plugin) setup() error {
 	// action, that action will be resolved here.
 	parseFlags()
 
+	// Check that the registered device handlers do not have any conflicting names.
+	err := ctx.checkDeviceHandlers()
+	if err != nil {
+		return err
+	}
+
 	// Check for configuration policies. If no policy was set by the plugin,
 	// this will fall back on the default policies.
-	err := policies.Check()
+	err = policies.Check()
 	if err != nil {
 		return err
 	}
