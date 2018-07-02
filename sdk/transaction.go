@@ -3,13 +3,10 @@ package sdk
 import (
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
 	"github.com/vapor-ware/synse-server-grpc/go"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
 )
 
 const (
@@ -26,34 +23,26 @@ const (
 // is used to track the asynchronous write transactions as they are processed.
 var transactionCache *cache.Cache
 
-// setupTransactionCache creates the transaction cache with the TTL in seconds.
-// This needs to be called in order to have transactions.
-// If this is called more than once, the cache is reinitialized and an error is
-// returned. The caller may choose to ignore the error.
-func setupTransactionCache(ttl time.Duration) (err error) {
-	// FIXME -- if the cache is not nil, we will return an error, but
-	// in that same case, we will still create a new cache.. this seems
-	// weird. shouldn't we just return the error in this block and return
-	// nil at the end of the func?
-	if transactionCache != nil {
-		err = status.Errorf(codes.AlreadyExists,
-			"transactionCache already initialized.")
-	}
-
-	transactionCache = cache.New(
-		ttl,
-		ttl*2,
-	)
-	return err
+// setupTransactionCache creates the transaction cache with the given TTL.
+//
+// This needs to be called prior to the plugin grpc server and device manager
+// starting up in order for us to have transactions.
+//
+// Note that if this is called multiple times, the global transaction cache
+// will be overwritten.
+func setupTransactionCache(ttl time.Duration) {
+	transactionCache = cache.New(ttl, ttl*2)
 }
 
 // newTransaction creates a new transaction instance. Upon creation, the
 // transaction is given a unique ID and is added to the transaction cache.
-// This call will fail if the transaction cache is not initialized.
-func newTransaction() (*transaction, error) {
+//
+// If the transaction cache has not been initialized by the time this is called,
+// we will terminate the plugin, as it is indicative of an improper plugin setup.
+func newTransaction() *transaction {
 	if transactionCache == nil {
-		return nil, status.Errorf(codes.FailedPrecondition,
-			"transactionCache not initialized. Call setupTransactionCache.")
+		// FIXME - need to update log so we can specify our own exiter to test this..
+		log.Fatalf("[sdk] transaction cache was not initialized; likely an issue in plugin setup")
 	}
 
 	id := xid.New().String()
@@ -67,24 +56,25 @@ func newTransaction() (*transaction, error) {
 		message: "",
 	}
 	transactionCache.Set(id, &t, cache.DefaultExpiration)
-	return &t, nil
+	return &t
 }
 
 // getTransaction looks up the given transaction ID in the cache. If it exists,
 // that transaction is returned; otherwise nil is returned.
-// This call will fail if the transaction cache is not initialized.
-func getTransaction(id string) (*transaction, error) {
+//
+// If the transaction cache has not been initialized by the time this is called,
+// we will terminate the plugin, as it is indicative of an improper plugin setup.
+func getTransaction(id string) *transaction {
 	if transactionCache == nil {
-		return nil, status.Errorf(codes.FailedPrecondition,
-			"transactionCache not initialized. Call setupTransactionCache.")
+		log.Fatalf("[sdk] transaction cache was not initialized; likely an issue in plugin setup")
 	}
 
 	t, found := transactionCache.Get(id)
 	if found {
-		return t.(*transaction), nil
+		return t.(*transaction)
 	}
-	logger.Info("transaction %v not found", id)
-	return nil, nil
+	log.WithField("id", id).Info("[sdk] transaction not found")
+	return nil
 }
 
 // transaction represents an asynchronous write transaction for the Plugin. It
@@ -101,6 +91,7 @@ type transaction struct {
 // encode translates the transaction to a corresponding gRPC WriteResponse.
 func (t *transaction) encode() *synse.WriteResponse {
 	return &synse.WriteResponse{
+		Id:      t.id,
 		Status:  t.status,
 		State:   t.state,
 		Created: t.created,
@@ -109,56 +100,44 @@ func (t *transaction) encode() *synse.WriteResponse {
 	}
 }
 
-// setStateOk sets the transaction to be in the 'ok' state. Since a pointer
-// to this struct is stored in the cache, and update here should update the
-// in-memory cache as well.
+// setStateOk sets the transaction to be in the 'ok' state.
 func (t *transaction) setStateOk() {
-	logger.Debugf("transaction %v: setting state to 'ok'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction state set to OK")
 	t.updated = GetCurrentTime()
 	t.state = stateOk
 }
 
-// setStateError sets the transaction to be in the 'error' state. Since a
-// pointer to this struct is stored in the cache, and update here should
-// update the in-memory cache as well.
+// setStateError sets the transaction to be in the 'error' state.
 func (t *transaction) setStateError() {
-	logger.Debugf("transaction %v: setting state to 'error'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction state set to ERROR")
 	t.updated = GetCurrentTime()
 	t.state = stateError
 }
 
-// setStatusUnknown sets the transaction status to 'unknown'. Since a
-// pointer to this struct is stored in the cache, and update here should
-// update the in-memory cache as well.
+// setStatusUnknown sets the transaction status to 'unknown'.
 func (t *transaction) setStatusUnknown() {
-	logger.Debugf("transaction %v: setting status to 'unknown'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction state set to UNKNOWN")
 	t.updated = GetCurrentTime()
 	t.status = statusUnknown
 }
 
-// setStatusPending sets the transaction status to 'pending'. Since a
-// pointer to this struct is stored in the cache, and update here should
-// update the in-memory cache as well.
+// setStatusPending sets the transaction status to 'pending'.
 func (t *transaction) setStatusPending() {
-	logger.Debugf("transaction %v: setting status to 'pending'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction status set to PENDING")
 	t.updated = GetCurrentTime()
 	t.status = statusPending
 }
 
-// setStatusWriting sets the transaction status to 'writing'. Since a
-// pointer to this struct is stored in the cache, and update here should
-// update the in-memory cache as well.
+// setStatusWriting sets the transaction status to 'writing'.
 func (t *transaction) setStatusWriting() {
-	logger.Debugf("transaction %v: setting status to 'writing'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction status set to WRITING")
 	t.updated = GetCurrentTime()
 	t.status = statusWriting
 }
 
-// setStatusDone sets the transaction status to 'done'. Since a pointer
-// to this struct is stored in the cache, and update here should update
-// the in-memory cache as well.
+// setStatusDone sets the transaction status to 'done'.
 func (t *transaction) setStatusDone() {
-	logger.Debugf("transaction %v: setting status to 'done'", t.id)
+	log.WithField("id", t.id).Debug("[sdk] transaction status set to DONE")
 	t.updated = GetCurrentTime()
 	t.status = statusDone
 }

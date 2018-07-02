@@ -20,13 +20,15 @@ User Guide
 ----------
 The official guide for using the Synse Plugin SDK. This section goes over some of the
 SDK basics and provides a verbose tutorial on how to build a simple plugin. With this
-information, along with the `GoDoc <https://godoc.org/github.com/vapor-ware/synse-sdk/sdk>`_,
+information, along with the `GoDoc <https://godoc.org/github.com/vapor-ware/synse-sdk/sdk>`_
+and `example plugins <https://github.com/vapor-ware/synse-sdk/tree/master/examples>`_,
 you should be able to make the most out of the Plugin SDK.
 
 .. toctree::
    :maxdepth: 2
 
-   user/basics
+   user/architecture
+   user/basic
    user/advanced
    user/configuration
    user/tutorial

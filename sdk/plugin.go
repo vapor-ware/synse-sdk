@@ -1,174 +1,73 @@
 package sdk
 
 import (
-	"encoding/json"
 	"fmt"
-	"runtime"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"encoding/json"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/creasty/defaults"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
+	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
-type pluginAction func(p *Plugin) error
-type deviceAction func(p *Plugin, d *Device) error
-
-// Plugin represents an instance of a Synse plugin. Along with metadata
-// and definable handlers, it contains a gRPC server to handle the plugin
-// requests.
+// A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
+// as data providers and device controllers for Synse server.
 type Plugin struct {
-	Config      *config.PluginConfig // See config.PluginConfig for comments.
-	server      *server              // InternalApiServer for fulfilling gRPC requests.
-	handlers    *Handlers            // See sdk.handlers.go for comments.
-	dataManager *dataManager         // Manages device reads and writes. Accesses cached read data.
-	versionInfo *VersionInfo         // Version tracking information.
-
-	deviceHandlers     []*DeviceHandler          // Plugin-specific read and write functions for the devices supported by the plugin.
-	preRunActions      []pluginAction            // Array of pluginAction to execute before the main plugin loop.
-	postRunActions     []pluginAction            // Array of pluginAction to execute after the main plugin loop.
-	deviceSetupActions map[string][]deviceAction // See comments for RegisterDeviceSetupActions.
+	server *server
+	quit   chan os.Signal
 }
 
-// NewPlugin creates a new Plugin instance. This is the preferred way of
-// initializing a new Plugin instance.
-//
-// The handlers parameter is required and must not be nil. The pluginConfig
-// parameter may be nil; if it is, the SDK will attempt to load the
-// configuration from file in: /etc/synse/plugin, $HOME/.synse/plugin,
-// and $PWD.
-func NewPlugin(handlers *Handlers, pluginConfig *config.PluginConfig) (*Plugin, error) {
-	logger.SetLogLevel(true)
-
-	// Parameter checks.
-	if handlers == nil {
-		return nil, invalidArgumentErr("handlers parameter must not be nil")
+// NewPlugin creates a new instance of a Synse Plugin.
+func NewPlugin(options ...PluginOption) *Plugin {
+	plugin := Plugin{
+		quit: make(chan os.Signal),
 	}
-	// PluginConfig may be nil.
 
-	// Create the Plugin.
-	p := &Plugin{}
-	p.handlers = handlers
-	p.versionInfo = emptyVersionInfo()
+	// Set custom options for the plugin.
+	for _, option := range options {
+		option(ctx)
+	}
+	return &plugin
+}
 
-	// If a configuration is passed in, use it.
-	// If not, default to finding the config in files.
-	if pluginConfig != nil {
-		logger.Infof("Using plugin config from parameter: %v", pluginConfig)
-		p.Config = pluginConfig
-	} else {
-		logger.Info("Loading plugin config from file")
-		cfg, err := config.NewPluginConfig()
-		if err != nil {
-			logger.Errorf("Failed to load plugin config from file: %v", err)
-			return nil, err
+// RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
+// is able to define its output types statically, they would be registered with the
+// plugin via this method. Output types can also be registered via configuration
+// file.
+func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
+	multiErr := errors.NewMultiError("registering output types")
+	log.Debug("[sdk] registering output types")
+	for _, outputType := range types {
+		_, hasType := ctx.outputTypes[outputType.Name]
+		if hasType {
+			log.WithField("type", outputType.Name).Error("[sdk] output type already exists")
+			multiErr.Add(fmt.Errorf("output type with name '%s' already exists", outputType.Name))
+			continue
 		}
-		p.Config = cfg
+		log.WithField("type", outputType.Name).Debug("[sdk] adding new output type")
+		ctx.outputTypes[outputType.Name] = outputType
 	}
-	// Set logging level from the config now that we have a config.
-	logger.SetLogLevel(p.Config.Debug)
-
-	return p, nil
-}
-
-// RegisterHandlers registers device handlers for the plugin.
-func (p *Plugin) RegisterHandlers(handlers *Handlers) {
-	p.handlers = handlers
-}
-
-// RegisterDeviceIdentifier sets the given identifier function as the DeviceIdentifier
-// handler for the plugin. This function helps generate the device UID by letting the
-// SDK know which pieces of a Device instance's configuration are unique to that device.
-func (p *Plugin) RegisterDeviceIdentifier(identifier DeviceIdentifier) {
-	p.handlers.DeviceIdentifier = identifier
-}
-
-// RegisterDeviceEnumerator sets the given enumerator function as the DeviceEnumerator
-// handler for the plugin.
-func (p *Plugin) RegisterDeviceEnumerator(enumerator DeviceEnumerator) {
-	p.handlers.DeviceEnumerator = enumerator
-}
-
-// RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
-//
-// These DeviceHandlers are then matched with the Device instances
-// by their type/model and provide the read/write functionality for the
-// Devices. If a DeviceHandler for a Device is not registered here, the
-// Device will not be usable by the plugin.
-func (p *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
-	if p.deviceHandlers == nil {
-		p.deviceHandlers = handlers
-	} else {
-		p.deviceHandlers = append(p.deviceHandlers, handlers...)
-	}
-}
-
-// SetVersion sets the VersionInfo for the Plugin.
-//
-// The given VersionParameter is merged into an empty VersionInfo.
-// This means that any fields not specified in the info parameter
-// will take the value "-".
-func (p *Plugin) SetVersion(info VersionInfo) {
-	p.versionInfo.Merge(&info)
-}
-
-// SetConfig manually sets the configuration of the Plugin. This is
-// generally not the recommended way to configure a Plugin.
-func (p *Plugin) SetConfig(config *config.PluginConfig) error {
-	err := config.Validate()
-	if err != nil {
-		logger.Errorf("Failed plugin config validation: %v", err)
-		return err
-	}
-	p.Config = config
-
-	logger.SetLogLevel(p.Config.Debug)
-	return nil
-}
-
-// registerDevices registers all of the configured devices (via their proto and
-// instance config) with the plugin.
-func (p *Plugin) registerDevices() error {
-	var devices []*config.DeviceConfig
-
-	cfgDevices, err := devicesFromConfig()
-	if err != nil {
-		logger.Errorf("Failed to register devices from files: %v", err)
-		return err
-	}
-	devices = append(devices, cfgDevices...)
-
-	enumDevices, err := devicesFromAutoEnum(p)
-	if err != nil {
-		logger.Errorf("Failed to register devices from auto-enum: %v", err)
-		return err
-	}
-	devices = append(devices, enumDevices...)
-
-	return registerDevices(p, devices)
+	return multiErr.Err()
 }
 
 // RegisterPreRunActions registers functions with the plugin that will be called
 // before the gRPC server and dataManager are started. The functions here can be
 // used for plugin-wide setup actions.
-func (p *Plugin) RegisterPreRunActions(actions ...pluginAction) {
-	if p.preRunActions == nil {
-		p.preRunActions = actions
-	} else {
-		p.preRunActions = append(p.preRunActions, actions...)
-	}
+func (plugin *Plugin) RegisterPreRunActions(actions ...pluginAction) {
+	ctx.preRunActions = append(ctx.preRunActions, actions...)
 }
 
 // RegisterPostRunActions registers functions with the plugin that will be called
 // after the gRPC server and dataManager terminate running. The functions here can
 // be used for plugin-wide teardown actions.
-//
-// NOTE: While post run actions can be defined for a Plugin, they are currently
-// not executed. See: https://github.com/vapor-ware/synse-sdk/issues/85
-func (p *Plugin) RegisterPostRunActions(actions ...pluginAction) {
-	if p.postRunActions == nil {
-		p.postRunActions = actions
-	} else {
-		p.postRunActions = append(p.postRunActions, actions...)
-	}
+func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
+	ctx.postRunActions = append(ctx.postRunActions, actions...)
 }
 
 // RegisterDeviceSetupActions registers functions with the plugin that will be
@@ -176,19 +75,26 @@ func (p *Plugin) RegisterPostRunActions(actions ...pluginAction) {
 // functions here can be used for device-specific setup actions.
 //
 // The filter parameter should be the filter to apply to devices. Currently
-// filtering is only supported for device type and device model. Filter strings
-// are specified by the format "key=value,key=value". The filter
-//     "type=temperature,model=ABC123"
-// would only match devices whose type was temperature and model was ABC123.
-func (p *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
-	if p.deviceSetupActions == nil {
-		p.deviceSetupActions = make(map[string][]deviceAction)
-	}
-	if _, exists := p.deviceSetupActions[filter]; exists {
-		p.deviceSetupActions[filter] = append(p.deviceSetupActions[filter], actions...)
+// filtering is supported for device kind and type. Filter strings are specified in
+// the format "key=value,key=value". The filter
+//     "kind=temperature,kind=ABC123"
+// would only match devices whose kind was temperature or ABC123.
+func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
+	if _, exists := ctx.deviceSetupActions[filter]; exists {
+		ctx.deviceSetupActions[filter] = append(ctx.deviceSetupActions[filter], actions...)
 	} else {
-		p.deviceSetupActions[filter] = actions
+		ctx.deviceSetupActions[filter] = actions
 	}
+}
+
+// RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
+//
+// These DeviceHandlers are then matched with the Device instances
+// by their name and provide the read/write functionality for the
+// Devices. If a DeviceHandler is not registered for a Device, the
+// Device will not be usable by the plugin.
+func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
+	ctx.deviceHandlers = append(ctx.deviceHandlers, handlers...)
 }
 
 // Run starts the Plugin.
@@ -196,135 +102,522 @@ func (p *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceActi
 // Before the gRPC server is started, and before the read and write goroutines
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
-func (p *Plugin) Run() error { // nolint: gocyclo
-	logger.Info("Starting plugin run")
-	err := p.setup()
+func (plugin *Plugin) Run() error {
+	// Perform pre-run setup
+	err := plugin.setup()
 	if err != nil {
-		logger.Errorf("Failed plugin run setup: %v", err)
 		return err
 	}
-	p.logInfo()
 
 	// Before we start the dataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
-	if len(p.preRunActions) > 0 {
-		logger.Debug("Executing Pre Run Actions:")
-		for _, action := range p.preRunActions {
-			logger.Debugf(" * %v", action)
-			err := action(p)
-			if err != nil {
-				logger.Errorf("Failed pre-run action %v: %v", action, err)
-				return err
-			}
-		}
+	multiErr := execPreRun(plugin)
+	if multiErr.HasErrors() {
+		return multiErr
 	}
 
 	// At this point all state that the plugin will need should be available.
 	// With a complete view of the plugin, devices, and configuration, we can
 	// now process any device setup actions prior to reading to/writing from
 	// the device(s).
-	if len(p.deviceSetupActions) > 0 {
-		logger.Debug("Executing Device Setup Actions:")
-		for filter, actions := range p.deviceSetupActions {
-			devices, err := filterDevices(filter)
-			if err != nil {
-				logger.Errorf("Failed to filter devices for setup actions: %v", err)
-				return err
-			}
-			logger.Debugf("* %v (%v devices match filter %v)", actions, len(devices), filter)
-			for _, d := range devices {
-				for _, action := range actions {
-					err := action(p, d)
-					if err != nil {
-						logger.Errorf("Failed device setup action %v: %v", action, err)
-						return err
-					}
-				}
-			}
+	multiErr = execDeviceSetup(plugin)
+	if multiErr.HasErrors() {
+		return multiErr
+	}
+
+	// Log info at plugin startup
+	logStartupInfo()
+
+	// If the --dry-run flag is set, we will end here. The gRPC server and
+	// data manager do not get started up in the dry run.
+	if flagDryRun {
+		log.Info("dry-run successful")
+		os.Exit(0)
+	}
+
+	log.Debug("[sdk] starting plugin run")
+
+	// If the default health checks are enabled, register them now
+	if Config.Plugin.Health.UseDefaults {
+		log.Debug("[sdk] registering default health checks")
+		health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
+		health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
+	}
+
+	// Start the data manager
+	err = DataManager.run()
+	if err != nil {
+		return err
+	}
+
+	// Start the gRPC server
+	return plugin.server.Serve()
+}
+
+// onQuit is a function that waits for a signal to terminate the plugin's run
+// and run cleanup/post-run actions prior to terminating.
+func (plugin *Plugin) onQuit() {
+	sig := <-plugin.quit
+	log.Infof("[sdk] stopping plugin (%s)...", sig.String())
+
+	// TODO: any other stop/cleanup actions should go here (closing channels, etc)
+
+	// Immediately stop the gRPC server.
+	plugin.server.Stop()
+
+	// Execute post-run actions.
+	multiErr := execPostRun(plugin)
+	if multiErr.HasErrors() {
+		log.Error(multiErr)
+		os.Exit(1)
+	}
+
+	log.Info("[done]")
+	os.Exit(0)
+}
+
+// setup performs the pre-run setup actions for a plugin.
+func (plugin *Plugin) setup() error {
+	// Register system calls for graceful stopping.
+	signal.Notify(plugin.quit, syscall.SIGTERM)
+	signal.Notify(plugin.quit, syscall.SIGINT)
+	go plugin.onQuit()
+
+	// The plugin name must be set as metainfo, since it is used in the Device
+	// model. Check if it is set here. If not, return an error.
+	if metainfo.Name == "" {
+		return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
+	}
+
+	// Check for command line flags. If any flags are set that require an
+	// action, that action will be resolved here.
+	parseFlags()
+
+	// Check that the registered device handlers do not have any conflicting names.
+	err := ctx.checkDeviceHandlers()
+	if err != nil {
+		return err
+	}
+
+	// Check for configuration policies. If no policy was set by the plugin,
+	// this will fall back on the default policies.
+	err = policies.Check()
+	if err != nil {
+		return err
+	}
+
+	// Read in all configs and verify that they are correct.
+	err = plugin.processConfig()
+	if err != nil {
+		return err
+	}
+
+	// If the plugin config specifies debug mode, enable debug mode
+	if Config.Plugin.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	// Initialize Device instances for each of the devices configured with
+	// the plugin.
+	err = registerDevices()
+	if err != nil {
+		return err
+	}
+
+	// Set up the transaction cache
+	ttl, err := Config.Plugin.Settings.Transaction.GetTTL()
+	if err != nil {
+		return err
+	}
+	setupTransactionCache(ttl)
+
+	// Initialize a gRPC server for the Plugin to use.
+	plugin.server = newServer(
+		Config.Plugin.Network.Type,
+		Config.Plugin.Network.Address,
+	)
+	return nil
+}
+
+// processConfig handles plugin configuration in a number of steps. The behavior
+// of config handling is dependent on the config policy that is set. If no config
+// policies are set, the plugin will terminate in error.
+//
+// There are four major steps to processing plugin configuration: reading in the
+// config, validating the config scheme, config unification, and verifying the
+// config data is correct. These steps should happen for all config types.
+func (plugin *Plugin) processConfig() error {
+
+	// Resolve the plugin config.
+	log.Debug("[sdk] resolving plugin config")
+	err := processPluginConfig()
+	if err != nil {
+		return err
+	}
+
+	// Resolve the output type config(s).
+	log.Debug("[sdk] resolving output type config(s)")
+	outputTypes, err := processOutputTypeConfig()
+	if err != nil {
+		return err
+	}
+
+	// Register the found output types, if any.
+	for _, output := range outputTypes {
+		err = plugin.RegisterOutputTypes(output)
+		if err != nil {
+			return err
 		}
 	}
 
-	// Start the dataManager goroutines for reading and writing data.
-	p.dataManager.init()
+	// Finally, make sure that we have output types. If we
+	// don't, return an error, since we won't be able to properly
+	// register devices.
+	if len(ctx.outputTypes) == 0 {
+		return fmt.Errorf(
+			"no output types found. you must either register output types " +
+				"with the plugin, or configure them via file",
+		)
+	}
 
-	// Start the gRPC server
-	return p.server.serve()
+	// Resolve the device config(s).
+	log.Debug("[sdk] resolving device config(s)")
+	err = processDeviceConfigs()
+	if err != nil {
+		return err
+	}
 
-	// TODO - figure out how to get post actions working correctly
+	log.Debug("[sdk] finished processing configuration(s) for run")
+	return nil
 }
 
-// setup is the pre-run stage where the Plugin handlers and configuration
-// are validated and runtime components of the plugin are initialized.
-func (p *Plugin) setup() error {
-	// validate that handlers are set
-	err := validateHandlers(p.handlers)
-	if err != nil {
-		logger.Errorf("Failed plugin handler validation: %v", err)
-		return err
-	}
+// The current (latest) version of the plugin config scheme.
+var currentPluginSchemeVersion = "1.0"
 
-	// validate that the plugin configuration is set
-	if p.Config == nil {
-		return fmt.Errorf("plugin must be configured before it is run")
+// NewDefaultPluginConfig creates a new instance of a PluginConfig with its
+// default values resolved.
+func NewDefaultPluginConfig() (*PluginConfig, error) {
+	config := &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: currentPluginSchemeVersion},
 	}
-
-	// register configured devices with the plugin
-	err = p.registerDevices()
+	err := defaults.Set(config)
 	if err != nil {
-		// we don't want to fail hard if registration fails, so just log out
-		// the registration error instead.
-		logger.Warnf("device registration failure: %v", err)
+		return nil, err
 	}
-
-	// Setup the transaction cache
-	ttl, err := p.Config.Settings.Transaction.GetTTL()
-	if err != nil {
-		logger.Errorf("Bad transaction TTL config %v: %v", p.Config.Settings.Transaction.TTL, err)
-		return err
-	}
-	err = setupTransactionCache(ttl)
-	if err != nil {
-		logger.Errorf("Failed to setup transaction cache: %v", err)
-		return err
-	}
-
-	// Register a new server and dataManager for the Plugin. This should
-	// be done prior to running the plugin, as opposed to on initialization
-	// of the Plugin struct, because their configuration is configuration
-	// dependent. The Plugin should be configured prior to running.
-	p.server, err = newServer(p)
-	if err != nil {
-		logger.Errorf("Failed to create new gRPC server: %v", err)
-		return err
-	}
-
-	// Create the dataManager
-	p.dataManager, err = newDataManager(p)
-	if err != nil {
-		logger.Errorf("Failed to create plugin data manager: %v", err)
-	}
-	return err
+	return config, nil
 }
 
-// logInfo logs out the information about the plugin. This is called just before the
-// plugin begins running all of its components.
-func (p *Plugin) logInfo() {
-	logger.Info("Plugin Info:")
-	logger.Infof(" Name:        %s", p.Config.Name)
-	logger.Infof(" Version:     %s", p.versionInfo.VersionString)
-	logger.Infof(" SDK Version: %s", SDKVersion)
-	logger.Infof(" Git Commit:  %s", p.versionInfo.GitCommit)
-	logger.Infof(" Git Tag:     %s", p.versionInfo.GitTag)
-	logger.Infof(" Go Version:  %s", p.versionInfo.GoVersion)
-	logger.Infof(" Build Date:  %s", p.versionInfo.BuildDate)
-	logger.Infof(" OS:          %s", runtime.GOOS)
-	logger.Infof(" Arch:        %s", runtime.GOARCH)
-	logger.Infof("Plugin Config:")
-	s, _ := json.MarshalIndent(p.Config, "", "  ")
-	logger.InfoMultiline(string(s))
-	logger.Info("Registered Devices:")
-	for id, dev := range deviceMap {
-		logger.Infof(" %v (%v)", id, dev.Model)
+// PluginConfig contains the configuration options for the plugin.
+type PluginConfig struct {
+
+	// SchemeVersion is the version of the configuration scheme.
+	SchemeVersion `yaml:",inline"`
+
+	// Debug is a flag that determines whether the plugin should run
+	// with debug logging or not.
+	Debug bool `default:"false" yaml:"debug,omitempty" addedIn:"1.0"`
+
+	// Settings provide specifications for how the plugin should run.
+	Settings *PluginSettings `default:"{}" yaml:"settings,omitempty" addedIn:"1.0"`
+
+	// Network specifies the networking configuration for the plugin.
+	Network *NetworkSettings `default:"{\"type\": \"tcp\", \"address\": \"localhost:5001\"}" yaml:"network,omitempty" addedIn:"1.0"`
+
+	// DynamicRegistration specifies configuration settings and data
+	// for how the plugin should handle dynamic device registration.
+	DynamicRegistration *DynamicRegistrationSettings `default:"{}" yaml:"dynamicRegistration,omitempty" addedIn:"1.0"`
+
+	// Limiter specifies settings for a rate limiter for reads/writes.
+	Limiter *LimiterSettings `yaml:"limiter,omitempty" addedIn:"1.0"`
+
+	// Health specifies the settings for health checking in the plugin.
+	Health *HealthSettings `default:"{}" yaml:"health,omitempty" addedIn:"1.0"`
+
+	// Context is a map that allows the plugin to specify any arbitrary
+	// data it may need.
+	Context map[string]interface{} `default:"{}" yaml:"context,omitempty" addedIn:"1.0"`
+}
+
+// JSON encodes the config as JSON. This can be useful for logging and debugging.
+func (config *PluginConfig) JSON() (string, error) {
+	bytes, err := json.Marshal(config)
+	if err != nil {
+		return "", err
 	}
-	logger.Info("--------------------------------")
+	return string(bytes), nil
+}
+
+// Validate validates that the PluginConfig has no configuration errors.
+func (config PluginConfig) Validate(multiErr *errors.MultiError) {
+	// A version must be specified and it must be of the correct format.
+	_, err := config.GetVersion()
+	if err != nil {
+		log.WithField("config", config).Error("[validation] bad version")
+		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
+	}
+
+	// If network is nil or an empty struct, error. We need to know how
+	// the plugin should communicate with Synse server.
+	if config.Network == nil || config.Network == (&NetworkSettings{}) {
+		log.WithField("config", config).Error("[validation] no network")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network"))
+	}
+}
+
+// PluginSettings specifies the configuration options that determine the
+// runtime behavior of the plugin.
+type PluginSettings struct {
+	// Mode is the run mode of the read and write loops. This can either
+	// be "serial" or "parallel".
+	Mode string `default:"serial" yaml:"mode,omitempty" addedIn:"1.0"`
+
+	// Read contains the settings to configure read behavior.
+	Read *ReadSettings `default:"{}" yaml:"read,omitempty" addedIn:"1.0"`
+
+	// Write contains the settings to configure write behavior.
+	Write *WriteSettings `default:"{}" yaml:"write,omitempty" addedIn:"1.0"`
+
+	// Transaction contains the settings to configure transaction
+	// handling behavior.
+	Transaction *TransactionSettings `default:"{}" yaml:"transaction,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the PluginSettings has no configuration errors.
+func (settings PluginSettings) Validate(multiErr *errors.MultiError) {
+	if settings.Mode != modeSerial && settings.Mode != modeParallel {
+		log.WithField("config", settings).Error("[validation] bad mode")
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"settings.mode",
+			"one of: serial, parallel",
+		))
+	}
+}
+
+// IsSerial checks if the PluginSettings is configured with mode "serial".
+func (settings *PluginSettings) IsSerial() bool {
+	return settings.Mode == modeSerial
+}
+
+// IsParallel checks if the PluginSettings is configured with mode "parallel".
+func (settings *PluginSettings) IsParallel() bool {
+	return settings.Mode == modeParallel
+}
+
+// NetworkSettings specifies the configuration options around the gRPC
+// server's networking behavior.
+type NetworkSettings struct {
+	// Type is the type of networking. Currently, this must be one of
+	// "tcp" (TCP/IP) or "unix" (Unix Socket)
+	Type string `yaml:"type,omitempty" addedIn:"1.0"`
+
+	// Address is the address to communicate over. For "tcp", this would
+	// be the host/port (e.g. 0.0.0.0:50001). For "unix", this would be
+	// the name of the unix socket (e.g. plugin.sock).
+	Address string `yaml:"address,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the NetworkSettings has no configuration errors.
+func (settings NetworkSettings) Validate(multiErr *errors.MultiError) {
+	if settings.Type == "" {
+		log.WithField("config", settings).Error("[validation] empty type")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network.type"))
+	} else {
+		if settings.Type != networkTypeTCP && settings.Type != networkTypeUnix {
+			log.WithField("config", settings).Error("[validation] bad type")
+			multiErr.Add(errors.NewInvalidValueError(
+				multiErr.Context["source"],
+				"network.type",
+				"one of: unix, tcp",
+			))
+		}
+	}
+	if settings.Address == "" {
+		log.WithField("config", settings).Error("[validation] empty address")
+		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network.address"))
+	}
+}
+
+// DynamicRegistrationSettings specifies configuration and data for
+// the dynamic registration of devices.
+type DynamicRegistrationSettings struct {
+	// The plugin configuration for dynamic registration. This slice of maps holds the
+	// plugin-specific data that can be used to dynamically register new devices.
+	// As an example, this could hold the information for connecting with a server,
+	// or it could contain a bus address, etc.
+	Config []map[string]interface{} `default:"[]" yaml:"config,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the DynamicRegistrationSettings has no configuration errors.
+func (settings DynamicRegistrationSettings) Validate(multiErr *errors.MultiError) {
+	// nothing to validate here.
+}
+
+// LimiterSettings specifies configurations for a rate limiter on reads
+// and writes.
+type LimiterSettings struct {
+	// Rate is the limit, or maximum frequency of events. A rate of
+	// 0 signifies 'unlimited'.
+	Rate int `yaml:"rate,omitempty" addedIn:"1.0"`
+
+	// Burst defines the bucket size for the limiter, or maximum number
+	// of events that can be fulfilled at once. If this is 0, it will take
+	// the same value as the rate.
+	Burst int `yaml:"burst,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the LimiterSettings has no configuration errors.
+func (settings LimiterSettings) Validate(multiErr *errors.MultiError) {
+	if settings.Rate < 0 {
+		log.WithField("config", settings).Error("[validation] bad rate")
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"limiter.rate",
+			"greater than or equal to 0",
+		))
+	}
+
+	if settings.Burst < 0 {
+		log.WithField("config", settings).Error("[validation] bad burst")
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"limiter.burst",
+			"greater than or equal to 0",
+		))
+	}
+}
+
+// ReadSettings provides configuration options for read operations.
+type ReadSettings struct {
+	// Enabled globally enables or disables reading for the plugin.
+	// By default, a plugin will have reading enabled.
+	Enabled bool `default:"true" yaml:"enabled,omitempty" addedIn:"1.0"`
+
+	// Interval specifies the interval at which devices should be
+	// read from. This is 1s by default.
+	Interval string `default:"1s" yaml:"interval,omitempty" addedIn:"1.0"`
+
+	// Buffer defines the size of the read buffer. This will be
+	// the size of the channel that passes along read responses.
+	Buffer int `default:"100" yaml:"buffer,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the ReadSettings has no configuration errors.
+func (settings ReadSettings) Validate(multiErr *errors.MultiError) {
+	// Try parsing the interval to validate it is a correctly specified duration string.
+	_, err := settings.GetInterval()
+	if err != nil {
+		log.WithField("config", settings).Error("[validation] bad interval")
+		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
+	}
+
+	// If the buffer size is set to 0, return an error. Previously, this
+	// was allowed, as a size of 0 could indicate "no read", but now we
+	// have the 'enabled' field, so we don't need to support this.
+	if settings.Buffer <= 0 {
+		log.WithField("config", settings).Error("[validation] bad read buffer")
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"settings.read.buffer",
+			"a value greater than 0",
+		))
+	}
+}
+
+// GetInterval gets the read interval as a duration. If the config
+// has been validated successfully, this should never return an error.
+func (settings *ReadSettings) GetInterval() (time.Duration, error) {
+	return time.ParseDuration(settings.Interval)
+}
+
+// WriteSettings provides configuration options for write operations.
+type WriteSettings struct {
+	// Enabled globally enables or disables writing for the plugin.
+	// By default, a plugin will have writing enabled.
+	Enabled bool `default:"true" yaml:"enabled,omitempty" addedIn:"1.0"`
+
+	// Interval specifies the interval at which devices should be
+	// written to. This is 1s by default.
+	Interval string `default:"1s" yaml:"interval,omitempty" addedIn:"1.0"`
+
+	// Buffer defines the size of the write buffer. This will be
+	// the size of the channel that passes along write requests.
+	Buffer int `default:"100" yaml:"buffer,omitempty" addedIn:"1.0"`
+
+	// Max is the maximum number of write transactions to process
+	// in a single batch. In general, this can tune performance when
+	// running in serial mode.
+	Max int `default:"100" yaml:"max,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the WriteSettings has no configuration errors.
+func (settings WriteSettings) Validate(multiErr *errors.MultiError) {
+	// Try parsing the interval to validate it is a correctly specified duration string.
+	_, err := settings.GetInterval()
+	if err != nil {
+		log.WithField("config", settings).Error("[validation] bad interval")
+		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
+	}
+
+	// If the buffer size is set to 0, return an error. Previously, this
+	// was allowed, as a size of 0 could indicate "no write", but now we
+	// have the 'enabled' field, so we don't need to support this.
+	if settings.Buffer <= 0 {
+		log.WithField("config", settings).Error("[validation] bad write buffer")
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"settings.write.buffer",
+			"a value greater than 0",
+		))
+	}
+
+	if settings.Max <= 0 {
+		log.WithField("config", settings).Error("[validation] bad write max")
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"settings.write.max",
+			"a value greater than 0",
+		))
+	}
+}
+
+// GetInterval gets the write interval as a duration. If the config
+// has been validated successfully, this should never return an error.
+func (settings WriteSettings) GetInterval() (time.Duration, error) {
+	return time.ParseDuration(settings.Interval)
+}
+
+// TransactionSettings provides configuration options for transaction operations.
+type TransactionSettings struct {
+	// TTL is the time-to-live for a transaction in the transaction cache.
+	TTL string `default:"5m" yaml:"ttl,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the TransactionSettings has no configuration errors.
+func (settings TransactionSettings) Validate(multiErr *errors.MultiError) {
+	// Try parsing the interval to validate it is a correctly specified duration string.
+	_, err := settings.GetTTL()
+	if err != nil {
+		log.WithField("config", settings).Error("[validation] bad ttl")
+		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
+	}
+}
+
+// GetTTL gets the transaction TTL as a duration. If the config has been
+// validated successfully, this should never return an error.
+func (settings *TransactionSettings) GetTTL() (time.Duration, error) {
+	return time.ParseDuration(settings.TTL)
+}
+
+// HealthSettings provides configuration options around health checking in
+// the plugin.
+type HealthSettings struct {
+	// UseDefaults determines whether the plugin should use the built-in health
+	// checks or not.
+	UseDefaults bool `default:"true" yaml:"useDefaults,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the HealthSettings has no configuration errors.
+func (settings HealthSettings) Validate(multiErr *errors.MultiError) {
+	// Nothing to validate
 }

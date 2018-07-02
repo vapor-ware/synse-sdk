@@ -4,17 +4,17 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
-// Temp2010 is the handler for the example "temp2010" device model.
+// Temp2010 is the handler for the example temperature device with model "temp2010".
 var Temp2010 = sdk.DeviceHandler{
-	Type:  "temperature",
-	Model: "temp2010",
+	Name: "temperature",
 
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
+		reading, err := device.GetOutput("temperature").MakeReading(10)
+		if err != nil {
+			return nil, err
+		}
 		return []*sdk.Reading{
-			sdk.NewReading(
-				device.Type,
-				"10",
-			),
+			reading,
 		}, nil
 	},
 }

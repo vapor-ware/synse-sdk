@@ -1,0 +1,13 @@
+version: 1.0
+locations:
+  - name: bar
+    rack:
+      name: rack
+    board:
+      name: board
+devices:
+  - kind: test
+    instances:
+      - location: foo
+        data:
+          id: 1

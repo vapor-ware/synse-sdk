@@ -4,6 +4,7 @@
     <a href="https://codecov.io/gh/vapor-ware/synse-sdk"><img src="https://codecov.io/gh/vapor-ware/synse-sdk/branch/master/graph/badge.svg?token=K9qxpN6AE2" /></a>
     <a href="https://godoc.org/github.com/vapor-ware/synse-sdk/sdk"><img src="https://godoc.org/github.com/vapor-ware/synse-sdk/sdk?status.svg"></a>
     <a href="https://goreportcard.com/report/github.com/vapor-ware/synse-sdk"><img src="https://goreportcard.com/badge/github.com/vapor-ware/synse-sdk"></a>
+    <a href='https://synse-sdk.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/synse-sdk/badge/?version=latest' alt='Documentation Status' /></a>
 
 <h1 align="center">Synse Plugin SDK</h1>
 </p>

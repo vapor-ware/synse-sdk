@@ -1,183 +1,12 @@
 package sdk
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"fmt"
 	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/vapor-ware/synse-sdk/internal/test"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
-
-// TestMakeDevices tests making devices where two instances match one prototype.
-func TestMakeDevices(t *testing.T) {
-	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
-	proto := []*config.PrototypeConfig{&testPrototypeConfig1}
-
-	devices, err := makeDevices(inst, proto, &testPlugin)
-	assert.NoError(t, err)
-	assert.Equal(t, 2, len(devices))
-}
-
-// TestMakeDevices2 tests making devices when no instances match the prototype.
-func TestMakeDevices2(t *testing.T) {
-	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
-	proto := []*config.PrototypeConfig{&testPrototypeConfig2}
-
-	devices, err := makeDevices(inst, proto, &testPlugin)
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(devices))
-}
-
-// TestMakeDevices3 tests making devices when one instance matches one of two prototypes.
-func TestMakeDevices3(t *testing.T) {
-	inst := []*config.DeviceConfig{&testDeviceConfig1}
-	proto := []*config.PrototypeConfig{&testPrototypeConfig1, &testPrototypeConfig2}
-
-	devices, err := makeDevices(inst, proto, &testPlugin)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(devices))
-}
-
-// TestMakeDevices4 tests making devices when no prototypes exist for instances to
-// match with.
-func TestMakeDevices4(t *testing.T) {
-	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
-	var proto []*config.PrototypeConfig
-
-	devices, err := makeDevices(inst, proto, &testPlugin)
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(devices))
-}
-
-// TestMakeDevices5 tests making devices when no instances exist for protocols to
-// be matched with.
-func TestMakeDevices5(t *testing.T) {
-	var inst []*config.DeviceConfig
-	proto := []*config.PrototypeConfig{&testPrototypeConfig1, &testPrototypeConfig2}
-
-	devices, err := makeDevices(inst, proto, &testPlugin)
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(devices))
-}
-
-// TestMakeDevices6 tests making devices when the plugin is incorrectly configured
-// (no device identifier handler), which should prohibit devices from being created.
-func TestMakeDevices6(t *testing.T) {
-	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
-	proto := []*config.PrototypeConfig{&testPrototypeConfig1}
-
-	plugin := makeTestPlugin()
-	plugin.handlers.DeviceIdentifier = nil
-
-	_, err := makeDevices(inst, proto, plugin)
-	assert.Error(t, err)
-}
-
-// TestMakeDevices7 tests making devices when the plugin is incorrectly configured
-// (no device handlers), which should prohibit devices from being created.
-func TestMakeDevices7(t *testing.T) {
-	inst := []*config.DeviceConfig{&testDeviceConfig1, &testDeviceConfig2}
-	proto := []*config.PrototypeConfig{&testPrototypeConfig1}
-
-	plugin := makeTestPlugin()
-	plugin.deviceHandlers = []*DeviceHandler{}
-
-	_, err := makeDevices(inst, proto, plugin)
-	assert.Error(t, err)
-}
-
-// TestSetupSocket tests setting up the socket when the socket path
-// already exists.
-func TestSetupSocket(t *testing.T) {
-	// Set up a temporary directory for testing
-	dir, err := ioutil.TempDir("", "testing")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(dir))
-	}()
-
-	// Set the socket path to the temp dir for the test
-	sockPath = dir
-
-	sock, err := setupSocket("test.sock")
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Verify the socket path+name
-	assert.Equal(t, filepath.Join(dir, "test.sock"), sock)
-
-	// Verify that the socket path exists
-	_, err = os.Stat(sockPath)
-	assert.NoError(t, err)
-}
-
-// TestSetupSocket2 tests setting up the socket when the socket path
-// does not already exists.
-func TestSetupSocket2(t *testing.T) {
-	// Set up a temporary directory for testing
-	dir, err := ioutil.TempDir("", "testing")
-	assert.NoError(t, err)
-	// remove the temp dir now - it shouldn't exist when we set up the socket
-	test.CheckErr(t, os.RemoveAll(dir))
-
-	// Set the socket path to the temp dir for the test
-	sockPath = dir
-
-	sock, err := setupSocket("test.sock")
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Verify the socket path+name
-	assert.Equal(t, filepath.Join(dir, "test.sock"), sock)
-
-	// Verify that the socket path exists
-	_, err = os.Stat(sockPath)
-	assert.NoError(t, err)
-}
-
-// TestSetupSocket2 tests setting up the socket when the socket path
-// and the socket itself already exist.
-func TestSetupSocket3(t *testing.T) {
-	// Set up a temporary directory for testing
-	dir, err := ioutil.TempDir("", "testing")
-	assert.NoError(t, err)
-	defer func() {
-		test.CheckErr(t, os.RemoveAll(dir))
-	}()
-
-	// Set the socket path to the temp dir for the test
-	sockPath = dir
-
-	// Make the socket file
-	filename := filepath.Join(dir, "test.sock")
-	_, err = os.Create(filename)
-	assert.NoError(t, err)
-
-	sock, err := setupSocket("test.sock")
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Verify the socket path+name
-	assert.Equal(t, filepath.Join(dir, "test.sock"), sock)
-
-	// Verify that the socket path exists
-	_, err = os.Stat(sockPath)
-	assert.NoError(t, err)
-
-	// Verify that the socket itself no longer exists (setupSocket cleans
-	// up old socket instances)
-	_, err = os.Stat(filename)
-	exists := !os.IsNotExist(err)
-	assert.False(t, exists, "socket should no longer exist, but still does")
-}
 
 // TestMakeIDString tests making a compound ID string out of the device
 // identifier components (rack, board, device).
@@ -276,23 +105,22 @@ func TestNewUID(t *testing.T) {
 // and values.
 func TestFilterDevices(t *testing.T) {
 	dev1 := &Device{
-		Type:    "temperature",
-		Model:   "foo",
+		Kind:    "foo.temperature",
 		Handler: &DeviceHandler{},
 	}
 	dev2 := &Device{
-		Type:    "temperature",
-		Model:   "bar",
+		Kind:    "bar.temperature",
 		Handler: &DeviceHandler{},
 	}
 	dev3 := &Device{
-		Type:    "pressure",
-		Model:   "baz",
+		Kind:    "baz.pressure",
 		Handler: &DeviceHandler{},
 	}
 
+	defer resetContext()
+
 	// Populate the device map with the test devices.
-	deviceMap = map[string]*Device{
+	ctx.devices = map[string]*Device{
 		"dev1": dev1,
 		"dev2": dev2,
 		"dev3": dev3,
@@ -300,62 +128,63 @@ func TestFilterDevices(t *testing.T) {
 
 	// Set up the test cases
 	var filterDevicesTestTable = []struct {
+		desc     string
 		filter   string
 		expected []*Device
 	}{
 		{
-			// devices with type temperature
+			desc:     "devices with type temperature",
 			filter:   "type=temperature",
 			expected: []*Device{dev1, dev2},
 		},
 		{
-			// devices with type pressure
+			desc:     "devices with type pressure",
 			filter:   "type=pressure",
 			expected: []*Device{dev3},
 		},
 		{
-			// devices with model baz
-			filter:   "model=baz",
+			desc:     "devices with kind baz.pressure",
+			filter:   "kind=baz.pressure",
 			expected: []*Device{dev3},
 		},
 		{
-			// devices with type pressure and type temperature (can't have two types)
+			desc:     "devices with type pressure and type temperature (can't have two types)",
 			filter:   "type=pressure,type=temperature",
 			expected: []*Device{},
 		},
 		{
-			// devices with type none (should not match any)
+			desc:     "devices with type none (should not match any)",
 			filter:   "type=none",
 			expected: []*Device{},
 		},
 		{
-			// devices with type temperature and model foo
-			filter:   "type=temperature,model=foo",
+			desc:     "devices with type temperature and kind foo.temperature",
+			filter:   "type=temperature,kind=foo.temperature",
 			expected: []*Device{dev1},
 		},
 		{
-			// devices with type pressure and model foo
-			filter:   "type=pressure,model=foo",
+			desc:     "devices with type pressure and kind foo.temperature",
+			filter:   "type=pressure,kind=foo.temperature",
 			expected: []*Device{},
 		},
 		{
-			// devices of any type
+			desc:     "devices of any type",
 			filter:   "type=*",
 			expected: []*Device{dev1, dev2, dev3},
 		},
 		{
-			// devices of any model
-			filter:   "model=*",
+			desc:     "devices of any kind",
+			filter:   "kind=*",
 			expected: []*Device{dev1, dev2, dev3},
 		},
 		{
-			// devices of any model with type temperature
-			filter:   "type=temperature,model=*",
+			desc:     "devices of any kind with type temperature",
+			filter:   "type=temperature,kind=*",
 			expected: []*Device{dev1, dev2},
 		},
 		{
-			// devices of any type with model baz
-			filter:   "type=*,model=baz",
+			desc:     "devices of any type with kind baz.pressure",
+			filter:   "type=*,kind=baz.pressure",
 			expected: []*Device{dev3},
 		},
 	}
@@ -363,14 +192,14 @@ func TestFilterDevices(t *testing.T) {
 	for _, testCase := range filterDevicesTestTable {
 		actual, err := filterDevices(testCase.filter)
 		expected := testCase.expected
-		assert.NoError(t, err)
-		assert.Equal(t, len(expected), len(actual))
+		assert.NoError(t, err, testCase.desc)
+		assert.Equal(t, len(expected), len(actual), testCase.desc)
 
-		// Sort the expected and actual (we sort by model for the tests
-		// since the model is unique for each test device)
-		sort.SliceStable(expected, func(i int, j int) bool { return expected[i].Model < expected[j].Model })
-		sort.SliceStable(actual, func(i int, j int) bool { return actual[i].Model < actual[j].Model })
-		assert.Equal(t, testCase.expected, actual, "filter: %v", testCase.filter)
+		// Sort the expected and actual (we sort by Kind for the tests
+		// since it is unique for each test device)
+		sort.SliceStable(expected, func(i int, j int) bool { return expected[i].Kind < expected[j].Kind })
+		sort.SliceStable(actual, func(i int, j int) bool { return actual[i].Kind < actual[j].Kind })
+		assert.Equal(t, testCase.expected, actual, "filter: %v", testCase.filter, testCase.desc)
 	}
 }
 
@@ -378,18 +207,18 @@ func TestFilterDevices(t *testing.T) {
 // string results in a filtering error.
 func TestFilterDevicesErr(t *testing.T) {
 	dev1 := &Device{
-		Type:    "temperature",
-		Model:   "foo",
+		Kind:    "foo.temperature",
 		Handler: &DeviceHandler{},
 	}
 	dev2 := &Device{
-		Type:    "temperature",
-		Model:   "bar",
+		Kind:    "bar.temperature",
 		Handler: &DeviceHandler{},
 	}
 
+	defer resetContext()
+
 	// Populate the device map with the test devices.
-	deviceMap = map[string]*Device{
+	ctx.devices = map[string]*Device{
 		"dev1": dev1,
 		"dev2": dev2,
 	}
@@ -402,7 +231,7 @@ func TestFilterDevicesErr(t *testing.T) {
 
 		// unsupported filter keys
 		"invalid=temperature",
-		"MODEL=bar",
+		"KIND=bar",
 		"Type=temperature",
 	}
 
@@ -410,4 +239,174 @@ func TestFilterDevicesErr(t *testing.T) {
 		_, err := filterDevices(testCase)
 		assert.Error(t, err)
 	}
+}
+
+// TestGetCurrentTime tests getting the current time.
+func TestGetCurrentTime(t *testing.T) {
+	// TODO: figure out how to test the response...
+	out := GetCurrentTime()
+	assert.NotEmpty(t, out)
+}
+
+// Test_getTypeByNameOk tests getting a type that exists.
+func Test_getTypeByNameOk(t *testing.T) {
+	defer resetContext()
+
+	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
+
+	ot, err := GetTypeByName("foo")
+	assert.NoError(t, err)
+	assert.NotNil(t, ot)
+	assert.Equal(t, "foo", ot.Name)
+}
+
+// Test_getTypeByNameErr tests getting a type that doesn't exist.
+func Test_getTypeByNameErr(t *testing.T) {
+	ot, err := GetTypeByName("bar")
+	assert.Error(t, err)
+	assert.Nil(t, ot)
+}
+
+// Test_logStartupInfo tests logging out info which is done on startup.
+// There isn't much to check here other than it runs and completes without
+// any issues.
+func Test_logStartupInfo(t *testing.T) {
+	logStartupInfo()
+}
+
+// Test_registerDevices tests registering devices with the plugin when there
+// are no devices to register.
+func Test_registerDevices(t *testing.T) {
+	defer func() {
+		resetContext()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: []map[string]interface{}{
+				{},
+			},
+		},
+	}
+	Config.Device = &DeviceConfig{
+		Devices: []*DeviceKind{},
+	}
+
+	assert.Equal(t, 0, len(ctx.devices))
+	err := registerDevices()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(ctx.devices))
+}
+
+// Test_registerDevices2 tests registering devices with the plugin when
+// dynamic registration results in an error.
+func Test_registerDevices2(t *testing.T) {
+	defer func() {
+		resetContext()
+		Config.reset()
+	}()
+
+	ctx.dynamicDeviceRegistrar = func(i map[string]interface{}) ([]*Device, error) {
+		return nil, fmt.Errorf("test")
+	}
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: []map[string]interface{}{
+				{},
+			},
+		},
+	}
+	Config.Device = &DeviceConfig{
+		Devices: []*DeviceKind{},
+	}
+
+	assert.Equal(t, 0, len(ctx.devices))
+	err := registerDevices()
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(ctx.devices))
+}
+
+// Test_registerDevices3 tests registering devices with the plugin when there
+// is a device config, but it is invalid.
+func Test_registerDevices3(t *testing.T) {
+	defer func() {
+		resetContext()
+		Config.reset()
+	}()
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: []map[string]interface{}{
+				{},
+			},
+		},
+	}
+	Config.Device = &DeviceConfig{
+		Devices: []*DeviceKind{
+			{
+				Name: "foo",
+				Instances: []*DeviceInstance{
+					{
+						Location: "bar",
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, 0, len(ctx.devices))
+	err := registerDevices()
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(ctx.devices))
+}
+
+// Test_registerDevices4 tests registering devices with the plugin when there
+// is a device config and it is valid.
+func Test_registerDevices4(t *testing.T) {
+	defer func() {
+		resetContext()
+		Config.reset()
+	}()
+
+	ctx.deviceHandlers = []*DeviceHandler{
+		{Name: "foo"},
+	}
+
+	Config.Plugin = &PluginConfig{
+		SchemeVersion: SchemeVersion{Version: "test"},
+		DynamicRegistration: &DynamicRegistrationSettings{
+			Config: []map[string]interface{}{
+				{},
+			},
+		},
+	}
+	Config.Device = &DeviceConfig{
+		Locations: []*LocationConfig{
+			{
+				Name:  "bar",
+				Rack:  &LocationData{Name: "rack"},
+				Board: &LocationData{Name: "board"},
+			},
+		},
+		Devices: []*DeviceKind{
+			{
+				Name: "foo",
+				Instances: []*DeviceInstance{
+					{
+						Location: "bar",
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, 0, len(ctx.devices))
+	err := registerDevices()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ctx.devices))
 }

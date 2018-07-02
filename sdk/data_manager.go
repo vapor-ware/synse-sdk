@@ -6,11 +6,14 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
-
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/logger"
+	"golang.org/x/time/rate"
 )
+
+// DataManager is the global data manager for the plugin.
+var DataManager = newDataManager()
 
 // dataManager handles the reading from and writing to configured devices.
 // It executes the read and write goroutines and uses the channels between
@@ -31,7 +34,8 @@ type dataManager struct {
 	// received by the `pollWrite` function.
 	writeChannel chan *WriteContext
 
-	// Map of readings as strings. Key is the device UID.
+	// readings is a map of readings, where the key is the GUID of a
+	// device, and the values are the readings associated with that device.
 	readings map[string][]*Reading
 
 	// Lock around access/update of the `readings` map data.
@@ -40,51 +44,29 @@ type dataManager struct {
 	// Lock around async reads and writes.
 	rwLock *sync.Mutex
 
-	// The plugin's handlers. See sdk/handlers.go.
-	handlers *Handlers
-
-	// The plugin's device handlers. These are what handle the read
-	// and write functionality for all devices.
-	deviceHandlers []*DeviceHandler
-
-	// The plugin's configuration. See sdk.config.plugin.go.
-	config *config.PluginConfig
+	// limiter is a rate limiter for making requests. This is configured
+	// via the plugin config.
+	limiter *rate.Limiter
 }
 
-// newDataManager creates a new instance of the dataManager for a Plugin. For a
-// new dataManager to be created successfully, the given Plugin should be non-nil,
-// have non-nil Handlers defined, and have a non-nil config defined.
-func newDataManager(plugin *Plugin) (*dataManager, error) {
-	// Nil check the parameter and all pointers we dereference here for now.
-	// FUTURE: Check in the plugin config constructor.
-	if plugin == nil {
-		return nil, fmt.Errorf("plugin parameter must not be nil")
-	}
-
-	if plugin.handlers == nil {
-		return nil, fmt.Errorf("plugin.handlers in parameter must not be nil")
-	}
-
-	if plugin.Config == nil {
-		return nil, fmt.Errorf("plugin.Config in parameter must not be nil")
-	}
-
+func newDataManager() *dataManager {
 	return &dataManager{
-		readChannel:    make(chan *ReadContext, plugin.Config.Settings.Read.Buffer),
-		writeChannel:   make(chan *WriteContext, plugin.Config.Settings.Write.Buffer),
-		readings:       make(map[string][]*Reading),
-		dataLock:       &sync.RWMutex{},
-		rwLock:         &sync.Mutex{},
-		handlers:       plugin.handlers,
-		deviceHandlers: plugin.deviceHandlers,
-		config:         plugin.Config,
-	}, nil
+		// Do not make the read/write channel. Those channels will be set up
+		// when the DataManger is initialized via `dataManager.init()`
+		readings: make(map[string][]*Reading),
+		dataLock: &sync.RWMutex{},
+		rwLock:   &sync.Mutex{},
+	}
 }
 
-// init initializes the goroutines for the dataManager so it can start reading
-// from and writing to the devices managed by the Plugin.
-func (manager *dataManager) init() {
-	logger.Info("Initializing dataManager goroutines..")
+// run sets up the dataManager and starts the read, write, and updater goroutines
+// allowing it to provide data from, and access to, configured devices.
+func (manager *dataManager) run() error {
+
+	err := manager.setup()
+	if err != nil {
+		return err
+	}
 
 	// Start the reader/writer
 	manager.goRead()
@@ -93,30 +75,57 @@ func (manager *dataManager) init() {
 	// Update the manager readings state
 	manager.goUpdateData()
 
-	logger.Info("dataManager initialization complete.")
+	log.Info("[data manager] running")
+	return nil
+}
+
+// setup initializes the remaining data manager structures based on the global
+// plugin configuration.
+func (manager *dataManager) setup() error {
+	log.Debug("[data manager] setting up data manager state")
+
+	if Config.Plugin == nil {
+		return fmt.Errorf("plugin config not set, cannot setup data manager")
+	}
+
+	// Initialize the read and write channels
+	manager.readChannel = make(chan *ReadContext, Config.Plugin.Settings.Read.Buffer)
+	manager.writeChannel = make(chan *WriteContext, Config.Plugin.Settings.Write.Buffer)
+
+	// Initialize the limiter, if configured
+	if Config.Plugin.Limiter != nil && Config.Plugin.Limiter != (&LimiterSettings{}) {
+		manager.limiter = rate.NewLimiter(
+			rate.Limit(Config.Plugin.Limiter.Rate),
+			Config.Plugin.Limiter.Burst,
+		)
+	}
+	return nil
 }
 
 // writesEnabled checks to see whether writing is enabled for the plugin based on
 // the configuration.
 func (manager *dataManager) writesEnabled() bool {
-	return manager.config.Settings.Write.Enabled
+	return Config.Plugin.Settings.Write.Enabled
 }
 
 // goRead starts the goroutine for reading from configured devices.
 func (manager *dataManager) goRead() {
+	mode := Config.Plugin.Settings.Mode
+	readLog := log.WithField("mode", mode)
+
 	// If reads are not enabled, there is nothing to do here.
-	if !manager.config.Settings.Read.Enabled {
-		logger.Info("plugin reads disabled in config - will not start the read goroutine")
+	if !Config.Plugin.Settings.Read.Enabled {
+		readLog.Info("[data manager] skipping read goroutine (reads disabled)")
 		return
 	}
 
-	logger.Info("plugin reads enabled - starting the read goroutine")
+	readLog.Info("[data manager] starting read goroutine (reads enabled)")
 	go func() {
-		interval, _ := manager.config.Settings.Read.GetInterval()
+		interval, _ := Config.Plugin.Settings.Read.GetInterval()
 		for {
 			// Perform the reads. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
-			switch mode := manager.config.Settings.Mode; mode {
+			switch mode {
 			case "serial":
 				// Get device readings in serial
 				manager.serialRead()
@@ -124,7 +133,7 @@ func (manager *dataManager) goRead() {
 				// Get device readings in parallel
 				manager.parallelRead()
 			default:
-				logger.Errorf("exiting read loop: unsupported plugin run mode: %s", mode)
+				readLog.Error("[data manager] exiting read loop: unsupported plugin run mode")
 				return
 			}
 
@@ -133,14 +142,14 @@ func (manager *dataManager) goRead() {
 	}()
 }
 
-// read implements the logic for reading from a device that is configured
-// with the Plugin.
+// readOne implements the logic for reading from an individual device that is
+// configured with the Plugin.
 func (manager *dataManager) readOne(device *Device) {
 	// Rate limiting, if configured
-	if manager.config.Limiter != nil {
-		err := manager.config.Limiter.Wait(context.Background())
+	if manager.limiter != nil {
+		err := manager.limiter.Wait(context.Background())
 		if err != nil {
-			logger.Errorf("error from limiter when reading %v: %v", device.GUID(), err)
+			log.Errorf("[data manager] error from limiter when reading %v: %v", device.GUID(), err)
 		}
 	}
 
@@ -153,9 +162,9 @@ func (manager *dataManager) readOne(device *Device) {
 			// Check to see if the error is that of unsupported error. If it is, we
 			// do not want to log out here (low-interval read polling would cause this
 			// to pollute the logs for something that we should already know).
-			_, unsupported := err.(*UnsupportedCommandError)
+			_, unsupported := err.(*errors.UnsupportedCommandError)
 			if !unsupported {
-				logger.Errorf("failed to read from device %v: %v", device.GUID(), err)
+				log.Errorf("[data manager] failed to read from device %v: %v", device.GUID(), err)
 			}
 		} else {
 			manager.readChannel <- resp
@@ -168,23 +177,23 @@ func (manager *dataManager) readOne(device *Device) {
 // will be read individually via readOne instead.
 func (manager *dataManager) readBulk(handler *DeviceHandler) {
 	// Rate limiting, if configured
-	if manager.config.Limiter != nil {
-		err := manager.config.Limiter.Wait(context.Background())
+	if manager.limiter != nil {
+		err := manager.limiter.Wait(context.Background())
 		if err != nil {
-			logger.Errorf("error from limiter when bulk reading with handler for %v: %v", handler.Model, err)
+			log.Errorf("[data manager] error from limiter when bulk reading with handler for %v: %v", handler.Name, err)
 		}
 	}
 
 	// If the handler supports bulk read, execute bulk read. Otherwise,
 	// do nothing. Individual reads are done via the readOne function.
-	if handler.doesBulkRead() {
+	if handler.supportsBulkRead() {
 		devices := handler.getDevicesForHandler()
 		if len(devices) == 0 {
 			return
 		}
 		resp, err := handler.BulkRead(devices)
 		if err != nil {
-			logger.Errorf("failed to bulk read from device handler for: %v: %v", handler.Model, err)
+			log.Errorf("[data manager] failed to bulk read from device handler for: %v: %v", handler.Name, err)
 		} else {
 			for _, readCtx := range resp {
 				manager.readChannel <- readCtx
@@ -200,11 +209,11 @@ func (manager *dataManager) serialRead() {
 	manager.rwLock.Lock()
 	defer manager.rwLock.Unlock()
 
-	for _, dev := range deviceMap {
+	for _, dev := range ctx.devices {
 		manager.readOne(dev)
 	}
 
-	for _, handler := range manager.deviceHandlers {
+	for _, handler := range ctx.deviceHandlers {
 		manager.readBulk(handler)
 	}
 }
@@ -213,7 +222,7 @@ func (manager *dataManager) serialRead() {
 func (manager *dataManager) parallelRead() {
 	var waitGroup sync.WaitGroup
 
-	for _, dev := range deviceMap {
+	for _, dev := range ctx.devices {
 		// Increment the WaitGroup counter.
 		waitGroup.Add(1)
 
@@ -224,7 +233,7 @@ func (manager *dataManager) parallelRead() {
 		}(&waitGroup, dev)
 	}
 
-	for _, handler := range manager.deviceHandlers {
+	for _, handler := range ctx.deviceHandlers {
 		// Increment the WaitGroup counter.
 		waitGroup.Add(1)
 
@@ -241,19 +250,22 @@ func (manager *dataManager) parallelRead() {
 
 // goWrite starts the goroutine for writing to configured devices.
 func (manager *dataManager) goWrite() {
+	mode := Config.Plugin.Settings.Mode
+	writeLog := log.WithField("mode", mode)
+
 	// If writes are not enabled, there is nothing to do here.
-	if !manager.config.Settings.Write.Enabled {
-		logger.Info("plugin writes disabled in config - will not start the write goroutine")
+	if !manager.writesEnabled() {
+		writeLog.Info("[data manager] skipping write goroutine (writes disabled)")
 		return
 	}
 
-	logger.Info("plugin writes enabled - starting the write goroutine")
+	writeLog.Info("[data manager] starting write goroutine (writes enabled)")
 	go func() {
-		interval, _ := manager.config.Settings.Write.GetInterval()
+		interval, _ := Config.Plugin.Settings.Write.GetInterval()
 		for {
 			// Perform the writes. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
-			switch mode := manager.config.Settings.Mode; mode {
+			switch mode := Config.Plugin.Settings.Mode; mode {
 			case "serial":
 				// Write to devices in serial
 				manager.serialWrite()
@@ -261,7 +273,7 @@ func (manager *dataManager) goWrite() {
 				// Write to devices in parallel
 				manager.parallelWrite()
 			default:
-				logger.Errorf("exiting write loop: unsupported plugin run mode: %s", mode)
+				writeLog.Error("[data manager] exiting write loop: unsupported plugin run mode")
 				return
 			}
 
@@ -270,6 +282,7 @@ func (manager *dataManager) goWrite() {
 	}()
 }
 
+// serialWrite writes to devices configured with the Plugin in serial.
 func (manager *dataManager) serialWrite() {
 	// If the plugin is a serial plugin, we want to lock around reads
 	// and writes so the two operations do not stomp on one another.
@@ -278,7 +291,7 @@ func (manager *dataManager) serialWrite() {
 
 	// Check for any pending writes and, if any exist, attempt to fulfill
 	// the writes and update their transaction state accordingly.
-	for i := 0; i < manager.config.Settings.Write.Max; i++ {
+	for i := 0; i < Config.Plugin.Settings.Write.Max; i++ {
 		select {
 		case w := <-manager.writeChannel:
 			manager.write(w)
@@ -289,12 +302,13 @@ func (manager *dataManager) serialWrite() {
 	}
 }
 
+// parallelWrite writes to devices configured with the Plugin in parallel.
 func (manager *dataManager) parallelWrite() {
 	var waitGroup sync.WaitGroup
 
 	// Check for any pending writes and, if any exist, attempt to fulfill
 	// the writes and update their transaction state accordingly.
-	for i := 0; i < manager.config.Settings.Write.Max; i++ {
+	for i := 0; i < Config.Plugin.Settings.Write.Max; i++ {
 		select {
 		case w := <-manager.writeChannel:
 			// Increment the WaitGroup counter.
@@ -319,31 +333,34 @@ func (manager *dataManager) parallelWrite() {
 // with the Plugin.
 func (manager *dataManager) write(w *WriteContext) {
 	// Rate limiting, if configured
-	if manager.config.Limiter != nil {
-		err := manager.config.Limiter.Wait(context.Background())
+	if manager.limiter != nil {
+		err := manager.limiter.Wait(context.Background())
 		if err != nil {
-			logger.Errorf("error from limiter when writing %v: %v", w, err)
+			log.Errorf("[data manager] error from limiter when writing %v: %v", w, err)
 		}
 	}
 
 	// Write to the device
-	logger.Debugf("writing for %v (transaction %v)", w.device, w.transaction.id)
+	log.WithFields(log.Fields{
+		"device":      w.device,
+		"transaction": w.transaction.id,
+	}).Debug("[data manager] fulfilling write transaction")
 	w.transaction.setStatusWriting()
 
-	device := deviceMap[w.ID()]
+	device := ctx.devices[w.ID()]
 	if device == nil {
 		w.transaction.setStateError()
 		msg := "no device found with ID " + w.ID()
 		w.transaction.message = msg
-		logger.Error(msg)
-	}
-
-	data := decodeWriteData(w.data)
-	err := device.Write(data)
-	if err != nil {
-		w.transaction.setStateError()
-		w.transaction.message = err.Error()
-		logger.Errorf("failed to write to device %v: %v", w.device, err)
+		log.Error(msg)
+	} else {
+		data := decodeWriteData(w.data)
+		err := device.Write(data)
+		if err != nil {
+			w.transaction.setStateError()
+			w.transaction.message = err.Error()
+			log.Errorf("[data manager] failed to write to device %v: %v", w.device, err)
+		}
 	}
 	w.transaction.setStatusDone()
 }
@@ -351,7 +368,6 @@ func (manager *dataManager) write(w *WriteContext) {
 // goUpdateData updates the DeviceManager's readings state with the latest
 // values that were read for each device.
 func (manager *dataManager) goUpdateData() {
-	logger.Info("starting data updater")
 	go func() {
 		for {
 			reading := <-manager.readChannel
@@ -375,11 +391,11 @@ func (manager *dataManager) getReadings(device string) []*Reading {
 
 // Read fulfills a Read request by providing the latest data read from a device
 // and framing it up for the gRPC response.
-func (manager *dataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse, error) {
+func (manager *dataManager) Read(req *synse.DeviceFilter) ([]*synse.Reading, error) {
 	// Validate that the incoming request has the requisite fields populated.
-	err := validateReadRequest(req)
+	err := validateDeviceFilter(req)
 	if err != nil {
-		logger.Errorf("Incoming read request failed validation %v: %v", req, err)
+		log.WithField("request", req).Error("[data manager] request failed validation")
 		return nil, err
 	}
 
@@ -387,45 +403,42 @@ func (manager *dataManager) Read(req *synse.ReadRequest) ([]*synse.ReadResponse,
 	deviceID := makeIDString(req.Rack, req.Board, req.Device)
 	err = validateForRead(deviceID)
 	if err != nil {
-		logger.Errorf("Unable to read device %s: %v", deviceID, err)
+		log.WithField("id", deviceID).Error("[data manager] unable to read device")
 		return nil, err
 	}
 
 	// Get the readings for the device.
 	readings := manager.getReadings(deviceID)
 	if readings == nil {
-		logger.Errorf("No readings found for device: %s", deviceID)
-		return nil, notFoundErr("no readings found for device: %s", deviceID)
+		log.WithField("id", deviceID).Error("[data manager] no readings found")
+		return nil, errors.NotFoundErr("no readings found for device: %s", deviceID)
 	}
 
 	// Create the response containing the device readings.
-	var resp []*synse.ReadResponse
+	var resp []*synse.Reading
 	for _, r := range readings {
-		reading := &synse.ReadResponse{
-			Timestamp: r.Timestamp,
-			Type:      r.Type,
-			Value:     r.Value,
-		}
-		resp = append(resp, reading)
+		resp = append(resp, r.encode())
 	}
 	return resp, nil
 }
 
 // Write fulfills a Write request by queuing up the write context and framing
 // up the corresponding gRPC response.
-func (manager *dataManager) Write(req *synse.WriteRequest) (map[string]*synse.WriteData, error) {
+func (manager *dataManager) Write(req *synse.WriteInfo) (map[string]*synse.WriteData, error) {
 	// Validate that the incoming request has the requisite fields populated.
-	err := validateWriteRequest(req)
+	err := validateWriteInfo(req)
 	if err != nil {
-		logger.Errorf("Incoming write request failed validation %v: %v", req, err)
+		log.WithField("request", req).Error("[data manager] request failed validation")
 		return nil, err
 	}
 
+	filter := req.DeviceFilter
+
 	// Create the id for the device.
-	deviceID := makeIDString(req.Rack, req.Board, req.Device)
+	deviceID := makeIDString(filter.Rack, filter.Board, filter.Device)
 	err = validateForWrite(deviceID)
 	if err != nil {
-		logger.Errorf("Unable to write to device %s: %v", deviceID, err)
+		log.WithField("id", deviceID).Error("[data manager] unable to write to device")
 		return nil, err
 	}
 
@@ -437,21 +450,21 @@ func (manager *dataManager) Write(req *synse.WriteRequest) (map[string]*synse.Wr
 	// Perform the write and build the response.
 	var resp = make(map[string]*synse.WriteData)
 	for _, data := range req.Data {
-		t, err := newTransaction()
-		if err != nil {
-			return nil, err
-		}
+		t := newTransaction()
 		t.setStatusPending()
 
+		// Map the transaction ID to the write context for the response
 		resp[t.id] = data
+
+		// Pass the write context to the write channel to be queued for writing.
 		manager.writeChannel <- &WriteContext{
 			transaction: t,
-			device:      req.Device,
-			board:       req.Board,
-			rack:        req.Rack,
+			device:      filter.Device,
+			board:       filter.Board,
+			rack:        filter.Rack,
 			data:        data,
 		}
 	}
-	logger.Debugf("write response data: %#v", resp)
+	log.Debugf("[data manager] write response data: %#v", resp)
 	return resp, nil
 }

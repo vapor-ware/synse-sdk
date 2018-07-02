@@ -2,85 +2,73 @@ package main
 
 import (
 	"log"
-	"os"
-	"strconv"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
-// Build time variables for setting the version info of a Plugin.
 var (
-	BuildDate     string
-	GitCommit     string
-	GitTag        string
-	GoVersion     string
-	VersionString string
+	pluginName       = "C Plugin"
+	pluginMaintainer = "vaporio"
+	pluginDesc       = "An example plugin that demonstrates C code integration"
+)
+
+var (
+	// The output for temperature devices.
+	temperatureOutput = sdk.OutputType{
+		Name:      "temperature",
+		Precision: 2,
+		Unit: sdk.Unit{
+			Name:   "celsius",
+			Symbol: "C",
+		},
+	}
 )
 
 // temperatureHandler defines the read/write behavior for the "temp2010"
 // temperature device.
 var temperatureHandler = sdk.DeviceHandler{
-	Type:  "temperature",
-	Model: "temp2010",
+	Name: "temperature",
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-		id, err := strconv.Atoi(device.Data["id"])
-		if err != nil {
+		id, ok := device.Data["id"].(int)
+		if !ok {
 			log.Fatalf("invalid device ID - should be an integer in configuration")
 		}
-
-		value := cRead(id, device.Model)
-		return []*sdk.Reading{
-			sdk.NewReading(
-				device.Type,
-				value,
-			),
-		}, nil
+		value := cRead(id, device.Kind)
+		reading, err := device.GetOutput("temperature").MakeReading(value)
+		if err != nil {
+			return nil, err
+		}
+		return []*sdk.Reading{reading}, nil
 	},
 }
 
-// ProtocolIdentifier gets the unique identifiers out of the plugin-specific
-// configuration to be used in UID generation.
-func ProtocolIdentifier(data map[string]string) string {
-	return data["id"]
-}
+func main() {
+	// Set the metainfo for the plugin.
+	sdk.SetPluginMeta(
+		pluginName,
+		pluginMaintainer,
+		pluginDesc,
+		"",
+	)
 
-// checkErr is a helper used in the main function to check errors. If any errors
-// are present, this will exit with log.Fatal.
-func checkErr(err error) {
+	// Create a new Plugin instance
+	plugin := sdk.NewPlugin()
+
+	// Register the output types
+	err := plugin.RegisterOutputTypes(
+		&temperatureOutput,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-}
 
-// The main function - this is where we will configure, create, and run
-// the plugin.
-func main() {
-	// Set the prototype and device instance config paths to be relative to the
-	// current working directory instead of using the default location. This way
-	// the plugin can be run from within this directory.
-	checkErr(os.Setenv("PLUGIN_DEVICE_CONFIG", "./config"))
-
-	// Create handlers for the plugin.
-	handlers, err := sdk.NewHandlers(ProtocolIdentifier, nil)
-	checkErr(err)
-
-	// The configuration comes from the files in the environment path.
-	plugin, err := sdk.NewPlugin(handlers, nil)
-	checkErr(err)
-
+	// Register device handlers
 	plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
 	)
 
-	// Set build-time version info
-	plugin.SetVersion(sdk.VersionInfo{
-		BuildDate:     BuildDate,
-		GitCommit:     GitCommit,
-		GitTag:        GitTag,
-		GoVersion:     GoVersion,
-		VersionString: VersionString,
-	})
-
-	// Run the plugin.
-	checkErr(plugin.Run())
+	// Run the plugin
+	if err := plugin.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

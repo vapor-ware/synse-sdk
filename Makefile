@@ -2,7 +2,7 @@
 # Synse Plugin SDK
 #
 
-SDK_VERSION := $(shell cat sdk/version.go | grep 'const SDKVersion' | awk '{print $$4}')
+SDK_VERSION := $(shell cat sdk/version.go | grep 'const Version' | awk '{print $$4}')
 
 HAS_LINT := $(shell which gometalinter)
 HAS_DEP  := $(shell which dep)
@@ -43,6 +43,17 @@ endif
 docs:  ## Build the docs locally
 	(cd docs ; make html)
 
+.PHONY: check-examples
+check-examples:  ## Check that the examples run without failing.
+	@for d in examples/*/ ; do \
+		echo "\n\033[32m$$d\033[0m" ; \
+		cd $$d ; \
+		if [ ! -f "plugin" ]; then echo "\033[31mplugin binary not found\033[0m"; fi; \
+		if ! ./plugin --dry-run; then exit 1; fi; \
+		cd ../.. ; \
+	done
+
+
 .PHONY: examples
 examples:  ## Build the examples
 	@for d in examples/*/ ; do \
@@ -75,10 +86,9 @@ endif
 	@ # disable gotype: https://github.com/alecthomas/gometalinter/issues/40
 	gometalinter ./... \
 		--disable=gotype --disable=interfacer \
-		--exclude='(sdk\/sdktest\.go)' \
 		--tests \
 		--vendor \
-		--sort=severity \
+		--sort=path --sort=line \
 		--aggregate \
 		--deadline=5m
 

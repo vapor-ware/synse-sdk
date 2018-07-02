@@ -4,17 +4,15 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk"
 )
 
-// Volt1103 is the handler for the example "volt1103" device model.
+// Volt1103 is the handler for the example voltage device with model "volt1103".
 var Volt1103 = sdk.DeviceHandler{
-	Type:  "voltage",
-	Model: "volt1103",
+	Name: "voltage",
 
 	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-		return []*sdk.Reading{
-			sdk.NewReading(
-				device.Type,
-				"1",
-			),
-		}, nil
+		reading, err := device.GetOutput("voltage").MakeReading(1)
+		if err != nil {
+			return nil, err
+		}
+		return []*sdk.Reading{reading}, nil
 	},
 }

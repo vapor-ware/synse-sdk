@@ -1,0 +1,16 @@
+version: 1
+debug: true
+network:
+  type: unix
+  address: dynamic-registration-plugin.sock
+settings:
+  read:
+    interval: 5s
+  write:
+    interval: 5s
+  transaction:
+    ttl: 8m
+dynamicRegistration:
+  config:
+    - base: 10
+    - base: 13

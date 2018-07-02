@@ -1,472 +1,739 @@
 package sdk
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/vapor-ware/synse-sdk/internal/test"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
-// File level global test configuration.
-var testConfig = config.PluginConfig{
-	Name:    "test config",
-	Version: "test config v1",
-	Network: config.NetworkSettings{
-		Type:    "tcp",
-		Address: "test_config",
-	},
-	Settings: config.Settings{
-		Read:        config.ReadSettings{Buffer: 1024},
-		Write:       config.WriteSettings{Buffer: 1024},
-		Transaction: config.TransactionSettings{TTL: "2s"},
-	},
-}
-
-// TestNewPluginNilHandlers tests creating a new Plugin with nil handlers
-func TestNewPluginNilHandlers(t *testing.T) {
-	_, err := NewPlugin(nil, &testConfig)
-	assert.Error(t, err)
-}
-
-// TestNewPlugin tests creating a new Plugin with the required handlers defined.
+// TestNewPlugin tests creating a new plugin.
 func TestNewPlugin(t *testing.T) {
-	// Create valid handlers for the Plugin.
-	h, err := NewHandlers(testDeviceIdentifier, nil)
-	assert.NoError(t, err)
-
-	// Create the plugin.
-	p, err := NewPlugin(h, &testConfig)
-	assert.NoError(t, err)
-
-	assert.Nil(t, p.server, "server should not be initialized with new plugin")
-	assert.Nil(t, p.dataManager, "data manager should not be initialized with new plugin")
-	assert.Nil(t, p.handlers.DeviceEnumerator)
-
-	assert.Equal(t, &h.DeviceIdentifier, &p.handlers.DeviceIdentifier)
-	assert.NotNil(t, p.Config, "plugin should be configured on init")
-}
-
-// TestNewPluginWithConfig tests creating a new Plugin and passing a valid
-// config in as an argument.
-func TestNewPluginWithConfig(t *testing.T) {
-	// Create valid handlers for the Plugin.
-	h, err := NewHandlers(testDeviceIdentifier, nil)
-	assert.NoError(t, err)
-
-	// Create a configuration for the Plugin.
-	c := config.PluginConfig{
-		Name:    "test-plugin",
-		Version: "1.0",
-		Network: config.NetworkSettings{
-			Type:    "tcp",
-			Address: ":666",
+	var testTable = []struct {
+		desc    string
+		options []PluginOption
+	}{
+		{
+			desc:    "no plugin options",
+			options: []PluginOption{},
+		},
+		{
+			desc: "one options",
+			options: []PluginOption{
+				CustomDeviceIdentifier(func(i map[string]interface{}) string {
+					return "test"
+				}),
+			},
+		},
+		{
+			desc: "multiple options",
+			options: []PluginOption{
+				CustomDeviceIdentifier(func(i map[string]interface{}) string {
+					return "test"
+				}),
+				CustomDynamicDeviceRegistration(func(i map[string]interface{}) ([]*Device, error) {
+					return nil, nil
+				}),
+			},
+		},
+		{
+			desc: "duplicate options",
+			options: []PluginOption{
+				CustomDeviceIdentifier(func(i map[string]interface{}) string {
+					return "foo"
+				}),
+				CustomDeviceIdentifier(func(i map[string]interface{}) string {
+					return "bar"
+				}),
+			},
 		},
 	}
 
-	// Create the plugin.
-	p, err := NewPlugin(h, &c)
-	assert.NoError(t, err)
-	assert.NotNil(t, p.Config, "plugin should be configured")
-}
-
-// TestNewPluginWithIncompleteConfig tests creating a new Plugin and passing in
-// an incomplete PluginConfig instance as an argument. The constructor should not
-// return an error with a bad/incomplete config.
-func TestNewPluginWithIncompleteConfig(t *testing.T) {
-	// Create valid handlers for the Plugin.
-	h, err := NewHandlers(testDeviceIdentifier, nil)
-	assert.NoError(t, err)
-
-	// network spec missing but required
-	c := config.PluginConfig{
-		Name:    "test-plugin",
-		Version: "1.0",
+	for _, testCase := range testTable {
+		plugin := NewPlugin(testCase.options...)
+		assert.NotNil(t, plugin)
 	}
-
-	// Create the plugin.
-	_, err = NewPlugin(h, &c)
-	assert.NoError(t, err)
 }
 
-// TestNewPluginNilConfig tests creating a new Plugin, passing in nil as the
-// configuration. This should cause the plugin to search for plugin configuration
-// files to load config from. Here we expect it to error out because it should
-// not find a config file.
-func TestNewPluginNilConfig(t *testing.T) {
-	h, err := NewHandlers(testDeviceIdentifier, nil)
-	assert.NoError(t, err)
+// TestPlugin_RegisterOutputTypes tests registering the output types for the plugin.
+func TestPlugin_RegisterOutputTypes(t *testing.T) {
+	defer resetContext()
 
-	// Create the plugin
-	plugin, err := NewPlugin(h, nil)
-	assert.Nil(t, plugin)
-	assert.Error(t, err)
-}
-
-// TestPlugin_RegisterHandlers tests registering handlers from the dedicated function,
-// not from the initializer function.
-func TestPlugin_RegisterHandlers(t *testing.T) {
-	plugin := Plugin{}
-	assert.Nil(t, plugin.handlers)
-
-	h, err := NewHandlers(testDeviceIdentifier, nil)
-	assert.NoError(t, err)
-
-	plugin.RegisterHandlers(h)
-	assert.NotNil(t, plugin.handlers)
-	assert.Equal(t, plugin.handlers, h)
-}
-
-// TestPlugin_RegisterDeviceIdentifier tests registering the device identifier
-// handler individually.
-func TestPlugin_RegisterDeviceIdentifier(t *testing.T) {
-	plugin := Plugin{}
-	plugin.handlers = &Handlers{}
-
-	assert.Nil(t, plugin.handlers.DeviceIdentifier)
-	plugin.RegisterDeviceIdentifier(testDeviceIdentifier)
-	assert.NotNil(t, plugin.handlers.DeviceIdentifier)
-}
-
-// TestPlugin_RegisterDeviceEnumerator tests registering the device enumerator
-// handler individually.
-func TestPlugin_RegisterDeviceEnumerator(t *testing.T) {
-	plugin := Plugin{}
-	plugin.handlers = &Handlers{}
-
-	assert.Nil(t, plugin.handlers.DeviceEnumerator)
-	plugin.RegisterDeviceEnumerator(testDeviceEnumerator)
-	assert.NotNil(t, plugin.handlers.DeviceEnumerator)
-}
-
-// TestPlugin_RegisterDeviceHandlers tests registering device handlers when
-// none are already registered.
-func TestPlugin_RegisterDeviceHandlers(t *testing.T) {
-	devHandler1 := DeviceHandler{Type: "test", Model: "model1"}
-	devHandler2 := DeviceHandler{Type: "test", Model: "model2"}
-
-	plugin := Plugin{}
-	assert.Nil(t, plugin.deviceHandlers)
-
-	plugin.RegisterDeviceHandlers(&devHandler1, &devHandler2)
-
-	assert.NotNil(t, plugin.deviceHandlers)
-	assert.Equal(t, 2, len(plugin.deviceHandlers))
-}
-
-// TestPlugin_RegisterDeviceHandlers tests registering device handlers when
-// some are already registered.
-func TestPlugin_RegisterDeviceHandlers2(t *testing.T) {
-	devHandler1 := DeviceHandler{Type: "test", Model: "model1"}
-	devHandler2 := DeviceHandler{Type: "test", Model: "model2"}
-
-	plugin := Plugin{}
-	plugin.deviceHandlers = []*DeviceHandler{&devHandler1}
-	assert.Equal(t, 1, len(plugin.deviceHandlers))
-
-	plugin.RegisterDeviceHandlers(&devHandler2)
-
-	assert.NotNil(t, plugin.deviceHandlers)
-	assert.Equal(t, 2, len(plugin.deviceHandlers))
-}
-
-// TestPlugin_SetVersion tests setting the version info for a plugin.
-func TestPlugin_SetVersion(t *testing.T) {
-	plugin := Plugin{}
-	plugin.versionInfo = &VersionInfo{}
-
-	plugin.SetVersion(VersionInfo{
-		BuildDate:     "today",
-		GitCommit:     "1234",
-		VersionString: "abcd",
-	})
-
-	assert.Equal(t, "today", plugin.versionInfo.BuildDate)
-	assert.Equal(t, "1234", plugin.versionInfo.GitCommit)
-	assert.Equal(t, "abcd", plugin.versionInfo.VersionString)
-	assert.Equal(t, "", plugin.versionInfo.GitTag)
-	assert.Equal(t, "", plugin.versionInfo.GoVersion)
-}
-
-// TestPlugin_SetVersion2 tests setting the version info for a plugin
-// when there is already some version info set.
-func TestPlugin_SetVersion2(t *testing.T) {
-	plugin := Plugin{}
-	plugin.versionInfo = &VersionInfo{
-		GoVersion:     "1.9",
-		GitTag:        "1.2.3",
-		VersionString: "xyz",
+	types := []*OutputType{
+		{Name: "foo"},
+		{Name: "bar"},
+		{Name: "baz"},
 	}
+	plugin := NewPlugin()
+	assert.Equal(t, 0, len(ctx.outputTypes))
 
-	plugin.SetVersion(VersionInfo{
-		BuildDate:     "today",
-		GitCommit:     "1234",
-		VersionString: "abcd",
-	})
-
-	assert.Equal(t, "today", plugin.versionInfo.BuildDate)
-	assert.Equal(t, "1234", plugin.versionInfo.GitCommit)
-	assert.Equal(t, "abcd", plugin.versionInfo.VersionString)
-	assert.Equal(t, "1.2.3", plugin.versionInfo.GitTag)
-	assert.Equal(t, "1.9", plugin.versionInfo.GoVersion)
-}
-
-// TestPlugin_SetConfig tests manually setting the plugin configuration with
-// a valid configuration.
-func TestPlugin_SetConfig(t *testing.T) {
-	plugin := Plugin{}
-	assert.Nil(t, plugin.Config)
-
-	err := plugin.SetConfig(&testConfig)
+	err := plugin.RegisterOutputTypes(types...)
 	assert.NoError(t, err)
-
-	assert.NotNil(t, plugin.Config)
-	assert.Equal(t, &testConfig, plugin.Config)
+	assert.Equal(t, 3, len(ctx.outputTypes))
 }
 
-// TestPlugin_SetConfig2 tests manually setting the plugin configuration with
-// an invalid configuration.
-func TestPlugin_SetConfig2(t *testing.T) {
-	plugin := Plugin{}
-	assert.Nil(t, plugin.Config)
+// TestPlugin_RegisterOutputTypesError tests registering the output types for the
+// plugin when duplicate types are specified.
+func TestPlugin_RegisterOutputTypesError(t *testing.T) {
+	defer resetContext()
 
-	// use an incomplete config
-	err := plugin.SetConfig(&config.PluginConfig{Name: "test", Version: "1"})
+	types := []*OutputType{
+		{Name: "foo"},
+		{Name: "bar"},
+		{Name: "foo"},
+	}
+	plugin := NewPlugin()
+	assert.Equal(t, 0, len(ctx.outputTypes))
+
+	err := plugin.RegisterOutputTypes(types...)
 	assert.Error(t, err)
-
-	assert.Nil(t, plugin.Config)
+	assert.True(t, len(ctx.outputTypes) > 0)
 }
 
-// TestPlugin_RegisterDeviceSetupActions tests registering device setup actions for a filter
-// when the device setup actions map doesn't exist.
-func TestPlugin_RegisterDeviceSetupActions(t *testing.T) {
-	plugin := Plugin{}
-	setupFn := func(p *Plugin, d *Device) error { return nil }
-
-	assert.Nil(t, plugin.deviceSetupActions)
-
-	plugin.RegisterDeviceSetupActions("type=test", setupFn)
-
-	assert.NotNil(t, plugin.deviceSetupActions)
-	assert.Equal(t, 1, len(plugin.deviceSetupActions))
-	assert.Equal(t, 1, len(plugin.deviceSetupActions["type=test"]))
-}
-
-// TestPlugin_RegisterDeviceSetupActions2 tests registering device setup actions for a filter
-// when the device setup actions map does exist, but the filter does not already exist.
-func TestPlugin_RegisterDeviceSetupActions2(t *testing.T) {
-	plugin := Plugin{}
-	plugin.deviceSetupActions = make(map[string][]deviceAction)
-	setupFn := func(p *Plugin, d *Device) error { return nil }
-
-	assert.NotNil(t, plugin.deviceSetupActions)
-
-	plugin.RegisterDeviceSetupActions("type=test", setupFn)
-
-	assert.NotNil(t, plugin.deviceSetupActions)
-	assert.Equal(t, 1, len(plugin.deviceSetupActions))
-	assert.Equal(t, 1, len(plugin.deviceSetupActions["type=test"]))
-}
-
-// TestPlugin_RegisterDeviceSetupActions3 tests registering device setup actions for a filter
-// when the device setup actions map exists and the filter already exists in the map.
-func TestPlugin_RegisterDeviceSetupActions3(t *testing.T) {
-	plugin := Plugin{}
-	setupFn1 := func(p *Plugin, d *Device) error { return nil }
-	setupFn2 := func(p *Plugin, d *Device) error { return nil }
-	plugin.deviceSetupActions = make(map[string][]deviceAction)
-	plugin.deviceSetupActions["type=test"] = []deviceAction{setupFn1}
-
-	assert.NotNil(t, plugin.deviceSetupActions)
-	assert.Equal(t, 1, len(plugin.deviceSetupActions))
-	assert.Equal(t, 1, len(plugin.deviceSetupActions["type=test"]))
-
-	plugin.RegisterDeviceSetupActions("type=test", setupFn2)
-
-	assert.NotNil(t, plugin.deviceSetupActions)
-	assert.Equal(t, 1, len(plugin.deviceSetupActions))
-	assert.Equal(t, 2, len(plugin.deviceSetupActions["type=test"]))
-}
-
-// TestPlugin_RegisterPostRunActions tests registering post run actions
-// when none are already defined.
-func TestPlugin_RegisterPostRunActions(t *testing.T) {
-	action := func(p *Plugin) error { return nil }
-	plugin := Plugin{}
-	assert.Nil(t, plugin.postRunActions)
-
-	plugin.RegisterPostRunActions(action)
-
-	assert.NotNil(t, plugin.postRunActions)
-	assert.Equal(t, 1, len(plugin.postRunActions))
-}
-
-// TestPlugin_RegisterPostRunActions2 tests registering post run actions
-// when some are already defined.
-func TestPlugin_RegisterPostRunActions2(t *testing.T) {
-	action1 := func(p *Plugin) error { return nil }
-	action2 := func(p *Plugin) error { return nil }
-	plugin := Plugin{}
-
-	plugin.postRunActions = []pluginAction{action1}
-	assert.NotNil(t, plugin.postRunActions)
-	assert.Equal(t, 1, len(plugin.postRunActions))
-
-	plugin.RegisterPostRunActions(action2)
-
-	assert.NotNil(t, plugin.postRunActions)
-	assert.Equal(t, 2, len(plugin.postRunActions))
-}
-
-// TestPlugin_RegisterPreRunActions tests registering pre run actions
-// when none are already defined.
+// TestPlugin_RegisterPreRunActions tests registering pre-run actions.
 func TestPlugin_RegisterPreRunActions(t *testing.T) {
-	action := func(p *Plugin) error { return nil }
-	plugin := Plugin{}
-	assert.Nil(t, plugin.preRunActions)
+	defer resetContext()
 
-	plugin.RegisterPreRunActions(action)
-
-	assert.NotNil(t, plugin.preRunActions)
-	assert.Equal(t, 1, len(plugin.preRunActions))
-}
-
-// TestPlugin_RegisterPreRunActions2 tests registering pre run actions
-// when some are already defined.
-func TestPlugin_RegisterPreRunActions2(t *testing.T) {
-	action1 := func(p *Plugin) error { return nil }
-	action2 := func(p *Plugin) error { return nil }
-	plugin := Plugin{}
-
-	plugin.preRunActions = []pluginAction{action1}
-	assert.NotNil(t, plugin.preRunActions)
-	assert.Equal(t, 1, len(plugin.preRunActions))
-
-	plugin.RegisterPreRunActions(action2)
-
-	assert.NotNil(t, plugin.preRunActions)
-	assert.Equal(t, 2, len(plugin.preRunActions))
-
-}
-
-// TestPlugin_logInfo tests logging out the plugin info.
-func TestPlugin_logInfo(t *testing.T) {
-	h, err := NewHandlers(testDeviceIdentifier, nil)
-	assert.NoError(t, err)
-
-	// Create the plugin.
-	p, err := NewPlugin(h, &testConfig)
-	assert.NoError(t, err)
-	assert.NotNil(t, p)
-
-	// Should not cause any kind of error
-	p.logInfo()
-}
-
-// TestPlugin_Configure tests configuring a Plugin using a config file
-// specified via environment variable.
-func TestPlugin_Configure(t *testing.T) {
-	cfgFilePath := "tmp/config.yml"
-	cfg := `name: test-plugin
-version: 1.0.0
-debug: true
-network:
-  type: tcp
-  address: ":50051"
-settings:
-  loop_delay: 100
-  read:
-    buffer_size: 150
-  write:
-    buffer_size: 150
-    per_loop: 4
-  transaction:
-    ttl: 600s`
-
-	err := writeConfigFile(cfgFilePath, cfg)
-	assert.NoError(t, err)
-
-	defer func() {
-		err = os.RemoveAll("tmp")
-		assert.NoError(t, err)
-	}()
-
-	test.CheckErr(t, os.Setenv("PLUGIN_CONFIG", "tmp"))
-
-	// Create valid handlers for the Plugin.
-	h, err := NewHandlers(testDeviceIdentifier, nil)
-	assert.NoError(t, err)
-
-	// Create the plugin.
-	p, err := NewPlugin(h, nil)
-	assert.NoError(t, err)
-
-	assert.NotNil(t, p.Config, "plugin is not configured, but should be")
-	assert.Equal(t, "test-plugin", p.Config.Name)
-	assert.Equal(t, "1.0.0", p.Config.Version)
-}
-
-// TestPlugin_setup tests setting up a Plugin successfully. This means that
-// the state is validated, the devices are registered, and the Plugin components
-// (server, data manager) are created.
-func TestPlugin_setup(t *testing.T) {
-	// Create valid handlers for the Plugin.
-	h, err := NewHandlers(testDeviceIdentifier, testDeviceEnumerator)
-	assert.NoError(t, err)
-
-	// Create the plugin.
-	p, err := NewPlugin(h, &testConfig)
-	assert.NoError(t, err)
-
-	// CONSIDER: Can we move setup functionality to the constructor?
-	err = p.setup()
-	assert.NoError(t, err)
-
-	assert.NotNil(t, p.server, "server should be initialized on setup")
-	assert.NotNil(t, p.dataManager, "data manager should be initialized on setup")
-}
-
-// TestPlugin_setup2 tests setting up a Plugin unsuccessfully. This means that
-// the state is validated, the devices are registered, and the Plugin components
-// (server, data manager) are created. In this case, handler validation should fail.
-func TestPlugin_setup2(t *testing.T) {
-	// Create invalid handlers for the plugin.
-	h := Handlers{}
-	p, err := NewPlugin(&h, &testConfig)
-	assert.NoError(t, err)
-
-	err = p.setup()
-	assert.Error(t, err)
-}
-
-// TestPlugin_setup3 tests setting up a plugin unsuccessfully. It should fail
-// setup validation due to a nil config.
-func TestPlugin_setup3(t *testing.T) {
-	h, err := NewHandlers(testDeviceIdentifier, testDeviceEnumerator)
-	assert.NoError(t, err)
-
-	p := Plugin{
-		handlers: h,
+	actions := []pluginAction{
+		func(_ *Plugin) error { return nil },
+		func(_ *Plugin) error { return nil },
+		func(_ *Plugin) error { return nil },
 	}
 
-	err = p.setup()
-	assert.Error(t, err)
+	plugin := NewPlugin()
+
+	assert.Equal(t, 0, len(ctx.preRunActions))
+	plugin.RegisterPreRunActions(actions...)
+	assert.Equal(t, 3, len(ctx.preRunActions))
 }
 
-// TestPlugin_setup4 tests setting up a plugin unsuccessfully. It should fail
-// setup validation due to a bad configuration.
-func TestPlugin_setup4(t *testing.T) {
-	h, err := NewHandlers(testDeviceIdentifier, testDeviceEnumerator)
+// TestPlugin_RegisterPostRunActions tests registering post-run actions.
+func TestPlugin_RegisterPostRunActions(t *testing.T) {
+	defer resetContext()
+
+	actions := []pluginAction{
+		func(_ *Plugin) error { return nil },
+		func(_ *Plugin) error { return nil },
+		func(_ *Plugin) error { return nil },
+	}
+
+	plugin := NewPlugin()
+
+	assert.Equal(t, 0, len(ctx.postRunActions))
+	plugin.RegisterPostRunActions(actions...)
+	assert.Equal(t, 3, len(ctx.postRunActions))
+}
+
+// TestPlugin_RegisterDeviceSetupActions tests registering device setup actions.
+func TestPlugin_RegisterDeviceSetupActions(t *testing.T) {
+	defer resetContext()
+
+	action := func(_ *Plugin, _ *Device) error { return nil }
+
+	plugin := NewPlugin()
+
+	assert.Equal(t, 0, len(ctx.deviceSetupActions))
+	plugin.RegisterDeviceSetupActions("kind=test", action, action, action)
+	assert.Equal(t, 1, len(ctx.deviceSetupActions))
+	assert.Equal(t, 3, len(ctx.deviceSetupActions["kind=test"]))
+}
+
+// TestPlugin_RegisterDeviceSetupActions2 tests registering device setup actions when
+// some already exist.
+func TestPlugin_RegisterDeviceSetupActions2(t *testing.T) {
+	defer resetContext()
+
+	action := func(_ *Plugin, _ *Device) error { return nil }
+
+	// add something to the device setup actions to start with
+	ctx.deviceSetupActions["kind=test"] = []deviceAction{action}
+
+	plugin := NewPlugin()
+
+	assert.Equal(t, 1, len(ctx.deviceSetupActions))
+	plugin.RegisterDeviceSetupActions("kind=test", action)
+	assert.Equal(t, 1, len(ctx.deviceSetupActions))
+	assert.Equal(t, 2, len(ctx.deviceSetupActions["kind=test"]))
+}
+
+// TestPlugin_RegisterDeviceHandlers tests registering DeviceHandlers with the plugin.
+func TestPlugin_RegisterDeviceHandlers(t *testing.T) {
+	defer resetContext()
+
+	fooHandler := &DeviceHandler{Name: "foo"}
+	barHandler := &DeviceHandler{Name: "bar"}
+
+	plugin := NewPlugin()
+
+	assert.Equal(t, 0, len(ctx.deviceHandlers))
+	plugin.RegisterDeviceHandlers(fooHandler, barHandler)
+	assert.Equal(t, 2, len(ctx.deviceHandlers))
+}
+
+// TestNewDefaultPluginConfig tests getting a default plugin config.
+func TestNewDefaultPluginConfig(t *testing.T) {
+	cfg, err := NewDefaultPluginConfig()
 	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
 
-	p, err := NewPlugin(h, &testConfig)
-	assert.NoError(t, err)
+	assert.Equal(t, false, cfg.Debug)
+	assert.NotNil(t, cfg.Settings, "settings should not be nil")
+	assert.NotNil(t, cfg.Network, "network should not be nil")
+	assert.NotNil(t, cfg.DynamicRegistration, "dynamic registration should not be nil")
+	assert.NotNil(t, cfg.Context, "context should not be nil")
 
-	// make the plugin config bad
-	p.Config.Settings.Transaction.TTL = "foo"
+	assert.Nil(t, cfg.Limiter, "limiter should be nil")
+}
 
-	err = p.setup()
-	assert.Error(t, err)
+// TestPluginConfig_Validate_Ok tests validating a PluginConfig with no errors.
+func TestPluginConfig_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config PluginConfig
+	}{
+		{
+			desc: "PluginConfig has valid version and network",
+			config: PluginConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Network: &NetworkSettings{
+					Type:    "tcp",
+					Address: "10.10.10.10",
+				},
+			},
+		},
+		{
+			desc: "PluginConfig has valid version and network, invalid settings (not validated here)",
+			config: PluginConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Network: &NetworkSettings{
+					Type:    "tcp",
+					Address: "10.10.10.10",
+				},
+				Settings: &PluginSettings{
+					Mode: "bad mode",
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
+}
+
+// TestPluginConfig_Validate_Error tests validating a PluginConfig with errors.
+func TestPluginConfig_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   PluginConfig
+	}{
+		{
+			desc:     "PluginConfig has invalid version",
+			errCount: 1,
+			config: PluginConfig{
+				SchemeVersion: SchemeVersion{Version: "abc"},
+				Network: &NetworkSettings{
+					Type:    "tcp",
+					Address: "10.10.10.10",
+				},
+			},
+		},
+		{
+			desc:     "PluginConfig has no network",
+			errCount: 1,
+			config: PluginConfig{
+				SchemeVersion: SchemeVersion{Version: "1.0"},
+			},
+		},
+		{
+			desc:     "PluginConfig is empty",
+			errCount: 2,
+			config:   PluginConfig{},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestPluginSettings_Validate_Ok tests validating a PluginSettings with no errors.
+func TestPluginSettings_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config PluginSettings
+	}{
+		{
+			desc: "PluginSettings has valid mode (serial)",
+			config: PluginSettings{
+				Mode:        "serial",
+				Read:        &ReadSettings{},
+				Write:       &WriteSettings{},
+				Transaction: &TransactionSettings{},
+			},
+		},
+		{
+			desc: "PluginSettings has valid mode (parallel)",
+			config: PluginSettings{
+				Mode:        "parallel",
+				Read:        &ReadSettings{},
+				Write:       &WriteSettings{},
+				Transaction: &TransactionSettings{},
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
+}
+
+// TestPluginSettings_Validate_Error tests validating a PluginSettings with errors.
+func TestPluginSettings_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   PluginSettings
+	}{
+		{
+			desc:     "PluginSettings is empty",
+			errCount: 1,
+			config:   PluginSettings{},
+		},
+		{
+			desc:     "PluginSettings has invalid mode",
+			errCount: 1,
+			config: PluginSettings{
+				Mode:        "bad mode",
+				Read:        &ReadSettings{},
+				Write:       &WriteSettings{},
+				Transaction: &TransactionSettings{},
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestPluginSettings_IsParallel tests if the plugin is in parallel mode.
+func TestPluginSettings_IsParallel(t *testing.T) {
+	parallel := PluginSettings{Mode: "parallel"}
+	assert.True(t, parallel.IsParallel())
+
+	serial := PluginSettings{Mode: "serial"}
+	assert.False(t, serial.IsParallel())
+}
+
+// TestPluginSettings_IsSerial tests if the plugin is in serial mode.
+func TestPluginSettings_IsSerial(t *testing.T) {
+	parallel := PluginSettings{Mode: "parallel"}
+	assert.False(t, parallel.IsSerial())
+
+	serial := PluginSettings{Mode: "serial"}
+	assert.True(t, serial.IsSerial())
+}
+
+// TestNetworkSettings_Validate_Ok tests validating a NetworkSettings with no errors.
+func TestNetworkSettings_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config NetworkSettings
+	}{
+		{
+			desc: "NetworkSettings has valid type (tcp) and address",
+			config: NetworkSettings{
+				Type:    "tcp",
+				Address: "1.2.3.4",
+			},
+		},
+		{
+			desc: "NetworkSettings has valid type (unix) and address",
+			config: NetworkSettings{
+				Type:    "unix",
+				Address: "foo.sock",
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
+}
+
+// TestNetworkSettings_Validate_Error tests validating a NetworkSettings with errors.
+func TestNetworkSettings_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   NetworkSettings
+	}{
+		{
+			desc:     "NetworkSettings is empty",
+			errCount: 2,
+			config:   NetworkSettings{},
+		},
+		{
+			desc:     "NetworkSettings has no type",
+			errCount: 1,
+			config: NetworkSettings{
+				Address: "1.2.3.4",
+			},
+		},
+		{
+			desc:     "NetworkSettings has no address",
+			errCount: 1,
+			config: NetworkSettings{
+				Type: "tcp",
+			},
+		},
+		{
+			desc:     "NetworkSettings has invalid type",
+			errCount: 1,
+			config: NetworkSettings{
+				Type:    "other",
+				Address: "foo",
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestLimiterSettings_Validate_Ok tests validating a LimiterSettings with no errors.
+func TestLimiterSettings_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config LimiterSettings
+	}{
+		{
+			desc:   "LimiterSettings is empty",
+			config: LimiterSettings{},
+		},
+		{
+			desc: "LimiterSettings has valid rate (0)",
+			config: LimiterSettings{
+				Rate: 0,
+			},
+		},
+		{
+			desc: "LimiterSettings has valid burst (0)",
+			config: LimiterSettings{
+				Burst: 0,
+			},
+		},
+		{
+			desc: "LimiterSettings has valid rate (>0)",
+			config: LimiterSettings{
+				Rate: 100,
+			},
+		},
+		{
+			desc: "LimiterSettings has valid burst (>0)",
+			config: LimiterSettings{
+				Burst: 100,
+			},
+		},
+		{
+			desc: "LimiterSettings has valid rate and burst",
+			config: LimiterSettings{
+				Rate:  100,
+				Burst: 100,
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
+}
+
+// TestLimiterSettings_Validate_Error tests validating a LimiterSettings with errors.
+func TestLimiterSettings_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   LimiterSettings
+	}{
+		{
+			desc:     "LimiterSettings has rate below 0",
+			errCount: 1,
+			config: LimiterSettings{
+				Rate: -1,
+			},
+		},
+		{
+			desc:     "LimiterSettings has burst below 0",
+			errCount: 1,
+			config: LimiterSettings{
+				Burst: -1,
+			},
+		},
+		{
+			desc:     "LimiterSettings has rate and burst below 0",
+			errCount: 2,
+			config: LimiterSettings{
+				Rate:  -1,
+				Burst: -1,
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestReadSettings_Validate_Ok tests validating a ReadSettings with no errors.
+func TestReadSettings_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config ReadSettings
+	}{
+		{
+			desc: "ReadSettings has valid interval and buffer size",
+			config: ReadSettings{
+				Interval: "5s",
+				Buffer:   100,
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
+}
+
+// TestReadSettings_Validate_Error tests validating a ReadSettings with errors.
+func TestReadSettings_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   ReadSettings
+	}{
+		{
+			desc:     "ReadSettings has invalid interval",
+			errCount: 1,
+			config: ReadSettings{
+				Interval: "foobar",
+				Buffer:   100,
+			},
+		},
+		{
+			desc:     "ReadSettings has invalid buffer size",
+			errCount: 1,
+			config: ReadSettings{
+				Interval: "1s",
+				Buffer:   0,
+			},
+		},
+		{
+			desc:     "ReadSettings has invalid interval and invalid buffer size",
+			errCount: 2,
+			config: ReadSettings{
+				Interval: "xyz",
+				Buffer:   -1,
+			},
+		},
+		{
+			desc:     "ReadSettings is empty",
+			errCount: 2,
+			config:   ReadSettings{},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestWriteSettings_Validate_Ok tests validating a WriteSettings with no errors.
+func TestWriteSettings_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config WriteSettings
+	}{
+		{
+			desc: "WriteSettings has valid interval, buffer, and max",
+			config: WriteSettings{
+				Interval: "5s",
+				Buffer:   100,
+				Max:      100,
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
+}
+
+// TestWriteSettings_Validate_Error tests validating a WriteSettings with errors.
+func TestWriteSettings_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   WriteSettings
+	}{
+		{
+			desc:     "WriteSettings has invalid interval",
+			errCount: 1,
+			config: WriteSettings{
+				Interval: "foobar",
+				Buffer:   100,
+				Max:      100,
+			},
+		},
+		{
+			desc:     "WriteSettings has invalid buffer",
+			errCount: 1,
+			config: WriteSettings{
+				Interval: "5s",
+				Buffer:   0,
+				Max:      100,
+			},
+		},
+		{
+			desc:     "WriteSettings has invalid max",
+			errCount: 1,
+			config: WriteSettings{
+				Interval: "5s",
+				Buffer:   100,
+				Max:      0,
+			},
+		},
+		{
+			desc:     "WriteSettings has invalid interval, buffer, and max",
+			errCount: 3,
+			config: WriteSettings{
+				Interval: "xyz",
+				Buffer:   -1,
+				Max:      -100,
+			},
+		},
+		{
+			desc:     "WriteSettings is empty",
+			errCount: 3,
+			config:   WriteSettings{},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestTransactionSettings_Validate_Ok tests validating a TransactionSettings with no errors.
+func TestTransactionSettings_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config TransactionSettings
+	}{
+		{
+			desc: "TransactionSettings has valid TTL",
+			config: TransactionSettings{
+				TTL: "5s",
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
+}
+
+// TestTransactionSettings_Validate_Error tests validating a TransactionSettings with errors.
+func TestTransactionSettings_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   TransactionSettings
+	}{
+		{
+			desc:     "TransactionSettings is empty",
+			errCount: 1,
+			config:   TransactionSettings{},
+		},
+		{
+			desc:     "TransactionSettings has invalid TTL",
+			errCount: 1,
+			config: TransactionSettings{
+				TTL: "xyz",
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}
+
+// TestDynamicRegistrationSettings_Validate tests validating a DynamicRegistrationSettings.
+// Validation should always pass here.
+func TestDynamicRegistrationSettings_Validate(t *testing.T) {
+	merr := errors.NewMultiError("test")
+	config := DynamicRegistrationSettings{}
+	config.Validate(merr)
+	assert.NoError(t, merr.Err())
+}
+
+// TestHealthSettings_Validate tests validating a HealthSettings. Validation should always pass.
+func TestHealthSettings_Validate(t *testing.T) {
+	merr := errors.NewMultiError("test")
+	config := HealthSettings{}
+	config.Validate(merr)
+	assert.NoError(t, merr.Err())
 }

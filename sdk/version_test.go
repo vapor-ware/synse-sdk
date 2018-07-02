@@ -1,121 +1,57 @@
 package sdk
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-// TestEmptyVersionInfo tests creating a VersionInfo populated with
-// its default 'empty' values.
-func TestEmptyVersionInfo(t *testing.T) {
-	v := emptyVersionInfo()
-
-	assert.Equal(t, "-", v.VersionString)
-	assert.Equal(t, "-", v.GoVersion)
-	assert.Equal(t, "-", v.GitTag)
-	assert.Equal(t, "-", v.GitCommit)
-	assert.Equal(t, "-", v.BuildDate)
+// TestVersionInit tests that the init function initialized things correctly.
+func TestVersionInit(t *testing.T) {
+	assert.NotNil(t, version)
+	assert.Equal(t, "-", version.BuildDate)
+	assert.Equal(t, "-", version.GitCommit)
+	assert.Equal(t, "-", version.GitTag)
+	assert.Equal(t, "-", version.PluginVersion)
+	assert.Equal(t, "-", version.GoVersion)
+	assert.Equal(t, Version, version.SDKVersion)
+	assert.Equal(t, runtime.GOARCH, version.Arch)
+	assert.Equal(t, runtime.GOOS, version.OS)
 }
 
-// TestVersionInfo_Merge tests merging two VersionInfo instances
-// with fields that conflict.
-func TestVersionInfo_Merge(t *testing.T) {
-	v1 := VersionInfo{
-		BuildDate:     "yesterday",
-		GitCommit:     "123",
-		GitTag:        "git-tag-2",
-		GoVersion:     "go1.8",
-		VersionString: "2",
-	}
+// Test_setField tests setting a field value.
+func Test_setField(t *testing.T) {
+	f := setField("")
+	assert.Equal(t, "-", f)
 
-	v2 := VersionInfo{
-		BuildDate:     "today",
-		GitCommit:     "abc",
-		GitTag:        "git-tag-1",
-		GoVersion:     "go1.9",
-		VersionString: "1",
-	}
-
-	// Merge v2 into v1
-	v1.Merge(&v2)
-
-	// All fields from v2 should be taken, so v1 and v2 should now be equal
-	assert.Equal(t, v2, v1)
+	f = setField("foo")
+	assert.Equal(t, "foo", f)
 }
 
-// TestVersionInfo_Merge2 tests merging two VersionInfo instances
-// with fields that do not conflict.
-func TestVersionInfo_Merge2(t *testing.T) {
-	v1 := VersionInfo{
-		BuildDate: "today",
-		GitTag:    "tag1",
-	}
-
-	v2 := VersionInfo{
-		VersionString: "1",
-		GitCommit:     "abc",
-	}
-
-	expected := VersionInfo{
-		VersionString: "1",
-		GitCommit:     "abc",
-		GitTag:        "tag1",
-		BuildDate:     "today",
-	}
-
-	// Merge v2 into v1
-	v1.Merge(&v2)
-	assert.Equal(t, expected, v1)
+// TestBinVersion_Encode tests converting the binVersion to the gRPC VersionInfo.
+func TestBinVersion_Encode(t *testing.T) {
+	vi := version.Encode()
+	assert.NotNil(t, vi)
+	assert.Equal(t, "-", vi.PluginVersion)
+	assert.Equal(t, "-", vi.GitTag)
+	assert.Equal(t, "-", vi.GitCommit)
+	assert.Equal(t, "-", vi.BuildDate)
+	assert.Equal(t, Version, vi.SdkVersion)
+	assert.Equal(t, runtime.GOOS, vi.Os)
+	assert.Equal(t, runtime.GOARCH, vi.Arch)
 }
 
-// TestVersionInfo_Merge3 tests merging two VersionInfo instances
-// where one VersionInfo is the empty default.
-func TestVersionInfo_Merge3(t *testing.T) {
-	v1 := emptyVersionInfo()
-	v2 := VersionInfo{
-		VersionString: "1",
-		GitCommit:     "abc",
-	}
-
-	expected := VersionInfo{
-		VersionString: "1",
-		GitCommit:     "abc",
-		GitTag:        "-",
-		BuildDate:     "-",
-		GoVersion:     "-",
-	}
-
-	// Merge v2 into v1
-	v1.Merge(&v2)
-	assert.Equal(t, expected, *v1)
+// TestBinVersion_Format tests producing a formatted string representation
+// of the binVersion.
+func TestBinVersion_Format(t *testing.T) {
+	// since the values here will change based on when/where this is run,
+	// we can only verify that it produces something.
+	out := version.Format()
+	assert.NotEmpty(t, out)
 }
 
-// TestVersionInfo_Merge4 tests merging two VersionInfo instances
-// where some fields conflict, but others do not.
-func TestVersionInfo_Merge4(t *testing.T) {
-	v1 := VersionInfo{
-		VersionString: "1",
-		GitCommit:     "abc",
-		GitTag:        "1.1",
-		BuildDate:     "1-2-3",
-		GoVersion:     "1.8",
-	}
-	v2 := VersionInfo{
-		VersionString: "2",
-		GitCommit:     "def",
-		GitTag:        "1.2",
-	}
-
-	expected := VersionInfo{
-		VersionString: "2",
-		GitCommit:     "def",
-		GitTag:        "1.2",
-		BuildDate:     "1-2-3",
-		GoVersion:     "1.8",
-	}
-
-	// Merge v2 into v1
-	v1.Merge(&v2)
-	assert.Equal(t, expected, v1)
+// TestBinVersion_Log tests logging out the binVersion
+func TestBinVersion_Log(t *testing.T) {
+	version.Log()
 }
