@@ -118,6 +118,10 @@ type Device struct {
 	// bulkRead is a flag that determines whether or not the device should be
 	// read in bulk, i.e. in a batch with other devices of the same kind.
 	bulkRead bool
+
+	// SortOrdinal is a one based sort ordinal for a device in a scan. Zero for
+	// don't care.
+	SortOrdinal int32
 }
 
 // GetType gets the type of the device. The type of the device is the last
@@ -147,7 +151,7 @@ func (device *Device) GetOutput(name string) *Output {
 // different files or from file and dynamic registration) are merged into a single
 // DeviceConfig. This should only be called once all configs have been parsed and
 // validated to ensure that the information we have is all correct.
-func makeDevices(config *DeviceConfig) ([]*Device, error) {
+func makeDevices(config *DeviceConfig) ([]*Device, error) { // nolint: gocyclo
 	var devices []*Device
 
 	// The DeviceConfig we get here should be the unified config.
@@ -185,14 +189,15 @@ func makeDevices(config *DeviceConfig) ([]*Device, error) {
 			}
 
 			device := &Device{
-				Kind:     kind.Name,
-				Metadata: kind.Metadata,
-				Plugin:   metainfo.Name,
-				Info:     instance.Info,
-				Location: location,
-				Data:     instance.Data,
-				Outputs:  instanceOutputs,
-				Handler:  handler,
+				Kind:        kind.Name,
+				Metadata:    kind.Metadata,
+				Plugin:      metainfo.Name,
+				Info:        instance.Info,
+				Location:    location,
+				Data:        instance.Data,
+				Outputs:     instanceOutputs,
+				Handler:     handler,
+				SortOrdinal: instance.SortOrdinal,
 			}
 			devices = append(devices, device)
 		}
@@ -377,14 +382,15 @@ func (device *Device) encode() *synse.Device {
 		output = append(output, out.encode())
 	}
 	return &synse.Device{
-		Timestamp: GetCurrentTime(),
-		Uid:       device.ID(),
-		Kind:      device.Kind,
-		Metadata:  device.Metadata,
-		Plugin:    device.Plugin,
-		Info:      device.Info,
-		Location:  device.Location.encode(),
-		Output:    output,
+		Timestamp:   GetCurrentTime(),
+		Uid:         device.ID(),
+		Kind:        device.Kind,
+		Metadata:    device.Metadata,
+		Plugin:      device.Plugin,
+		Info:        device.Info,
+		Location:    device.Location.encode(),
+		SortOrdinal: device.SortOrdinal,
+		Output:      output,
 	}
 }
 
@@ -708,6 +714,10 @@ type DeviceInstance struct {
 	// If this is true, this instance will not inherit any outputs defined by its
 	// DeviceKind.
 	DisableOutputInheritance bool `yaml:"disableOutputInheritance,omitempty" addedIn:"1.0"`
+
+	// SortOrdinal is a one based sort ordinal for a device in a scan. Zero for
+	// don't care.
+	SortOrdinal int32 `yaml:"sortOrdinal,omitempty" addedIn:"1.0"`
 
 	// HandlerName specifies the name of the DeviceHandler to match this DeviceInstance
 	// with. By default, a DeviceInstance will match with a DeviceHandler using
