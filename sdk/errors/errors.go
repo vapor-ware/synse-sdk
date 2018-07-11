@@ -61,10 +61,10 @@ func (err MultiError) Error() string {
 	}
 
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "%d error(s) for: %s\n", len(err.Errors), src) // nolint: gas
+	fmt.Fprintf(&buf, "%d error(s) for: %s\n", len(err.Errors), src) // nolint: gas, errcheck
 
 	for _, err := range err.Errors {
-		fmt.Fprintf(&buf, "%s\n", err.Error()) // nolint: gas
+		fmt.Fprintf(&buf, "%s\n", err.Error()) // nolint: gas, errcheck
 	}
 
 	return buf.String()

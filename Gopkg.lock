@@ -56,10 +56,10 @@
   version = "v1.2.2"
 
 [[projects]]
+  branch = "master"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
-  revision = "e0c079f1b85081c6a536fb7c5c63cf9b9370c22e"
-  version = "1.0.0"
+  revision = "8dc490fe19fb65f9b9ed3bc2e02621f098f5a887"
 
 [[projects]]
   branch = "master"
@@ -79,7 +79,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "87b3feba568e144938625fc5d80ec92566c1a8fe"
+  revision = "039a4258aec0ad3c79b905677cceeab13b296a77"
 
 [[projects]]
   branch = "master"
@@ -88,7 +88,7 @@
     "unix",
     "windows"
   ]
-  revision = "7138fd3d9dc8335c567ca206f4333fb75eb05d56"
+  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -121,7 +121,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "ff3583edef7de132f219f0efc00e097cabcc0ec0"
+  revision = "e92b116572682a5b432ddd840aeaba2a559eeff1"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -164,6 +164,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ec08dd130d5e4387e6fca85468d4bcfdf6861ea2320fb0a87254eab511c19342"
+  inputs-digest = "0c2807d48a2c571ca41270564708749a5fb670fe2c9bd176d8a64d81d870f161"
   solver-name = "gps-cdcl"
   solver-version = 1
