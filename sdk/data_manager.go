@@ -121,7 +121,11 @@ func (manager *dataManager) goRead() {
 
 	readLog.Info("[data manager] starting read goroutine (reads enabled)")
 	go func() {
-		interval, _ := Config.Plugin.Settings.Read.GetInterval()
+		interval, err := Config.Plugin.Settings.Read.GetInterval()
+		if err != nil {
+			readLog.WithField("error", err).
+				Warn("[data manager] misconfiguration: failed to get read interval")
+		}
 		for {
 			// Perform the reads. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
@@ -261,7 +265,11 @@ func (manager *dataManager) goWrite() {
 
 	writeLog.Info("[data manager] starting write goroutine (writes enabled)")
 	go func() {
-		interval, _ := Config.Plugin.Settings.Write.GetInterval()
+		interval, err := Config.Plugin.Settings.Write.GetInterval()
+		if err != nil {
+			writeLog.WithField("error", err).
+				Warn("[data manager] misconfiguration: failed to get write interval")
+		}
 		for {
 			// Perform the writes. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
