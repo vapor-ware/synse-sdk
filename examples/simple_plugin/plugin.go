@@ -46,7 +46,7 @@ var (
 		Name: "example.led",
 
 		Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-			reading, err := device.GetOutput("simple.led").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas
+			reading, err := device.GetOutput("simple.led").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas, gosec
 			if err != nil {
 				return nil, err
 			}
@@ -67,7 +67,7 @@ var (
 		Name: "example.temperature",
 
 		Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-			reading, err := device.GetOutput("simple.temperature").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas
+			reading, err := device.GetOutput("simple.temperature").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas, gosec
 			if err != nil {
 				return nil, err
 			}

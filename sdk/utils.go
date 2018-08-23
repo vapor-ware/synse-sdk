@@ -46,7 +46,8 @@ func makeIDString(rack, board, device string) string {
 // These device IDs are not guaranteed to be globally unique, but they should
 // be unique to the board they reside on.
 func newUID(components ...string) string {
-	h := md5.New() // nolint: gas
+	h := md5.New() // #nosec
+	/* #nosec */
 	for _, component := range components {
 		io.WriteString(h, component) // nolint: errcheck
 	}

@@ -20,6 +20,7 @@ type Command struct {
 
 // NewCommand creates a new instance of a Command.
 func NewCommand(bin string, args ...string) *Command {
+	/* #nosec */
 	return &Command{
 		bin:    bin,
 		cmd:    exec.Command(bin, args...), // nolint: gas

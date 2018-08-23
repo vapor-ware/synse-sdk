@@ -122,7 +122,7 @@ func getPluginConfigFromFile() (*ConfigContext, error) {
 // specified struct.
 func unmarshalConfigFile(filepath string, out interface{}) error {
 	// Read the file contents
-	contents, err := ioutil.ReadFile(filepath)
+	contents, err := ioutil.ReadFile(filepath) // #nosec
 	if err != nil {
 		return err
 	}
