@@ -1,13 +1,13 @@
 package sdk
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"strings"
-	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
