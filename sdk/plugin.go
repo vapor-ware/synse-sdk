@@ -313,10 +313,6 @@ type PluginConfig struct {
 	// SchemeVersion is the version of the configuration scheme.
 	SchemeVersion `yaml:",inline"`
 
-	// Debug is a flag that determines whether the plugin should run
-	// with debug logging or not.
-	Debug bool `default:"false" yaml:"debug,omitempty" addedIn:"1.0"`
-
 	// Settings provide specifications for how the plugin should run.
 	Settings *PluginSettings `default:"{}" yaml:"settings,omitempty" addedIn:"1.0"`
 
@@ -333,9 +329,9 @@ type PluginConfig struct {
 	// Health specifies the settings for health checking in the plugin.
 	Health *HealthSettings `default:"{}" yaml:"health,omitempty" addedIn:"1.0"`
 
-	// Context is a map that allows the plugin to specify any arbitrary
-	// data it may need.
-	Context map[string]interface{} `default:"{}" yaml:"context,omitempty" addedIn:"1.0"`
+	// Debug is a flag that determines whether the plugin should run
+	// with debug logging or not.
+	Debug bool `default:"false" yaml:"debug,omitempty" addedIn:"1.0"`
 
 	// SSLEnabled is a boolean flag that determines whether or not the gRPC
 	// server should be setup to use TLS/SSL. If this is false (default), the
@@ -347,6 +343,10 @@ type PluginConfig struct {
 
 	// SSLKey is the location of the cert file to use for the gRPC server.
 	SSLKey string `yaml:"sslKey,omitempty" addedIn:"1.1"`
+
+	// Context is a map that allows the plugin to specify any arbitrary
+	// data it may need.
+	Context map[string]interface{} `default:"{}" yaml:"context,omitempty" addedIn:"1.0"`
 
 	// CACerts are a list of certificate authority certs to use. If none
 	// are specified, the OS system-wide TLS certs are used.

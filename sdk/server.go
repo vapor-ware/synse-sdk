@@ -5,6 +5,9 @@ import (
 	"net"
 	"os"
 	"strings"
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
@@ -12,10 +15,7 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"crypto/tls"
-	"crypto/x509"
 	"google.golang.org/grpc/credentials"
-	"io/ioutil"
 )
 
 // server implements the Synse Plugin gRPC server. It is used by the
@@ -99,9 +99,9 @@ func (server *server) cleanup() error {
 
 // Serve sets up the gRPC server and runs it.
 func (server *server) Serve() error {
-	err := server.setup()
-	if err != nil {
-		return err
+	e := server.setup()
+	if e != nil {
+		return e
 	}
 
 	var opts []grpc.ServerOption
@@ -137,7 +137,7 @@ func (server *server) Serve() error {
 		}
 
 		creds := credentials.NewTLS(&tls.Config{
-			Certificates: []tls.Certificate{cert},
+			Certificates:             []tls.Certificate{cert},
 			PreferServerCipherSuites: true,
 			// https://www.acunetix.com/blog/articles/tls-ssl-cipher-hardening/
 			CipherSuites: []uint16{
@@ -153,7 +153,7 @@ func (server *server) Serve() error {
 				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 			},
 			ClientAuth: tls.RequireAndVerifyClientCert,
-			ClientCAs: CAs,
+			ClientCAs:  CAs,
 		})
 
 		opts = append(opts, grpc.Creds(creds))
@@ -172,10 +172,11 @@ func (server *server) Serve() error {
 	return svr.Serve(lis)
 }
 
+// loadCACerts loads the certs from the provided certificate authority/authorities.
 func loadCACerts(cacerts []string) (*x509.CertPool, error) {
 	certPool := x509.NewCertPool()
 	for _, c := range cacerts {
-		ca, err := ioutil.ReadFile(c)
+		ca, err := ioutil.ReadFile(c) // #nosec
 		if err != nil {
 			log.Errorf("[server] failed to read CA file: %v", err)
 			return nil, err
