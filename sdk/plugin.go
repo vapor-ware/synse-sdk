@@ -336,6 +336,21 @@ type PluginConfig struct {
 	// Context is a map that allows the plugin to specify any arbitrary
 	// data it may need.
 	Context map[string]interface{} `default:"{}" yaml:"context,omitempty" addedIn:"1.0"`
+
+	// SSLEnabled is a boolean flag that determines whether or not the gRPC
+	// server should be setup to use TLS/SSL. If this is false (default), the
+	// server will run in Insecure mode, even if certs and keys are specified.
+	SSLEnabled bool `yaml:"sslEnabled,omitempty" addedIn:"1.1"`
+
+	// SSLCert is the location of the cert file to use for the gRPC server.
+	SSLCert string `yaml:"sslCert,omitempty" addedIn:"1.1"`
+
+	// SSLKey is the location of the cert file to use for the gRPC server.
+	SSLKey string `yaml:"sslKey,omitempty" addedIn:"1.1"`
+
+	// CACerts are a list of certificate authority certs to use. If none
+	// are specified, the OS system-wide TLS certs are used.
+	CACerts []string `yaml:"caCerts,omitempty" addedIn:"1.1"`
 }
 
 // JSON encodes the config as JSON. This can be useful for logging and debugging.

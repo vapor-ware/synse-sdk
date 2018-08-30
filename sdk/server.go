@@ -12,6 +12,9 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"crypto/tls"
+	"crypto/x509"
+	"google.golang.org/grpc/credentials"
 )
 
 // server implements the Synse Plugin gRPC server. It is used by the
@@ -100,12 +103,67 @@ func (server *server) Serve() error {
 		return err
 	}
 
+	var opts []grpc.ServerOption
+
+	// tls/ssl
+	if Config.Plugin.SSLEnabled {
+		log.Debugf("[server] configuring grpc server for tls/ssl transport")
+
+		cert, err := tls.LoadX509KeyPair(Config.Plugin.SSLCert, Config.Plugin.SSLKey)
+		if err != nil {
+			log.Errorf("[server] failed to load TLS key pair: %v", err)
+			return err
+		}
+
+		var CAs *x509.CertPool
+
+		// If custom certificate authority certs are specified, use those, otherwise
+		// use the syste-wide root certs from the OS.
+		if len(Config.Plugin.CACerts) > 0 {
+			log.Debugf("[server] loading custom CA certs: %v", Config.Plugin.CACerts)
+			CAs, err = loadCACerts(Config.Plugin.CACerts)
+			if err != nil {
+				log.Errorf("[server] failed to load custom CA certs: %v", err)
+				return err
+			}
+		} else {
+			log.Debug("[server] loading default certs from OS")
+			CAs, err = x509.SystemCertPool()
+			if err != nil {
+				log.Errorf("[server] failed to load default OS certs: %v", err)
+				return err
+			}
+		}
+
+		creds := credentials.NewTLS(&tls.Config{
+			Certificates: []tls.Certificate{cert},
+			PreferServerCipherSuites: true,
+			// https://www.acunetix.com/blog/articles/tls-ssl-cipher-hardening/
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+			},
+			ClientAuth: tls.RequireAndVerifyClientCert,
+			ClientCAs: CAs,
+		})
+
+		opts = append(opts, grpc.Creds(creds))
+	}
+
 	lis, err := net.Listen(server.network, server.address)
 	if err != nil {
 		return err
 	}
 
-	svr := grpc.NewServer()
+	svr := grpc.NewServer(opts...)
 	synse.RegisterPluginServer(svr, server)
 	server.grpc = svr
 
