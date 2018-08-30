@@ -15,6 +15,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"google.golang.org/grpc/credentials"
+	"io/ioutil"
 )
 
 // server implements the Synse Plugin gRPC server. It is used by the
@@ -169,6 +170,23 @@ func (server *server) Serve() error {
 
 	log.Infof("[grpc] listening on %s:%s", server.network, server.address)
 	return svr.Serve(lis)
+}
+
+func loadCACerts(cacerts []string) (*x509.CertPool, error) {
+	certPool := x509.NewCertPool()
+	for _, c := range cacerts {
+		ca, err := ioutil.ReadFile(c)
+		if err != nil {
+			log.Errorf("[server] failed to read CA file: %v", err)
+			return nil, err
+		}
+
+		if ok := certPool.AppendCertsFromPEM(ca); !ok {
+			log.Errorf("[server] failed to append CA cert: %v", c)
+			return nil, fmt.Errorf("failed to append ca cert")
+		}
+	}
+	return certPool, nil
 }
 
 // Stop stops the GRPC server from serving and immediately terminates all open
