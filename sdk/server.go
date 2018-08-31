@@ -124,28 +124,36 @@ func (server *server) Serve() error {
 			return err
 		}
 
-		var CAs *x509.CertPool
+		var certPool *x509.CertPool
 
 		// If custom certificate authority certs are specified, use those, otherwise
 		// use the system-wide root certs from the OS.
 		if len(tlsConfig.CACerts) > 0 {
 			log.Debugf("[server] loading custom CA certs: %v", tlsConfig.CACerts)
-			CAs, err = loadCACerts(tlsConfig.CACerts)
+			certPool, err = loadCACerts(tlsConfig.CACerts)
 			if err != nil {
 				log.Errorf("[server] failed to load custom CA certs: %v", err)
 				return err
 			}
 		} else {
 			log.Debug("[server] loading default CA certs from OS")
-			CAs, err = x509.SystemCertPool()
+			certPool, err = x509.SystemCertPool()
 			if err != nil {
 				log.Errorf("[server] failed to load default OS CA certs: %v", err)
 				return err
 			}
 		}
 
+		clientAuth := tls.RequireAndVerifyClientCert
+		if tlsConfig.SkipVerify {
+			clientAuth = tls.NoClientCert
+		}
+
 		creds := credentials.NewTLS(&tls.Config{
+			ClientAuth:               clientAuth,
+			ClientCAs:                certPool,
 			Certificates:             []tls.Certificate{cert},
+			MinVersion:               tls.VersionTLS12,
 			PreferServerCipherSuites: true,
 			// https://www.acunetix.com/blog/articles/tls-ssl-cipher-hardening/
 			CipherSuites: []uint16{
@@ -160,8 +168,6 @@ func (server *server) Serve() error {
 				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
 				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 			},
-			ClientAuth: tls.RequireAndVerifyClientCert,
-			ClientCAs:  CAs,
 		})
 
 		opts = append(opts, grpc.Creds(creds))

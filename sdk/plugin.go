@@ -455,6 +455,9 @@ type TLSNetworkSettings struct {
 	// CACerts are a list of certificate authority certs to use. If none
 	// are specified, the OS system-wide TLS certs are used.
 	CACerts []string `yaml:"caCerts,omitempty" addedIn:"1.1"`
+
+	// SkipVerify is a flag that, when set, will skip certificate checks.
+	SkipVerify bool `yaml:"skipVerify,omitempty" addedIn:"1.1"`
 }
 
 // DynamicRegistrationSettings specifies configuration and data for
