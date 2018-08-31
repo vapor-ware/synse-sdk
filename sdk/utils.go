@@ -11,14 +11,14 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
-// GetCurrentTime return the current time (time.Now()) as a string formatted
-// with the RFC3339Nano layout. This should be the format of all timestamps
-// returned by the SDK.
+// GetCurrentTime return the current time (time.Now()), with location set to UTC,
+// as a string formatted with the RFC3339Nano layout. This should be the format
+// of all timestamps returned by the SDK.
 //
 // The SDK uses this function to generate all of its timestamps. It is highly
 // recommended that plugins use this as well for timestamp generation.
 func GetCurrentTime() string {
-	return time.Now().Format(time.RFC3339Nano)
+	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
 // GetTypeByName gets the output type with the given name from the collection of
