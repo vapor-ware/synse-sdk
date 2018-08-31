@@ -104,13 +104,21 @@ func (server *server) Serve() error {
 		return e
 	}
 
+	// Options for the gRPC server to be passed in to the constructor.
 	var opts []grpc.ServerOption
 
-	// tls/ssl
-	if Config.Plugin.SSLEnabled {
-		log.Debugf("[server] configuring grpc server for tls/ssl transport")
+	// If the plugin is configured to use TLS/SSL for communicating with Synse Server,
+	// load in the specified certs, make sure everything is happy, and add a gRPC Creds
+	// option to the slice of server options.
+	if Config.Plugin.Network.TLS != nil {
+		tlsConfig := Config.Plugin.Network.TLS
+		log.WithFields(log.Fields{
+			"cert": tlsConfig.Cert,
+			"key":  tlsConfig.Key,
+			"ca":   tlsConfig.CACerts,
+		}).Debugf("[server] configuring grpc server for tls/ssl transport")
 
-		cert, err := tls.LoadX509KeyPair(Config.Plugin.SSLCert, Config.Plugin.SSLKey)
+		cert, err := tls.LoadX509KeyPair(tlsConfig.Cert, tlsConfig.Key)
 		if err != nil {
 			log.Errorf("[server] failed to load TLS key pair: %v", err)
 			return err
@@ -120,9 +128,9 @@ func (server *server) Serve() error {
 
 		// If custom certificate authority certs are specified, use those, otherwise
 		// use the syste-wide root certs from the OS.
-		if len(Config.Plugin.CACerts) > 0 {
-			log.Debugf("[server] loading custom CA certs: %v", Config.Plugin.CACerts)
-			CAs, err = loadCACerts(Config.Plugin.CACerts)
+		if len(tlsConfig.CACerts) > 0 {
+			log.Debugf("[server] loading custom CA certs: %v", tlsConfig.CACerts)
+			CAs, err = loadCACerts(tlsConfig.CACerts)
 			if err != nil {
 				log.Errorf("[server] failed to load custom CA certs: %v", err)
 				return err
@@ -157,13 +165,17 @@ func (server *server) Serve() error {
 		})
 
 		opts = append(opts, grpc.Creds(creds))
+	} else {
+		log.Debug("[server] configuring grpc server for insecure transport")
 	}
 
+	// Create the listener over the configured network type and address.
 	lis, err := net.Listen(server.network, server.address)
 	if err != nil {
 		return err
 	}
 
+	// Create the grpc server instance, passing in any server options.
 	svr := grpc.NewServer(opts...)
 	synse.RegisterPluginServer(svr, server)
 	server.grpc = svr

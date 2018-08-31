@@ -84,6 +84,10 @@ func TestServer_cleanup_Unknown(t *testing.T) {
 // TestServer_Serve tests serving when there is a setup error.
 func TestServer_Serve(t *testing.T) {
 	defer resetContext()
+	defer Config.reset()
+	Config.Plugin = &PluginConfig{
+		Network: &NetworkSettings{},
+	}
 
 	s := newServer("foo", "bar")
 	defer s.Stop()
@@ -94,6 +98,10 @@ func TestServer_Serve(t *testing.T) {
 // TestServer_Serve2 tests serving when there is an error creating a net listener.
 func TestServer_Serve2(t *testing.T) {
 	defer resetContext()
+	defer Config.reset()
+	Config.Plugin = &PluginConfig{
+		Network: &NetworkSettings{},
+	}
 
 	s := newServer("tcp", "bar")
 	defer s.Stop()

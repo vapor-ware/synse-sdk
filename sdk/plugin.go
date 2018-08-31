@@ -313,6 +313,10 @@ type PluginConfig struct {
 	// SchemeVersion is the version of the configuration scheme.
 	SchemeVersion `yaml:",inline"`
 
+	// Debug is a flag that determines whether the plugin should run
+	// with debug logging or not.
+	Debug bool `default:"false" yaml:"debug,omitempty" addedIn:"1.0"`
+
 	// Settings provide specifications for how the plugin should run.
 	Settings *PluginSettings `default:"{}" yaml:"settings,omitempty" addedIn:"1.0"`
 
@@ -329,28 +333,9 @@ type PluginConfig struct {
 	// Health specifies the settings for health checking in the plugin.
 	Health *HealthSettings `default:"{}" yaml:"health,omitempty" addedIn:"1.0"`
 
-	// Debug is a flag that determines whether the plugin should run
-	// with debug logging or not.
-	Debug bool `default:"false" yaml:"debug,omitempty" addedIn:"1.0"`
-
-	// SSLEnabled is a boolean flag that determines whether or not the gRPC
-	// server should be setup to use TLS/SSL. If this is false (default), the
-	// server will run in Insecure mode, even if certs and keys are specified.
-	SSLEnabled bool `yaml:"sslEnabled,omitempty" addedIn:"1.1"`
-
-	// SSLCert is the location of the cert file to use for the gRPC server.
-	SSLCert string `yaml:"sslCert,omitempty" addedIn:"1.1"`
-
-	// SSLKey is the location of the cert file to use for the gRPC server.
-	SSLKey string `yaml:"sslKey,omitempty" addedIn:"1.1"`
-
 	// Context is a map that allows the plugin to specify any arbitrary
 	// data it may need.
 	Context map[string]interface{} `default:"{}" yaml:"context,omitempty" addedIn:"1.0"`
-
-	// CACerts are a list of certificate authority certs to use. If none
-	// are specified, the OS system-wide TLS certs are used.
-	CACerts []string `yaml:"caCerts,omitempty" addedIn:"1.1"`
 }
 
 // JSON encodes the config as JSON. This can be useful for logging and debugging.
@@ -430,6 +415,11 @@ type NetworkSettings struct {
 	// be the host/port (e.g. 0.0.0.0:50001). For "unix", this would be
 	// the name of the unix socket (e.g. plugin.sock).
 	Address string `yaml:"address,omitempty" addedIn:"1.0"`
+
+	// TLS contains the configuration settings for TLS/SSL for the gRPC
+	// connection between Synse Server and the plugin. If this is not set,
+	// insecure transport will be used.
+	TLS *TLSNetworkSettings `yaml:"tls,omitempty" addedIn:"1.1"`
 }
 
 // Validate validates that the NetworkSettings has no configuration errors.
@@ -451,6 +441,20 @@ func (settings NetworkSettings) Validate(multiErr *errors.MultiError) {
 		log.WithField("config", settings).Error("[validation] empty address")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network.address"))
 	}
+}
+
+// TLSNetworkSettings specifies configuration around TLS/SSL for securing the
+// gRPC communication layer between Synse Server and plugins using this SDK.
+type TLSNetworkSettings struct {
+	// Cert is the location of the cert file to use for the gRPC server.
+	Cert string `yaml:"cert,omitempty" addedIn:"1.1"`
+
+	// Key is the location of the cert file to use for the gRPC server.
+	Key string `yaml:"key,omitempty" addedIn:"1.1"`
+
+	// CACerts are a list of certificate authority certs to use. If none
+	// are specified, the OS system-wide TLS certs are used.
+	CACerts []string `yaml:"caCerts,omitempty" addedIn:"1.1"`
 }
 
 // DynamicRegistrationSettings specifies configuration and data for
