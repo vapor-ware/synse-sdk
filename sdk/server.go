@@ -143,8 +143,6 @@ func (server *server) Serve() error {
 				return err
 			}
 		}
-		
-		log.Infof("[server] CAs: %v", CAs)
 
 		creds := credentials.NewTLS(&tls.Config{
 			Certificates:             []tls.Certificate{cert},
@@ -163,7 +161,7 @@ func (server *server) Serve() error {
 				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 			},
 			ClientAuth: tls.RequireAndVerifyClientCert,
-			//ClientCAs:  CAs,
+			ClientCAs:  CAs,
 		})
 
 		opts = append(opts, grpc.Creds(creds))
