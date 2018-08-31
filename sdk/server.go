@@ -1,7 +1,10 @@
 package sdk
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -12,6 +15,7 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // server implements the Synse Plugin gRPC server. It is used by the
@@ -95,22 +99,121 @@ func (server *server) cleanup() error {
 
 // Serve sets up the gRPC server and runs it.
 func (server *server) Serve() error {
-	err := server.setup()
+	e := server.setup()
+	if e != nil {
+		return e
+	}
+
+	// Options for the gRPC server to be passed in to the constructor.
+	var opts []grpc.ServerOption
+	err := setCredsOption(&opts)
 	if err != nil {
 		return err
 	}
 
+	// Create the listener over the configured network type and address.
 	lis, err := net.Listen(server.network, server.address)
 	if err != nil {
 		return err
 	}
 
-	svr := grpc.NewServer()
+	// Create the grpc server instance, passing in any server options.
+	svr := grpc.NewServer(opts...)
 	synse.RegisterPluginServer(svr, server)
 	server.grpc = svr
 
 	log.Infof("[grpc] listening on %s:%s", server.network, server.address)
 	return svr.Serve(lis)
+}
+
+// setCredsOptions will add a credentials option to the server options slice, if the
+// plugin is configured to use TLS/SSL with gRPC.
+func setCredsOption(options *[]grpc.ServerOption) error {
+	// If the plugin is configured to use TLS/SSL for communicating with Synse Server,
+	// load in the specified certs, make sure everything is happy, and add a gRPC Creds
+	// option to the slice of server options.
+	if Config.Plugin.Network.TLS != nil {
+		tlsConfig := Config.Plugin.Network.TLS
+		log.WithFields(log.Fields{
+			"cert": tlsConfig.Cert,
+			"key":  tlsConfig.Key,
+			"ca":   tlsConfig.CACerts,
+		}).Debugf("[server] configuring grpc server for tls/ssl transport")
+
+		cert, err := tls.LoadX509KeyPair(tlsConfig.Cert, tlsConfig.Key)
+		if err != nil {
+			log.Errorf("[server] failed to load TLS key pair: %v", err)
+			return err
+		}
+
+		var certPool *x509.CertPool
+
+		// If custom certificate authority certs are specified, use those, otherwise
+		// use the system-wide root certs from the OS.
+		if len(tlsConfig.CACerts) > 0 {
+			log.Debugf("[server] loading custom CA certs: %v", tlsConfig.CACerts)
+			certPool, err = loadCACerts(tlsConfig.CACerts)
+			if err != nil {
+				log.Errorf("[server] failed to load custom CA certs: %v", err)
+				return err
+			}
+		} else {
+			log.Debug("[server] loading default CA certs from OS")
+			certPool, err = x509.SystemCertPool()
+			if err != nil {
+				log.Errorf("[server] failed to load default OS CA certs: %v", err)
+				return err
+			}
+		}
+
+		clientAuth := tls.RequireAndVerifyClientCert
+		if tlsConfig.SkipVerify {
+			clientAuth = tls.NoClientCert
+		}
+
+		creds := credentials.NewTLS(&tls.Config{
+			ClientAuth:               clientAuth,
+			ClientCAs:                certPool,
+			Certificates:             []tls.Certificate{cert},
+			MinVersion:               tls.VersionTLS12,
+			PreferServerCipherSuites: true,
+			// https://www.acunetix.com/blog/articles/tls-ssl-cipher-hardening/
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+			},
+		})
+		*options = append(*options, grpc.Creds(creds))
+	} else {
+		log.Debug("[server] configuring grpc server for insecure transport")
+	}
+	return nil
+}
+
+// loadCACerts loads the certs from the provided certificate authority/authorities.
+func loadCACerts(cacerts []string) (*x509.CertPool, error) {
+	certPool := x509.NewCertPool()
+	for _, c := range cacerts {
+		ca, err := ioutil.ReadFile(c) // #nosec
+		if err != nil {
+			log.Errorf("[server] failed to read CA file: %v", err)
+			return nil, err
+		}
+
+		if ok := certPool.AppendCertsFromPEM(ca); !ok {
+			log.Errorf("[server] failed to append CA cert: %v", c)
+			return nil, fmt.Errorf("failed to append ca cert")
+		}
+	}
+	return certPool, nil
 }
 
 // Stop stops the GRPC server from serving and immediately terminates all open

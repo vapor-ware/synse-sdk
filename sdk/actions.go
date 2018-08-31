@@ -33,7 +33,7 @@ func execPostRun(plugin *Plugin) *errors.MultiError {
 	log.Debugf("[sdk] executing %d post-run action(s)", len(ctx.postRunActions))
 	if len(ctx.postRunActions) > 0 {
 		for _, action := range ctx.postRunActions {
-			log.Debug(" * %v", action)
+			log.Debugf(" * %v", action)
 			err := action(plugin)
 			if err != nil {
 				multiErr.Add(err)

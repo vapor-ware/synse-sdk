@@ -415,6 +415,11 @@ type NetworkSettings struct {
 	// be the host/port (e.g. 0.0.0.0:50001). For "unix", this would be
 	// the name of the unix socket (e.g. plugin.sock).
 	Address string `yaml:"address,omitempty" addedIn:"1.0"`
+
+	// TLS contains the configuration settings for TLS/SSL for the gRPC
+	// connection between Synse Server and the plugin. If this is not set,
+	// insecure transport will be used.
+	TLS *TLSNetworkSettings `yaml:"tls,omitempty" addedIn:"1.1"`
 }
 
 // Validate validates that the NetworkSettings has no configuration errors.
@@ -436,6 +441,23 @@ func (settings NetworkSettings) Validate(multiErr *errors.MultiError) {
 		log.WithField("config", settings).Error("[validation] empty address")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network.address"))
 	}
+}
+
+// TLSNetworkSettings specifies configuration around TLS/SSL for securing the
+// gRPC communication layer between Synse Server and plugins using this SDK.
+type TLSNetworkSettings struct {
+	// Cert is the location of the cert file to use for the gRPC server.
+	Cert string `yaml:"cert,omitempty" addedIn:"1.1"`
+
+	// Key is the location of the cert file to use for the gRPC server.
+	Key string `yaml:"key,omitempty" addedIn:"1.1"`
+
+	// CACerts are a list of certificate authority certs to use. If none
+	// are specified, the OS system-wide TLS certs are used.
+	CACerts []string `yaml:"caCerts,omitempty" addedIn:"1.1"`
+
+	// SkipVerify is a flag that, when set, will skip certificate checks.
+	SkipVerify bool `yaml:"skipVerify,omitempty" addedIn:"1.1"`
 }
 
 // DynamicRegistrationSettings specifies configuration and data for
