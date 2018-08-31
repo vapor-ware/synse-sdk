@@ -106,7 +106,29 @@ func (server *server) Serve() error {
 
 	// Options for the gRPC server to be passed in to the constructor.
 	var opts []grpc.ServerOption
+	err := setCredsOption(&opts)
+	if err != nil {
+		return err
+	}
 
+	// Create the listener over the configured network type and address.
+	lis, err := net.Listen(server.network, server.address)
+	if err != nil {
+		return err
+	}
+
+	// Create the grpc server instance, passing in any server options.
+	svr := grpc.NewServer(opts...)
+	synse.RegisterPluginServer(svr, server)
+	server.grpc = svr
+
+	log.Infof("[grpc] listening on %s:%s", server.network, server.address)
+	return svr.Serve(lis)
+}
+
+// setCredsOptions will add a credentials option to the server options slice, if the
+// plugin is configured to use TLS/SSL with gRPC.
+func setCredsOption(options *[]grpc.ServerOption) error {
 	// If the plugin is configured to use TLS/SSL for communicating with Synse Server,
 	// load in the specified certs, make sure everything is happy, and add a gRPC Creds
 	// option to the slice of server options.
@@ -169,25 +191,11 @@ func (server *server) Serve() error {
 				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 			},
 		})
-
-		opts = append(opts, grpc.Creds(creds))
+		*options = append(*options, grpc.Creds(creds))
 	} else {
 		log.Debug("[server] configuring grpc server for insecure transport")
 	}
-
-	// Create the listener over the configured network type and address.
-	lis, err := net.Listen(server.network, server.address)
-	if err != nil {
-		return err
-	}
-
-	// Create the grpc server instance, passing in any server options.
-	svr := grpc.NewServer(opts...)
-	synse.RegisterPluginServer(svr, server)
-	server.grpc = svr
-
-	log.Infof("[grpc] listening on %s:%s", server.network, server.address)
-	return svr.Serve(lis)
+	return nil
 }
 
 // loadCACerts loads the certs from the provided certificate authority/authorities.

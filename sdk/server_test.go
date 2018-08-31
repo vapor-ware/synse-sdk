@@ -10,6 +10,7 @@ import (
 	"github.com/vapor-ware/synse-sdk/internal/test"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-server-grpc/go"
+	"google.golang.org/grpc"
 )
 
 // TestNewServer tests that a server is returned when the constructor
@@ -988,4 +989,146 @@ func TestServer_Transaction5(t *testing.T) {
 	err := s.Transaction(req, mock)
 
 	assert.Error(t, err)
+}
+
+// Test_loadCACerts_1 tests loading CA certs when none are given.
+func Test_loadCACerts_1(t *testing.T) {
+	certPool, err := loadCACerts([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(certPool.Subjects()))
+}
+
+// Test_loadCACerts_2 tests loading CA certs when invalid cert files are given
+// (does not exist).
+func Test_loadCACerts_2(t *testing.T) {
+	certPool, err := loadCACerts([]string{"foobar"})
+	assert.Error(t, err)
+	assert.Nil(t, certPool)
+}
+
+// Test_loadCACerts_3 tests loading CA certs when invalid cert files are given
+// (bad contents).
+func Test_loadCACerts_3(t *testing.T) {
+	certPool, err := loadCACerts([]string{"testdata/certs/badcert.crt"})
+	assert.Error(t, err)
+	assert.Nil(t, certPool)
+}
+
+// Test_loadCACerts_4 tests loading CA certs when a valid CA cert file is given.
+func Test_loadCACerts_4(t *testing.T) {
+	certPool, err := loadCACerts([]string{"testdata/certs/rootCA.crt"})
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(certPool.Subjects()))
+}
+
+// Test_setCredsOptions_1 tests setting credential options when the plugin is not configured
+// for TLS/SSL.
+func Test_setCredsOptions_1(t *testing.T) {
+	defer Config.reset()
+	Config.Plugin = &PluginConfig{
+		Network: &NetworkSettings{},
+	}
+
+	var options []grpc.ServerOption
+	err := setCredsOption(&options)
+	assert.NoError(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_setCredsOptions_2 tests setting credential options when the plugin is configured
+// for TLS/SSL, but the cert is invalid.
+func Test_setCredsOptions_2(t *testing.T) {
+	defer Config.reset()
+	Config.Plugin = &PluginConfig{
+		Network: &NetworkSettings{
+			TLS: &TLSNetworkSettings{
+				Cert: "foobar",
+				Key:  "testdata/certs/plugin.key",
+			},
+		},
+	}
+
+	var options []grpc.ServerOption
+	err := setCredsOption(&options)
+	assert.Error(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_setCredsOptions_3 tests setting credential options when the plugin is configured
+// for TLS/SSL, but the key is invalid.
+func Test_setCredsOptions_3(t *testing.T) {
+	defer Config.reset()
+	Config.Plugin = &PluginConfig{
+		Network: &NetworkSettings{
+			TLS: &TLSNetworkSettings{
+				Cert: "testdata/certs/plugin.crt",
+				Key:  "foobar",
+			},
+		},
+	}
+
+	var options []grpc.ServerOption
+	err := setCredsOption(&options)
+	assert.Error(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_setCredsOptions_4 tests setting credential options when the plugin is configured
+// for TLS/SSL, but the specified cacert is invalid.
+func Test_setCredsOptions_4(t *testing.T) {
+	defer Config.reset()
+	Config.Plugin = &PluginConfig{
+		Network: &NetworkSettings{
+			TLS: &TLSNetworkSettings{
+				Cert:    "testdata/certs/plugin.crt",
+				Key:     "testdata/certs/plugin.key",
+				CACerts: []string{"foobar"},
+			},
+		},
+	}
+
+	var options []grpc.ServerOption
+	err := setCredsOption(&options)
+	assert.Error(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_setCredsOptions_5 tests setting credential options when the plugin is configured
+// for TLS/SSL, there is no cacert specified, and skip verify is enabled.
+func Test_setCredsOptions_5(t *testing.T) {
+	defer Config.reset()
+	Config.Plugin = &PluginConfig{
+		Network: &NetworkSettings{
+			TLS: &TLSNetworkSettings{
+				Cert:       "testdata/certs/plugin.crt",
+				Key:        "testdata/certs/plugin.key",
+				SkipVerify: true,
+			},
+		},
+	}
+
+	var options []grpc.ServerOption
+	err := setCredsOption(&options)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(options))
+}
+
+// Test_setCredsOptions_6 tests setting credential options when the plugin is configured
+// for TLS/SSL, there is no cacert specified, and skip verify is disabled.
+func Test_setCredsOptions_6(t *testing.T) {
+	defer Config.reset()
+	Config.Plugin = &PluginConfig{
+		Network: &NetworkSettings{
+			TLS: &TLSNetworkSettings{
+				Cert:       "testdata/certs/plugin.crt",
+				Key:        "testdata/certs/plugin.key",
+				SkipVerify: false,
+			},
+		},
+	}
+
+	var options []grpc.ServerOption
+	err := setCredsOption(&options)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(options))
 }
