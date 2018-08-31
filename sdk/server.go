@@ -127,7 +127,7 @@ func (server *server) Serve() error {
 		var CAs *x509.CertPool
 
 		// If custom certificate authority certs are specified, use those, otherwise
-		// use the syste-wide root certs from the OS.
+		// use the system-wide root certs from the OS.
 		if len(tlsConfig.CACerts) > 0 {
 			log.Debugf("[server] loading custom CA certs: %v", tlsConfig.CACerts)
 			CAs, err = loadCACerts(tlsConfig.CACerts)
@@ -136,13 +136,15 @@ func (server *server) Serve() error {
 				return err
 			}
 		} else {
-			log.Debug("[server] loading default certs from OS")
+			log.Debug("[server] loading default CA certs from OS")
 			CAs, err = x509.SystemCertPool()
 			if err != nil {
-				log.Errorf("[server] failed to load default OS certs: %v", err)
+				log.Errorf("[server] failed to load default OS CA certs: %v", err)
 				return err
 			}
 		}
+		
+		log.Infof("[server] CAs: %v", CAs)
 
 		creds := credentials.NewTLS(&tls.Config{
 			Certificates:             []tls.Certificate{cert},
@@ -161,7 +163,7 @@ func (server *server) Serve() error {
 				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 			},
 			ClientAuth: tls.RequireAndVerifyClientCert,
-			ClientCAs:  CAs,
+			//ClientCAs:  CAs,
 		})
 
 		opts = append(opts, grpc.Creds(creds))
