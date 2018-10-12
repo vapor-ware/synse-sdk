@@ -1,0 +1,5 @@
+version: 1.2  # listeners added in cfg version 1.2
+debug: true
+network:
+  type: unix
+  address: example-plugin.sock

@@ -48,6 +48,13 @@ type DeviceHandler struct {
 	// If a device does not support bulk read, this can be left as nil. Additionally,
 	// a device can only be bulk read if there is no Read handler set.
 	BulkRead func([]*Device) ([]*ReadContext, error)
+
+	// Listen is a function that will listen for push-based data from the device.
+	// This function is called one per device using the handler, even if there are
+	// other handler functions (e.g. read, write) defined. The listener function
+	// will run in a separate goroutine for each device. The goroutines are started
+	// before the read/write loops.
+	Listen func(*Device, chan *ReadContext) error
 }
 
 // supportsBulkRead checks if the handler supports bulk reading for its Devices.
@@ -347,7 +354,7 @@ func (device *Device) Write(data *WriteData) error {
 // IsReadable checks if the Device is readable based on the presence/absence
 // of a Read/BulkRead action defined in its DeviceHandler.
 func (device *Device) IsReadable() bool {
-	return device.Handler.Read != nil || device.Handler.BulkRead != nil
+	return device.Handler.Read != nil || device.Handler.BulkRead != nil || device.Handler.Listen != nil
 }
 
 // IsWritable checks if the Device is writable based on the presence/absence
