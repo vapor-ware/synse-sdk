@@ -353,7 +353,6 @@ func TestSchemeValidator_Validate_Complex_Ok(t *testing.T) {
 		Source: "<complex test config>",
 		Config: &complexTestConfig{
 			SchemeVersion: SchemeVersion{Version: "1.0"},
-			Foo:           true,
 			FloatVal:      20,
 			IntVal:        3,
 			UintVal:       2,
@@ -429,7 +428,7 @@ func TestSchemeValidator_Validate_Complex_Error(t *testing.T) {
 
 	err := validator.Validate(toValidate)
 	assert.Error(t, err.Err())
-	assert.Equal(t, 2, len(err.Errors), err.Error())
+	assert.Equal(t, 1, len(err.Errors), err.Error())
 
 	// check that validation cleanup was successful
 	checkValidationCleanup(t)

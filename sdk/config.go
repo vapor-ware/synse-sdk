@@ -85,6 +85,16 @@ func (ctx *ConfigContext) IsOutputTypeConfig() bool {
 	return ok
 }
 
+// TODO (etd) [v2]: In SDK v2, we can probably get rid of this. While versioning
+// the configuration fields is a unique approach to ensuring config compatibility,
+// it doesn't actually buy us much and at this point just adds complexity to the
+// code base. We should be fine to version the config files themselves (e.g.
+// 1, 1.0, v1, ...) and distinguish a v1 config from a v2 config, but at the most
+// all we would be able to do from that is complain and say that the given config
+// file is not compatible with the current version of the SDK, so it really only
+// makes sense to have validation of version at the config level, not at the field
+// level. For v1, we will keep this in for compatibility, but this can be removed
+// for v2. All similar components will be marked with a TODO [v2] tag for removal.
 const (
 	tagAddedIn      = "addedIn"
 	tagDeprecatedIn = "deprecatedIn"
@@ -95,6 +105,9 @@ const (
 // that can be compared to other SchemeVersions.
 type ConfigVersion struct {
 	Major int
+
+	// TODO (etd) [v2]: for v1, disabled checking against the minor version,
+	// can be removed for v2.
 	Minor int
 }
 
@@ -142,31 +155,19 @@ func (version *ConfigVersion) String() string {
 // IsLessThan returns true if the Version is less than the Version
 // provided as a parameter.
 func (version *ConfigVersion) IsLessThan(other *ConfigVersion) bool {
-	if version.Major < other.Major {
-		return true
-	}
-	if version.Major == other.Major && version.Minor < other.Minor {
-		return true
-	}
-	return false
+	return version.Major < other.Major
 }
 
 // IsGreaterOrEqualTo returns true if the ConfigVersion is greater than or equal to
 // the Version provided as a parameter.
 func (version *ConfigVersion) IsGreaterOrEqualTo(other *ConfigVersion) bool {
-	if version.Major > other.Major {
-		return true
-	}
-	if version.Major == other.Major && version.Minor >= other.Minor {
-		return true
-	}
-	return false
+	return version.Major >= other.Major
 }
 
 // IsEqual returns true if the Version is equal to the Version provided
 // as a parameter.
 func (version *ConfigVersion) IsEqual(other *ConfigVersion) bool {
-	return version.Major == other.Major && version.Minor == other.Minor
+	return version.Major == other.Major
 }
 
 // SchemeVersion is a struct that is used to extract the configuration
