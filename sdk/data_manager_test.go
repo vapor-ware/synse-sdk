@@ -72,6 +72,7 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -129,6 +130,7 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
@@ -186,6 +188,7 @@ func TestDataManager_readOneErr(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -234,6 +237,7 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -310,6 +314,7 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
@@ -386,6 +391,7 @@ func TestDataManager_readBulkError(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -440,6 +446,7 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -501,6 +508,7 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -576,6 +584,7 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -638,6 +647,7 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -713,6 +723,7 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -815,6 +826,7 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -918,6 +930,7 @@ func TestDataManager_writeOkNoLimiter(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -979,6 +992,7 @@ func TestDataManager_writeOkWithLimiter(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
@@ -1041,6 +1055,7 @@ func TestDataManager_writeNoDevice(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -1083,6 +1098,7 @@ func TestDataManager_writeError(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 	}
@@ -1144,6 +1160,7 @@ func TestDataManager_serialWriteSingle(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200, Max: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
@@ -1208,6 +1225,7 @@ func TestDataManager_serialWriteMultiple(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200, Max: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
@@ -1294,6 +1312,7 @@ func TestDataManager_parallelWriteSingle(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200, Max: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 		Limiter: &LimiterSettings{Rate: 200, Burst: 200},
@@ -1358,6 +1377,7 @@ func TestDataManager_parallelWriteMultiple(t *testing.T) {
 		Settings: &PluginSettings{
 			Read:        &ReadSettings{Buffer: 200},
 			Write:       &WriteSettings{Buffer: 200, Max: 200},
+			Listen:      &ListenSettings{Buffer: 100},
 			Transaction: &TransactionSettings{TTL: "2s"},
 		},
 		Limiter: &LimiterSettings{Rate: 200, Burst: 200},

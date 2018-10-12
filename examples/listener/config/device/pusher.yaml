@@ -1,0 +1,18 @@
+version: 1.0
+locations:
+  - name: r1b1
+    rack:
+      name: rack-1
+    board:
+      name: board-1
+devices:
+  - name: pusher
+    metadata:
+      model: test-device
+    outputs:
+      - type: push_data
+    instances:
+      - info: Test Pusher Device
+        location: r1b1
+        data:
+          address: "localhost:8553"

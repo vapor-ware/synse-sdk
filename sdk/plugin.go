@@ -371,6 +371,10 @@ type PluginSettings struct {
 	// be "serial" or "parallel".
 	Mode string `default:"serial" yaml:"mode,omitempty" addedIn:"1.0"`
 
+	// Listen contains the settings to configure listener behavior.
+	// FIXME (etd) - field versioning is messed up, for now leaving this at 1.0
+	Listen *ListenSettings `default:"{}" yaml:"listen,omitempty" addedIn:"1.0"`
+
 	// Read contains the settings to configure read behavior.
 	Read *ReadSettings `default:"{}" yaml:"read,omitempty" addedIn:"1.0"`
 
@@ -505,6 +509,36 @@ func (settings LimiterSettings) Validate(multiErr *errors.MultiError) {
 			multiErr.Context["source"],
 			"limiter.burst",
 			"greater than or equal to 0",
+		))
+	}
+}
+
+// ListenSettings provides configuration options for listener operations.
+// A listener is a function that is used to collect push-based data.
+type ListenSettings struct {
+	// FIXME (etd) - field versioning is messed up, for now leaving this at 1.0
+
+	// Enabled globally enables or disables listening for the plugin.
+	// By default a plugin will have listening enabled.
+	Enabled bool `default:"true" yaml:"enabled,omitempty" addedIn:"1.0"`
+
+	// Buffer defines the size of the listen buffer. This will be the
+	// size of the channel that passes all the collected push data from
+	// all listener instances to the data manager.
+	Buffer int `default:"100" yaml:"buffer,omitempty" addedIn:"1.0"`
+}
+
+// Validate validates that the ListenSettings has no confiugration errors.
+func (settings ListenSettings) Validate(multiErr *errors.MultiError) {
+	// If the buffer size is set to 0, return an error. A size
+	// of 0 would prevent any data from being moved around, blocking
+	// all listen operations.
+	if settings.Buffer <= 0 {
+		log.WithField("config", settings).Error("[validation] bad listen buffer")
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"settings.listen.buffer",
+			"a value greater than 0",
 		))
 	}
 }
