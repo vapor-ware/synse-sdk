@@ -173,7 +173,29 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 		}
 
 		if len(configs) != 0 {
-			log.WithField("path", path).Debugf("[sdk] found %d config(s)", len(configs))
+			absPath, err := filepath.Abs(path)
+			if err != nil {
+				pwd, e := os.Getwd()
+				if e != nil {
+					// If we fail to resolve the current working directory, there isn't
+					// much else we can do to provide additional context, so we just log
+					// the error and continue on. Chances are that if this is happening
+					// something is wrong, since we should always be able to resolve
+					// the working directory from within the plugin container.
+					log.Warnf("[sdk] unable to get current working directory: %v", e)
+				}
+				// If we fail to get the absolute path, log an error and just
+				// keep the relative path for logging.
+				log.WithFields(log.Fields{
+					"path": path,
+					"pwd":  pwd,
+				}).Error("[sdk] failed to get absolute path for config")
+				absPath = path
+			}
+			log.WithFields(log.Fields{
+				"path":    absPath,
+				"configs": configs,
+			}).Info("[sdk] found config files")
 			break
 		}
 	}
