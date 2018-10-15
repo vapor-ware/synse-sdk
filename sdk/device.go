@@ -110,7 +110,7 @@ type Device struct {
 	Outputs []*Output
 
 	// The read/write handler for the device. Handlers should be registered globally.
-	Handler *DeviceHandler
+	Handler *DeviceHandler `json:"-"`
 
 	// id is the deterministic id of the device
 	id string
@@ -122,6 +122,15 @@ type Device struct {
 	// SortOrdinal is a one based sort ordinal for a device in a scan. Zero for
 	// don't care.
 	SortOrdinal int32
+}
+
+// JSON encodes the device as JSON. This can be useful for logging and debugging.
+func (device *Device) JSON() (string, error) {
+	bytes, err := json.Marshal(device)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 // GetType gets the type of the device. The type of the device is the last
@@ -397,14 +406,35 @@ func (device *Device) encode() *synse.Device {
 // updateDeviceMap updates the global device map with the provided Devices.
 // If duplicate IDs are detected, the plugin will terminate.
 func updateDeviceMap(devices []*Device) {
+	var foundDuplicates bool
 	for _, d := range devices {
-		if _, hasDevice := ctx.devices[d.GUID()]; hasDevice {
+		if existing, hasDevice := ctx.devices[d.GUID()]; hasDevice {
 			// If we have devices with the same ID, there is something very wrong
 			// happening and we will not want to proceed, since we won't be able
 			// to route to devices correctly.
-			log.Fatalf("[sdk] duplicate device id found: %s", d.GUID())
+			log.WithField("id", d.ID()).Error("[sdk] duplicate device found")
+			foundDuplicates = true
+
+			// Get a dump of the device data, including all nested structs
+			existingJSON, err := existing.JSON()
+			if err != nil {
+				log.Errorf("[sdk] failed to dump device to JSON: %v", err)
+				log.Errorf("[sdk] existing device: %v", existing)
+			} else {
+				log.Errorf("[sdk] existing device: %v", existingJSON)
+			}
+			duplicateJSON, err := d.JSON()
+			if err != nil {
+				log.Errorf("[sdk] failed to dump device to JSON: %v", err)
+				log.Errorf("[sdk] duplicate device: %v", d)
+			} else {
+				log.Errorf("[sdk] duplicate device: %v", duplicateJSON)
+			}
 		}
 		ctx.devices[d.GUID()] = d
+	}
+	if foundDuplicates {
+		log.Fatal("[sdk] unable to run plugin with duplicate device configurations")
 	}
 }
 
