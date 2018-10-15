@@ -231,6 +231,10 @@ func (plugin *Plugin) setup() error {
 	}
 	setupTransactionCache(ttl)
 
+	// Set up the readings cache, if its configured
+	// TODO
+
+
 	// Initialize a gRPC server for the Plugin to use.
 	plugin.server = newServer(
 		Config.Plugin.Network.Type,
@@ -383,6 +387,10 @@ type PluginSettings struct {
 	// Transaction contains the settings to configure transaction
 	// handling behavior.
 	Transaction *TransactionSettings `default:"{}" yaml:"transaction,omitempty" addedIn:"1.0"`
+
+	// Cache contains the settings to configure local data caching
+	// by the plugin.
+	Cache *CacheSettings `default:"{}" yaml:"cache,omitempty" addedIn:"1.2"`
 }
 
 // Validate validates that the PluginSettings has no configuration errors.
@@ -672,5 +680,24 @@ type HealthSettings struct {
 
 // Validate validates that the HealthSettings has no configuration errors.
 func (settings HealthSettings) Validate(multiErr *errors.MultiError) {
+	// Nothing to validate
+}
+
+// CacheSettings provides configuration options for an in-memory windowed
+// cache for plugin readings.
+type CacheSettings struct{
+	// Enabled sets whether the plugin will use a local
+	// in-memory cache to store a small window of readings.
+	// By default, the cache is not enabled.
+	Enabled bool `default:"false" yaml:"enabled,omitempty" addedIn:"1.2"`
+
+	// TTL is the time-to-live for a reading in the readings cache.
+	// This will only be used if the cache is enabled. Once a reading
+	// has exceeded its TTL, it will be removed from the cache.
+	TTL time.Duration `default:"3m" yaml:"ttl,omitempty" addedIn:"1.2"`
+}
+
+// Validate validates that the CacheSettings has no configuration errors.
+func (settings CacheSettings) Validate(multiErr *errors.MultiError) {
 	// Nothing to validate
 }
