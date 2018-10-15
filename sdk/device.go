@@ -406,18 +406,35 @@ func (device *Device) encode() *synse.Device {
 // updateDeviceMap updates the global device map with the provided Devices.
 // If duplicate IDs are detected, the plugin will terminate.
 func updateDeviceMap(devices []*Device) {
+	var foundDuplicates bool
 	for _, d := range devices {
 		if existing, hasDevice := ctx.devices[d.GUID()]; hasDevice {
 			// If we have devices with the same ID, there is something very wrong
 			// happening and we will not want to proceed, since we won't be able
 			// to route to devices correctly.
-			deviceJSON, err := existing.JSON()
+			log.WithField("id", d.ID()).Error("[sdk] duplicate device found")
+			foundDuplicates = true
+
+			// Get a dump of the device data, including all nested structs
+			existingJSON, err := existing.JSON()
 			if err != nil {
-				log.Fatalf("[sdk] duplicate device (failed to dump JSON: %v): %v", err, existing)
+				log.Errorf("[sdk] failed to dump device to JSON: %v", err)
+				log.Errorf("[sdk] existing device: %v", existing)
+			} else {
+				log.Errorf("[sdk] existing device: %v", existingJSON)
 			}
-			log.Fatalf("[sdk] duplicate id found for device: %v", deviceJSON)
+			duplicateJSON, err := d.JSON()
+			if err != nil {
+				log.Errorf("[sdk] failed to dump device to JSON: %v", err)
+				log.Errorf("[sdk] duplicate device: %v", d)
+			} else {
+				log.Errorf("[sdk] duplicate device: %v", duplicateJSON)
+			}
 		}
 		ctx.devices[d.GUID()] = d
+	}
+	if foundDuplicates {
+		log.Fatal("[sdk] unable to run plugin with duplicate device configurations")
 	}
 }
 
