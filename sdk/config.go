@@ -417,14 +417,17 @@ func processPluginConfig() error { // nolint: gocyclo
 	}
 
 	// Regardless of whether we pass policy checks/config validation,
-	// we will want to see what the config is, if in debug mode.
-	if log.GetLevel() == log.DebugLevel {
+	// we will want to see what the config is. The config can be nil
+	// if only defaults are being used.
+	if pluginCtx == nil {
+		log.Info("[sdk] no config found from file, checking policy and using defaults")
+	} else {
 		cfg := pluginCtx.Config.(*PluginConfig)
 		json, e := cfg.JSON()
 		if e != nil {
 			log.Errorf("[sdk] failed to marshal plugin config to json: %v", err)
 		} else {
-			log.Debugf("[sdk] plugin config: %v", json)
+			log.Infof("[sdk] plugin config: %v", json)
 		}
 	}
 

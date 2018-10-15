@@ -110,7 +110,7 @@ type Device struct {
 	Outputs []*Output
 
 	// The read/write handler for the device. Handlers should be registered globally.
-	Handler *DeviceHandler
+	Handler *DeviceHandler `json:"-"`
 
 	// id is the deterministic id of the device
 	id string
@@ -122,6 +122,15 @@ type Device struct {
 	// SortOrdinal is a one based sort ordinal for a device in a scan. Zero for
 	// don't care.
 	SortOrdinal int32
+}
+
+// JSON encodes the device as JSON. This can be useful for logging and debugging.
+func (device *Device) JSON() (string, error) {
+	bytes, err := json.Marshal(device)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 // GetType gets the type of the device. The type of the device is the last
@@ -398,11 +407,15 @@ func (device *Device) encode() *synse.Device {
 // If duplicate IDs are detected, the plugin will terminate.
 func updateDeviceMap(devices []*Device) {
 	for _, d := range devices {
-		if _, hasDevice := ctx.devices[d.GUID()]; hasDevice {
+		if existing, hasDevice := ctx.devices[d.GUID()]; hasDevice {
 			// If we have devices with the same ID, there is something very wrong
 			// happening and we will not want to proceed, since we won't be able
 			// to route to devices correctly.
-			log.Fatalf("[sdk] duplicate device id found: %s", d.GUID())
+			deviceJSON, err := existing.JSON()
+			if err != nil {
+				log.Fatalf("[sdk] duplicate device (failed to dump JSON: %v): %v", err, existing)
+			}
+			log.Fatalf("[sdk] duplicate id found for device: %v", deviceJSON)
 		}
 		ctx.devices[d.GUID()] = d
 	}

@@ -173,7 +173,19 @@ func findConfigs(searchPaths []string, env, name string) (configs []string, err 
 		}
 
 		if len(configs) != 0 {
-			log.WithField("path", path).Debugf("[sdk] found %d config(s)", len(configs))
+			absPath, err := filepath.Abs(path)
+			if err != nil {
+				// If we fail to get the absolute path, log an error and just
+				// keep the relative path for logging.
+				log.WithField(
+					"path", path,
+				).Error("[sdk] failed to get absolute path for config")
+				absPath = path
+			}
+			log.WithFields(log.Fields{
+				"path":    absPath,
+				"configs": configs,
+			}).Info("[sdk] found config files")
 			break
 		}
 	}
