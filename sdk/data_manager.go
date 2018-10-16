@@ -497,11 +497,12 @@ func (manager *dataManager) goUpdateData() {
 			)
 
 			// Read from the listen and read channel for incoming readings
+			var reading *ReadContext
 			select {
-			case reading := <-manager.readChannel:
+			case reading = <-manager.readChannel:
 				id = reading.ID()
 				readings = reading.Reading
-			case reading := <-manager.listenChannel:
+			case reading = <-manager.listenChannel:
 				id = reading.ID()
 				readings = reading.Reading
 			}
@@ -510,6 +511,9 @@ func (manager *dataManager) goUpdateData() {
 			manager.dataLock.Lock()
 			manager.readings[id] = readings
 			manager.dataLock.Unlock()
+
+			// update the readings cache
+			addReadingToCache(reading)
 		}
 	}()
 }

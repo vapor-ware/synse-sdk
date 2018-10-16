@@ -232,8 +232,7 @@ func (plugin *Plugin) setup() error {
 	setupTransactionCache(ttl)
 
 	// Set up the readings cache, if its configured
-	// TODO
-
+	setupReadingsCache()
 
 	// Initialize a gRPC server for the Plugin to use.
 	plugin.server = newServer(
@@ -685,7 +684,7 @@ func (settings HealthSettings) Validate(multiErr *errors.MultiError) {
 
 // CacheSettings provides configuration options for an in-memory windowed
 // cache for plugin readings.
-type CacheSettings struct{
+type CacheSettings struct {
 	// Enabled sets whether the plugin will use a local
 	// in-memory cache to store a small window of readings.
 	// By default, the cache is not enabled.

@@ -1,6 +1,8 @@
 package sdk
 
 import (
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
 )
@@ -51,22 +53,71 @@ func addReadingToCache(ctx *ReadContext) {
 	}
 }
 
-// todo: figure out the grpc api - we'll probably want some filtering
-// on the cache and this can specify the bounds of that filter.
-type readingCacheFilter struct {
-	from string
-	until string
-}
+// getReadingsFromCache takes optional start/end bounds (which can be left as empty strings
+// to specify no bounds on the reading data) and a channel. It will collect all pertinent
+// reading data from the cache and pass it through the channel. Once the function returns,
+// the channel will be closed.
+func getReadingsFromCache(start, end string, readings chan *ReadContext) { // nolint: gocyclo
+	// Whether we exit the function by passing all cached readings through
+	// the channel or by erroring out, we want to close the channel. This
+	// will signal to caller (who provides the channel) that we are done.
+	defer close(readings)
+	var err error
 
-// TODO - maybe passing in a channel and dumping all the read contexts
-// to the channel makes more sense.
-func getReadingsFromCache(filter *readingCacheFilter) []*ReadContext {
-	var out []*ReadContext
-	for _, item := range readingsCache.Items() {
-		ctxs := item.Object.(*cacheContexts)
-		for _, ctx := range *ctxs {
-			out = append(out, ctx)
+	// Parse the timestamp for the starting bound on the data window,
+	// if it is set.
+	var startTime time.Time
+	if start != "" {
+		startTime, err = time.Parse(time.RFC3339, start)
+		if err != nil {
+			log.WithField(
+				"time", start,
+			).Error("[cache] failed to parse start time to RFC3339")
 		}
 	}
-	return out
+
+	// Parse the timestamp for the ending bound on the data window,
+	// if it is set.
+	var endTime time.Time
+	if end != "" {
+		endTime, err = time.Parse(time.RFC3339, end)
+		if err != nil {
+			log.WithField(
+				"time", end,
+			).Error("[cache] failed to parse end time to RFC3339")
+		}
+	}
+
+	// Collect all of the cached readings. If starting or ending bounds
+	// are specified, ensure that the data is within those bounds before
+	// passing it back to the caller via the channel.
+
+	for ts, item := range readingsCache.Items() {
+		cachedTime, err := time.Parse(time.RFC3339, ts)
+		if err != nil {
+			log.WithField(
+				"timestamp", ts,
+			).Error("[cache] failed to parse timestamp from cache")
+		}
+
+		// If we have a start bound, check that the cached items are
+		// within that bound. If not, ignore them.
+		if !startTime.IsZero() {
+			if cachedTime.Before(startTime) {
+				continue
+			}
+		}
+		// If we have an end bound, check that the cached items are
+		// within that bound. If not, ignore them.
+		if !endTime.IsZero() {
+			if cachedTime.After(endTime) {
+				continue
+			}
+		}
+
+		ctxs := item.Object.(*cacheContexts)
+		for _, ctx := range *ctxs {
+			readings <- ctx
+		}
+	}
 }
