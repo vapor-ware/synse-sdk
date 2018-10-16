@@ -529,6 +529,22 @@ func (manager *dataManager) getReadings(device string) []*Reading {
 	return manager.readings[device]
 }
 
+// getAllReadings safely copies the current reading state in the data manager and
+// returns all of the readings.
+func (manager *dataManager) getAllReadings() map[string][]*Reading {
+	mapCopy := make(map[string][]*Reading)
+	manager.dataLock.RLock()
+	defer manager.dataLock.RUnlock()
+
+	// Iterate over the map to make a copy - we want a copy or else we would be
+	// returning a reference to the underlying data which should only be accessed
+	// in a lock context.
+	for k, v := range manager.readings {
+		mapCopy[k] = v
+	}
+	return mapCopy
+}
+
 // Read fulfills a Read request by providing the latest data read from a device
 // and framing it up for the gRPC response.
 func (manager *dataManager) Read(req *synse.DeviceFilter) ([]*synse.Reading, error) {

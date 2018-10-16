@@ -21,6 +21,22 @@ func GetCurrentTime() string {
 	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
+// ParseRFC3339 parses a timestamp string in RFC3339 format into a Time struct.
+// If it is given an empty string, it will return the zero-value for a Time
+// instance. You can check if it is a zero time with the Time's `IsZero` method.
+func ParseRFC3339(timestamp string) (t time.Time, err error) {
+	if timestamp == "" {
+		return
+	}
+	t, err = time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		log.WithField(
+			"timestamp", timestamp,
+		).Error("[sdk] failed to parse timestamp from RFC3339 format")
+	}
+	return
+}
+
 // GetTypeByName gets the output type with the given name from the collection of
 // output types registered with the SDK for the plugin. If an output type with the
 // given name does not exist, an error is returned.

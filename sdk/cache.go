@@ -34,10 +34,6 @@ func setupReadingsCache() {
 	}
 }
 
-// TODO (etd) - have a "ReadingCache" type or something to encapsulate
-// all of this?
-
-// TODO (etd) -- this needs some testing..
 // addReading adds a reading to the readings cache.
 func addReadingToCache(ctx *ReadContext) {
 	if Config.Plugin.Settings.Cache.Enabled {
@@ -57,71 +53,87 @@ func addReadingToCache(ctx *ReadContext) {
 // to specify no bounds on the reading data) and a channel. It will collect all pertinent
 // reading data from the cache and pass it through the channel. Once the function returns,
 // the channel will be closed.
-func getReadingsFromCache(start, end string, readings chan *ReadContext) { // nolint: gocyclo
-
-	// TODO (etd): If cached readings are disabled for the plugin, just
-	// get and return the current readings.
-
+func getReadingsFromCache(start, end string, readings chan *ReadContext) {
 	// Whether we exit the function by passing all cached readings through
 	// the channel or by erroring out, we want to close the channel. This
 	// will signal to caller (who provides the channel) that we are done.
 	defer close(readings)
-	var err error
 
-	// Parse the timestamp for the starting bound on the data window,
-	// if it is set.
-	var startTime time.Time
-	if start != "" {
-		startTime, err = time.Parse(time.RFC3339, start)
-		if err != nil {
-			log.WithField(
-				"time", start,
-			).Error("[cache] failed to parse start time to RFC3339")
-		}
+	// Parse the timestamps for the starting and ending bounds on the data
+	// window, if they are set.
+	startTime, err := ParseRFC3339(start)
+	if err != nil {
+		log.Errorf("[cache] failed to parse start time: %v", err)
+	}
+	endTime, err := ParseRFC3339(end)
+	if err != nil {
+		log.Errorf("[cache] failed to parse end time: %v", err)
 	}
 
-	// Parse the timestamp for the ending bound on the data window,
-	// if it is set.
-	var endTime time.Time
-	if end != "" {
-		endTime, err = time.Parse(time.RFC3339, end)
-		if err != nil {
-			log.WithField(
-				"time", end,
-			).Error("[cache] failed to parse end time to RFC3339")
-		}
+	// If caching reads is disabled, just return all of the current
+	// tracked readings, if they fall within the specified time bound.
+	// Otherwise, collect the readings from the cache.
+	if Config.Plugin.Settings.Cache.Enabled {
+		getCachedReadings(startTime, endTime, readings)
+	} else {
+		getCurrentReadings(readings)
 	}
+}
 
-	// Collect all of the cached readings. If starting or ending bounds
-	// are specified, ensure that the data is within those bounds before
-	// passing it back to the caller via the channel.
-
+// getCachedReadings gets the readings from the read cache, filters them based
+// on the provided start and end bounds, and passes them to the provided channel.
+func getCachedReadings(start, end time.Time, readings chan *ReadContext) {
 	for ts, item := range readingsCache.Items() {
-		cachedTime, err := time.Parse(time.RFC3339, ts)
+		cachedTime, err := ParseRFC3339(ts)
 		if err != nil {
-			log.WithField(
-				"timestamp", ts,
-			).Error("[cache] failed to parse timestamp from cache")
+			// If we can't parse the timestamp from the cache, an error is logged
+			// and we move on. We should always be using RFC3339 formatted timestamps
+			// as keys when things get inserted, so if we find something in there that
+			// does not conform, it means something is wrong and we should not use it
+			// (data corruption, something added incorrectly, ...)
+			log.Error("[cache] failed to parse RFC3339 timestamp from cache - ignoring")
+			continue
 		}
 
 		// If we have a start bound, check that the cached items are
 		// within that bound. If not, ignore them.
-		if !startTime.IsZero() {
-			if cachedTime.Before(startTime) {
-				continue
-			}
-		}
-		// If we have an end bound, check that the cached items are
-		// within that bound. If not, ignore them.
-		if !endTime.IsZero() {
-			if cachedTime.After(endTime) {
-				continue
-			}
+		if !start.IsZero() && cachedTime.Before(start) {
+			continue
 		}
 
+		// If we have an end bound, check that the cached items are
+		// within that bound. If not, ignore them.
+		if !end.IsZero() && cachedTime.After(end) {
+			continue
+		}
+
+		// Pass the read contexts to the channel
 		ctxs := item.Object.(*cacheContexts)
 		for _, ctx := range *ctxs {
 			readings <- ctx
+		}
+	}
+}
+
+// getCurrentReadings gets the current readings from the data manager and passes
+// them to the provided channel.
+func getCurrentReadings(readings chan *ReadContext) {
+	for deviceID, data := range DataManager.getAllReadings() {
+		// We have the device ID, but we will also want the provenance info
+		// (rack, board, device), so we will need to lookup the device by ID.
+		dev, ok := ctx.devices[deviceID]
+		if !ok {
+			log.WithField(
+				"id", deviceID,
+			).Error("[cache] found orphan reading (id does not match any known devices)")
+			continue
+		}
+
+		readings <- &ReadContext{
+			Rack: dev.Location.Rack,
+			Board: dev.Location.Board,
+			Device: dev.id,
+			Reading: data,
 		}
 	}
 }
