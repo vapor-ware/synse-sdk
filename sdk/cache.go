@@ -58,6 +58,10 @@ func addReadingToCache(ctx *ReadContext) {
 // reading data from the cache and pass it through the channel. Once the function returns,
 // the channel will be closed.
 func getReadingsFromCache(start, end string, readings chan *ReadContext) { // nolint: gocyclo
+
+	// TODO (etd): If cached readings are disabled for the plugin, just
+	// get and return the current readings.
+
 	// Whether we exit the function by passing all cached readings through
 	// the channel or by erroring out, we want to close the channel. This
 	// will signal to caller (who provides the channel) that we are done.
