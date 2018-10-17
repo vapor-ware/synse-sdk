@@ -176,6 +176,41 @@ func TestDevice_GetOutput(t *testing.T) {
 	assert.Equal(t, "foo", output.Name)
 }
 
+// TestDevice_JSON_1 tests dumping an empty Device to a JSON string.
+func TestDevice_JSON_1(t *testing.T) {
+	d := Device{}
+	out, err := d.JSON()
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		`{"Kind":"","Metadata":null,"Plugin":"","Info":"","Location":null,"Data":null,"Outputs":null,"SortOrdinal":0}`,
+		out,
+	)
+}
+
+// TestDevice_JSON_2 tests dumping a Device to a JSON string.
+func TestDevice_JSON_2(t *testing.T) {
+	d := Device{
+		Kind:        "foo",
+		Metadata:    map[string]string{"test": "data"},
+		Info:        "info",
+		Handler:     &DeviceHandler{},
+		SortOrdinal: 1,
+		Location: &Location{
+			Rack:  "rack",
+			Board: "board",
+		},
+	}
+
+	out, err := d.JSON()
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		`{"Kind":"foo","Metadata":{"test":"data"},"Plugin":"","Info":"info","Location":{"Rack":"rack","Board":"board"},"Data":null,"Outputs":null,"SortOrdinal":1}`,
+		out,
+	)
+}
+
 // TestMakeDevices tests making a single device.
 func TestMakeDevices(t *testing.T) {
 	defer resetContext()
@@ -770,7 +805,37 @@ func Test_updateDeviceMap(t *testing.T) {
 
 	assert.Equal(t, 0, len(ctx.devices))
 	updateDeviceMap([]*Device{device})
+	//r := recover()
+	//assert.NotNil(t, r)
 	assert.Equal(t, 1, len(ctx.devices))
+}
+
+// Test_updateDeviceMap2 tests updating the device map when a device
+// with that id already exists.
+func Test_updateDeviceMap2(t *testing.T) {
+	defer resetContext()
+
+	// this will be run after we panic
+	defer func() {
+		r := recover()
+		assert.NotNil(t, r)
+		assert.Equal(t, 1, len(ctx.devices))
+	}()
+
+	device := &Device{
+		Kind: "test",
+		Location: &Location{
+			Rack:  "rack",
+			Board: "board",
+		},
+	}
+	// manually add the device to the device map
+	ctx.devices[device.GUID()] = device
+	assert.Equal(t, 1, len(ctx.devices))
+
+	// now try updating the map - this will be a duplicate since
+	// we already have this device in the map.
+	updateDeviceMap([]*Device{device})
 }
 
 // Test_getInstanceOutputs tests getting instance output when none are defined.
@@ -947,6 +1012,35 @@ func TestNewDeviceConfig(t *testing.T) {
 	assert.Equal(t, currentDeviceSchemeVersion, cfg.Version)
 	assert.Equal(t, 0, len(cfg.Locations))
 	assert.Equal(t, 0, len(cfg.Devices))
+}
+
+// TestDeviceConfig_JSON_1 tests dumping an empty DeviceConfig to a JSON string.
+func TestDeviceConfig_JSON_1(t *testing.T) {
+	d := DeviceConfig{}
+	out, err := d.JSON()
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		`{"Version":"","Locations":null,"Devices":null}`,
+		out,
+	)
+}
+
+// TestDeviceConfig_JSON_2 tests dumping a DeviceConfig to a JSON string.
+func TestDeviceConfig_JSON_2(t *testing.T) {
+	d := DeviceConfig{
+		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Locations:     []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+		Devices:       []*DeviceKind{{Name: "test"}},
+	}
+
+	out, err := d.JSON()
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		`{"Version":"1.0","Locations":[{"Name":"test","Rack":{"Name":"test","FromEnv":""},"Board":{"Name":"test","FromEnv":""}}],"Devices":[{"Name":"test","Metadata":null,"Instances":null,"Outputs":null,"HandlerName":""}]}`,
+		out,
+	)
 }
 
 // TestDeviceConfig_GetLocation_Ok tests getting locations from a DeviceConfig successfully.
