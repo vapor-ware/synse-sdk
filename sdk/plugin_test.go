@@ -737,3 +737,97 @@ func TestHealthSettings_Validate(t *testing.T) {
 	config.Validate(merr)
 	assert.NoError(t, merr.Err())
 }
+
+// Test validating the ListenSettings successfully.
+func TestListenSettings_Validate_Ok(t *testing.T) {
+	var testTable = []struct {
+		desc   string
+		config ListenSettings
+	}{
+		{
+			desc: "listen enabled, small buffer",
+			config: ListenSettings{
+				Enabled: true,
+				Buffer:  1,
+			},
+		},
+		{
+			desc: "listen enabled, larger buffer",
+			config: ListenSettings{
+				Enabled: true,
+				Buffer:  100,
+			},
+		},
+		{
+			desc: "listen disabled, small buffer",
+			config: ListenSettings{
+				Enabled: false,
+				Buffer:  1,
+			},
+		},
+		{
+			desc: "listen disabled, larger buffer",
+			config: ListenSettings{
+				Enabled: false,
+				Buffer:  100,
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.NoError(t, merr.Err(), testCase.desc)
+	}
+}
+
+// Test validating the ListenSettings unsuccessfully.
+func TestListenSettings_Validate_Error(t *testing.T) {
+	var testTable = []struct {
+		desc     string
+		errCount int
+		config   ListenSettings
+	}{
+		{
+			desc:     "listen enabled, zero buffer",
+			errCount: 1,
+			config: ListenSettings{
+				Enabled: true,
+				Buffer:  0,
+			},
+		},
+		{
+			desc:     "listen enabled, negative buffer",
+			errCount: 1,
+			config: ListenSettings{
+				Enabled: true,
+				Buffer:  -1,
+			},
+		},
+		{
+			desc:     "listen disabled, zero buffer",
+			errCount: 1,
+			config: ListenSettings{
+				Enabled: false,
+				Buffer:  0,
+			},
+		},
+		{
+			desc:     "listen disabled, negative buffer",
+			errCount: 1,
+			config: ListenSettings{
+				Enabled: false,
+				Buffer:  -1,
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		merr := errors.NewMultiError("test")
+
+		testCase.config.Validate(merr)
+		assert.Error(t, merr.Err(), testCase.desc)
+		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
+	}
+}

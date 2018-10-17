@@ -80,12 +80,12 @@
   version = "v1.2.2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:bf033fb06435e52e54e920d172f72b11b2ea91e44b2b9a5e21e57a616590f9d7"
+  branch = "cached-readings"
+  digest = "1:a95be5a656edf57b48a06335bbb627fc2eb5f37890df1183bbaab9443c43cae1"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
   pruneopts = "UT"
-  revision = "5a6280c2ec33b2eb3781e7700ddfec04294bf3c6"
+  revision = "b080d990ed2c4a7b52d6b1510b76fd2e2c911d4f"
 
 [[projects]]
   branch = "master"

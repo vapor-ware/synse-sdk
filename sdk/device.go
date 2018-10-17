@@ -441,7 +441,7 @@ func updateDeviceMap(devices []*Device) {
 		ctx.devices[d.GUID()] = d
 	}
 	if foundDuplicates {
-		log.Fatal("[sdk] unable to run plugin with duplicate device configurations")
+		log.Panic("[sdk] unable to run plugin with duplicate device configurations")
 	}
 }
 

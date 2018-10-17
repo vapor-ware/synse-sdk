@@ -47,7 +47,7 @@
 
 [[constraint]]
   name = "github.com/vapor-ware/synse-server-grpc"
-  branch = "master"
+  branch = "cached-readings"
 
 [[constraint]]
   branch = "master"

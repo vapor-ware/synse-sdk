@@ -364,6 +364,29 @@ func (server *server) Read(request *synse.DeviceFilter, stream synse.Plugin_Read
 	return nil
 }
 
+// ReadCached is the handler for the Synse GRPC Plugin service's `ReadCached` RPC method.
+func (server *server) ReadCached(bounds *synse.Bounds, stream synse.Plugin_ReadCachedServer) error {
+	log.WithField("bounds", bounds).Debugf("[grpc] read cached rpc request")
+
+	// create a channel that will be used to collect the cached readings
+	readings := make(chan *ReadContext, 128)
+	go getReadingsFromCache(bounds.Start, bounds.End, readings)
+	for r := range readings {
+		for _, data := range r.Reading {
+			deviceReading := &synse.DeviceReading{
+				Rack:    r.Rack,
+				Board:   r.Board,
+				Device:  r.Device,
+				Reading: data.encode(),
+			}
+			if err := stream.Send(deviceReading); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // Write is the handler for the Synse GRPC Plugin service's `Write` RPC method.
 func (server *server) Write(ctx context.Context, request *synse.WriteInfo) (*synse.Transactions, error) {
 	log.WithField("request", request).Debug("[grpc] write rpc request")

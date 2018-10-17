@@ -1446,3 +1446,14 @@ func TestDataManager_parallelWriteMultiple(t *testing.T) {
 		assert.Equal(t, "", ctx.transaction.message)
 	}
 }
+
+// Test creating a new instance of a listener context.
+func TestNewListenerCtx(t *testing.T) {
+	handler := &DeviceHandler{}
+	device := &Device{}
+
+	ctx := NewListenerCtx(handler, device)
+	assert.Equal(t, handler, ctx.handler)
+	assert.Equal(t, device, ctx.device)
+	assert.Equal(t, 0, ctx.restarts)
+}
