@@ -759,6 +759,179 @@ func TestServer_Read4(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// Test the ReadCached method of the gRPC plugin service.
+func TestServer_ReadCached1(t *testing.T) {
+	defer func() {
+		DataManager = newDataManager()
+		resetContext()
+		Config.reset()
+	}()
+
+	// Disable the listener -- this will mean we get readings from
+	// the DataManager, which we will manually add readings to next.
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Cache: &CacheSettings{
+				Enabled: false,
+			},
+		},
+	}
+	ctx.devices["rack-board-device"] = &Device{
+		id:   "device",
+		Kind: "foo",
+		Location: &Location{
+			Rack:  "rack",
+			Board: "board",
+		},
+		Outputs: []*Output{
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
+		},
+		Handler: &DeviceHandler{
+			Read: func(device *Device) ([]*Reading, error) {
+				return nil, nil
+			},
+		},
+	}
+	DataManager.readings["rack-board-device"] = []*Reading{
+		{
+			Timestamp: "2018-10-17T13:19:44.326431979Z",
+			Type:      "temperature",
+			Value:     3,
+		},
+		{
+			Timestamp: "2018-10-17T13:19:44.338671923Z",
+			Type:      "humidity",
+			Value:     5,
+		},
+	}
+
+	s := server{}
+	bounds := &synse.Bounds{}
+	mock := test.NewMockReadCachedStream()
+	err := s.ReadCached(bounds, mock)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(mock.Results))
+}
+
+// Test the ReadCached method of the gRPC plugin service. In this test
+// case, we have the cache disabled (pulling current readings) and specify
+// bounds. When the cache is disabled, the bounds should be ignored, so
+// we expect to get readings back, even though they are out of bounds here.
+func TestServer_ReadCached2(t *testing.T) {
+	defer func() {
+		DataManager = newDataManager()
+		resetContext()
+		Config.reset()
+	}()
+
+	// Disable the listener -- this will mean we get readings from
+	// the DataManager, which we will manually add readings to next.
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Cache: &CacheSettings{
+				Enabled: false,
+			},
+		},
+	}
+	ctx.devices["rack-board-device"] = &Device{
+		id:   "device",
+		Kind: "foo",
+		Location: &Location{
+			Rack:  "rack",
+			Board: "board",
+		},
+		Outputs: []*Output{
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
+		},
+		Handler: &DeviceHandler{
+			Read: func(device *Device) ([]*Reading, error) {
+				return nil, nil
+			},
+		},
+	}
+	DataManager.readings["rack-board-device"] = []*Reading{
+		{
+			Timestamp: "2018-10-17T13:19:44.326431979Z",
+			Type:      "temperature",
+			Value:     3,
+		},
+		{
+			Timestamp: "2018-10-17T13:19:44.338671923Z",
+			Type:      "humidity",
+			Value:     5,
+		},
+	}
+
+	s := server{}
+	bounds := &synse.Bounds{
+		End: "2018-10-17T13:19:40.000000000Z",
+	}
+	mock := test.NewMockReadCachedStream()
+	err := s.ReadCached(bounds, mock)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(mock.Results))
+}
+
+// Test the ReadCached method of the gRPC plugin service when the stream
+// returns an error.
+func TestServer_ReadCached3(t *testing.T) {
+	defer func() {
+		DataManager = newDataManager()
+		resetContext()
+		Config.reset()
+	}()
+
+	// Disable the listener -- this will mean we get readings from
+	// the DataManager, which we will manually add readings to next.
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Cache: &CacheSettings{
+				Enabled: false,
+			},
+		},
+	}
+	ctx.devices["rack-board-device"] = &Device{
+		id:   "device",
+		Kind: "foo",
+		Location: &Location{
+			Rack:  "rack",
+			Board: "board",
+		},
+		Outputs: []*Output{
+			{OutputType: OutputType{Name: "output1"}},
+			{OutputType: OutputType{Name: "output2"}},
+		},
+		Handler: &DeviceHandler{
+			Read: func(device *Device) ([]*Reading, error) {
+				return nil, nil
+			},
+		},
+	}
+	DataManager.readings["rack-board-device"] = []*Reading{
+		{
+			Timestamp: "2018-10-17T13:19:44.326431979Z",
+			Type:      "temperature",
+			Value:     3,
+		},
+		{
+			Timestamp: "2018-10-17T13:19:44.338671923Z",
+			Type:      "humidity",
+			Value:     5,
+		},
+	}
+
+	s := server{}
+	bounds := &synse.Bounds{}
+	mock := &test.MockReadCachedStreamErr{}
+	err := s.ReadCached(bounds, mock)
+
+	assert.Error(t, err)
+}
+
 // TestServer_Write tests the Write method of the gRPC plugin service when
 // the specified device isn't found.
 func TestServer_Write(t *testing.T) {

@@ -7,6 +7,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+//
+// CAPABILITIES
+//
+
 // MockCapabilitiesStream mocks the stream for the Capabilities request, with no error.
 type MockCapabilitiesStream struct {
 	grpc.ServerStream
@@ -35,6 +39,10 @@ type MockCapabilitiesStreamErr struct {
 func (mock *MockCapabilitiesStreamErr) Send(capability *synse.DeviceCapability) error {
 	return fmt.Errorf("grpc error")
 }
+
+//
+// DEVICES
+//
 
 // MockDevicesStream mocks the stream for the Devices request, with no error.
 type MockDevicesStream struct {
@@ -65,6 +73,10 @@ func (mock *MockDevicesStreamErr) Send(device *synse.Device) error {
 	return fmt.Errorf("grpc error")
 }
 
+//
+// READ
+//
+
 // MockReadStream mocks the stream for the Read request, with no error.
 type MockReadStream struct {
 	grpc.ServerStream
@@ -93,6 +105,43 @@ type MockReadStreamErr struct {
 func (mock *MockReadStreamErr) Send(reading *synse.Reading) error {
 	return fmt.Errorf("grpc error")
 }
+
+//
+// READ CACHED
+//
+
+// MockReadCachedStream mocks the stream for the ReadCached request, with no error.
+type MockReadCachedStream struct {
+	grpc.ServerStream
+	Results []*synse.DeviceReading
+}
+
+// NewMockReadCachedStream creates a new mock read cache stream.
+func NewMockReadCachedStream() *MockReadCachedStream {
+	return &MockReadCachedStream{
+		Results: []*synse.DeviceReading{},
+	}
+}
+
+// Send fulfils the stream interface for the mock grpc stream.
+func (mock *MockReadCachedStream) Send(reading *synse.DeviceReading) error {
+	mock.Results = append(mock.Results, reading)
+	return nil
+}
+
+// MockReadCachedStreamErr mocks the stream for a ReadCached request, with error.
+type MockReadCachedStreamErr struct {
+	grpc.ServerStream
+}
+
+// Send fulfils the stream interface for the mock grpc stream.
+func (mock *MockReadCachedStreamErr) Send(reading *synse.DeviceReading) error {
+	return fmt.Errorf("grpc error")
+}
+
+//
+// TRANSACTION
+//
 
 // MockTransactionStream mocks the stream for the Transaction request, with no error.
 type MockTransactionStream struct {

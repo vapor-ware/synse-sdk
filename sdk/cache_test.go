@@ -322,3 +322,91 @@ func Test_getReadingsFromCache_Disabled(t *testing.T) {
 		},
 	}
 }
+
+// Test getting readings when the start time is not an RFC3339-formatted
+// timestamp. If this is the case, the timestamp will be ignored.
+func Test_getReadingsFromCache_invalidStart(t *testing.T) {
+	defer func() {
+		// reset plugin state
+		resetContext()
+		Config.reset()
+
+		// reset readings cache
+		readingsCache = nil
+	}()
+
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Cache: &CacheSettings{
+				Enabled: true,
+			},
+		},
+	}
+	setupReadingsCache()
+
+	// manually add to the readingsCache
+	ctx := &ReadContext{
+		Rack:    "rack",
+		Board:   "board",
+		Device:  "device",
+		Reading: []*Reading{{Type: "test", Value: 1}},
+	}
+	ctxs := cacheContexts([]*ReadContext{ctx})
+	readingsCache.Set("2018-10-16T22:08:50.000000000Z", &ctxs, 0)
+	readingsCache.Set("2018-10-16T22:08:51.000000000Z", &ctxs, 0)
+	readingsCache.Set("2018-10-16T22:08:52.000000000Z", &ctxs, 0)
+	readingsCache.Set("2018-10-16T22:08:53.000000000Z", &ctxs, 0)
+	readingsCache.Set("2018-10-16T22:08:54.000000000Z", &ctxs, 0)
+
+	c := make(chan *ReadContext, 10)
+	go getReadingsFromCache("Tues Oct 16 22:08:52 UTC 2018", "", c)
+	var results []*ReadContext
+	for r := range c {
+		results = append(results, r)
+	}
+	assert.Equal(t, 5, len(results))
+}
+
+// Test getting readings when the end time is not an RFC3339-formatted
+// timestamp. If this is the case, the timestamp will be ignored.
+func Test_getReadingsFromCache_invalidEnd(t *testing.T) {
+	defer func() {
+		// reset plugin state
+		resetContext()
+		Config.reset()
+
+		// reset readings cache
+		readingsCache = nil
+	}()
+
+	Config.Plugin = &PluginConfig{
+		Settings: &PluginSettings{
+			Cache: &CacheSettings{
+				Enabled: true,
+			},
+		},
+	}
+	setupReadingsCache()
+
+	// manually add to the readingsCache
+	ctx := &ReadContext{
+		Rack:    "rack",
+		Board:   "board",
+		Device:  "device",
+		Reading: []*Reading{{Type: "test", Value: 1}},
+	}
+	ctxs := cacheContexts([]*ReadContext{ctx})
+	readingsCache.Set("2018-10-16T22:08:50.000000000Z", &ctxs, 0)
+	readingsCache.Set("2018-10-16T22:08:51.000000000Z", &ctxs, 0)
+	readingsCache.Set("2018-10-16T22:08:52.000000000Z", &ctxs, 0)
+	readingsCache.Set("2018-10-16T22:08:53.000000000Z", &ctxs, 0)
+	readingsCache.Set("2018-10-16T22:08:54.000000000Z", &ctxs, 0)
+
+	c := make(chan *ReadContext, 10)
+	go getReadingsFromCache("", "Tues Oct 16 22:08:53 UTC 2018", c)
+	var results []*ReadContext
+	for r := range c {
+		results = append(results, r)
+	}
+	assert.Equal(t, 5, len(results))
+}
