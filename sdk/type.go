@@ -1,11 +1,11 @@
 package sdk
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 
-	"encoding/json"
-
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
@@ -94,34 +94,48 @@ func (outputType *OutputType) Apply(value interface{}) interface{} { // nolint: 
 		return value
 	}
 
-	// Do not permit a scaling factor of 0.
-	if scalingFactor != 0 {
-		switch t := value.(type) {
-		case float64:
-			value = t * scalingFactor
-		case float32:
-			value = float32(float64(t) * scalingFactor)
-		case int64:
-			value = int64(float64(t) * scalingFactor)
-		case int32:
-			value = int32(float64(t) * scalingFactor)
-		case int16:
-			value = int16(float64(t) * scalingFactor)
-		case int8:
-			value = int8(float64(t) * scalingFactor)
-		case int:
-			value = int(float64(t) * scalingFactor)
-		case uint64:
-			value = uint64(float64(t) * scalingFactor)
-		case uint32:
-			value = uint32(float64(t) * scalingFactor)
-		case uint16:
-			value = uint16(float64(t) * scalingFactor)
-		case uint8:
-			value = uint8(float64(t) * scalingFactor)
-		case uint:
-			value = uint(float64(t) * scalingFactor)
-		}
+	// If the scaling factor is 0, log a warning and just return the original value.
+	if scalingFactor == 0 {
+		log.WithField("value", value).Warn(
+			"[type] got scaling factor of 0; will not apply",
+		)
+		return value
+	}
+
+	// If the scaling factor is 1, there is nothing to do. Return the value.
+	if scalingFactor == 1 {
+		return value
+	}
+
+	// Otherwise, the scaling factor is non-zero and not 1, so it will
+	// need to be applied.
+	switch t := value.(type) {
+	case float64:
+		value = t * scalingFactor
+	case float32:
+		value = float64(t) * scalingFactor
+	case int64:
+		value = float64(t) * scalingFactor
+	case int32:
+		value = float64(t) * scalingFactor
+	case int16:
+		value = float64(t) * scalingFactor
+	case int8:
+		value = float64(t) * scalingFactor
+	case int:
+		value = float64(t) * scalingFactor
+	case uint64:
+		value = float64(t) * scalingFactor
+	case uint32:
+		value = float64(t) * scalingFactor
+	case uint16:
+		value = float64(t) * scalingFactor
+	case uint8:
+		value = float64(t) * scalingFactor
+	case uint:
+		value = float64(t) * scalingFactor
+	default:
+		log.Warnf("[type] Unable to apply scaling factor %v to value %v of type %v", scalingFactor, value, t)
 	}
 	return value
 }
