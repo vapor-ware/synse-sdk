@@ -248,7 +248,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "3",
 			},
 			value:    0,
-			expected: 0,
+			expected: float64(0),
 		},
 		{
 			desc: "multiply factor by value 1",
@@ -256,7 +256,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "3",
 			},
 			value:    1,
-			expected: 3,
+			expected: float64(3),
 		},
 		{
 			desc: "multiply value by 0.5 factor",
@@ -264,7 +264,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    float64(1),
-			expected: 0.5,
+			expected: float64(0.5),
 		},
 		{
 			desc: "value is a float64, factor is > 1",
@@ -288,7 +288,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    float32(3),
-			expected: float32(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a float32, factor is < 1",
@@ -296,7 +296,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    float32(3),
-			expected: float32(1.5),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a int64, factor is > 1",
@@ -304,7 +304,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    int64(3),
-			expected: int64(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a int64, factor is < 1",
@@ -312,7 +312,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    int64(3),
-			expected: int64(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a int32, factor is > 1",
@@ -320,7 +320,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    int32(3),
-			expected: int32(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a int32, factor is < 1",
@@ -328,7 +328,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    int32(3),
-			expected: int32(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a int16, factor is > 1",
@@ -336,7 +336,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    int16(3),
-			expected: int16(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a int16, factor is < 1",
@@ -344,7 +344,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    int16(3),
-			expected: int16(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a int8, factor is > 1",
@@ -352,7 +352,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    int8(3),
-			expected: int8(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a int8, factor is < 1",
@@ -360,7 +360,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    int8(3),
-			expected: int8(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a int, factor is > 1",
@@ -368,7 +368,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    int(3),
-			expected: int(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a int, factor is < 1",
@@ -376,7 +376,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    int(3),
-			expected: int(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a uint64, factor is > 1",
@@ -384,7 +384,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    uint64(3),
-			expected: uint64(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a uint64, factor is < 1",
@@ -392,7 +392,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    uint64(3),
-			expected: uint64(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a uint32, factor is > 1",
@@ -400,7 +400,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    uint32(3),
-			expected: uint32(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a uint32, factor is < 1",
@@ -408,7 +408,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    uint32(3),
-			expected: uint32(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a uint16, factor is > 1",
@@ -416,7 +416,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    uint32(3),
-			expected: uint32(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a uint16, factor is < 1",
@@ -424,7 +424,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    uint16(3),
-			expected: uint16(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a uint8, factor is > 1",
@@ -432,7 +432,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    uint8(3),
-			expected: uint8(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a uint8, factor is < 1",
@@ -440,7 +440,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    uint8(3),
-			expected: uint8(1),
+			expected: float64(1.5),
 		},
 		{
 			desc: "value is a uint, factor is > 1",
@@ -448,7 +448,7 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "2",
 			},
 			value:    uint(3),
-			expected: uint(6),
+			expected: float64(6),
 		},
 		{
 			desc: "value is a uint, factor is < 1",
@@ -456,7 +456,63 @@ func TestOutputType_Apply(t *testing.T) {
 				ScalingFactor: "0.5",
 			},
 			value:    uint(3),
-			expected: uint(1),
+			expected: float64(1.5),
+		},
+		{
+			desc: "value is a bool, factor is < 1",
+			output: OutputType{
+				ScalingFactor: "0.5",
+			},
+			value:    true,
+			expected: true,
+		},
+		{
+			desc: "value is a uint, factor is 1",
+			output: OutputType{
+				ScalingFactor: "1",
+			},
+			value:    uint(3),
+			expected: uint(3),
+		},
+		{
+			desc: "value is a float32, factor is 1",
+			output: OutputType{
+				ScalingFactor: "1",
+			},
+			value:    float32(3),
+			expected: float32(3),
+		},
+		{
+			desc: "value is a bool, factor is 1",
+			output: OutputType{
+				ScalingFactor: "1",
+			},
+			value:    true,
+			expected: true,
+		},
+		{
+			desc: "value is a uint, factor is 0",
+			output: OutputType{
+				ScalingFactor: "0",
+			},
+			value:    uint(3),
+			expected: uint(3),
+		},
+		{
+			desc: "value is a float32, factor is 0",
+			output: OutputType{
+				ScalingFactor: "0",
+			},
+			value:    float32(3),
+			expected: float32(3),
+		},
+		{
+			desc: "value is a bool, factor is 0",
+			output: OutputType{
+				ScalingFactor: "0",
+			},
+			value:    false,
+			expected: false,
 		},
 	}
 
