@@ -306,6 +306,7 @@ func (output *Output) encode() *synse.Output {
 		Precision:     int32(output.Precision),
 		ScalingFactor: sf,
 		Unit:          output.Unit.encode(),
+		Conversion:    output.Conversion,
 	}
 }
 
