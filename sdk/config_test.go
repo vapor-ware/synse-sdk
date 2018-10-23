@@ -267,6 +267,8 @@ func TestSchemeVersion_String(t *testing.T) {
 }
 
 // TestSchemeVersion_IsEqual test equality of SchemeVersions
+// TODO (etd) [v2]: this will be changed for v2. for v1, this was updated to
+// only check on the major component of the version.
 func TestSchemeVersion_IsEqual(t *testing.T) {
 	var testTable = []struct {
 		scheme1 *ConfigVersion
@@ -296,7 +298,7 @@ func TestSchemeVersion_IsEqual(t *testing.T) {
 		{
 			scheme1: &ConfigVersion{1, 1},
 			scheme2: &ConfigVersion{1, 2},
-			equal:   false,
+			equal:   true,
 		},
 	}
 
@@ -307,6 +309,8 @@ func TestSchemeVersion_IsEqual(t *testing.T) {
 }
 
 // TestSchemeVersion_IsLessThan tests if one Version is less than another
+// TODO (etd) [v2]: this will be changed for v2. for v1, this was updated to
+// only check on the major component of the version.
 func TestSchemeVersion_IsLessThan(t *testing.T) {
 	var testTable = []struct {
 		scheme1  *ConfigVersion
@@ -336,7 +340,7 @@ func TestSchemeVersion_IsLessThan(t *testing.T) {
 		{
 			scheme1:  &ConfigVersion{1, 1},
 			scheme2:  &ConfigVersion{1, 2},
-			lessThan: true,
+			lessThan: false,
 		},
 		{
 			scheme1:  &ConfigVersion{1, 2},
@@ -352,7 +356,7 @@ func TestSchemeVersion_IsLessThan(t *testing.T) {
 }
 
 // TestSchemeVersion_IsGreaterOrEqualTo tests if one Version is greater than
-// or qual to another
+// or equal to another
 func TestSchemeVersion_IsGreaterOrEqualTo(t *testing.T) {
 	var testTable = []struct {
 		scheme1 *ConfigVersion
@@ -382,7 +386,7 @@ func TestSchemeVersion_IsGreaterOrEqualTo(t *testing.T) {
 		{
 			scheme1: &ConfigVersion{1, 1},
 			scheme2: &ConfigVersion{1, 2},
-			gte:     false,
+			gte:     true,
 		},
 		{
 			scheme1: &ConfigVersion{1, 2},

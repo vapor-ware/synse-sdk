@@ -599,3 +599,41 @@ func TestNilOutput(t *testing.T) {
 		t.Error("nil OutputType should fail")
 	}
 }
+
+// Test dumping an OutputType to a JSON string.
+func TestOutputType_JSON(t *testing.T) {
+	var testTable = []struct {
+		output   OutputType
+		expected string
+	}{
+		{
+			output:   OutputType{},
+			expected: `{"Version":"","Name":"","Precision":0,"Unit":{"Name":"","Symbol":""},"ScalingFactor":""}`,
+		},
+		{
+			output: OutputType{
+				Name:      "foo",
+				Precision: 2,
+			},
+			expected: `{"Version":"","Name":"foo","Precision":2,"Unit":{"Name":"","Symbol":""},"ScalingFactor":""}`,
+		},
+		{
+			output: OutputType{
+				Name:      "test",
+				Precision: 4,
+				Unit: Unit{
+					Name:   "unit",
+					Symbol: "u",
+				},
+				ScalingFactor: "1e6",
+			},
+			expected: `{"Version":"","Name":"test","Precision":4,"Unit":{"Name":"unit","Symbol":"u"},"ScalingFactor":"1e6"}`,
+		},
+	}
+
+	for _, testCase := range testTable {
+		actual, err := testCase.output.JSON()
+		assert.NoError(t, err)
+		assert.Equal(t, testCase.expected, actual)
+	}
+}

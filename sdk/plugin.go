@@ -231,6 +231,9 @@ func (plugin *Plugin) setup() error {
 	}
 	setupTransactionCache(ttl)
 
+	// Set up the readings cache, if its configured
+	setupReadingsCache()
+
 	// Initialize a gRPC server for the Plugin to use.
 	plugin.server = newServer(
 		Config.Plugin.Network.Type,
@@ -371,6 +374,9 @@ type PluginSettings struct {
 	// be "serial" or "parallel".
 	Mode string `default:"serial" yaml:"mode,omitempty" addedIn:"1.0"`
 
+	// Listen contains the settings to configure listener behavior.
+	Listen *ListenSettings `default:"{}" yaml:"listen,omitempty" addedIn:"1.2"`
+
 	// Read contains the settings to configure read behavior.
 	Read *ReadSettings `default:"{}" yaml:"read,omitempty" addedIn:"1.0"`
 
@@ -380,6 +386,10 @@ type PluginSettings struct {
 	// Transaction contains the settings to configure transaction
 	// handling behavior.
 	Transaction *TransactionSettings `default:"{}" yaml:"transaction,omitempty" addedIn:"1.0"`
+
+	// Cache contains the settings to configure local data caching
+	// by the plugin.
+	Cache *CacheSettings `default:"{}" yaml:"cache,omitempty" addedIn:"1.2"`
 }
 
 // Validate validates that the PluginSettings has no configuration errors.
@@ -505,6 +515,34 @@ func (settings LimiterSettings) Validate(multiErr *errors.MultiError) {
 			multiErr.Context["source"],
 			"limiter.burst",
 			"greater than or equal to 0",
+		))
+	}
+}
+
+// ListenSettings provides configuration options for listener operations.
+// A listener is a function that is used to collect push-based data.
+type ListenSettings struct {
+	// Enabled globally enables or disables listening for the plugin.
+	// By default a plugin will have listening enabled.
+	Enabled bool `default:"true" yaml:"enabled,omitempty" addedIn:"1.2"`
+
+	// Buffer defines the size of the listen buffer. This will be the
+	// size of the channel that passes all the collected push data from
+	// all listener instances to the data manager.
+	Buffer int `default:"100" yaml:"buffer,omitempty" addedIn:"1.2"`
+}
+
+// Validate validates that the ListenSettings has no confiugration errors.
+func (settings ListenSettings) Validate(multiErr *errors.MultiError) {
+	// If the buffer size is set to 0, return an error. A size
+	// of 0 would prevent any data from being moved around, blocking
+	// all listen operations.
+	if settings.Buffer <= 0 {
+		log.WithField("config", settings).Error("[validation] bad listen buffer")
+		multiErr.Add(errors.NewInvalidValueError(
+			multiErr.Context["source"],
+			"settings.listen.buffer",
+			"a value greater than 0",
 		))
 	}
 }
@@ -641,5 +679,24 @@ type HealthSettings struct {
 
 // Validate validates that the HealthSettings has no configuration errors.
 func (settings HealthSettings) Validate(multiErr *errors.MultiError) {
+	// Nothing to validate
+}
+
+// CacheSettings provides configuration options for an in-memory windowed
+// cache for plugin readings.
+type CacheSettings struct {
+	// Enabled sets whether the plugin will use a local
+	// in-memory cache to store a small window of readings.
+	// By default, the cache is not enabled.
+	Enabled bool `default:"false" yaml:"enabled,omitempty" addedIn:"1.2"`
+
+	// TTL is the time-to-live for a reading in the readings cache.
+	// This will only be used if the cache is enabled. Once a reading
+	// has exceeded its TTL, it will be removed from the cache.
+	TTL time.Duration `default:"3m" yaml:"ttl,omitempty" addedIn:"1.2"`
+}
+
+// Validate validates that the CacheSettings has no configuration errors.
+func (settings CacheSettings) Validate(multiErr *errors.MultiError) {
 	// Nothing to validate
 }

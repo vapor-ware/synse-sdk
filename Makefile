@@ -84,13 +84,15 @@ ifndef HAS_LINT
 	gometalinter --install
 endif
 	@ # disable gotype: https://github.com/alecthomas/gometalinter/issues/40
-	gometalinter ./... \
+	gometalinter \
 		--disable=gotype --disable=interfacer \
 		--tests \
 		--vendor \
 		--sort=path --sort=line \
 		--aggregate \
-		--deadline=5m
+		--deadline=5m \
+		-e $$(go env GOROOT) \
+		./...
 
 .PHONY: setup
 setup:  ## Install the build and development dependencies

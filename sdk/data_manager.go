@@ -15,6 +15,29 @@ import (
 // DataManager is the global data manager for the plugin.
 var DataManager = newDataManager()
 
+// ListenerCtx is the context needed for a listener function to be called
+// and retried at a later time if it errors out after the listener goroutine
+// is initially dispatched.
+type ListenerCtx struct {
+	// handler is the DeviceHandler that defines the handler function.
+	handler *DeviceHandler
+
+	// device is the Device that is being listened to via the listener.
+	device *Device
+
+	// restarts is the number of times the listener has been restarted.
+	restarts int
+}
+
+// NewListenerCtx creates a new ListenerCtx for the given handler and device.
+func NewListenerCtx(handler *DeviceHandler, device *Device) *ListenerCtx {
+	return &ListenerCtx{
+		handler:  handler,
+		device:   device,
+		restarts: 0,
+	}
+}
+
 // dataManager handles the reading from and writing to configured devices.
 // It executes the read and write goroutines and uses the channels between
 // those goroutines and its process to update the read and write state.
@@ -33,6 +56,18 @@ type dataManager struct {
 	// Write data is sent to the channel by the `Write` function and is
 	// received by the `pollWrite` function.
 	writeChannel chan *WriteContext
+
+	// listenChannel is the channel that is used to get data from a device
+	// that is being listened to. This is used by the SDK to collect push
+	// based data. While the data in the listenChannel and the data in the
+	// readChannel are similar, they are kept separate so the behaviors of
+	// pull-based/push-based reading can be tuned independently.
+	listenChannel chan *ReadContext
+
+	// listenerRetry is a channel that all listeners will pass a ListenerRetryCtx
+	// to if they fail. This channel is read by a separate goroutine which will
+	// attempt to re-run the listener.
+	listenerRetry chan *ListenerCtx
 
 	// readings is a map of readings, where the key is the GUID of a
 	// device, and the values are the readings associated with that device.
@@ -68,12 +103,16 @@ func (manager *dataManager) run() error {
 		return err
 	}
 
-	// Start the reader/writer
+	// Start the listeners/reader/writer
+	manager.goListen()
 	manager.goRead()
 	manager.goWrite()
 
 	// Update the manager readings state
 	manager.goUpdateData()
+
+	// Watch for failed listeners to retry them
+	go manager.watchForListenerRetry()
 
 	log.Info("[data manager] running")
 	return nil
@@ -88,7 +127,9 @@ func (manager *dataManager) setup() error {
 		return fmt.Errorf("plugin config not set, cannot setup data manager")
 	}
 
-	// Initialize the read and write channels
+	// Initialize the listen, read, and write channels
+	manager.listenerRetry = make(chan *ListenerCtx, 50)
+	manager.listenChannel = make(chan *ReadContext, Config.Plugin.Settings.Listen.Buffer)
 	manager.readChannel = make(chan *ReadContext, Config.Plugin.Settings.Read.Buffer)
 	manager.writeChannel = make(chan *WriteContext, Config.Plugin.Settings.Write.Buffer)
 
@@ -106,6 +147,78 @@ func (manager *dataManager) setup() error {
 // the configuration.
 func (manager *dataManager) writesEnabled() bool {
 	return Config.Plugin.Settings.Write.Enabled
+}
+
+// goListen starts the goroutines for any listener functions for the configured
+// devices. If there are no listener functions defined, this will do nothing.
+func (manager *dataManager) goListen() {
+	// Although we consider listening to be a type of "read" behavior (e.g. collecting
+	// push-based readings vs. collecting pull-based readings), we use different
+	// configuration fields for listening to make it easier to tune independent of
+	// pull-based collection needs. If listening is globally disabled, there is
+	// nothing to do here.
+	if !Config.Plugin.Settings.Listen.Enabled {
+		log.Info("[data manager] skipping listener goroutine(s) (listen disabled)")
+		return
+	}
+
+	// For each handler that has a listener function defined, get the devices for
+	// that handler and start the listener for the devices.
+	for _, handler := range ctx.deviceHandlers {
+		hlog := log.WithField("handler", handler.Name)
+		if handler.Listen != nil {
+			hlog.Info("[data manager] setting up listeners")
+
+			// Get all of the devices that have registered with the handler
+			devices := handler.getDevicesForHandler()
+			if len(devices) == 0 {
+				hlog.Debugf("[data manager] found no devices for handler")
+				continue
+			}
+
+			// For each device, run the listener goroutine
+			for _, device := range devices {
+				ctx := NewListenerCtx(handler, device)
+				go manager.runListener(ctx)
+			}
+		}
+	}
+}
+
+// runListener runs the listener function for a device. If the listener
+// fails, it will attempt to restart the listener.
+func (manager *dataManager) runListener(ctx *ListenerCtx) {
+	log.WithFields(log.Fields{
+		"handler": ctx.handler.Name,
+		"device":  ctx.device.ID(),
+	}).Info("[data manager] running listener")
+
+	err := ctx.handler.Listen(ctx.device, manager.listenChannel)
+	if err != nil {
+		log.WithField("device", ctx.device.ID()).Errorf(
+			"[data manager] failed to listen for device readings: %v", err,
+		)
+		// pass the context to retry channel
+		manager.listenerRetry <- ctx
+	}
+}
+
+// watchForListenerRetry waits for the 'runListener' function to pass a
+// listener context to it via the 'listenerRetry' channel. If it gets
+// a context, that listener had failed and needs to be restarted.
+func (manager *dataManager) watchForListenerRetry() {
+	for {
+		ctx := <-manager.listenerRetry
+		// increment the restart counter
+		ctx.restarts++
+
+		llog := log.WithFields(log.Fields{
+			"manager": ctx.handler.Name,
+			"device":  ctx.device.ID(),
+		})
+		llog.Infof("[data manager] restarting failed listener (restarts %v)", ctx.restarts)
+		go manager.runListener(ctx)
+	}
 }
 
 // goRead starts the goroutine for reading from configured devices.
@@ -378,10 +491,29 @@ func (manager *dataManager) write(w *WriteContext) {
 func (manager *dataManager) goUpdateData() {
 	go func() {
 		for {
-			reading := <-manager.readChannel
+			var (
+				id       string
+				readings []*Reading
+			)
+
+			// Read from the listen and read channel for incoming readings
+			var reading *ReadContext
+			select {
+			case reading = <-manager.readChannel:
+				id = reading.ID()
+				readings = reading.Reading
+			case reading = <-manager.listenChannel:
+				id = reading.ID()
+				readings = reading.Reading
+			}
+
+			// Update the internal map of current reading state
 			manager.dataLock.Lock()
-			manager.readings[reading.ID()] = reading.Reading
+			manager.readings[id] = readings
 			manager.dataLock.Unlock()
+
+			// update the readings cache
+			addReadingToCache(reading)
 		}
 	}()
 }
@@ -395,6 +527,22 @@ func (manager *dataManager) getReadings(device string) []*Reading {
 	defer manager.dataLock.RUnlock()
 
 	return manager.readings[device]
+}
+
+// getAllReadings safely copies the current reading state in the data manager and
+// returns all of the readings.
+func (manager *dataManager) getAllReadings() map[string][]*Reading {
+	mapCopy := make(map[string][]*Reading)
+	manager.dataLock.RLock()
+	defer manager.dataLock.RUnlock()
+
+	// Iterate over the map to make a copy - we want a copy or else we would be
+	// returning a reference to the underlying data which should only be accessed
+	// in a lock context.
+	for k, v := range manager.readings {
+		mapCopy[k] = v
+	}
+	return mapCopy
 }
 
 // Read fulfills a Read request by providing the latest data read from a device
