@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/Sirupsen/logrus"
-  version = "1.0.5"
+  version = "1.1.1"
 
 [[constraint]]
   name = "github.com/creasty/defaults"
@@ -39,7 +39,7 @@
 
 [[constraint]]
   name = "github.com/rs/xid"
-  version = "1.2.0"
+  version = "1.2.1"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
@@ -47,7 +47,7 @@
 
 [[constraint]]
   name = "github.com/vapor-ware/synse-server-grpc"
-  branch = "cached-readings"
+  version = "1.1.0"
 
 [[constraint]]
   branch = "master"
@@ -59,7 +59,7 @@
 
 [[constraint]]
   name = "google.golang.org/grpc"
-  version = "1.12.2"
+  version = "1.15.0"
 
 [[constraint]]
   name = "gopkg.in/yaml.v2"
