@@ -39,9 +39,10 @@ type OutputType struct {
 	// a mathematical representation of the value, e.g. "1e-2".
 	ScalingFactor string `yaml:"scalingFactor,omitempty" addedIn:"1.0"`
 
-	// Converstion is an arbitrary string that allows the sdk to
+	// Conversion is an arbitrary string that allows the sdk to
 	// perform a conversion. Initially only the string englishToMetricTemperature
 	// will be supported for temperature sensors.
+	// This field is not in the Output message, therefore the grpc client never sees this.
 	Conversion string `yaml:"conversion,omitempty" addedIn:"1.2"`
 }
 
@@ -88,7 +89,7 @@ func (outputType *OutputType) GetScalingFactor() (float64, error) {
 }
 
 // applyScalingFactor multiplies the raw reading value (the value parameter) by the output
-// scaling factor and returnes the scaled reading.
+// scaling factor and returns the scaled reading.
 func (outputType *OutputType) applyScalingFactor(value interface{}) interface{} {
 	scalingFactor, err := outputType.GetScalingFactor()
 	if err != nil {

@@ -47,8 +47,7 @@
 
 [[constraint]]
   name = "github.com/vapor-ware/synse-server-grpc"
-  #version = "1.1.0"
-  branch = "mhink-eng-metric"
+  version = "1.1.0"
 
 [[constraint]]
   branch = "master"

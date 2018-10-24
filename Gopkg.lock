@@ -80,12 +80,12 @@
   version = "v1.2.2"
 
 [[projects]]
-  branch = "mhink-eng-metric"
-  digest = "1:ca04c4373a2770396027a5ef7abe24e836ba9fb5c1177eee7be9f06b43d3b9c7"
+  digest = "1:a95be5a656edf57b48a06335bbb627fc2eb5f37890df1183bbaab9443c43cae1"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
   pruneopts = "UT"
-  revision = "116f93eb339768d03d9f8e4919f84ed133be733d"
+  revision = "3bc0b24b2bfbc8df1d67f02607d13380318d68ee"
+  version = "1.1.0"
 
 [[projects]]
   branch = "master"
