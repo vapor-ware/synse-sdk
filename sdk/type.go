@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -37,6 +38,12 @@ type OutputType struct {
 	// supported. This can be the value itself, e.g. "0.01", or
 	// a mathematical representation of the value, e.g. "1e-2".
 	ScalingFactor string `yaml:"scalingFactor,omitempty" addedIn:"1.0"`
+
+	// Conversion is an arbitrary string that allows the sdk to
+	// perform a conversion. Initially only the string englishToMetricTemperature
+	// will be supported for temperature sensors.
+	// This field is not in the Output message, therefore the grpc client never sees this.
+	Conversion string `yaml:"conversion,omitempty" addedIn:"1.2"`
 }
 
 // JSON encodes the config as JSON. This can be useful for logging and debugging.
@@ -81,17 +88,15 @@ func (outputType *OutputType) GetScalingFactor() (float64, error) {
 	return strconv.ParseFloat(outputType.ScalingFactor, 64)
 }
 
-// Apply applies the transformations specified by the OutputType to
-// a reading value. These transformations are (in the order that they
-// are applied): multiply scaling factor.
-//
-// Precision is not applied at this level, but will instead be applied
-// in Synse server before the corresponding reading is returned to the
-// user.
-func (outputType *OutputType) Apply(value interface{}) interface{} { // nolint: gocyclo
+// applyScalingFactor multiplies the raw reading value (the value parameter) by the output
+// scaling factor and returns the scaled reading.
+func (outputType *OutputType) applyScalingFactor(value interface{}) interface{} {
 	scalingFactor, err := outputType.GetScalingFactor()
 	if err != nil {
-		return value
+		log.Errorf(
+			"[type] Unable to get scaling factor for outputType %+v, error: %v",
+			outputType, err.Error())
+		return value // TODO: Return the error.
 	}
 
 	// If the scaling factor is 0, log a warning and just return the original value.
@@ -109,33 +114,50 @@ func (outputType *OutputType) Apply(value interface{}) interface{} { // nolint: 
 
 	// Otherwise, the scaling factor is non-zero and not 1, so it will
 	// need to be applied.
-	switch t := value.(type) {
-	case float64:
-		value = t * scalingFactor
-	case float32:
-		value = float64(t) * scalingFactor
-	case int64:
-		value = float64(t) * scalingFactor
-	case int32:
-		value = float64(t) * scalingFactor
-	case int16:
-		value = float64(t) * scalingFactor
-	case int8:
-		value = float64(t) * scalingFactor
-	case int:
-		value = float64(t) * scalingFactor
-	case uint64:
-		value = float64(t) * scalingFactor
-	case uint32:
-		value = float64(t) * scalingFactor
-	case uint16:
-		value = float64(t) * scalingFactor
-	case uint8:
-		value = float64(t) * scalingFactor
-	case uint:
-		value = float64(t) * scalingFactor
+	f, err := ConvertToFloat64(value)
+	if err != nil {
+		log.Errorf("[type] Unable to apply scaling factor %v to value %v of type %T", scalingFactor, value, value)
+		// TODO: Return the error.
+	}
+	return f * scalingFactor
+}
+
+// applyConversion applies the conversion based on the output conversion string and
+// the scaled reading.
+// For now this is pretty limited, but it's a place to start.
+func (outputType *OutputType) applyConversion(value interface{}) (result interface{}, err error) {
+	// Only one supported conversion string for now.
+	switch outputType.Conversion {
+	case "": // Nothing to do.
+		return value, nil
+	case "englishToMetricTemperature":
+		var f float64
+		f, err = ConvertToFloat64(value)
+		if err != nil {
+			return
+		}
+		c := (f - 32.0) * 5.0 / 9.0
+		return c, nil
 	default:
-		log.Warnf("[type] Unable to apply scaling factor %v to value %v of type %v", scalingFactor, value, t)
+		return nil, fmt.Errorf("Unknown conversion %v", outputType.Conversion)
+	}
+}
+
+// Apply applies the transformations specified by the OutputType to
+// a reading value. These transformations are (in the order that they
+// are applied): multiply scaling factor.
+//
+// Precision is not applied at this level, but will instead be applied
+// in Synse server before the corresponding reading is returned to the
+// user.
+func (outputType *OutputType) Apply(value interface{}) interface{} {
+
+	value = outputType.applyScalingFactor(value)
+
+	value, err := outputType.applyConversion(value)
+	if err != nil {
+		log.Errorf("Unable to apply conversion: %v, error %v", outputType.Conversion, err)
+		// TODO: Return the error.
 	}
 	return value
 }

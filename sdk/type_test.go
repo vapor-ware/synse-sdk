@@ -459,12 +459,13 @@ func TestOutputType_Apply(t *testing.T) {
 			expected: float64(1.5),
 		},
 		{
+			// TODO: This should probably be an error case. Scaling a bool.
 			desc: "value is a bool, factor is < 1",
 			output: OutputType{
 				ScalingFactor: "0.5",
 			},
 			value:    true,
-			expected: true,
+			expected: float64(0),
 		},
 		{
 			desc: "value is a uint, factor is 1",
@@ -513,6 +514,52 @@ func TestOutputType_Apply(t *testing.T) {
 			},
 			value:    false,
 			expected: false,
+		},
+		// Tests with conversions.
+		{
+			desc: "value is int16(-1), factor is .1, conversion is englishToMetricTemperature",
+			output: OutputType{
+				ScalingFactor: ".1",
+				Conversion:    "englishToMetricTemperature",
+			},
+			value:    int16(-1),                    // Fahrenheit in tenths
+			expected: float64(-17.833333333333332), // Celsius
+		},
+		{
+			desc: "value is int16(31.9), factor is .1, conversion is englishToMetricTemperature",
+			output: OutputType{
+				ScalingFactor: ".1",
+				Conversion:    "englishToMetricTemperature",
+			},
+			value:    int16(319),                    // Fahrenheit in tenths
+			expected: float64(-0.05555555555555437), // Celsius
+		},
+		{
+			desc: "value is int16(321), factor is .1, conversion is englishToMetricTemperature",
+			output: OutputType{
+				ScalingFactor: ".1",
+				Conversion:    "englishToMetricTemperature",
+			},
+			value:    int16(321),                    // Fahrenheit in tenths
+			expected: float64(0.055555555555556344), // Celsius
+		},
+		{
+			desc: "value is int16(1500), factor is .1, conversion is englishToMetricTemperature",
+			output: OutputType{
+				ScalingFactor: ".1",
+				Conversion:    "englishToMetricTemperature",
+			},
+			value:    int16(1500),                // Fahrenheit in tenths
+			expected: float64(65.55555555555556), // Celsius
+		},
+		{
+			desc: "value is int16(1500), factor is .1, conversion is unsupportedConversion",
+			output: OutputType{
+				ScalingFactor: ".1",
+				Conversion:    "unsupportedConversion",
+			},
+			value:    int16(1500), // Fahrenheit in tenths
+			expected: nil,         // Celsius // TODO: Should return an error.
 		},
 	}
 
@@ -608,14 +655,14 @@ func TestOutputType_JSON(t *testing.T) {
 	}{
 		{
 			output:   OutputType{},
-			expected: `{"Version":"","Name":"","Precision":0,"Unit":{"Name":"","Symbol":""},"ScalingFactor":""}`,
+			expected: `{"Version":"","Name":"","Precision":0,"Unit":{"Name":"","Symbol":""},"ScalingFactor":"","Conversion":""}`,
 		},
 		{
 			output: OutputType{
 				Name:      "foo",
 				Precision: 2,
 			},
-			expected: `{"Version":"","Name":"foo","Precision":2,"Unit":{"Name":"","Symbol":""},"ScalingFactor":""}`,
+			expected: `{"Version":"","Name":"foo","Precision":2,"Unit":{"Name":"","Symbol":""},"ScalingFactor":"","Conversion":""}`,
 		},
 		{
 			output: OutputType{
@@ -626,8 +673,9 @@ func TestOutputType_JSON(t *testing.T) {
 					Symbol: "u",
 				},
 				ScalingFactor: "1e6",
+				Conversion:    "englishToMetric",
 			},
-			expected: `{"Version":"","Name":"test","Precision":4,"Unit":{"Name":"unit","Symbol":"u"},"ScalingFactor":"1e6"}`,
+			expected: `{"Version":"","Name":"test","Precision":4,"Unit":{"Name":"unit","Symbol":"u"},"ScalingFactor":"1e6","Conversion":"englishToMetric"}`,
 		},
 	}
 

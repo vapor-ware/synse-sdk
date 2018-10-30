@@ -4,6 +4,7 @@ import (
 	"crypto/md5" // #nosec
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +47,41 @@ func GetTypeByName(name string) (*OutputType, error) {
 		return nil, fmt.Errorf("no output type with name '%s' found", name)
 	}
 	return t, nil
+}
+
+// ConvertToFloat64 converts value to a float64 or errors out.
+func ConvertToFloat64(value interface{}) (result float64, err error) { // nolint: gocyclo
+	switch t := value.(type) {
+	case float64:
+		result = t
+	case float32:
+		result = float64(t)
+	case int64:
+		result = float64(t)
+	case int32:
+		result = float64(t)
+	case int16:
+		result = float64(t)
+	case int8:
+		result = float64(t)
+	case int:
+		result = float64(t)
+	case uint64:
+		result = float64(t)
+	case uint32:
+		result = float64(t)
+	case uint16:
+		result = float64(t)
+	case uint8:
+		result = float64(t)
+	case uint:
+		result = float64(t)
+	case string:
+		result, err = strconv.ParseFloat(t, 64)
+	default:
+		err = fmt.Errorf("Unable to convert value %v, type %T to float64", value, value)
+	}
+	return result, err
 }
 
 // makeIDString makes a compound string out of the given rack, board, and
