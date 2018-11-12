@@ -242,6 +242,7 @@ func (manager *dataManager) goRead() {
 		for {
 			// Perform the reads. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
+			log.Info("Starting reads in mode %v", mode)
 			switch mode {
 			case "serial":
 				// Get device readings in serial
@@ -253,8 +254,10 @@ func (manager *dataManager) goRead() {
 				readLog.Error("[data manager] exiting read loop: unsupported plugin run mode")
 				return
 			}
-
+			log.Info("Completed reads in mode %v", mode)
+			log.Info("Sleeping for interval %v", interval)
 			time.Sleep(interval)
+			log.Info("Slept for interval %v", interval)
 		}
 	}()
 }
@@ -326,9 +329,11 @@ func (manager *dataManager) serialRead() {
 	manager.rwLock.Lock()
 	defer manager.rwLock.Unlock()
 
+	log.Infof("Starting serial read of %v devices", len(ctx.devices))
 	for _, dev := range ctx.devices {
 		manager.readOne(dev)
 	}
+	log.Infof("Completed serial read of %v devices", len(ctx.devices))
 
 	for _, handler := range ctx.deviceHandlers {
 		manager.readBulk(handler)

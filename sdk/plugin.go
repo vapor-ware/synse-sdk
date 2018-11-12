@@ -1,13 +1,12 @@
 package sdk
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
-	"encoding/json"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/creasty/defaults"
