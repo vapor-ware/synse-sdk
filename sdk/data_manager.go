@@ -337,6 +337,7 @@ func (manager *dataManager) serialRead(serialReadInterval time.Duration) {
 	log.Infof("Starting serial read of %v devices", len(ctx.devices))
 	for _, dev := range ctx.devices {
 		manager.readOne(dev)
+		log.Infof("Sleeping after read %v", serialReadInterval)
 		time.Sleep(serialReadInterval)
 	}
 	log.Infof("Completed serial read of %v devices", len(ctx.devices))
