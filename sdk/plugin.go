@@ -175,12 +175,25 @@ func (plugin *Plugin) onQuit() {
 	os.Exit(0)
 }
 
+// setupLogger sets up the logger. Currently this just gives us sub second time
+// resolution, but can be expanded on later.
+func setupLogger() error {
+	// Set formatter that gives at least milliseconds.
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: time.RFC3339Nano,
+	})
+
+	return nil // There may be scenarios where we need to fail later (unclear).
+}
+
 // setup performs the pre-run setup actions for a plugin.
 func (plugin *Plugin) setup() error {
 	// Register system calls for graceful stopping.
 	signal.Notify(plugin.quit, syscall.SIGTERM)
 	signal.Notify(plugin.quit, syscall.SIGINT)
 	go plugin.onQuit()
+
+	setupLogger()
 
 	// The plugin name must be set as metainfo, since it is used in the Device
 	// model. Check if it is set here. If not, return an error.
