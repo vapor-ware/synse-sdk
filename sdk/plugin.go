@@ -559,6 +559,10 @@ type ReadSettings struct {
 	// Buffer defines the size of the read buffer. This will be
 	// the size of the channel that passes along read responses.
 	Buffer int `default:"100" yaml:"buffer,omitempty" addedIn:"1.0"`
+
+	// SerialReadInterval specifies the interval to pause between serial reads.
+	// This is here to avoid overwhelming a device. This is 0s by default.
+	SerialReadInterval string `default:"0s" yaml:"serialReadInterval,omitempty" addedIn:"1.3"`
 }
 
 // Validate validates that the ReadSettings has no configuration errors.
@@ -567,6 +571,13 @@ func (settings ReadSettings) Validate(multiErr *errors.MultiError) {
 	_, err := settings.GetInterval()
 	if err != nil {
 		log.WithField("config", settings).Error("[validation] bad interval")
+		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
+	}
+
+	// Try parsing the serial read interval to validate it is a correctly specified duration string.
+	_, err = settings.GetSerialReadInterval()
+	if err != nil {
+		log.WithField("config", settings).Error("[validation] bad serial read interval")
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
 
@@ -587,6 +598,13 @@ func (settings ReadSettings) Validate(multiErr *errors.MultiError) {
 // has been validated successfully, this should never return an error.
 func (settings *ReadSettings) GetInterval() (time.Duration, error) {
 	return time.ParseDuration(settings.Interval)
+}
+
+// GetSerialReadInterval gets the duration to wait between serial reads.
+// This is here to avoid overwhelming a device.
+func (settings *ReadSettings) GetSerialReadInterval() (time.Duration, error) {
+	log.Infof("GetSerialReadInterval settings: %v", settings)
+	return time.ParseDuration(settings.SerialReadInterval)
 }
 
 // WriteSettings provides configuration options for write operations.
