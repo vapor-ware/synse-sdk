@@ -193,7 +193,10 @@ func (plugin *Plugin) setup() error {
 	signal.Notify(plugin.quit, syscall.SIGINT)
 	go plugin.onQuit()
 
-	setupLogger()
+	err := setupLogger()
+	if err != nil {
+		return err
+	}
 
 	// The plugin name must be set as metainfo, since it is used in the Device
 	// model. Check if it is set here. If not, return an error.
@@ -206,7 +209,7 @@ func (plugin *Plugin) setup() error {
 	parseFlags()
 
 	// Check that the registered device handlers do not have any conflicting names.
-	err := ctx.checkDeviceHandlers()
+	err = ctx.checkDeviceHandlers()
 	if err != nil {
 		return err
 	}
