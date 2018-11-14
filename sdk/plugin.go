@@ -180,7 +180,8 @@ func (plugin *Plugin) onQuit() {
 func setupLogger() error {
 	// Set formatter that gives at least milliseconds.
 	log.SetFormatter(&log.TextFormatter{
-		TimestampFormat: time.RFC3339Nano,
+		//TimestampFormat: time.RFC3339Nano,
+		TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
 	})
 
 	return nil // There may be scenarios where we need to fail later (unclear).
