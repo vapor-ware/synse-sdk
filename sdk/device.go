@@ -1,11 +1,10 @@
 package sdk
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-
-	"encoding/json"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
