@@ -10,7 +10,7 @@ HAS_DEP  := $(shell which dep)
 
 .PHONY: build
 build:  ## Build the SDK locally
-	go build -v ./sdk
+	go build -v ./sdk || exit
 
 .PHONY: ci
 ci:  ## Run CI checks locally (build, test, lint)
@@ -18,7 +18,7 @@ ci:  ## Run CI checks locally (build, test, lint)
 
 .PHONY: clean
 clean:  ## Remove temporary files
-	go clean -v
+	go clean -v || exit
 
 .PHONY: cover
 cover:  ## Run tests and open the coverage report
@@ -65,7 +65,7 @@ examples:  ## Build the examples
 
 .PHONY: fmt
 fmt:  ## Run goimports on all go files
-	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do goimports -w "$$file"; done
+	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do goimports -w "$$file" || exit; done
 
 .PHONY: github-tag
 github-tag:  ## Create and push a tag with the current version
@@ -92,7 +92,7 @@ endif
 		--aggregate \
 		--deadline=5m \
 		-e $$(go env GOROOT) \
-		./...
+		./... || exit
 
 .PHONY: setup
 setup:  ## Install the build and development dependencies
@@ -104,7 +104,7 @@ setup:  ## Install the build and development dependencies
 
 .PHONY: test
 test:  ## Run all tests
-	go test -race -cover ./sdk/...
+	go test -race -cover ./sdk/... || exit
 
 .PHONY: version
 version: ## Print the version of the SDK
