@@ -242,10 +242,16 @@ func (manager *dataManager) goRead() {
 		for {
 			// Perform the reads. This is done in a separate function
 			// to allow for cleaner lock/unlock semantics.
+			log.Infof("Starting reads in mode %v", mode)
 			switch mode {
 			case "serial":
 				// Get device readings in serial
-				manager.serialRead()
+				serialReadInterval, err := Config.Plugin.Settings.Read.GetSerialReadInterval()
+				if err != nil {
+					readLog.WithField("error", err).
+						Warn("[data manager] misconfiguration: failed to get serial read interval")
+				}
+				manager.serialRead(serialReadInterval)
 			case "parallel":
 				// Get device readings in parallel
 				manager.parallelRead()
@@ -254,7 +260,10 @@ func (manager *dataManager) goRead() {
 				return
 			}
 
+			log.Infof("Completed reads in mode %v", mode)
+			log.Infof("Sleeping for interval %v", interval)
 			time.Sleep(interval)
+			log.Infof("Slept for interval %v", interval)
 		}
 	}()
 }
@@ -320,15 +329,19 @@ func (manager *dataManager) readBulk(handler *DeviceHandler) {
 }
 
 // serialRead reads all devices configured with the Plugin in serial.
-func (manager *dataManager) serialRead() {
+func (manager *dataManager) serialRead(serialReadInterval time.Duration) {
 	// If the plugin is a serial plugin, we want to lock around reads
 	// and writes so the two operations do not stomp on one another.
 	manager.rwLock.Lock()
 	defer manager.rwLock.Unlock()
 
+	log.Infof("Starting serial read of %v devices", len(ctx.devices))
 	for _, dev := range ctx.devices {
 		manager.readOne(dev)
+		log.Infof("Sleeping after read %v", serialReadInterval)
+		time.Sleep(serialReadInterval)
 	}
+	log.Infof("Completed serial read of %v devices", len(ctx.devices))
 
 	for _, handler := range ctx.deviceHandlers {
 		manager.readBulk(handler)

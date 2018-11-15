@@ -482,7 +482,7 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 
 	// Pass a reading in
 	assert.Equal(t, 0, len(d.readChannel))
-	d.serialRead()
+	d.serialRead(time.Nanosecond)
 	assert.Equal(t, 1, len(d.readChannel))
 
 	// Get the reading out
@@ -558,7 +558,7 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 
 	// Pass a reading in
 	assert.Equal(t, 0, len(d.readChannel))
-	d.serialRead()
+	d.serialRead(time.Nanosecond)
 	assert.Equal(t, 1, len(d.readChannel))
 
 	// Get the reading out
@@ -799,7 +799,7 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(d.readChannel))
-	d.serialRead()
+	d.serialRead(time.Nanosecond)
 	assert.Equal(t, 3, len(d.readChannel))
 
 	for i := 0; i < 3; i++ {

@@ -523,10 +523,11 @@ func TestReadSettings_Validate_Ok(t *testing.T) {
 		config ReadSettings
 	}{
 		{
-			desc: "ReadSettings has valid interval and buffer size",
+			desc: "ReadSettings has valid interval and buffer size and SerialReadInterval",
 			config: ReadSettings{
-				Interval: "5s",
-				Buffer:   100,
+				Interval:           "5s",
+				Buffer:             100,
+				SerialReadInterval: "0s",
 			},
 		},
 	}
@@ -550,29 +551,41 @@ func TestReadSettings_Validate_Error(t *testing.T) {
 			desc:     "ReadSettings has invalid interval",
 			errCount: 1,
 			config: ReadSettings{
-				Interval: "foobar",
-				Buffer:   100,
+				Interval:           "foobar",
+				Buffer:             100,
+				SerialReadInterval: "1s",
+			},
+		},
+		{
+			desc:     "ReadSettings has invalid serial read interval",
+			errCount: 1,
+			config: ReadSettings{
+				Interval:           "5s",
+				Buffer:             100,
+				SerialReadInterval: "invalid",
 			},
 		},
 		{
 			desc:     "ReadSettings has invalid buffer size",
 			errCount: 1,
 			config: ReadSettings{
-				Interval: "1s",
-				Buffer:   0,
+				Interval:           "1s",
+				Buffer:             0,
+				SerialReadInterval: "1s",
 			},
 		},
 		{
 			desc:     "ReadSettings has invalid interval and invalid buffer size",
 			errCount: 2,
 			config: ReadSettings{
-				Interval: "xyz",
-				Buffer:   -1,
+				Interval:           "xyz",
+				Buffer:             -1,
+				SerialReadInterval: "1s",
 			},
 		},
 		{
 			desc:     "ReadSettings is empty",
-			errCount: 2,
+			errCount: 3,
 			config:   ReadSettings{},
 		},
 	}
