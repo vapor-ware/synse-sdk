@@ -78,8 +78,8 @@ and is consistent and readable. Tests should also be added or updated as appropr
 
 CI
 --
-All commits and pull requests to the Synse Plugin SDK trigger a build in `Circle CI <https://circleci.com/gh/vapor-ware/synse-sdk>`_.
-The CI configuration can be found in the repo's ``.circleci/config.yml`` file. In summary,
+All commits and pull requests to the Synse Plugin SDK trigger a build on our Jenkins CI server.
+The CI configuration can be found in the repo's ``.jenkins`` file. In summary,
 a build triggered by a commit will:
 
 - Install dependencies
