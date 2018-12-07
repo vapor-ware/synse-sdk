@@ -1,6 +1,6 @@
 <p align="center"><a href="https://www.vapor.io/"><img src="docs/_static/logo.png" width="360"></a></p>
 <p align="center">
-    <a href="https://circleci.com/gh/vapor-ware/synse-sdk"><img src="https://circleci.com/gh/vapor-ware/synse-sdk.svg?style=shield&circle-token=a35e96598e3df84da3dc58a4f0f9dcc8632bfbd3"></a>
+    <a href="https://build.vio.sh/blue/organizations/jenkins/vapor-ware%2Fsynse-sdk/activity"><img src="https://build.vio.sh/buildStatus/icon?job=vapor-ware/synse-sdk/master" /></a>
     <a href="https://codecov.io/gh/vapor-ware/synse-sdk"><img src="https://codecov.io/gh/vapor-ware/synse-sdk/branch/master/graph/badge.svg?token=K9qxpN6AE2" /></a>
 <a href="https://app.fossa.io/projects/git%2Bgithub.com%2Fvapor-ware%2Fsynse-sdk?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvapor-ware%2Fsynse-sdk.svg?type=shield"/></a>
     <a href="https://godoc.org/github.com/vapor-ware/synse-sdk/sdk"><img src="https://godoc.org/github.com/vapor-ware/synse-sdk/sdk?status.svg"></a>
