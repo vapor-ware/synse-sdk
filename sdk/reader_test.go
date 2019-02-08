@@ -147,7 +147,7 @@ func Test_unmarshalConfigFile(t *testing.T) {
 
 	// Data to write to file
 	data := `
-version: 1.0
+version: 3
 `
 
 	// Add data to the temporary test directory
@@ -158,7 +158,7 @@ version: 1.0
 	assert.NoError(t, err)
 
 	// Check that the config now has the correct fields.
-	assert.Equal(t, "1.0", config.Version)
+	assert.Equal(t, 3, config.Version)
 }
 
 // Test_unmarshalConfigFile2 tests unmarshalling data from a file into a struct successfully.
@@ -221,7 +221,7 @@ func Test_unmarshalConfigFile4(t *testing.T) {
 	// Data to write to file
 	data := `
 foo: bar
-version: "1.0"
+version: 3
 `
 
 	// Add data to the temporary test directory
@@ -527,7 +527,7 @@ func TestGetDeviceConfigsFromFile3(t *testing.T) {
 	defer test.ClearTestDir(t)
 
 	data := `
-version: "1.0"
+version: 3
 `
 
 	// Add a file to the dir
@@ -544,7 +544,7 @@ version: "1.0"
 
 	assert.True(t, ctxs[0].IsDeviceConfig())
 	cfg := ctxs[0].Config.(*DeviceConfig)
-	assert.Equal(t, "1.0", cfg.Version)
+	assert.Equal(t, 3, cfg.Version)
 }
 
 // TestGetDeviceConfigsFromFile4 tests getting ConfigContext for all device configs found.
@@ -555,7 +555,7 @@ func TestGetDeviceConfigsFromFile4(t *testing.T) {
 	defer test.ClearTestDir(t)
 
 	data := `
-version: "1.0"
+version: 3
 `
 
 	// Add a file to the dir
@@ -574,13 +574,13 @@ version: "1.0"
 	assert.Equal(t, bar, barCtx.Source)
 	assert.True(t, barCtx.IsDeviceConfig())
 	cfg := barCtx.Config.(*DeviceConfig)
-	assert.Equal(t, "1.0", cfg.Version)
+	assert.Equal(t, 3, cfg.Version)
 
 	fooCtx := ctxs[1]
 	assert.Equal(t, foo, fooCtx.Source)
 	assert.True(t, fooCtx.IsDeviceConfig())
 	cfg = fooCtx.Config.(*DeviceConfig)
-	assert.Equal(t, "1.0", cfg.Version)
+	assert.Equal(t, 3, cfg.Version)
 }
 
 // TestGetPluginConfigFromFile tests getting the ConfigContext for the plugin config.
@@ -634,7 +634,7 @@ func TestGetPluginConfigFromFile3(t *testing.T) {
 	defer test.ClearTestDir(t)
 
 	data := `
-version: "1.0"
+version: 3
 network:
   type: tcp
   address: "1.2.3.4:5001"
@@ -659,7 +659,7 @@ network:
 	t.Logf("config: %#v", cfg)
 
 	// check config values
-	assert.Equal(t, "1.0", cfg.Version)
+	assert.Equal(t, 3, cfg.Version)
 	assert.Equal(t, "tcp", cfg.Network.Type)
 	assert.Equal(t, "1.2.3.4:5001", cfg.Network.Address)
 
@@ -686,7 +686,7 @@ func TestGetPluginConfigFromFile4(t *testing.T) {
 	defer test.ClearTestDir(t)
 
 	data := `
-version: "1.0"
+version: 3
 debug: true
 network:
   type: tcp
@@ -724,7 +724,7 @@ limiter:
 	cfg := ctx.Config.(*PluginConfig)
 
 	// check config values
-	assert.Equal(t, "1.0", cfg.Version)
+	assert.Equal(t, 3, cfg.Version)
 	assert.Equal(t, "tcp", cfg.Network.Type)
 	assert.Equal(t, "1.2.3.4:5001", cfg.Network.Address)
 	assert.Equal(t, 100, cfg.Limiter.Rate)
@@ -822,7 +822,7 @@ func TestGetOutputTypeConfigsFromFile3(t *testing.T) {
 	defer test.ClearTestDir(t)
 
 	data := `
-version: "1.0"
+version: 3
 `
 
 	// Add a file to the dir
@@ -839,7 +839,7 @@ version: "1.0"
 
 	assert.True(t, ctxs[0].IsOutputTypeConfig())
 	cfg := ctxs[0].Config.(*OutputType)
-	assert.Equal(t, "1.0", cfg.Version)
+	assert.Equal(t, 3, cfg.Version)
 }
 
 // TestGetOutputTypeConfigsFromFile4 tests getting OutputType for all configs found.
@@ -850,7 +850,7 @@ func TestGetOutputTypeConfigsFromFile4(t *testing.T) {
 	defer test.ClearTestDir(t)
 
 	data := `
-version: "1.0"
+version: 3
 `
 
 	// Add a file to the dir
@@ -869,11 +869,11 @@ version: "1.0"
 	assert.Equal(t, bar, barCtx.Source)
 	assert.True(t, barCtx.IsOutputTypeConfig())
 	cfg := barCtx.Config.(*OutputType)
-	assert.Equal(t, "1.0", cfg.Version)
+	assert.Equal(t, 3, cfg.Version)
 
 	fooCtx := ctxs[1]
 	assert.Equal(t, foo, fooCtx.Source)
 	assert.True(t, fooCtx.IsOutputTypeConfig())
 	cfg = fooCtx.Config.(*OutputType)
-	assert.Equal(t, "1.0", cfg.Version)
+	assert.Equal(t, 3, cfg.Version)
 }
