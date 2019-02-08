@@ -310,13 +310,13 @@ func (plugin *Plugin) processConfig() error {
 }
 
 // The current (latest) version of the plugin config scheme.
-var currentPluginSchemeVersion = "1.0"
+var currentPluginSchemeVersion = 3
 
 // NewDefaultPluginConfig creates a new instance of a PluginConfig with its
 // default values resolved.
 func NewDefaultPluginConfig() (*PluginConfig, error) {
 	config := &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: currentPluginSchemeVersion},
+		Version: currentPluginSchemeVersion,
 	}
 	err := defaults.Set(config)
 	if err != nil {
@@ -328,8 +328,8 @@ func NewDefaultPluginConfig() (*PluginConfig, error) {
 // PluginConfig contains the configuration options for the plugin.
 type PluginConfig struct {
 
-	// SchemeVersion is the version of the configuration scheme.
-	SchemeVersion `yaml:",inline"`
+	// Version is the version of the configuration scheme.
+	Version int `yaml:"version,omitempty"`
 
 	// Debug is a flag that determines whether the plugin should run
 	// with debug logging or not.
@@ -367,19 +367,18 @@ func (config *PluginConfig) JSON() (string, error) {
 
 // Validate validates that the PluginConfig has no configuration errors.
 func (config PluginConfig) Validate(multiErr *errors.MultiError) {
-	// A version must be specified and it must be of the correct format.
-	_, err := config.GetVersion()
-	if err != nil {
-		log.WithField("config", config).Error("[validation] bad version")
-		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
-	}
-
 	// If network is nil or an empty struct, error. We need to know how
 	// the plugin should communicate with Synse server.
 	if config.Network == nil || config.Network == (&NetworkSettings{}) {
 		log.WithField("config", config).Error("[validation] no network")
 		multiErr.Add(errors.NewFieldRequiredError(multiErr.Context["source"], "network"))
 	}
+}
+
+// GetVersion fulfills the VersionedConfig interface. It just returns the version
+// of the config.
+func (config *PluginConfig) GetVersion() int {
+	return config.Version
 }
 
 // PluginSettings specifies the configuration options that determine the

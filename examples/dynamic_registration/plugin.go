@@ -68,9 +68,7 @@ func DynamicDeviceConfig(cfg map[string]interface{}) ([]*sdk.DeviceConfig, error
 	// should be gathered from whatever the real source of dynamic registration is,
 	// e.g. for IPMI - the SDR records.
 	d := sdk.DeviceConfig{
-		SchemeVersion: sdk.SchemeVersion{
-			Version: "1.0",
-		},
+		Version: 3,
 		Locations: []*sdk.LocationConfig{
 			{
 				Name:  "foobar",
