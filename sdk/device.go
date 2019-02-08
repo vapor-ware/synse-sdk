@@ -12,7 +12,7 @@ import (
 )
 
 // The current (latest) version of the device config scheme.
-var currentDeviceSchemeVersion = "1.0"
+var currentDeviceSchemeVersion = 3
 
 // DeviceHandler specifies the read and write handlers for a Device
 // based on its type and model.
@@ -448,8 +448,8 @@ func updateDeviceMap(devices []*Device) {
 // instances of those kinds which a plugin will manage.
 type DeviceConfig struct {
 
-	// SchemeVersion is the version of the configuration scheme.
-	SchemeVersion `yaml:",inline"`
+	// The version of the device config.
+	Version int `yaml:"version,omitempty"`
 
 	// Locations are all of the locations that are defined by the configuration
 	// for device instances to reference.
@@ -465,12 +465,16 @@ type DeviceConfig struct {
 // and Devices fields initialized, but not filled.
 func NewDeviceConfig() *DeviceConfig {
 	return &DeviceConfig{
-		SchemeVersion: SchemeVersion{
-			Version: currentDeviceSchemeVersion,
-		},
+		Version:   currentDeviceSchemeVersion,
 		Locations: []*LocationConfig{},
 		Devices:   []*DeviceKind{},
 	}
+}
+
+// GetVersion fulfills the VersionedConfig interface. It just returns the version
+// of the config.
+func (config *DeviceConfig) GetVersion() int {
+	return config.Version
 }
 
 // ValidateDeviceConfigData validates the `Data` field(s) of a Device Config to
@@ -521,12 +525,7 @@ func (config *DeviceConfig) JSON() (string, error) {
 //
 // This is called before Devices are created.
 func (config DeviceConfig) Validate(multiErr *errors.MultiError) {
-	// A version must be specified and it must be of the correct format.
-	_, err := config.GetVersion()
-	if err != nil {
-		log.WithField("config", config).Error("[validation] bad version")
-		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
-	}
+	// nothing to check
 }
 
 // GetLocation gets a location from the DeviceConfig by name, if it exists.

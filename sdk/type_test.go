@@ -655,14 +655,14 @@ func TestOutputType_JSON(t *testing.T) {
 	}{
 		{
 			output:   OutputType{},
-			expected: `{"Version":"","Name":"","Precision":0,"Unit":{"Name":"","Symbol":""},"ScalingFactor":"","Conversion":""}`,
+			expected: `{"Version":0,"Name":"","Precision":0,"Unit":{"Name":"","Symbol":""},"ScalingFactor":"","Conversion":""}`,
 		},
 		{
 			output: OutputType{
 				Name:      "foo",
 				Precision: 2,
 			},
-			expected: `{"Version":"","Name":"foo","Precision":2,"Unit":{"Name":"","Symbol":""},"ScalingFactor":"","Conversion":""}`,
+			expected: `{"Version":0,"Name":"foo","Precision":2,"Unit":{"Name":"","Symbol":""},"ScalingFactor":"","Conversion":""}`,
 		},
 		{
 			output: OutputType{
@@ -675,7 +675,7 @@ func TestOutputType_JSON(t *testing.T) {
 				ScalingFactor: "1e6",
 				Conversion:    "englishToMetric",
 			},
-			expected: `{"Version":"","Name":"test","Precision":4,"Unit":{"Name":"unit","Symbol":"u"},"ScalingFactor":"1e6","Conversion":"englishToMetric"}`,
+			expected: `{"Version":0,"Name":"test","Precision":4,"Unit":{"Name":"unit","Symbol":"u"},"ScalingFactor":"1e6","Conversion":"englishToMetric"}`,
 		},
 	}
 

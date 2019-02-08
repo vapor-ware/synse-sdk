@@ -360,7 +360,7 @@ func Test_registerDevices(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		DynamicRegistration: &DynamicRegistrationSettings{
 			Config: []map[string]interface{}{
 				{},
@@ -390,7 +390,7 @@ func Test_registerDevices2(t *testing.T) {
 	}
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		DynamicRegistration: &DynamicRegistrationSettings{
 			Config: []map[string]interface{}{
 				{},
@@ -416,7 +416,7 @@ func Test_registerDevices3(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		DynamicRegistration: &DynamicRegistrationSettings{
 			Config: []map[string]interface{}{
 				{},
@@ -455,7 +455,7 @@ func Test_registerDevices4(t *testing.T) {
 	}
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		DynamicRegistration: &DynamicRegistrationSettings{
 			Config: []map[string]interface{}{
 				{},

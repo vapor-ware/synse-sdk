@@ -2,8 +2,6 @@ package sdk
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
@@ -13,6 +11,17 @@ import (
 // Config holds the configuration for a plugin, its device configs, and
 // its type configs.
 var Config = config{}
+
+// TODO (etd): The organization of all these config pieces are... confusing and
+//  not necessarily intuitive. Additionally, we are accessing all of our config
+//  globally which isn't technically ideal since any plugin could be free to
+//  override it. What we *should* do is load the config and pass it to the thing
+//  that needs it. e.g. on init, load the plugin config. The Plugin can take it
+//  as a param.
+//  There are questions around this too.. like how do we make that info accessible
+//  to other components. Also, we have 3 different kinds of configs and they can
+//  be referenced from a number of places, so there are a lot of moving parts (hence
+//  why this stuff is laid out in a fairly confusing way).
 
 // config is a struct that holds all of the configs.
 type config struct {
@@ -37,11 +46,15 @@ type ConfigComponent interface {
 	Validate(*errors.MultiError)
 }
 
-// ConfigBase is an interface that the base configuration struct should
-// implement. This allows the schemeValidator to get the SchemeVersion
-// for that given configuration.
-type ConfigBase interface {
-	GetVersion() (*ConfigVersion, error)
+// VersionedConfig is an interface that SDK config structs implement. It allows
+// them to be referenced as a class of configuration which has a version attributed
+// to them.
+//
+// The config version is a simple integer. A particular version of the SDK will
+// only support their corresponding version. This allows us to do version checks
+// as a sort of pre-flight check for the plugin.
+type VersionedConfig interface {
+	GetVersion() int
 }
 
 // ConfigContext is a structure that associates context with configuration info.
@@ -52,15 +65,12 @@ type ConfigContext struct {
 	// Source is where the config came from.
 	Source string
 
-	// Config is the configuration itself. This should be a configuration struct
-	// that implements Base. That is to say, the config held in this context
-	// should be the root config struct for that config type. This will allow us
-	// to get the scheme version of the configuration.
-	Config ConfigBase
+	// Config is the configuration itself.
+	Config VersionedConfig
 }
 
 // NewConfigContext creates a new Context instance.
-func NewConfigContext(source string, config ConfigBase) *ConfigContext {
+func NewConfigContext(source string, config VersionedConfig) *ConfigContext {
 	return &ConfigContext{
 		Source: source,
 		Config: config,
@@ -83,123 +93,6 @@ func (ctx *ConfigContext) IsPluginConfig() bool {
 func (ctx *ConfigContext) IsOutputTypeConfig() bool {
 	_, ok := ctx.Config.(*OutputType)
 	return ok
-}
-
-// TODO (etd) [v2]: In SDK v2, we can probably get rid of this. While versioning
-// the configuration fields is a unique approach to ensuring config compatibility,
-// it doesn't actually buy us much and at this point just adds complexity to the
-// code base. We should be fine to version the config files themselves (e.g.
-// 1, 1.0, v1, ...) and distinguish a v1 config from a v2 config, but at the most
-// all we would be able to do from that is complain and say that the given config
-// file is not compatible with the current version of the SDK, so it really only
-// makes sense to have validation of version at the config level, not at the field
-// level. For v1, we will keep this in for compatibility, but this can be removed
-// for v2. All similar components will be marked with a TODO [v2] tag for removal.
-const (
-	tagAddedIn      = "addedIn"
-	tagDeprecatedIn = "deprecatedIn"
-	tagRemovedIn    = "removedIn"
-)
-
-// ConfigVersion is a representation of a configuration scheme version
-// that can be compared to other SchemeVersions.
-type ConfigVersion struct {
-	Major int
-
-	// TODO (etd) [v2]: for v1, disabled checking against the minor version,
-	// can be removed for v2.
-	Minor int
-}
-
-// NewVersion creates a new instance of a Version.
-func NewVersion(versionString string) (*ConfigVersion, error) {
-	var min, maj int
-	var err error
-
-	if versionString == "" {
-		return nil, fmt.Errorf("no version info found")
-	}
-
-	s := strings.Split(versionString, ".")
-	switch len(s) {
-	case 1:
-		maj, err = strconv.Atoi(s[0])
-		if err != nil {
-			return nil, err
-		}
-		min = 0
-	case 2:
-		maj, err = strconv.Atoi(s[0])
-		if err != nil {
-			return nil, err
-		}
-		min, err = strconv.Atoi(s[1])
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("too many version components - should only have MAJOR[.MINOR]")
-	}
-
-	return &ConfigVersion{
-		Major: maj,
-		Minor: min,
-	}, nil
-}
-
-// String returns a string representation of the scheme version.
-func (version *ConfigVersion) String() string {
-	return fmt.Sprintf("%d.%d", version.Major, version.Minor)
-}
-
-// IsLessThan returns true if the Version is less than the Version
-// provided as a parameter.
-func (version *ConfigVersion) IsLessThan(other *ConfigVersion) bool {
-	return version.Major < other.Major
-}
-
-// IsGreaterOrEqualTo returns true if the ConfigVersion is greater than or equal to
-// the Version provided as a parameter.
-func (version *ConfigVersion) IsGreaterOrEqualTo(other *ConfigVersion) bool {
-	return version.Major >= other.Major
-}
-
-// IsEqual returns true if the Version is equal to the Version provided
-// as a parameter.
-func (version *ConfigVersion) IsEqual(other *ConfigVersion) bool {
-	return version.Major == other.Major
-}
-
-// SchemeVersion is a struct that is used to extract the configuration
-// scheme version from any config file.
-type SchemeVersion struct {
-	// Version is the config version scheme specified in the config file.
-	Version string `yaml:"version,omitempty" addedIn:"1.0"`
-
-	// scheme is the Version that represents the SchemeVersion's Version.
-	scheme *ConfigVersion
-}
-
-// parse parses the Version field into a Version.
-func (schemeVersion *SchemeVersion) parse() error {
-	scheme, err := NewVersion(schemeVersion.Version)
-	if err != nil {
-		return err
-	}
-	schemeVersion.scheme = scheme
-	return nil
-}
-
-// GetVersion gets the Version associated with the version specified
-// in the configuration.
-func (schemeVersion *SchemeVersion) GetVersion() (*ConfigVersion, error) {
-	if schemeVersion.scheme == nil {
-		err := schemeVersion.parse()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return schemeVersion.scheme, nil
 }
 
 // processDeviceConfigs searches for, reads, and validates the device configuration(s).
@@ -358,10 +251,12 @@ func processDeviceConfigs() error { // nolint: gocyclo
 
 	// Validate the device configs
 	for _, ctx := range deviceCtxs {
-		// Validate config scheme
-		multiErr = validator.Validate(ctx)
-		if multiErr.HasErrors() {
-			return multiErr
+		if ctx.Config.GetVersion() != currentDeviceSchemeVersion {
+			return errors.NewValidationError(
+				ctx.Source,
+				"[sdk] the specified configuration version is not supported with this "+
+					"version of the SDK.",
+			)
 		}
 	}
 
@@ -370,7 +265,7 @@ func processDeviceConfigs() error { // nolint: gocyclo
 	var unifiedCtx *ConfigContext
 	if len(deviceCtxs) == 0 {
 		unifiedCtx = NewConfigContext("empty", &DeviceConfig{
-			SchemeVersion: SchemeVersion{Version: currentDeviceSchemeVersion},
+			Version: currentDeviceSchemeVersion,
 		})
 	} else {
 		unifiedCtx, err = unifyDeviceConfigs(deviceCtxs)
@@ -482,9 +377,12 @@ func processPluginConfig() error { // nolint: gocyclo
 	log.WithField("policy", pluginFilePolicy.String()).Debug("[sdk] policy validation successful")
 
 	// Validate the plugin config
-	multiErr := validator.Validate(pluginCtx)
-	if multiErr.HasErrors() {
-		return multiErr
+	if pluginCtx.Config.GetVersion() != currentDeviceSchemeVersion {
+		return errors.NewValidationError(
+			pluginCtx.Source,
+			"[sdk] the specified configuration version is not supported with this "+
+				"version of the SDK.",
+		)
 	}
 
 	// With the config validated, we can now assign it to the global Plugin variable.
@@ -564,10 +462,14 @@ func processOutputTypeConfig() ([]*OutputType, error) { // nolint: gocyclo
 
 	// Validate the plugin config
 	for _, outputTypeCtx := range outputTypeCtxs {
-		multiErr := validator.Validate(outputTypeCtx)
-		if multiErr.HasErrors() {
-			return nil, multiErr
+		if outputTypeCtx.Config.GetVersion() != currentDeviceSchemeVersion {
+			return nil, errors.NewValidationError(
+				outputTypeCtx.Source,
+				"[sdk] the specified configuration version is not supported with this "+
+					"version of the SDK.",
+			)
 		}
+
 		cfg := outputTypeCtx.Config.(*OutputType)
 		outputs = append(outputs, cfg)
 	}

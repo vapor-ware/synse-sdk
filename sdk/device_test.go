@@ -1021,7 +1021,7 @@ func TestDeviceConfig_JSON_1(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		`{"Version":"","Locations":null,"Devices":null}`,
+		`{"Version":0,"Locations":null,"Devices":null}`,
 		out,
 	)
 }
@@ -1029,16 +1029,16 @@ func TestDeviceConfig_JSON_1(t *testing.T) {
 // TestDeviceConfig_JSON_2 tests dumping a DeviceConfig to a JSON string.
 func TestDeviceConfig_JSON_2(t *testing.T) {
 	d := DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
-		Locations:     []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
-		Devices:       []*DeviceKind{{Name: "test"}},
+		Version:   1,
+		Locations: []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+		Devices:   []*DeviceKind{{Name: "test"}},
 	}
 
 	out, err := d.JSON()
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		`{"Version":"1.0","Locations":[{"Name":"test","Rack":{"Name":"test","FromEnv":""},"Board":{"Name":"test","FromEnv":""}}],"Devices":[{"Name":"test","Metadata":null,"Instances":null,"Outputs":null,"HandlerName":""}]}`,
+		`{"Version":1,"Locations":[{"Name":"test","Rack":{"Name":"test","FromEnv":""},"Board":{"Name":"test","FromEnv":""}}],"Devices":[{"Name":"test","Metadata":null,"Instances":null,"Outputs":null,"HandlerName":""}]}`,
 		out,
 	)
 }
@@ -1134,37 +1134,37 @@ func TestDeviceConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "DeviceConfig has valid version",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Version: 1,
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version and location",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Version:   1,
+				Locations: []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version, location, and DeviceKind",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
-				Devices:       []*DeviceKind{{Name: "test"}},
+				Version:   1,
+				Locations: []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Devices:   []*DeviceKind{{Name: "test"}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version, invalid Locations (Locations not validated here)",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{{Name: ""}},
+				Version:   1,
+				Locations: []*LocationConfig{{Name: ""}},
 			},
 		},
 		{
 			desc: "DeviceConfig has valid version and locations, invalid DeviceKinds (DeviceKinds not validated here)",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
-				Devices:       []*DeviceKind{{Name: ""}},
+				Version:   1,
+				Locations: []*LocationConfig{{Name: "test", Rack: &LocationData{Name: "test"}, Board: &LocationData{Name: "test"}}},
+				Devices:   []*DeviceKind{{Name: ""}},
 			},
 		},
 	}
@@ -1174,31 +1174,6 @@ func TestDeviceConfig_Validate_Ok(t *testing.T) {
 
 		testCase.config.Validate(merr)
 		assert.NoError(t, merr.Err(), testCase.desc)
-	}
-}
-
-// TestDeviceConfig_Validate_Error tests validating a DeviceConfig with errors.
-func TestDeviceConfig_Validate_Error(t *testing.T) {
-	var testTable = []struct {
-		desc     string
-		errCount int
-		config   DeviceConfig
-	}{
-		{
-			desc:     "DeviceConfig has invalid version",
-			errCount: 1,
-			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "abc"},
-			},
-		},
-	}
-
-	for _, testCase := range testTable {
-		merr := errors.NewMultiError("test")
-
-		testCase.config.Validate(merr)
-		assert.Error(t, merr.Err(), testCase.desc)
-		assert.Equal(t, testCase.errCount, len(merr.Errors), merr.Error())
 	}
 }
 
@@ -1787,16 +1762,16 @@ func TestDeviceConfig_ValidateDeviceConfigDataOk(t *testing.T) {
 		{
 			desc: "no data field in the device config",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{},
-				Devices:       []*DeviceKind{},
+				Version:   1,
+				Locations: []*LocationConfig{},
+				Devices:   []*DeviceKind{},
 			},
 		},
 		{
 			desc: "data in the device kind output",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{},
+				Version:   1,
+				Locations: []*LocationConfig{},
 				Devices: []*DeviceKind{
 					{
 						Outputs: []*DeviceOutput{
@@ -1813,8 +1788,8 @@ func TestDeviceConfig_ValidateDeviceConfigDataOk(t *testing.T) {
 		{
 			desc: "data in the device instance",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{},
+				Version:   1,
+				Locations: []*LocationConfig{},
 				Devices: []*DeviceKind{
 					{
 						Instances: []*DeviceInstance{
@@ -1831,8 +1806,8 @@ func TestDeviceConfig_ValidateDeviceConfigDataOk(t *testing.T) {
 		{
 			desc: "data in the device instance output",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{},
+				Version:   1,
+				Locations: []*LocationConfig{},
 				Devices: []*DeviceKind{
 					{
 						Instances: []*DeviceInstance{
@@ -1874,8 +1849,8 @@ func TestDeviceConfig_ValidateDeviceConfigDataError(t *testing.T) {
 		{
 			desc: "data in the device kind output",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{},
+				Version:   1,
+				Locations: []*LocationConfig{},
 				Devices: []*DeviceKind{
 					{
 						Outputs: []*DeviceOutput{
@@ -1892,8 +1867,8 @@ func TestDeviceConfig_ValidateDeviceConfigDataError(t *testing.T) {
 		{
 			desc: "data in the device instance",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{},
+				Version:   1,
+				Locations: []*LocationConfig{},
 				Devices: []*DeviceKind{
 					{
 						Instances: []*DeviceInstance{
@@ -1910,8 +1885,8 @@ func TestDeviceConfig_ValidateDeviceConfigDataError(t *testing.T) {
 		{
 			desc: "data in the device instance output",
 			config: DeviceConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
-				Locations:     []*LocationConfig{},
+				Version:   1,
+				Locations: []*LocationConfig{},
 				Devices: []*DeviceKind{
 					{
 						Instances: []*DeviceInstance{
