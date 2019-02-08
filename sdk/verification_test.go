@@ -10,9 +10,9 @@ import (
 // TestVerifyConfigs tests verifying the unified device config.
 func TestVerifyConfigs(t *testing.T) {
 	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
-		Locations:     []*LocationConfig{},
-		Devices:       []*DeviceKind{},
+		Version:   1,
+		Locations: []*LocationConfig{},
+		Devices:   []*DeviceKind{},
 	}
 
 	err := verifyConfigs(cfg)
@@ -26,7 +26,7 @@ func Test_verifyDeviceConfigLocations_Ok(t *testing.T) {
 	}()
 
 	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Version: 1,
 		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
@@ -63,7 +63,7 @@ func Test_verifyDeviceConfigLocations_Error(t *testing.T) {
 	}()
 
 	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
+		Version: 1,
 		Locations: []*LocationConfig{
 			{
 				Name:  "foo",
@@ -108,8 +108,8 @@ func Test_verifyDeviceConfigInstances_Ok(t *testing.T) {
 	}
 
 	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
-		Locations:     []*LocationConfig{},
+		Version:   1,
+		Locations: []*LocationConfig{},
 		Devices: []*DeviceKind{
 			{
 				Name: "test",
@@ -148,8 +148,8 @@ func Test_verifyDeviceConfigInstances_Error(t *testing.T) {
 	}
 
 	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
-		Locations:     []*LocationConfig{},
+		Version:   1,
+		Locations: []*LocationConfig{},
 		Devices: []*DeviceKind{
 			{
 				Name: "test",
@@ -185,8 +185,8 @@ func Test_verifyDeviceConfigOutputs_Ok(t *testing.T) {
 	ctx.outputTypes["bar"] = &OutputType{Name: "bar"}
 
 	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
-		Locations:     []*LocationConfig{},
+		Version:   1,
+		Locations: []*LocationConfig{},
 		Devices: []*DeviceKind{
 			{
 				Name: "test",
@@ -241,8 +241,8 @@ func Test_verifyDeviceConfigOutputs_Error(t *testing.T) {
 	ctx.outputTypes["foo"] = &OutputType{Name: "foo"}
 
 	cfg := &DeviceConfig{
-		SchemeVersion: SchemeVersion{Version: "1.0"},
-		Locations:     []*LocationConfig{},
+		Version:   1,
+		Locations: []*LocationConfig{},
 		Devices: []*DeviceKind{
 			{
 				Name: "test",

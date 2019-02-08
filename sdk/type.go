@@ -14,8 +14,8 @@ import (
 // OutputType provides information about the output of a device reading.
 type OutputType struct {
 
-	// SchemeVersion is the version of the configuration scheme.
-	SchemeVersion `yaml:",inline"`
+	// Version is the version of the configuration scheme.
+	Version int `yaml:"version,omitempty"`
 
 	// Name is the name of the output type. Each output type
 	// should have a unique name. Names can be namespaced with
@@ -67,6 +67,12 @@ func (outputType OutputType) Validate(multiErr *errors.MultiError) {
 	if err != nil {
 		multiErr.Add(errors.NewValidationError(multiErr.Context["source"], err.Error()))
 	}
+}
+
+// GetVersion fulfills the VersionedConfig interface. It just returns the version
+// of the config.
+func (outputType *OutputType) GetVersion() int {
+	return outputType.Version
 }
 
 // Type gets the type of the reading. This is encoded in the OutputType

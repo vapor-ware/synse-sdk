@@ -194,7 +194,7 @@ func TestPluginConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "PluginConfig has valid version and network",
 			config: PluginConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Version: 1,
 				Network: &NetworkSettings{
 					Type:    "tcp",
 					Address: "10.10.10.10",
@@ -204,7 +204,7 @@ func TestPluginConfig_Validate_Ok(t *testing.T) {
 		{
 			desc: "PluginConfig has valid version and network, invalid settings (not validated here)",
 			config: PluginConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Version: 1,
 				Network: &NetworkSettings{
 					Type:    "tcp",
 					Address: "10.10.10.10",
@@ -232,26 +232,15 @@ func TestPluginConfig_Validate_Error(t *testing.T) {
 		config   PluginConfig
 	}{
 		{
-			desc:     "PluginConfig has invalid version",
-			errCount: 1,
-			config: PluginConfig{
-				SchemeVersion: SchemeVersion{Version: "abc"},
-				Network: &NetworkSettings{
-					Type:    "tcp",
-					Address: "10.10.10.10",
-				},
-			},
-		},
-		{
 			desc:     "PluginConfig has no network",
 			errCount: 1,
 			config: PluginConfig{
-				SchemeVersion: SchemeVersion{Version: "1.0"},
+				Version: 1,
 			},
 		},
 		{
 			desc:     "PluginConfig is empty",
-			errCount: 2,
+			errCount: 1,
 			config:   PluginConfig{},
 		},
 	}

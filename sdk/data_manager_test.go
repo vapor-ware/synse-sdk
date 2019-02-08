@@ -36,7 +36,7 @@ func TestDataManager_WritesEnabled(t *testing.T) {
 	defer Config.reset()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -64,7 +64,7 @@ func TestDataManager_readOneOkNoLimiter(t *testing.T) {
 	defer Config.reset()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -122,7 +122,7 @@ func TestDataManager_readOneOkWithLimiter(t *testing.T) {
 	defer Config.reset()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -180,7 +180,7 @@ func TestDataManager_readOneErr(t *testing.T) {
 	defer Config.reset()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -229,7 +229,7 @@ func TestDataManager_readBulkOkNoLimiter(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -306,7 +306,7 @@ func TestDataManager_readBulkOkWithLimiter(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -383,7 +383,7 @@ func TestDataManager_readBulkError(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -438,7 +438,7 @@ func TestDataManager_serialReadSingle(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -500,7 +500,7 @@ func TestDataManager_serialReadSingleBulk(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -576,7 +576,7 @@ func TestDataManager_parallelReadSingle(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -639,7 +639,7 @@ func TestDataManager_parallelReadSingleBulk(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -715,7 +715,7 @@ func TestDataManager_serialReadMultiple(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -818,7 +818,7 @@ func TestDataManager_parallelReadMultiple(t *testing.T) {
 	}()
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -922,7 +922,7 @@ func TestDataManager_writeOkNoLimiter(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -984,7 +984,7 @@ func TestDataManager_writeOkWithLimiter(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -1047,7 +1047,7 @@ func TestDataManager_writeNoDevice(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -1090,7 +1090,7 @@ func TestDataManager_writeError(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -1152,7 +1152,7 @@ func TestDataManager_serialWriteSingle(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -1217,7 +1217,7 @@ func TestDataManager_serialWriteMultiple(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -1304,7 +1304,7 @@ func TestDataManager_parallelWriteSingle(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
@@ -1369,7 +1369,7 @@ func TestDataManager_parallelWriteMultiple(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
 	Config.Plugin = &PluginConfig{
-		SchemeVersion: SchemeVersion{Version: "test"},
+		Version: 1,
 		Network: &NetworkSettings{
 			Type:    "tcp",
 			Address: "test",
