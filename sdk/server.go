@@ -354,8 +354,18 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 	return nil
 }
 
-// Write is the handler for the Synse GRPC Plugin service's `Write` RPC method.
+// WriteAsync writes data to the specified plugin device. A transaction ID is returned
+// so the status of the write can be checked asynchronously.
+//
+// It is the handler for the Synse gRPC Plugin V3Service's `WriteAsync` RPC method.
 func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayload) (*synse.V3WriteTransaction, error) {
+	log.WithFields(log.Fields{
+		"data": request.Data,
+		"id": request.Selector.Id,
+	}).Debug("[grpc] WRITE ASYNC request")
+
+	// TODO (etd): update this once various other transaction updates are completed.
+
 	return &synse.V3WriteTransaction{}, nil
 
 	//log.WithField("request", request).Debug("[grpc] write rpc request")
