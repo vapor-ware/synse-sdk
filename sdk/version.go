@@ -10,7 +10,7 @@ import (
 )
 
 // Version specifies the version of the Synse Plugin SDK.
-const Version = "1.2.0"
+const Version = "3.0.0"
 
 // version is a reference to a binVersion that is used by the SDK to get
 // the version info for a plugin.
@@ -61,9 +61,9 @@ type binVersion struct {
 	SDKVersion    string
 }
 
-// encode converts the binVersion to its corresponding Synse GRPC VersionInfo message.
-func (version *binVersion) Encode() *synse.VersionInfo {
-	return &synse.VersionInfo{
+// Encode converts the binVersion to its corresponding Synse GRPC V3Version message.
+func (version *binVersion) Encode() *synse.V3Version {
+	return &synse.V3Version{
 		PluginVersion: version.PluginVersion,
 		SdkVersion:    version.SDKVersion,
 		BuildDate:     version.BuildDate,
