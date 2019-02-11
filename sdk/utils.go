@@ -13,27 +13,27 @@ import (
 )
 
 // GetCurrentTime return the current time (time.Now()), with location set to UTC,
-// as a string formatted with the RFC3339Nano layout. This should be the format
+// as a string formatted with the RFC3339 layout. This should be the format
 // of all timestamps returned by the SDK.
 //
 // The SDK uses this function to generate all of its timestamps. It is highly
 // recommended that plugins use this as well for timestamp generation.
 func GetCurrentTime() string {
-	return time.Now().UTC().Format(time.RFC3339Nano)
+	return time.Now().UTC().Format(time.RFC3339)
 }
 
-// ParseRFC3339Nano parses a timestamp string in RFC3339Nano format into a Time struct.
+// ParseRFC3339 parses a timestamp string in RFC3339 format into a Time struct.
 // If it is given an empty string, it will return the zero-value for a Time
 // instance. You can check if it is a zero time with the Time's `IsZero` method.
-func ParseRFC3339Nano(timestamp string) (t time.Time, err error) {
+func ParseRFC3339(timestamp string) (t time.Time, err error) {
 	if timestamp == "" {
 		return
 	}
-	t, err = time.Parse(time.RFC3339Nano, timestamp)
+	t, err = time.Parse(time.RFC3339, timestamp)
 	if err != nil {
 		log.WithField(
 			"timestamp", timestamp,
-		).Error("[sdk] failed to parse timestamp from RFC3339Nano format")
+		).Error("[sdk] failed to parse timestamp from RFC3339 format")
 	}
 	return
 }
