@@ -7,7 +7,7 @@ import (
 )
 
 // Reading describes a single device reading with a timestamp. The timestamp
-// should be formatted with the RFC3339Nano layout.
+// should be formatted with the RFC3339 layout.
 type Reading struct {
 	// Timestamp describes the time at which the reading was taken.
 	Timestamp string
