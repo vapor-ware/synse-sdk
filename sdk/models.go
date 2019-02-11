@@ -46,7 +46,7 @@ func (reading *Reading) encode() *synse.V3Reading { // nolint: gocyclo
 	r := synse.V3Reading{
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
-		Context: map[string]string{},
+		Context:   map[string]string{},
 		Unit:      reading.Unit.encode(),
 	}
 

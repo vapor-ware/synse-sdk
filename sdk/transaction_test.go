@@ -61,7 +61,6 @@ func TestGetTransaction2(t *testing.T) {
 	assert.Nil(t, transaction)
 }
 
-
 // TestTransaction_setStatusError tests setting the status of a transaction to Error.
 func TestTransaction_setStatusError(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
