@@ -275,39 +275,24 @@ func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.
 	}, nil
 }
 
-// Devices is the handler for the Synse GRPC Plugin service's `Devices` RPC method.
+// Devices gets all of the devices which a plugin manages.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Devices` RPC method.
 func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Plugin_DevicesServer) error {
-	return nil
+	log.WithFields(log.Fields{
+		"tags": request.Tags,
+		"id": request.Id,
+	}).Debug("[grpc] DEVICES request")
 
-	//log.WithField("request", request).Debug("[grpc] devices rpc request")
-	//var (
-	//	rack   = request.GetRack()
-	//	board  = request.GetBoard()
-	//	device = request.GetDevice()
-	//)
-	//if device != "" {
-	//	return fmt.Errorf("devices rpc method does not support filtering on device")
-	//}
-	//if rack == "" && board != "" {
-	//	return fmt.Errorf("filter specifies board with no rack - must specifiy rack as well")
-	//}
-	//
-	//for _, device := range ctx.devices {
-	//	if rack != "" {
-	//		if device.Location.Rack != rack {
-	//			continue
-	//		}
-	//		if board != "" {
-	//			if device.Location.Board != board {
-	//				continue
-	//			}
-	//		}
-	//	}
-	//	if err := stream.Send(device.encode()); err != nil {
-	//		return err
-	//	}
-	//}
-	//return nil
+
+	for _, device := range ctx.devices {
+		// TODO (etd): filter upon the tags/id. first, we need to update how devices are
+		//  cached/routed to. for now, returning all devices.
+		if err := stream.Send(device.encode()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Metadata is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
