@@ -329,29 +329,29 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 	return nil
 }
 
-// ReadCache is the handler for the Synse GRPC Plugin service's `ReadCached` RPC method.
-func (server *server) ReadCache(bounds *synse.V3Bounds, stream synse.V3Plugin_ReadCacheServer) error {
-	return nil
+// ReadCache gets the cached readings from the plugin. If the plugin is not configured
+// to cache its readings, this will return a dump of the entire current readings state.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `ReadCache` RPC method.
+func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_ReadCacheServer) error {
+	log.WithFields(log.Fields{
+		"start": request.Start,
+		"end": request.End,
+	}).Debug("[grpc] READCACHE request")
 
-	//log.WithField("bounds", bounds).Debugf("[grpc] read cached rpc request")
-	//
-	//// create a channel that will be used to collect the cached readings
-	//readings := make(chan *ReadContext, 128)
-	//go getReadingsFromCache(bounds.Start, bounds.End, readings)
-	//for r := range readings {
-	//	for _, data := range r.Reading {
-	//		deviceReading := &synse.DeviceReading{
-	//			Rack:    r.Rack,
-	//			Board:   r.Board,
-	//			Device:  r.Device,
-	//			Reading: data.encode(),
-	//		}
-	//		if err := stream.Send(deviceReading); err != nil {
-	//			return err
-	//		}
-	//	}
-	//}
-	//return nil
+	// Create a channel that will be used to collect the cached readings.
+	readings := make(chan *ReadContext, 128)
+	go getReadingsFromCache(request.Start, request.End, readings)
+
+	// Encode and stream the readings back to the client.
+	for r := range readings {
+		for _, data := range r.Reading {
+			if err := stream.Send(data.encode()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Write is the handler for the Synse GRPC Plugin service's `Write` RPC method.
