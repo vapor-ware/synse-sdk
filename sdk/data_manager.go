@@ -483,7 +483,7 @@ func (manager *dataManager) write(w *WriteContext) {
 
 	device := ctx.devices[w.ID()]
 	if device == nil {
-		w.transaction.setStateError()
+		w.transaction.setStatusError()
 		msg := "no device found with ID " + w.ID()
 		w.transaction.message = msg
 		log.Error(msg)
@@ -491,7 +491,7 @@ func (manager *dataManager) write(w *WriteContext) {
 		data := decodeWriteData(w.data)
 		err := device.Write(data)
 		if err != nil {
-			w.transaction.setStateError()
+			w.transaction.setStatusError()
 			w.transaction.message = err.Error()
 			log.Errorf("[data manager] failed to write to device %v: %v", w.device, err)
 		}

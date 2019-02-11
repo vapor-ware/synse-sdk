@@ -9,9 +9,7 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/health"
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -119,7 +117,7 @@ func (server *server) Serve() error {
 
 	// Create the grpc server instance, passing in any server options.
 	svr := grpc.NewServer(opts...)
-	synse.RegisterPluginServer(svr, server)
+	synse.RegisterV3PluginServer(svr, server)
 	server.grpc = svr
 
 	log.Infof("[grpc] listening on %s:%s", server.network, server.address)
@@ -225,201 +223,201 @@ func (server *server) Stop() {
 	}
 }
 
+//
+// gRPC API Routes
+//
+
 // Test is the handler for the Synse GRPC Plugin service's `Test` RPC method.
-func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.Status, error) {
-	log.WithField("request", request).Debug("[grpc] test rpc request")
-	return &synse.Status{Ok: true}, nil
+func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3TestStatus, error) {
+	return &synse.V3TestStatus{}, nil
+
+	//log.WithField("request", request).Debug("[grpc] test rpc request")
+	//return &synse.Status{Ok: true}, nil
 }
 
 // Version is the handler for the Synse GRPC Plugin service's `Version` RPC method.
-func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.VersionInfo, error) {
-	log.WithField("request", request).Debug("[grpc] version rpc request")
-	return version.Encode(), nil
+func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.V3Version, error) {
+	return &synse.V3Version{}, nil
+
+	//log.WithField("request", request).Debug("[grpc] version rpc request")
+	//return version.Encode(), nil
 }
 
 // Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
-func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.PluginHealth, error) {
-	log.WithField("request", request).Debug("[grpc] health rpc request")
-	statuses := health.GetStatus()
+func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.V3Health, error) {
+	return &synse.V3Health{}, nil
 
-	// First, we need to determine the overall health of the plugin.
-	// If all statuses are good, we are ok. If some are bad, we are partially
-	// degraded. If all are bad, we are failing.
-	// TODO: do we want partially degraded, or should we just consider it failing
-	total := len(statuses)
-	ok := 0
-	failing := 0
-
-	var healthChecks []*synse.HealthCheck
-	for _, status := range statuses {
-		if status.Ok {
-			ok++
-		} else {
-			failing++
-		}
-		healthChecks = append(healthChecks, status.Encode())
-	}
-
-	var pluginStatus synse.PluginHealth_Status
-	if total == ok {
-		pluginStatus = synse.PluginHealth_OK
-	} else if total == failing {
-		pluginStatus = synse.PluginHealth_FAILING
-	} else {
-		pluginStatus = synse.PluginHealth_PARTIALLY_DEGRADED
-	}
-
-	return &synse.PluginHealth{
-		Timestamp: GetCurrentTime(),
-		Status:    pluginStatus,
-		Checks:    healthChecks,
-	}, nil
-}
-
-// Capabilities is the handler for the Synse GRPC Plugin service's `Capabilities` RPC method.
-func (server *server) Capabilities(request *synse.Empty, stream synse.Plugin_CapabilitiesServer) error {
-	log.WithField("request", request).Debug("[grpc] capabilities rpc request")
-	capabilitiesMap := map[string]*synse.DeviceCapability{}
-
-	for _, device := range ctx.devices {
-		_, hasKind := capabilitiesMap[device.Kind]
-		if !hasKind {
-			var outputs []string
-			for _, o := range device.Outputs {
-				outputs = append(outputs, o.Name)
-			}
-			capabilitiesMap[device.Kind] = &synse.DeviceCapability{
-				Kind:    device.Kind,
-				Outputs: outputs,
-			}
-		}
-	}
-
-	for _, capability := range capabilitiesMap {
-		if err := stream.Send(capability); err != nil {
-			return err
-		}
-	}
-	return nil
+	//log.WithField("request", request).Debug("[grpc] health rpc request")
+	//statuses := health.GetStatus()
+	//
+	//// First, we need to determine the overall health of the plugin.
+	//// If all statuses are good, we are ok. If some are bad, we are partially
+	//// degraded. If all are bad, we are failing.
+	//// TODO: do we want partially degraded, or should we just consider it failing
+	//total := len(statuses)
+	//ok := 0
+	//failing := 0
+	//
+	//var healthChecks []*synse.HealthCheck
+	//for _, status := range statuses {
+	//	if status.Ok {
+	//		ok++
+	//	} else {
+	//		failing++
+	//	}
+	//	healthChecks = append(healthChecks, status.Encode())
+	//}
+	//
+	//var pluginStatus synse.PluginHealth_Status
+	//if total == ok {
+	//	pluginStatus = synse.PluginHealth_OK
+	//} else if total == failing {
+	//	pluginStatus = synse.PluginHealth_FAILING
+	//} else {
+	//	pluginStatus = synse.PluginHealth_PARTIALLY_DEGRADED
+	//}
+	//
+	//return &synse.PluginHealth{
+	//	Timestamp: GetCurrentTime(),
+	//	Status:    pluginStatus,
+	//	Checks:    healthChecks,
+	//}, nil
 }
 
 // Devices is the handler for the Synse GRPC Plugin service's `Devices` RPC method.
-func (server *server) Devices(request *synse.DeviceFilter, stream synse.Plugin_DevicesServer) error {
-	log.WithField("request", request).Debug("[grpc] devices rpc request")
-	var (
-		rack   = request.GetRack()
-		board  = request.GetBoard()
-		device = request.GetDevice()
-	)
-	if device != "" {
-		return fmt.Errorf("devices rpc method does not support filtering on device")
-	}
-	if rack == "" && board != "" {
-		return fmt.Errorf("filter specifies board with no rack - must specifiy rack as well")
-	}
-
-	for _, device := range ctx.devices {
-		if rack != "" {
-			if device.Location.Rack != rack {
-				continue
-			}
-			if board != "" {
-				if device.Location.Board != board {
-					continue
-				}
-			}
-		}
-		if err := stream.Send(device.encode()); err != nil {
-			return err
-		}
-	}
+func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Plugin_DevicesServer) error {
 	return nil
+
+	//log.WithField("request", request).Debug("[grpc] devices rpc request")
+	//var (
+	//	rack   = request.GetRack()
+	//	board  = request.GetBoard()
+	//	device = request.GetDevice()
+	//)
+	//if device != "" {
+	//	return fmt.Errorf("devices rpc method does not support filtering on device")
+	//}
+	//if rack == "" && board != "" {
+	//	return fmt.Errorf("filter specifies board with no rack - must specifiy rack as well")
+	//}
+	//
+	//for _, device := range ctx.devices {
+	//	if rack != "" {
+	//		if device.Location.Rack != rack {
+	//			continue
+	//		}
+	//		if board != "" {
+	//			if device.Location.Board != board {
+	//				continue
+	//			}
+	//		}
+	//	}
+	//	if err := stream.Send(device.encode()); err != nil {
+	//		return err
+	//	}
+	//}
+	//return nil
 }
 
-// Metainfo is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
-func (server *server) Metainfo(ctx context.Context, request *synse.Empty) (*synse.Metadata, error) {
-	log.WithField("request", request).Debug("[grpc] metainfo rpc request")
-	return &synse.Metadata{
-		Name:        metainfo.Name,
-		Maintainer:  metainfo.Maintainer,
-		Tag:         metainfo.Tag,
-		Description: metainfo.Description,
-		Vcs:         metainfo.VCS,
-		Version:     version.Encode(),
-	}, nil
+// Metadata is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
+func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
+	return &synse.V3Metadata{}, nil
+
+	//log.WithField("request", request).Debug("[grpc] metainfo rpc request")
+	//return &synse.Metadata{
+	//	Name:        metainfo.Name,
+	//	Maintainer:  metainfo.Maintainer,
+	//	Tag:         metainfo.Tag,
+	//	Description: metainfo.Description,
+	//	Vcs:         metainfo.VCS,
+	//	Version:     version.Encode(),
+	//}, nil
 }
 
 // Read is the handler for the Synse GRPC Plugin service's `Read` RPC method.
-func (server *server) Read(request *synse.DeviceFilter, stream synse.Plugin_ReadServer) error {
-	log.WithField("request", request).Debug("[grpc] read rpc request")
-	responses, err := DataManager.Read(request)
-	if err != nil {
-		return err
-	}
-	for _, response := range responses {
-		if err := stream.Send(response); err != nil {
-			return err
-		}
-	}
+func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_ReadServer) error {
 	return nil
+
+	//log.WithField("request", request).Debug("[grpc] read rpc request")
+	//responses, err := DataManager.Read(request)
+	//if err != nil {
+	//	return err
+	//}
+	//for _, response := range responses {
+	//	if err := stream.Send(response); err != nil {
+	//		return err
+	//	}
+	//}
+	//return nil
 }
 
-// ReadCached is the handler for the Synse GRPC Plugin service's `ReadCached` RPC method.
-func (server *server) ReadCached(bounds *synse.Bounds, stream synse.Plugin_ReadCachedServer) error {
-	log.WithField("bounds", bounds).Debugf("[grpc] read cached rpc request")
-
-	// create a channel that will be used to collect the cached readings
-	readings := make(chan *ReadContext, 128)
-	go getReadingsFromCache(bounds.Start, bounds.End, readings)
-	for r := range readings {
-		for _, data := range r.Reading {
-			deviceReading := &synse.DeviceReading{
-				Rack:    r.Rack,
-				Board:   r.Board,
-				Device:  r.Device,
-				Reading: data.encode(),
-			}
-			if err := stream.Send(deviceReading); err != nil {
-				return err
-			}
-		}
-	}
+// ReadCache is the handler for the Synse GRPC Plugin service's `ReadCached` RPC method.
+func (server *server) ReadCache(bounds *synse.V3Bounds, stream synse.V3Plugin_ReadCacheServer) error {
 	return nil
+
+	//log.WithField("bounds", bounds).Debugf("[grpc] read cached rpc request")
+	//
+	//// create a channel that will be used to collect the cached readings
+	//readings := make(chan *ReadContext, 128)
+	//go getReadingsFromCache(bounds.Start, bounds.End, readings)
+	//for r := range readings {
+	//	for _, data := range r.Reading {
+	//		deviceReading := &synse.DeviceReading{
+	//			Rack:    r.Rack,
+	//			Board:   r.Board,
+	//			Device:  r.Device,
+	//			Reading: data.encode(),
+	//		}
+	//		if err := stream.Send(deviceReading); err != nil {
+	//			return err
+	//		}
+	//	}
+	//}
+	//return nil
 }
 
 // Write is the handler for the Synse GRPC Plugin service's `Write` RPC method.
-func (server *server) Write(ctx context.Context, request *synse.WriteInfo) (*synse.Transactions, error) {
-	log.WithField("request", request).Debug("[grpc] write rpc request")
-	transactions, err := DataManager.Write(request)
-	if err != nil {
-		return nil, err
-	}
-	return &synse.Transactions{
-		Transactions: transactions,
-	}, nil
+func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayload) (*synse.V3WriteTransaction, error) {
+	return &synse.V3WriteTransaction{}, nil
+
+	//log.WithField("request", request).Debug("[grpc] write rpc request")
+	//transactions, err := DataManager.Write(request)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//return &synse.Transactions{
+	//	Transactions: transactions,
+	//}, nil
+}
+
+
+func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Plugin_WriteSyncServer) error {
+	return nil
 }
 
 // Transaction is the handler for the Synse GRPC Plugin service's `Transaction` RPC method.
-func (server *server) Transaction(request *synse.TransactionFilter, stream synse.Plugin_TransactionServer) error {
-	log.WithField("request", request).Debug("[grpc] transaction rpc request")
+func (server *server) Transaction(request *synse.V3TransactionSelector, stream synse.V3Plugin_TransactionServer) error {
+	return nil
 
-	// If there is no ID with the incoming request, return all cached transactions.
-	if request.Id == "" {
-		for _, item := range transactionCache.Items() {
-			t, ok := item.Object.(*transaction)
-			if ok {
-				if err := stream.Send(t.encode()); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	}
-
-	// Otherwise, return the transaction with the specified ID.
-	transaction := getTransaction(request.Id)
-	if transaction == nil {
-		return errors.NotFoundErr("transaction not found: %v", request.Id)
-	}
-	return stream.Send(transaction.encode())
+	//log.WithField("request", request).Debug("[grpc] transaction rpc request")
+	//
+	//// If there is no ID with the incoming request, return all cached transactions.
+	//if request.Id == "" {
+	//	for _, item := range transactionCache.Items() {
+	//		t, ok := item.Object.(*transaction)
+	//		if ok {
+	//			if err := stream.Send(t.encode()); err != nil {
+	//				return err
+	//			}
+	//		}
+	//	}
+	//	return nil
+	//}
+	//
+	//// Otherwise, return the transaction with the specified ID.
+	//transaction := getTransaction(request.Id)
+	//if transaction == nil {
+	//	return errors.NotFoundErr("transaction not found: %v", request.Id)
+	//}
+	//return stream.Send(transaction.encode())
 }

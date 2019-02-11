@@ -96,7 +96,7 @@ func TestStatus_Encode(t *testing.T) {
 	}
 	out := s.Encode()
 	assert.Equal(t, "foo", out.Name)
-	assert.Equal(t, synse.PluginHealth_OK, out.Status)
+	assert.Equal(t, synse.HealthStatus_OK, out.Status)
 	assert.Equal(t, "", out.Message)
 	assert.Equal(t, "now", out.Timestamp)
 	assert.Equal(t, "test", out.Type)
