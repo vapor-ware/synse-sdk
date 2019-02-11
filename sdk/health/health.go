@@ -107,17 +107,20 @@ type Status struct {
 }
 
 // Encode converts the health Status into the Synse GRPC HealthCheck message.
-func (status *Status) Encode() *synse.HealthCheck {
-	s := synse.PluginHealth_OK
+func (status *Status) Encode() *synse.V3HealthCheck {
+
+	// TODO (etd): could probably just encode this directly in the Status obj
+	healthStatus := synse.HealthStatus_OK
 	if !status.Ok {
-		s = synse.PluginHealth_FAILING
+		healthStatus = synse.HealthStatus_FAILING
 	}
-	return &synse.HealthCheck{
-		Name:      status.Name,
-		Status:    s,
-		Message:   status.Message,
+
+	return &synse.V3HealthCheck{
+		Name: status.Name,
+		Status: healthStatus,
+		Message: status.Message,
 		Timestamp: status.Timestamp,
-		Type:      status.Type,
+		Type: status.Type,
 	}
 }
 

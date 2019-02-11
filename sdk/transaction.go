@@ -10,13 +10,10 @@ import (
 )
 
 const (
-	statusUnknown = synse.WriteResponse_UNKNOWN
-	statusPending = synse.WriteResponse_PENDING
-	statusWriting = synse.WriteResponse_WRITING
-	statusDone    = synse.WriteResponse_DONE
-
-	stateOk    = synse.WriteResponse_OK
-	stateError = synse.WriteResponse_ERROR
+	statusPending = synse.WriteStatus_PENDING
+	statusWriting = synse.WriteStatus_WRITING
+	statusDone    = synse.WriteStatus_DONE
+	statusError   = synse.WriteStatus_ERROR
 )
 
 // transactionCache is a cache with a configurable default expiration time that
@@ -49,8 +46,7 @@ func newTransaction() *transaction {
 	now := GetCurrentTime()
 	t := transaction{
 		id:      id,
-		status:  statusUnknown,
-		state:   stateOk,
+		status:  statusPending,
 		created: now,
 		updated: now,
 		message: "",
@@ -81,44 +77,21 @@ func getTransaction(id string) *transaction {
 // tracks the state and status of that transaction over its lifetime.
 type transaction struct {
 	id      string
-	status  synse.WriteResponse_WriteStatus
-	state   synse.WriteResponse_WriteState
+	status  synse.WriteStatus
 	created string
 	updated string
 	message string
 }
 
-// encode translates the transaction to a corresponding gRPC WriteResponse.
-func (t *transaction) encode() *synse.WriteResponse {
-	return &synse.WriteResponse{
+// encode translates the transaction to a corresponding gRPC V3TransactionStatus.
+func (t *transaction) encode() *synse.V3TransactionStatus {
+	return &synse.V3TransactionStatus{
 		Id:      t.id,
 		Status:  t.status,
-		State:   t.state,
 		Created: t.created,
 		Updated: t.updated,
 		Message: t.message,
 	}
-}
-
-// setStateOk sets the transaction to be in the 'ok' state.
-func (t *transaction) setStateOk() {
-	log.WithField("id", t.id).Debug("[sdk] transaction state set to OK")
-	t.updated = GetCurrentTime()
-	t.state = stateOk
-}
-
-// setStateError sets the transaction to be in the 'error' state.
-func (t *transaction) setStateError() {
-	log.WithField("id", t.id).Debug("[sdk] transaction state set to ERROR")
-	t.updated = GetCurrentTime()
-	t.state = stateError
-}
-
-// setStatusUnknown sets the transaction status to 'unknown'.
-func (t *transaction) setStatusUnknown() {
-	log.WithField("id", t.id).Debug("[sdk] transaction state set to UNKNOWN")
-	t.updated = GetCurrentTime()
-	t.status = statusUnknown
 }
 
 // setStatusPending sets the transaction status to 'pending'.
@@ -140,4 +113,11 @@ func (t *transaction) setStatusDone() {
 	log.WithField("id", t.id).Debug("[sdk] transaction status set to DONE")
 	t.updated = GetCurrentTime()
 	t.status = statusDone
+}
+
+// setStatusError sets the transaction status to 'error'.
+func (t *transaction) setStatusError() {
+	log.WithField("id", t.id).Debug("[sdk] transaction status set to ERROR")
+	t.updated = GetCurrentTime()
+	t.status = statusError
 }

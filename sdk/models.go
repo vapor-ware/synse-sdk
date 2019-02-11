@@ -42,45 +42,49 @@ func NewReading(output *Output, value interface{}) (reading *Reading, err error)
 }
 
 // encode translates the Reading type to the corresponding gRPC Reading message.
-func (reading *Reading) encode() *synse.Reading { // nolint: gocyclo
-	r := synse.Reading{
+func (reading *Reading) encode() *synse.V3Reading { // nolint: gocyclo
+	r := synse.V3Reading{
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
-		Info:      reading.Info,
+		Context: map[string]string{},
 		Unit:      reading.Unit.encode(),
+	}
+
+	if reading.Info != "" {
+		r.Context["info"] = reading.Info
 	}
 
 	switch t := reading.Value.(type) {
 	case string:
-		r.Value = &synse.Reading_StringValue{StringValue: t}
+		r.Value = &synse.V3Reading_StringValue{StringValue: t}
 	case bool:
-		r.Value = &synse.Reading_BoolValue{BoolValue: t}
+		r.Value = &synse.V3Reading_BoolValue{BoolValue: t}
 	case float64:
-		r.Value = &synse.Reading_Float64Value{Float64Value: t}
+		r.Value = &synse.V3Reading_Float64Value{Float64Value: t}
 	case float32:
-		r.Value = &synse.Reading_Float32Value{Float32Value: t}
+		r.Value = &synse.V3Reading_Float32Value{Float32Value: t}
 	case int64:
-		r.Value = &synse.Reading_Int64Value{Int64Value: t}
+		r.Value = &synse.V3Reading_Int64Value{Int64Value: t}
 	case int32:
-		r.Value = &synse.Reading_Int32Value{Int32Value: t}
+		r.Value = &synse.V3Reading_Int32Value{Int32Value: t}
 	case int16:
-		r.Value = &synse.Reading_Int32Value{Int32Value: int32(t)}
+		r.Value = &synse.V3Reading_Int32Value{Int32Value: int32(t)}
 	case int8:
-		r.Value = &synse.Reading_Int32Value{Int32Value: int32(t)}
+		r.Value = &synse.V3Reading_Int32Value{Int32Value: int32(t)}
 	case int:
-		r.Value = &synse.Reading_Int64Value{Int64Value: int64(t)}
+		r.Value = &synse.V3Reading_Int64Value{Int64Value: int64(t)}
 	case []byte:
-		r.Value = &synse.Reading_BytesValue{BytesValue: t}
+		r.Value = &synse.V3Reading_BytesValue{BytesValue: t}
 	case uint64:
-		r.Value = &synse.Reading_Uint64Value{Uint64Value: t}
+		r.Value = &synse.V3Reading_Uint64Value{Uint64Value: t}
 	case uint32:
-		r.Value = &synse.Reading_Uint32Value{Uint32Value: t}
+		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: t}
 	case uint16:
-		r.Value = &synse.Reading_Uint32Value{Uint32Value: uint32(t)}
+		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: uint32(t)}
 	case uint8:
-		r.Value = &synse.Reading_Uint32Value{Uint32Value: uint32(t)}
+		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: uint32(t)}
 	case uint:
-		r.Value = &synse.Reading_Uint64Value{Uint64Value: uint64(t)}
+		r.Value = &synse.V3Reading_Uint64Value{Uint64Value: uint64(t)}
 	case nil:
 		r.Value = nil
 	default:
@@ -131,7 +135,7 @@ type WriteContext struct {
 	device      string
 	board       string
 	rack        string
-	data        *synse.WriteData
+	data        *synse.V3WriteData
 }
 
 // ID returns a compound string that can identify the resource by its
@@ -143,18 +147,18 @@ func (ctx *WriteContext) ID() string {
 
 // WriteData is an SDK alias for the Synse gRPC WriteData. This is done to
 // make writing new plugins easier.
-type WriteData synse.WriteData
+type WriteData synse.V3WriteData
 
 // encode translates the WriteData to a corresponding gRPC WriteData.
-func (w *WriteData) encode() *synse.WriteData {
-	return &synse.WriteData{
+func (w *WriteData) encode() *synse.V3WriteData {
+	return &synse.V3WriteData{
 		Data:   w.Data,
 		Action: w.Action,
 	}
 }
 
 // decodeWriteData decodes the gRPC WriteData to the SDK WriteData.
-func decodeWriteData(data *synse.WriteData) *WriteData {
+func decodeWriteData(data *synse.V3WriteData) *WriteData {
 	return &WriteData{
 		Data:   data.Data,
 		Action: data.Action,
