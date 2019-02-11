@@ -61,11 +61,11 @@ func getReadingsFromCache(start, end string, readings chan *ReadContext) {
 
 	// Parse the timestamps for the starting and ending bounds on the data
 	// window, if they are set.
-	startTime, err := ParseRFC3339Nano(start)
+	startTime, err := ParseRFC3339(start)
 	if err != nil {
 		log.Errorf("[cache] failed to parse start time: %v", err)
 	}
-	endTime, err := ParseRFC3339Nano(end)
+	endTime, err := ParseRFC3339(end)
 	if err != nil {
 		log.Errorf("[cache] failed to parse end time: %v", err)
 	}
@@ -84,7 +84,7 @@ func getReadingsFromCache(start, end string, readings chan *ReadContext) {
 // on the provided start and end bounds, and passes them to the provided channel.
 func getCachedReadings(start, end time.Time, readings chan *ReadContext) {
 	for ts, item := range readingsCache.Items() {
-		cachedTime, err := ParseRFC3339Nano(ts)
+		cachedTime, err := ParseRFC3339(ts)
 		if err != nil {
 			// If we can't parse the timestamp from the cache, an error is logged
 			// and we move on. We should always be using RFC3339 formatted timestamps

@@ -181,7 +181,7 @@ func (c *checker) Update(err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.lastUpdate = time.Now().Format(time.RFC3339Nano)
+	c.lastUpdate = time.Now().Format(time.RFC3339)
 	c.err = err
 }
 
