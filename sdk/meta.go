@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"fmt"
+	"github.com/vapor-ware/synse-server-grpc/go"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -27,6 +28,17 @@ func (m *meta) log() {
 	log.Infof("  Maintainer:  %s", m.Maintainer)
 	log.Infof("  Description: %s", m.Description)
 	log.Infof("  VCS:         %s", m.VCS)
+}
+
+// Encode converts the metainfo struct to its corresponding Synse gRPC V3Metadata message.
+func (m *meta) Encode() *synse.V3Metadata {
+	return &synse.V3Metadata{
+		Name: m.Name,
+		Maintainer: m.Maintainer,
+		Tag: m.Tag,
+		Description: m.Description,
+		Vcs: m.VCS,
+	}
 }
 
 // SetPluginMeta sets the meta-information for a plugin.

@@ -295,19 +295,13 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 	return nil
 }
 
-// Metadata is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
+// Metadata gets the meta-information for a plugin.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Metadata` RPC method.
 func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
-	return &synse.V3Metadata{}, nil
+	log.Debug("[grpc] METADATA request")
 
-	//log.WithField("request", request).Debug("[grpc] metainfo rpc request")
-	//return &synse.Metadata{
-	//	Name:        metainfo.Name,
-	//	Maintainer:  metainfo.Maintainer,
-	//	Tag:         metainfo.Tag,
-	//	Description: metainfo.Description,
-	//	Vcs:         metainfo.VCS,
-	//	Version:     version.Encode(),
-	//}, nil
+	return metainfo.Encode(), nil
 }
 
 // Read is the handler for the Synse GRPC Plugin service's `Read` RPC method.
