@@ -4,12 +4,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"io/ioutil"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-server-grpc/go"
@@ -271,8 +272,8 @@ func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.
 
 	return &synse.V3Health{
 		Timestamp: GetCurrentTime(),
-		Status: healthStatus,
-		Checks: healthChecks,
+		Status:    healthStatus,
+		Checks:    healthChecks,
 	}, nil
 }
 
@@ -282,7 +283,7 @@ func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.
 func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Plugin_DevicesServer) error {
 	log.WithFields(log.Fields{
 		"tags": request.Tags,
-		"id": request.Id,
+		"id":   request.Id,
 	}).Debug("[grpc] DEVICES request")
 
 	// Encode and stream the devices back to the client.
@@ -310,8 +311,8 @@ func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*syns
 // It is the handler for the Synse gRPC V3Plugin service's `Read` RPC method.
 func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_ReadServer) error {
 	log.WithFields(log.Fields{
-		"tags": request.Selector.Tags,
-		"id": request.Selector.Id,
+		"tags":   request.Selector.Tags,
+		"id":     request.Selector.Id,
 		"system": request.SystemOfMeasure,
 	}).Debug("[grpc] READ request")
 
@@ -337,7 +338,7 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_ReadCacheServer) error {
 	log.WithFields(log.Fields{
 		"start": request.Start,
-		"end": request.End,
+		"end":   request.End,
 	}).Debug("[grpc] READCACHE request")
 
 	// Create a channel that will be used to collect the cached readings.
@@ -362,7 +363,7 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayload) (*synse.V3WriteTransaction, error) {
 	log.WithFields(log.Fields{
 		"data": request.Data,
-		"id": request.Selector.Id,
+		"id":   request.Selector.Id,
 	}).Debug("[grpc] WRITE ASYNC request")
 
 	// TODO (etd): update this once various other transaction updates are completed.
@@ -386,7 +387,7 @@ func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayl
 func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Plugin_WriteSyncServer) error {
 	log.WithFields(log.Fields{
 		"data": request.Data,
-		"id": request.Selector.Id,
+		"id":   request.Selector.Id,
 	}).Debug("[grpc] WRITE SYNC request")
 
 	// TODO (etd): update this once various other transaction updates are completed.

@@ -2,8 +2,9 @@ package sdk
 
 import (
 	"fmt"
-	"github.com/vapor-ware/synse-server-grpc/go"
 	"strings"
+
+	"github.com/vapor-ware/synse-server-grpc/go"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -33,11 +34,11 @@ func (m *meta) log() {
 // Encode converts the metainfo struct to its corresponding Synse gRPC V3Metadata message.
 func (m *meta) Encode() *synse.V3Metadata {
 	return &synse.V3Metadata{
-		Name: m.Name,
-		Maintainer: m.Maintainer,
-		Tag: m.Tag,
+		Name:        m.Name,
+		Maintainer:  m.Maintainer,
+		Tag:         m.Tag,
 		Description: m.Description,
-		Vcs: m.VCS,
+		Vcs:         m.VCS,
 	}
 }
 

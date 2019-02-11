@@ -116,11 +116,11 @@ func (status *Status) Encode() *synse.V3HealthCheck {
 	}
 
 	return &synse.V3HealthCheck{
-		Name: status.Name,
-		Status: healthStatus,
-		Message: status.Message,
+		Name:      status.Name,
+		Status:    healthStatus,
+		Message:   status.Message,
 		Timestamp: status.Timestamp,
-		Type: status.Type,
+		Type:      status.Type,
 	}
 }
 
