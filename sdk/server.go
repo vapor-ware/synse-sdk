@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"io/ioutil"
 	"net"
@@ -393,29 +394,32 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 	return nil
 }
 
-// Transaction is the handler for the Synse GRPC Plugin service's `Transaction` RPC method.
+// Transaction gets the status of an asynchronous write via a transaction ID that
+// associated with that action on write.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Transaction` RPC method.
 func (server *server) Transaction(request *synse.V3TransactionSelector, stream synse.V3Plugin_TransactionServer) error {
-	return nil
+	log.WithFields(log.Fields{
+		"id": request.Id,
+	}).Debug("[grpc] TRANSACTION request")
 
-	//log.WithField("request", request).Debug("[grpc] transaction rpc request")
-	//
-	//// If there is no ID with the incoming request, return all cached transactions.
-	//if request.Id == "" {
-	//	for _, item := range transactionCache.Items() {
-	//		t, ok := item.Object.(*transaction)
-	//		if ok {
-	//			if err := stream.Send(t.encode()); err != nil {
-	//				return err
-	//			}
-	//		}
-	//	}
-	//	return nil
-	//}
-	//
-	//// Otherwise, return the transaction with the specified ID.
-	//transaction := getTransaction(request.Id)
-	//if transaction == nil {
-	//	return errors.NotFoundErr("transaction not found: %v", request.Id)
-	//}
-	//return stream.Send(transaction.encode())
+	// If there is no ID specified with the incoming request, return all of the cached
+	// transaction.
+	if request.Id == "" {
+		for _, item := range transactionCache.Items() {
+			t, ok := item.Object.(*transaction)
+			if ok {
+				if err := stream.Send(t.encode()); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Otherwise, return only the transaction with the specified ID.
+	t := getTransaction(request.Id)
+	if t == nil {
+		return errors.NotFoundErr("transaction not found: %v", request.Id)
+	}
+	return stream.Send(t.encode())
 }
