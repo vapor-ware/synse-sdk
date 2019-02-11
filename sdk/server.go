@@ -227,20 +227,22 @@ func (server *server) Stop() {
 // gRPC API Routes
 //
 
-// Test is the handler for the Synse GRPC Plugin service's `Test` RPC method.
+// Test checks whether the plugin is reachable and ready.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Test` RPC method.
 func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3TestStatus, error) {
-	return &synse.V3TestStatus{}, nil
+	log.Debug("[grpc] TEST request")
 
-	//log.WithField("request", request).Debug("[grpc] test rpc request")
-	//return &synse.Status{Ok: true}, nil
+	return &synse.V3TestStatus{Ok: true}, nil
 }
 
-// Version is the handler for the Synse GRPC Plugin service's `Version` RPC method.
+// Version gets the version information for the plugin.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Version` RPC method.
 func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.V3Version, error) {
-	return &synse.V3Version{}, nil
+	log.Debug("[grpc] VERSION request")
 
-	//log.WithField("request", request).Debug("[grpc] version rpc request")
-	//return version.Encode(), nil
+	return version.Encode(), nil
 }
 
 // Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
@@ -389,7 +391,6 @@ func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayl
 	//	Transactions: transactions,
 	//}, nil
 }
-
 
 func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Plugin_WriteSyncServer) error {
 	return nil
