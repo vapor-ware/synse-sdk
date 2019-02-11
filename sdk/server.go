@@ -284,7 +284,7 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 		"id": request.Id,
 	}).Debug("[grpc] DEVICES request")
 
-
+	// Encode and stream the devices back to the client.
 	for _, device := range ctx.devices {
 		// TODO (etd): filter upon the tags/id. first, we need to update how devices are
 		//  cached/routed to. for now, returning all devices.
@@ -304,21 +304,29 @@ func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*syns
 	return metainfo.Encode(), nil
 }
 
-// Read is the handler for the Synse GRPC Plugin service's `Read` RPC method.
+// Read gets readings for the specified plugin device(s).
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Read` RPC method.
 func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_ReadServer) error {
-	return nil
+	log.WithFields(log.Fields{
+		"tags": request.Selector.Tags,
+		"id": request.Selector.Id,
+		"system": request.SystemOfMeasure,
+	}).Debug("[grpc] READ request")
 
-	//log.WithField("request", request).Debug("[grpc] read rpc request")
-	//responses, err := DataManager.Read(request)
-	//if err != nil {
-	//	return err
-	//}
-	//for _, response := range responses {
-	//	if err := stream.Send(response); err != nil {
-	//		return err
-	//	}
-	//}
-	//return nil
+	// Get device readings from the DataManager.
+	responses, err := DataManager.Read(request)
+	if err != nil {
+		return err
+	}
+
+	// Encode and stream the readings back to the client.
+	for _, response := range responses {
+		if err := stream.Send(response); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ReadCache is the handler for the Synse GRPC Plugin service's `ReadCached` RPC method.
