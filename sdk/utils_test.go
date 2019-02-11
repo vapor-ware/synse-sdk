@@ -242,9 +242,9 @@ func TestFilterDevicesErr(t *testing.T) {
 	}
 }
 
-// TestParseRFC3339Nano_Ok tests successfully parsing an RFC3339 timestamp
+// TestParseRFC3339_Ok tests successfully parsing an RFC3339 timestamp
 // into a Time struct.
-func TestParseRFC3339Nano_Ok(t *testing.T) {
+func TestParseRFC3339_Ok(t *testing.T) {
 	// get the EST location
 	est, err := time.LoadLocation("EST")
 	assert.NoError(t, err)
@@ -282,16 +282,16 @@ func TestParseRFC3339Nano_Ok(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			actual, err := ParseRFC3339Nano(tt.timestamp)
+			actual, err := ParseRFC3339(tt.timestamp)
 			assert.NoError(t, err)
 			assert.True(t, tt.expected.Equal(actual))
 		})
 	}
 }
 
-// TestParseRFC3339Nano_Error tests unsuccessfully parsing a timestamp into
+// TestParseRFC3339_Error tests unsuccessfully parsing a timestamp into
 // a Time struct
-func TestParseRFC3339Nano_Error(t *testing.T) {
+func TestParseRFC3339_Error(t *testing.T) {
 	var tests = []string{
 		"foobar",
 		"...",
@@ -311,7 +311,7 @@ func TestParseRFC3339Nano_Error(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			actual, err := ParseRFC3339Nano(tt)
+			actual, err := ParseRFC3339(tt)
 			assert.Error(t, err)
 			assert.Empty(t, actual)
 		})
