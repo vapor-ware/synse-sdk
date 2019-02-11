@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"io/ioutil"
 	"net"
 	"os"
@@ -245,45 +246,33 @@ func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse
 	return version.Encode(), nil
 }
 
-// Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
+// Health gets the overall health status of the plugin.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Health` RPC method.
 func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.V3Health, error) {
-	return &synse.V3Health{}, nil
+	log.Debug("[grpc] HEALTH request")
 
-	//log.WithField("request", request).Debug("[grpc] health rpc request")
-	//statuses := health.GetStatus()
-	//
-	//// First, we need to determine the overall health of the plugin.
-	//// If all statuses are good, we are ok. If some are bad, we are partially
-	//// degraded. If all are bad, we are failing.
-	//// TODO: do we want partially degraded, or should we just consider it failing
-	//total := len(statuses)
-	//ok := 0
-	//failing := 0
-	//
-	//var healthChecks []*synse.HealthCheck
-	//for _, status := range statuses {
-	//	if status.Ok {
-	//		ok++
-	//	} else {
-	//		failing++
-	//	}
-	//	healthChecks = append(healthChecks, status.Encode())
-	//}
-	//
-	//var pluginStatus synse.PluginHealth_Status
-	//if total == ok {
-	//	pluginStatus = synse.PluginHealth_OK
-	//} else if total == failing {
-	//	pluginStatus = synse.PluginHealth_FAILING
-	//} else {
-	//	pluginStatus = synse.PluginHealth_PARTIALLY_DEGRADED
-	//}
-	//
-	//return &synse.PluginHealth{
-	//	Timestamp: GetCurrentTime(),
-	//	Status:    pluginStatus,
-	//	Checks:    healthChecks,
-	//}, nil
+	// Get the health statuses from the health catalog.
+	statuses := health.GetStatus()
+
+	// Determine whether we are ok or failing. If all checks are okay, the plugin is
+	// healthy. If there are any checks that are failing, the plugin is considered
+	// unhealthy. Synse plugins do not support the notion of partially degraded.
+	healthStatus := synse.HealthStatus_OK
+
+	var healthChecks []*synse.V3HealthCheck
+	for _, status := range statuses {
+		if !status.Ok {
+			healthStatus = synse.HealthStatus_FAILING
+		}
+		healthChecks = append(healthChecks, status.Encode())
+	}
+
+	return &synse.V3Health{
+		Timestamp: GetCurrentTime(),
+		Status: healthStatus,
+		Checks: healthChecks,
+	}, nil
 }
 
 // Devices is the handler for the Synse GRPC Plugin service's `Devices` RPC method.
