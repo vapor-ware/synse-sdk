@@ -9,6 +9,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
@@ -245,141 +248,126 @@ func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse
 	return version.Encode(), nil
 }
 
-// Health is the handler for the Synse GRPC Plugin service's `Health` RPC method.
+// Health gets the overall health status of the plugin.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Health` RPC method.
 func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.V3Health, error) {
-	return &synse.V3Health{}, nil
+	log.Debug("[grpc] HEALTH request")
 
-	//log.WithField("request", request).Debug("[grpc] health rpc request")
-	//statuses := health.GetStatus()
-	//
-	//// First, we need to determine the overall health of the plugin.
-	//// If all statuses are good, we are ok. If some are bad, we are partially
-	//// degraded. If all are bad, we are failing.
-	//// TODO: do we want partially degraded, or should we just consider it failing
-	//total := len(statuses)
-	//ok := 0
-	//failing := 0
-	//
-	//var healthChecks []*synse.HealthCheck
-	//for _, status := range statuses {
-	//	if status.Ok {
-	//		ok++
-	//	} else {
-	//		failing++
-	//	}
-	//	healthChecks = append(healthChecks, status.Encode())
-	//}
-	//
-	//var pluginStatus synse.PluginHealth_Status
-	//if total == ok {
-	//	pluginStatus = synse.PluginHealth_OK
-	//} else if total == failing {
-	//	pluginStatus = synse.PluginHealth_FAILING
-	//} else {
-	//	pluginStatus = synse.PluginHealth_PARTIALLY_DEGRADED
-	//}
-	//
-	//return &synse.PluginHealth{
-	//	Timestamp: GetCurrentTime(),
-	//	Status:    pluginStatus,
-	//	Checks:    healthChecks,
-	//}, nil
+	// Get the health statuses from the health catalog.
+	statuses := health.GetStatus()
+
+	// Determine whether we are ok or failing. If all checks are okay, the plugin is
+	// healthy. If there are any checks that are failing, the plugin is considered
+	// unhealthy. Synse plugins do not support the notion of partially degraded.
+	healthStatus := synse.HealthStatus_OK
+
+	var healthChecks []*synse.V3HealthCheck
+	for _, status := range statuses {
+		if !status.Ok {
+			healthStatus = synse.HealthStatus_FAILING
+		}
+		healthChecks = append(healthChecks, status.Encode())
+	}
+
+	return &synse.V3Health{
+		Timestamp: GetCurrentTime(),
+		Status:    healthStatus,
+		Checks:    healthChecks,
+	}, nil
 }
 
-// Devices is the handler for the Synse GRPC Plugin service's `Devices` RPC method.
+// Devices gets all of the devices which a plugin manages.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Devices` RPC method.
 func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Plugin_DevicesServer) error {
-	return nil
+	log.WithFields(log.Fields{
+		"tags": request.Tags,
+		"id":   request.Id,
+	}).Debug("[grpc] DEVICES request")
 
-	//log.WithField("request", request).Debug("[grpc] devices rpc request")
-	//var (
-	//	rack   = request.GetRack()
-	//	board  = request.GetBoard()
-	//	device = request.GetDevice()
-	//)
-	//if device != "" {
-	//	return fmt.Errorf("devices rpc method does not support filtering on device")
-	//}
-	//if rack == "" && board != "" {
-	//	return fmt.Errorf("filter specifies board with no rack - must specifiy rack as well")
-	//}
-	//
-	//for _, device := range ctx.devices {
-	//	if rack != "" {
-	//		if device.Location.Rack != rack {
-	//			continue
-	//		}
-	//		if board != "" {
-	//			if device.Location.Board != board {
-	//				continue
-	//			}
-	//		}
-	//	}
-	//	if err := stream.Send(device.encode()); err != nil {
-	//		return err
-	//	}
-	//}
-	//return nil
+	// Encode and stream the devices back to the client.
+	for _, device := range ctx.devices {
+		// TODO (etd): filter upon the tags/id. first, we need to update how devices are
+		//  cached/routed to. for now, returning all devices.
+		if err := stream.Send(device.encode()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// Metadata is the handler for the Synse GRPC Plugin service's `Metainfo` RPC method.
+// Metadata gets the meta-information for a plugin.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Metadata` RPC method.
 func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
-	return &synse.V3Metadata{}, nil
+	log.Debug("[grpc] METADATA request")
 
-	//log.WithField("request", request).Debug("[grpc] metainfo rpc request")
-	//return &synse.Metadata{
-	//	Name:        metainfo.Name,
-	//	Maintainer:  metainfo.Maintainer,
-	//	Tag:         metainfo.Tag,
-	//	Description: metainfo.Description,
-	//	Vcs:         metainfo.VCS,
-	//	Version:     version.Encode(),
-	//}, nil
+	return metainfo.Encode(), nil
 }
 
-// Read is the handler for the Synse GRPC Plugin service's `Read` RPC method.
+// Read gets readings for the specified plugin device(s).
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Read` RPC method.
 func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_ReadServer) error {
-	return nil
+	log.WithFields(log.Fields{
+		"tags":   request.Selector.Tags,
+		"id":     request.Selector.Id,
+		"system": request.SystemOfMeasure,
+	}).Debug("[grpc] READ request")
 
-	//log.WithField("request", request).Debug("[grpc] read rpc request")
-	//responses, err := DataManager.Read(request)
-	//if err != nil {
-	//	return err
-	//}
-	//for _, response := range responses {
-	//	if err := stream.Send(response); err != nil {
-	//		return err
-	//	}
-	//}
-	//return nil
+	// Get device readings from the DataManager.
+	responses, err := DataManager.Read(request)
+	if err != nil {
+		return err
+	}
+
+	// Encode and stream the readings back to the client.
+	for _, response := range responses {
+		if err := stream.Send(response); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// ReadCache is the handler for the Synse GRPC Plugin service's `ReadCached` RPC method.
-func (server *server) ReadCache(bounds *synse.V3Bounds, stream synse.V3Plugin_ReadCacheServer) error {
-	return nil
+// ReadCache gets the cached readings from the plugin. If the plugin is not configured
+// to cache its readings, this will return a dump of the entire current readings state.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `ReadCache` RPC method.
+func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_ReadCacheServer) error {
+	log.WithFields(log.Fields{
+		"start": request.Start,
+		"end":   request.End,
+	}).Debug("[grpc] READCACHE request")
 
-	//log.WithField("bounds", bounds).Debugf("[grpc] read cached rpc request")
-	//
-	//// create a channel that will be used to collect the cached readings
-	//readings := make(chan *ReadContext, 128)
-	//go getReadingsFromCache(bounds.Start, bounds.End, readings)
-	//for r := range readings {
-	//	for _, data := range r.Reading {
-	//		deviceReading := &synse.DeviceReading{
-	//			Rack:    r.Rack,
-	//			Board:   r.Board,
-	//			Device:  r.Device,
-	//			Reading: data.encode(),
-	//		}
-	//		if err := stream.Send(deviceReading); err != nil {
-	//			return err
-	//		}
-	//	}
-	//}
-	//return nil
+	// Create a channel that will be used to collect the cached readings.
+	readings := make(chan *ReadContext, 128)
+	go getReadingsFromCache(request.Start, request.End, readings)
+
+	// Encode and stream the readings back to the client.
+	for r := range readings {
+		for _, data := range r.Reading {
+			if err := stream.Send(data.encode()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
-// Write is the handler for the Synse GRPC Plugin service's `Write` RPC method.
+// WriteAsync writes data to the specified plugin device. A transaction ID is returned
+// so the status of the write can be checked asynchronously.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `WriteAsync` RPC method.
 func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayload) (*synse.V3WriteTransaction, error) {
+	log.WithFields(log.Fields{
+		"data": request.Data,
+		"id":   request.Selector.Id,
+	}).Debug("[grpc] WRITE ASYNC request")
+
+	// TODO (etd): update this once various other transaction updates are completed.
+
 	return &synse.V3WriteTransaction{}, nil
 
 	//log.WithField("request", request).Debug("[grpc] write rpc request")
@@ -392,33 +380,47 @@ func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayl
 	//}, nil
 }
 
+// WriteSync writes data to the specified plugin device. The request blocks until the
+// write resolves so no asynchronous status checking is needed for the write action.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `WriteSync` RPC method.
 func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Plugin_WriteSyncServer) error {
+	log.WithFields(log.Fields{
+		"data": request.Data,
+		"id":   request.Selector.Id,
+	}).Debug("[grpc] WRITE SYNC request")
+
+	// TODO (etd): update this once various other transaction updates are completed.
+
 	return nil
 }
 
-// Transaction is the handler for the Synse GRPC Plugin service's `Transaction` RPC method.
+// Transaction gets the status of an asynchronous write via a transaction ID that
+// associated with that action on write.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Transaction` RPC method.
 func (server *server) Transaction(request *synse.V3TransactionSelector, stream synse.V3Plugin_TransactionServer) error {
-	return nil
+	log.WithFields(log.Fields{
+		"id": request.Id,
+	}).Debug("[grpc] TRANSACTION request")
 
-	//log.WithField("request", request).Debug("[grpc] transaction rpc request")
-	//
-	//// If there is no ID with the incoming request, return all cached transactions.
-	//if request.Id == "" {
-	//	for _, item := range transactionCache.Items() {
-	//		t, ok := item.Object.(*transaction)
-	//		if ok {
-	//			if err := stream.Send(t.encode()); err != nil {
-	//				return err
-	//			}
-	//		}
-	//	}
-	//	return nil
-	//}
-	//
-	//// Otherwise, return the transaction with the specified ID.
-	//transaction := getTransaction(request.Id)
-	//if transaction == nil {
-	//	return errors.NotFoundErr("transaction not found: %v", request.Id)
-	//}
-	//return stream.Send(transaction.encode())
+	// If there is no ID specified with the incoming request, return all of the cached
+	// transaction.
+	if request.Id == "" {
+		for _, item := range transactionCache.Items() {
+			t, ok := item.Object.(*transaction)
+			if ok {
+				if err := stream.Send(t.encode()); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Otherwise, return only the transaction with the specified ID.
+	t := getTransaction(request.Id)
+	if t == nil {
+		return errors.NotFoundErr("transaction not found: %v", request.Id)
+	}
+	return stream.Send(t.encode())
 }
