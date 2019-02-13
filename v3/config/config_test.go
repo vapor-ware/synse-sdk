@@ -709,7 +709,7 @@ func TestLoader_Load(t *testing.T) {
 	err := l.Load()
 	assert.NoError(t, err)
 
-	d := &Device{}
+	d := &Devices{}
 	err = l.Scan(d)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, d.Version)
