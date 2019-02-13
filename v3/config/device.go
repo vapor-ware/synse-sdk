@@ -23,29 +23,29 @@ type DeviceProto struct {
 	//
 	// The type should be descriptive and categorical, but is not well-defined,
 	// meaning that devices are free to define their own types.
-	Type      string
+	Type string
 
 	// Metadata contains any meta-information for the device(s). There is no
 	// restriction on what data can be specified here. It is optional, so a
 	// device does not need to specify any meta-information, though it can
 	// be helpful in identifying the device or tracking information about it.
-	Metadata  map[string]string
+	Metadata map[string]string
 
 	// Tags contains the set of tags to apply to each of the devices that
 	// are instances of this prototype. It is not required to define tags.
 	// All devices will get system-generated tags, so these are supplemental.
-	Tags      []string
+	Tags []string
 
 	// Data is any data that can be applied to each of the devices that are
 	// instances of this prototype. If specified, this data will be merged
 	// with any instance data, where the instance data will override any
 	// conflicting values.
-	Data      map[string]interface{}
+	Data map[string]interface{}
 
 	// Handler is the name of the plugin's DeviceHandler that will be used
 	// for instances of the device prototype. All instances will inherit
 	// this handler, but can override.
-	Handler   string
+	Handler string
 
 	// System defines the System of Measure for the instances of the device
 	// prototype. All instances will inherit this unless they specify their
@@ -53,7 +53,7 @@ type DeviceProto struct {
 	// (imperial, metric) which the device returns reading data. This is not
 	// required in all cases, since the DeviceHandler may specify the system
 	// as well.
-	System    string
+	System string
 
 	// Instances contains the data for all configured instances of the
 	// device prototype.
@@ -64,24 +64,24 @@ type DeviceProto struct {
 type DeviceInstance struct {
 	// Info is a string which provides a short human-understandable description
 	// or summary of the device instance.
-	Info      string
+	Info string
 
 	// Tags contains the set of tags which apply to the device instance. It
 	// is not required to define tags. All devices will get system-generated
 	// tags, so these are supplemental.
-	Tags      []string
+	Tags []string
 
 	// Data contains any protocol/plugin/device-specific configuration that
 	// is associated with the device instance. It is the responsibility of the
 	// plugin to handle these values correctly.
-	Data      map[string]interface{}
+	Data map[string]interface{}
 
 	// Output specifies the name of the OutputType that this device instance
 	// will use. This is not needed for all devices/plugins, as many DeviceHandlers
 	// will already know which output to use. This field is used in cases of
 	// generalized plugins, such as Modbus-IP, where a generalized handler
 	// will need to map something (like a set of registers) to a reading output.
-	Output    string
+	Output string
 
 	// SortIndex is a 1-based index that can be used to sort devices in a
 	// Synse Server scan. The zero value (0) designates no special sorting
@@ -90,7 +90,7 @@ type DeviceInstance struct {
 
 	// Handler is the name of the plugin's DeviceHandler that will be used to
 	// interface with this device.
-	Handler   string
+	Handler string
 
 	// Alias defines an alias that can be used to reference the device. The
 	// alias can either be a pre-defined string, or a template which will
@@ -115,7 +115,7 @@ type DeviceInstance struct {
 	// instance. This is not required in all cases, since the DeviceHandler
 	// may specify a system natively. Generally, this is used for general-purpose
 	// plugins, such as Modbus-IP.
-	System        string
+	System string
 
 	// DisableInheritance determines whether the device instance should inherit
 	// from its device prototype.
