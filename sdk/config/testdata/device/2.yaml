@@ -1,0 +1,19 @@
+version: 3
+devices:
+  - type: temperature
+    handler: max11610
+    metadata:
+      model: MAX11610
+    tags:
+      - something/model:max11610
+    instances:
+      - info: Zone 1 Temperature
+        tags:
+          - etd/zone:1
+        data:
+          channel: "00001"
+      - info: Zone 2 Temperature
+        tags:
+          - etd/zone:2
+        data:
+          channel: "00002"
