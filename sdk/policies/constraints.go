@@ -13,7 +13,6 @@ var constraints = []constraint{
 	oneOrNoneOf(PluginConfigFileOptional, PluginConfigFileRequired, PluginConfigFileProhibited),
 	oneOrNoneOf(DeviceConfigFileOptional, DeviceConfigFileRequired, DeviceConfigFileProhibited),
 	oneOrNoneOf(DeviceConfigDynamicOptional, DeviceConfigDynamicRequired, DeviceConfigDynamicProhibited),
-	oneOrNoneOf(TypeConfigFileOptional, TypeConfigFileRequired, TypeConfigFileProhibited),
 }
 
 // checkConstraints checks the given slice of ConfigPolicies for constraint

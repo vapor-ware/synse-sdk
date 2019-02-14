@@ -56,21 +56,6 @@ const (
 	// both dynamic registration which generates DeviceConfig instance and Device
 	// instances.
 	DeviceConfigDynamicProhibited
-
-	// TypeConfigFileOptional is a policy that allows zero or more output type
-	// configurations from config file. This is the default policy for output
-	// type file config.
-	TypeConfigFileOptional
-
-	// TypeConfigFileRequired is a policy that requires a plugin to have
-	// one or more output type configurations from config file. It does not prohibit
-	// the plugin from defining additional type configs directly in its code.
-	TypeConfigFileRequired
-
-	// TypeConfigFileProhibited is a policy that prevents a plugin from using
-	// type configurations from config file(s). This can be used if a plugin
-	// needs to restrict its configuration paths.
-	TypeConfigFileProhibited
 )
 
 // policyStrings maps ConfigPolicies to their name.
@@ -88,10 +73,6 @@ var policyStrings = map[ConfigPolicy]string{
 	DeviceConfigDynamicOptional:   "DeviceConfigDynamicOptional",
 	DeviceConfigDynamicRequired:   "DeviceConfigDynamicRequired",
 	DeviceConfigDynamicProhibited: "DeviceConfigDynamicProhibited",
-
-	TypeConfigFileOptional:   "TypeConfigFileOptional",
-	TypeConfigFileRequired:   "TypeConfigFileRequired",
-	TypeConfigFileProhibited: "TypeConfigFileProhibited",
 }
 
 // String returns the name of the ConfigPolicy.
@@ -113,7 +94,6 @@ type manager struct {
 	pluginConfigFilePolicy    ConfigPolicy
 	deviceConfigFilePolicy    ConfigPolicy
 	deviceConfigDynamicPolicy ConfigPolicy
-	typeConfigFilePolicy      ConfigPolicy
 }
 
 // Add adds a ConfigPolicy to the policies tracked by the manager.
@@ -132,7 +112,6 @@ func (m *manager) Clear() {
 	m.pluginConfigFilePolicy = NoPolicy
 	m.deviceConfigFilePolicy = NoPolicy
 	m.deviceConfigDynamicPolicy = NoPolicy
-	m.typeConfigFilePolicy = NoPolicy
 }
 
 // Clear clears the SDK's policy manager of all policies and settings.
@@ -221,30 +200,6 @@ func (m *manager) GetDeviceConfigDynamicPolicy() ConfigPolicy {
 // policy was explicitly set, the default policy is returned.
 func GetDeviceConfigDynamicPolicy() ConfigPolicy {
 	return defaultManager.GetDeviceConfigDynamicPolicy()
-}
-
-// GetTypeConfigFilePolicy gets the output type config policy for the manager.
-// If no policy was explicitly set, this will return the default policy.
-func (m *manager) GetTypeConfigFilePolicy() ConfigPolicy {
-	if m.typeConfigFilePolicy == NoPolicy {
-		for _, p := range m.policies {
-			switch p {
-			case TypeConfigFileOptional, TypeConfigFileRequired, TypeConfigFileProhibited:
-				m.typeConfigFilePolicy = p
-			}
-		}
-		if m.typeConfigFilePolicy == NoPolicy {
-			m.typeConfigFilePolicy = TypeConfigFileOptional
-		}
-	}
-	return m.typeConfigFilePolicy
-}
-
-// GetTypeConfigFilePolicy gets the output type config policy that was registered
-// with the SDK's policy manager. If no policy was explicitly set, the default
-// policy is returned.
-func GetTypeConfigFilePolicy() ConfigPolicy {
-	return defaultManager.GetTypeConfigFilePolicy()
 }
 
 // Check checks the policy constraint functions against the manager's set of

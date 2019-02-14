@@ -12,16 +12,9 @@ import (
 // its type configs.
 var Config = config{}
 
-// TODO (etd): The organization of all these config pieces are... confusing and
-//  not necessarily intuitive. Additionally, we are accessing all of our config
-//  globally which isn't technically ideal since any plugin could be free to
-//  override it. What we *should* do is load the config and pass it to the thing
-//  that needs it. e.g. on init, load the plugin config. The Plugin can take it
-//  as a param.
-//  There are questions around this too.. like how do we make that info accessible
-//  to other components. Also, we have 3 different kinds of configs and they can
-//  be referenced from a number of places, so there are a lot of moving parts (hence
-//  why this stuff is laid out in a fairly confusing way).
+// TODO (etd): this will largely, if not entirely, be stripped out once the simplified
+//  config flow is set up. for now, it will be kept around for reference while the
+//  new plumbing is built out.
 
 // config is a struct that holds all of the configs.
 type config struct {
