@@ -10,6 +10,6 @@ const (
 	modeSerial   = "serial"
 	modeParallel = "parallel"
 
-	networkTypeTCP  = "tcp"
-	networkTypeUnix = "unix"
+	//networkTypeTCP  = "tcp"
+	//networkTypeUnix = "unix"
 )
