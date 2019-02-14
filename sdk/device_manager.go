@@ -29,6 +29,9 @@ const (
 
 var DeviceManager *deviceManager
 
+func init() {
+	DeviceManager = NewDeviceManager()
+}
 
 func GetDeviceByID() {}
 func GetDeviceByAlias() {}
@@ -47,18 +50,8 @@ type deviceManager struct {
 }
 
 // NewDeviceManager creates a new DeviceManager.
-func NewDeviceManager() (*deviceManager, error) {
-
-	// Load the device configurations.
-	conf := new(cfg.Devices)
-	if err := loadDeviceConfigs(conf); err != nil {
-		return nil, err
-	}
-
-	manager := deviceManager{
-		config: conf,
-	}
-	return &manager, nil
+func NewDeviceManager() *deviceManager {
+	return &deviceManager{}
 }
 
 // AddDevice adds a device to the DeviceManager device slice.
@@ -76,6 +69,7 @@ func (manager *deviceManager) AddDevices(devices ...*Device) {
 func (manager *deviceManager) registerActions(plugin *Plugin) {
 	// Register pre-run actions.
 	plugin.RegisterPreRunActions(
+		func(plugin *Plugin) error { return manager.loadConfig() },
 		func(plugin *Plugin) error { return manager.loadDevices() },
 	)
 }
@@ -110,8 +104,7 @@ func (manager *deviceManager) loadDevices() error {
 	return nil
 }
 
-// loadDeviceConfigs loads the configuration for Plugin devices.
-func loadDeviceConfigs(conf *cfg.Devices) error {
+func (manager *deviceManager) loadConfig() error {
 	// Setup the config loader for the device manager.
 	loader := cfg.NewYamlLoader("device")
 	loader.EnvOverride = DeviceEnvOverride
@@ -125,5 +118,5 @@ func loadDeviceConfigs(conf *cfg.Devices) error {
 		return err
 	}
 
-	return loader.Scan(conf)
+	return loader.Scan(manager.config)
 }
