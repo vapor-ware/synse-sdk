@@ -18,6 +18,12 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
+const (
+	// PluginEnvOverride defines the environment variable that can be used to
+	// set an override config location for the Plugin configuration file.
+	PluginEnvOverride = "PLUGIN_CONFIG"
+)
+
 var (
 	flagDebug   bool
 	flagVersion bool
@@ -241,7 +247,7 @@ func loadPluginConfig(conf *cfg.Plugin) error {
 	// Setup the config loader for the plugin.
 	loader := cfg.NewYamlLoader("plugin")
 	loader.EnvPrefix = "PLUGIN"
-	loader.EnvOverride = "PLUGIN_CONFIG"
+	loader.EnvOverride = PluginEnvOverride
 	loader.FileName = "config"
 	loader.AddSearchPaths(
 		".",                        // Current working directory

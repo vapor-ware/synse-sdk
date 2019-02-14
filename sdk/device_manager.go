@@ -21,6 +21,12 @@ import (
 	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
+const (
+	// DeviceEnvOverride defines the environment variable that can be used to
+	// set an override config location for device configuration files.
+	DeviceEnvOverride = "PLUGIN_DEVICE_CONFIG"
+)
+
 var DeviceManager *deviceManager
 
 
@@ -108,7 +114,7 @@ func (manager *deviceManager) loadDevices() error {
 func loadDeviceConfigs(conf *cfg.Devices) error {
 	// Setup the config loader for the device manager.
 	loader := cfg.NewYamlLoader("device")
-	loader.EnvOverride = "PLUGIN_DEVICE_CONFIG"
+	loader.EnvOverride = DeviceEnvOverride
 	loader.AddSearchPaths(
 		"./config/device", // Local device config directory
 		"/etc/synse/plugin/config/device", // Default device config directory
