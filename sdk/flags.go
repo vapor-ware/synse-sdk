@@ -14,6 +14,12 @@ var (
 	flagDryRun  bool
 )
 
+// TODO (etd): this could be moved to plugin.go once that is cleaned up and
+//  simplified a bit. then, it would become more clear to someone looking at
+//  how a plugin is initialized which command line flags are being processed.
+//  It also makes it easier for plugin setup to have these flags available right
+//  there...
+
 func init() {
 	flag.BoolVar(&flagDebug, "debug", false, "run the plugin with debug logging")
 	flag.BoolVar(&flagVersion, "version", false, "print plugin version information")

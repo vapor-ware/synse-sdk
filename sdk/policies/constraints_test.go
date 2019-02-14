@@ -86,11 +86,6 @@ func TestCheckConstraints(t *testing.T) {
 			errCount: 0,
 		},
 		{
-			desc:     "one TypeConfig policy - should not fail",
-			policies: []ConfigPolicy{TypeConfigFileRequired},
-			errCount: 0,
-		},
-		{
 			desc:     "one PluginConfig policy - should not fail",
 			policies: []ConfigPolicy{PluginConfigFileRequired},
 			errCount: 0,
@@ -108,11 +103,6 @@ func TestCheckConstraints(t *testing.T) {
 		{
 			desc:     "conflicting DeviceConfig policies - should fail",
 			policies: []ConfigPolicy{DeviceConfigFileRequired, DeviceConfigFileOptional, PluginConfigFileOptional},
-			errCount: 1,
-		},
-		{
-			desc:     "conflicting TypeConfig policies - should fail",
-			policies: []ConfigPolicy{TypeConfigFileProhibited, TypeConfigFileOptional, PluginConfigFileOptional},
 			errCount: 1,
 		},
 		{

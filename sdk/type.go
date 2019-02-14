@@ -11,6 +11,10 @@ import (
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
+// TODO (etd): most of this will be changed or updated. output types will no
+//  longer be definable via configL they can only be defined in code for v3.
+
+
 // OutputType provides information about the output of a device reading.
 type OutputType struct {
 
