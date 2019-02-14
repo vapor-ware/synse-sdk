@@ -67,21 +67,6 @@ func TestConfigPolicy_String(t *testing.T) {
 			expected: "DeviceConfigDynamicProhibited",
 		},
 		{
-			desc:     "String for TypeConfigFileOptional",
-			policy:   TypeConfigFileOptional,
-			expected: "TypeConfigFileOptional",
-		},
-		{
-			desc:     "String for TypeConfigFileRequired",
-			policy:   TypeConfigFileRequired,
-			expected: "TypeConfigFileRequired",
-		},
-		{
-			desc:     "String for TypeConfigFileProhibited",
-			policy:   TypeConfigFileProhibited,
-			expected: "TypeConfigFileProhibited",
-		},
-		{
 			desc:     "String for custom policy",
 			policy:   ConfigPolicy(17),
 			expected: "unknown",
@@ -191,39 +176,6 @@ func TestGetDeviceConfigDynamicPolicy(t *testing.T) {
 	defaultManager.policies = []ConfigPolicy{DeviceConfigDynamicOptional}
 	policy = GetDeviceConfigDynamicPolicy()
 	assert.Equal(t, DeviceConfigDynamicOptional, policy)
-}
-
-// TestGetTypeConfigFilePolicy tests getting the output type config
-// policy from the global policy manager.
-func TestGetTypeConfigFilePolicy(t *testing.T) {
-	defer resetPolicyManager()
-
-	// Get the output type config file policy when none is set - this should give the default.
-	assert.Empty(t, defaultManager.typeConfigFilePolicy)
-	policy := GetTypeConfigFilePolicy()
-	assert.Equal(t, TypeConfigFileOptional, policy)
-
-	// Get the output type config file policy when Optional is set.
-	defaultManager.typeConfigFilePolicy = TypeConfigFileOptional
-	policy = GetTypeConfigFilePolicy()
-	assert.Equal(t, TypeConfigFileOptional, policy)
-
-	// Get the output type config file policy when Required is set.
-	defaultManager.typeConfigFilePolicy = TypeConfigFileRequired
-	policy = GetTypeConfigFilePolicy()
-	assert.Equal(t, TypeConfigFileRequired, policy)
-
-	// Get the output type config file policy when Prohibited is set.
-	defaultManager.typeConfigFilePolicy = TypeConfigFileProhibited
-	policy = GetTypeConfigFilePolicy()
-	assert.Equal(t, TypeConfigFileProhibited, policy)
-
-	// Reset the output type config file policy and add the policy to the
-	// tracked policies. It should now find it from there.
-	defaultManager.typeConfigFilePolicy = NoPolicy
-	defaultManager.policies = []ConfigPolicy{TypeConfigFileOptional}
-	policy = GetTypeConfigFilePolicy()
-	assert.Equal(t, TypeConfigFileOptional, policy)
 }
 
 // TestSet tests adding multiple policies to the manager.
@@ -404,14 +356,12 @@ func TestCheckOk(t *testing.T) {
 	policies := []ConfigPolicy{
 		DeviceConfigFileOptional,
 		PluginConfigFileRequired,
-		TypeConfigFileProhibited,
 		DeviceConfigDynamicOptional,
 	}
 
 	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 
 	defaultManager.Set(policies)
 	err := Check()
@@ -421,7 +371,6 @@ func TestCheckOk(t *testing.T) {
 	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 }
 
 // TestCheckOk2 tests checking policies with no error, when no policies are specified.
@@ -431,7 +380,6 @@ func TestCheckOk2(t *testing.T) {
 	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 
 	err := Check()
 	assert.NoError(t, err)
@@ -440,7 +388,6 @@ func TestCheckOk2(t *testing.T) {
 	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 }
 
 // TestCheckError tests checking policies resulting in error.
@@ -457,7 +404,6 @@ func TestCheckError(t *testing.T) {
 	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 
 	defaultManager.Set(policies)
 	err := Check()
@@ -467,5 +413,4 @@ func TestCheckError(t *testing.T) {
 	assert.Equal(t, NoPolicy, defaultManager.pluginConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigFilePolicy)
 	assert.Equal(t, NoPolicy, defaultManager.deviceConfigDynamicPolicy)
-	assert.Equal(t, NoPolicy, defaultManager.typeConfigFilePolicy)
 }
