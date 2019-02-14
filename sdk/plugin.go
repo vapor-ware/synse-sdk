@@ -45,6 +45,13 @@ func init() {
 	})
 }
 
+// PluginAction defines an action that can be run before or after the main
+// Plugin run logic. This is generally used for setup/teardown.
+type PluginAction struct {
+	Name string
+	Action func(p *Plugin) error
+}
+
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse server.
 type Plugin struct {
@@ -53,8 +60,8 @@ type Plugin struct {
 
 	server *server
 
-	preRun  []pluginAction
-	postRun []pluginAction
+	preRun  []*PluginAction
+	postRun []*PluginAction
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
@@ -127,36 +134,39 @@ func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
 	return multiErr.Err()
 }
 
-// RegisterPreRunActions registers functions with the plugin that will be called
-// before the gRPC server and dataManager are started. The functions here can be
-// used for plugin-wide setup actions.
-func (plugin *Plugin) RegisterPreRunActions(actions ...pluginAction) {
-	ctx.preRunActions = append(ctx.preRunActions, actions...)
-}
-
-// RegisterPostRunActions registers functions with the plugin that will be called
-// after the gRPC server and dataManager terminate running. The functions here can
-// be used for plugin-wide teardown actions.
-func (plugin *Plugin) RegisterPostRunActions(actions ...pluginAction) {
-	ctx.postRunActions = append(ctx.postRunActions, actions...)
-}
-
-// RegisterDeviceSetupActions registers functions with the plugin that will be
-// called on device initialization before it is ever read from / written to. The
-// functions here can be used for device-specific setup actions.
+// RegisterPreRunActions registers actions with the Plugin which will be called prior
+// to the business logic of the Plugin.
 //
-// The filter parameter should be the filter to apply to devices. Currently
-// filtering is supported for device kind and type. Filter strings are specified in
-// the format "key=value,key=value". The filter
-//     "kind=temperature,kind=ABC123"
-// would only match devices whose kind was temperature or ABC123.
-func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
-	if _, exists := ctx.deviceSetupActions[filter]; exists {
-		ctx.deviceSetupActions[filter] = append(ctx.deviceSetupActions[filter], actions...)
-	} else {
-		ctx.deviceSetupActions[filter] = actions
-	}
+// Pre-run actions are considered setup actions / validator and as such, they are
+// included in the Plugin dry-run. These run before the final pre-flight checks.
+func (plugin *Plugin) RegisterPreRunActions(actions ...*PluginAction) {
+	plugin.preRun = append(plugin.preRun, actions...)
 }
+
+// RegisterPostRunActions registers actions with the Plugin which will be called
+// after it terminates.
+//
+// These actions are generally cleanup and teardown actions.
+func (plugin *Plugin) RegisterPostRunActions(actions ...*PluginAction) {
+	plugin.postRun = append(plugin.postRun, actions...)
+}
+
+//// RegisterDeviceSetupActions registers functions with the plugin that will be
+//// called on device initialization before it is ever read from / written to. The
+//// functions here can be used for device-specific setup actions.
+////
+//// The filter parameter should be the filter to apply to devices. Currently
+//// filtering is supported for device kind and type. Filter strings are specified in
+//// the format "key=value,key=value". The filter
+////     "kind=temperature,kind=ABC123"
+//// would only match devices whose kind was temperature or ABC123.
+//func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
+//	if _, exists := ctx.deviceSetupActions[filter]; exists {
+//		ctx.deviceSetupActions[filter] = append(ctx.deviceSetupActions[filter], actions...)
+//	} else {
+//		ctx.deviceSetupActions[filter] = actions
+//	}
+//}
 
 // RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
 //
@@ -187,26 +197,24 @@ func (plugin *Plugin) Run() error {
 	}
 
 	// Perform pre-run setup
-	err := plugin.setup()
-	if err != nil {
+	if err := plugin.setup(); err != nil {
 		return err
 	}
 
 	// Before we start the dataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
-	multiErr := execPreRun(plugin)
-	if multiErr.HasErrors() {
-		return multiErr
+	if err := plugin.execPreRun(); err != nil {
+		return err
 	}
 
-	// At this point all state that the plugin will need should be available.
-	// With a complete view of the plugin, devices, and configuration, we can
-	// now process any device setup actions prior to reading to/writing from
-	// the device(s).
-	multiErr = execDeviceSetup(plugin)
-	if multiErr.HasErrors() {
-		return multiErr
-	}
+	//// At this point all state that the plugin will need should be available.
+	//// With a complete view of the plugin, devices, and configuration, we can
+	//// now process any device setup actions prior to reading to/writing from
+	//// the device(s).
+	//multiErr = execDeviceSetup(plugin)
+	//if multiErr.HasErrors() {
+	//	return multiErr
+	//}
 
 	// Log info at plugin startup
 	logStartupInfo()
@@ -232,8 +240,7 @@ func (plugin *Plugin) Run() error {
 	}
 
 	// Start the data manager
-	err = DataManager.run()
-	if err != nil {
+	if err := DataManager.run(); err != nil {
 		return err
 	}
 
@@ -301,14 +308,59 @@ func (plugin *Plugin) onQuit() {
 	plugin.server.Stop()
 
 	// Execute post-run actions.
-	multiErr := execPostRun(plugin)
-	if multiErr.HasErrors() {
-		log.Error(multiErr)
+	if err := plugin.execPostRun(); err != nil {
+		log.Error(err)
 		os.Exit(1)
 	}
 
 	log.Info("[done]")
 	os.Exit(0)
+}
+
+// execPreRun executes the pre-run actions for the plugin.
+func (plugin *Plugin) execPreRun() error {
+	if len(plugin.preRun) == 0 {
+		return nil
+	}
+
+	var multiErr = errors.NewMultiError("Pre-Run Actions")
+
+	log.WithFields(log.Fields{
+		"actions": len(plugin.preRun),
+	}).Info("[plugin] executing pre-run actions")
+
+	for _, action := range plugin.preRun {
+		actionLog := log.WithField("action", action.Name)
+		actionLog.Debug("[plugin] running pre-run action")
+		if err := action.Action(plugin); err != nil {
+			actionLog.Error("[plugin] pre-run action failed")
+			multiErr.Add(err)
+		}
+	}
+	return multiErr.Err()
+}
+
+// execPostRun executes the post-run actions for the plugin.
+func (plugin *Plugin) execPostRun() error {
+	if len(plugin.postRun) == 0 {
+		return nil
+	}
+
+	var multiErr = errors.NewMultiError("Post-Run Actions")
+
+	log.WithFields(log.Fields{
+		"actions": len(plugin.postRun),
+	}).Info("[plugin] executing post-run actions")
+
+	for _, action := range plugin.postRun {
+		actionLog := log.WithField("action", action.Name)
+		actionLog.Debug("[plugin] running post-run action")
+		if err := action.Action(plugin); err != nil {
+			actionLog.Error("[plugin] post-run action failed")
+			multiErr.Add(err)
+		}
+	}
+	return multiErr.Err()
 }
 
 // setup performs the pre-run setup actions for a plugin.

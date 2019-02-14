@@ -108,6 +108,7 @@ func newUID(components ...string) string {
 
 // filterDevices returns a list of Devices (a subset of the deviceMap) which
 // match the specified filter(s) in the given filter string.
+// FIXME: this needs to not use the context to get devices.. use device manager
 func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 	filters := strings.Split(filter, ",")
 
