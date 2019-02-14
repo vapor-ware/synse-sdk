@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -17,27 +18,86 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
+var (
+	flagDebug   bool
+	flagVersion bool
+	flagInfo    bool
+	flagDryRun  bool
+)
+
+func init() {
+	flag.BoolVar(&flagDebug, "debug", false, "enable debug logging")
+	flag.BoolVar(&flagVersion, "version", false, "print the plugin version information")
+	flag.BoolVar(&flagInfo, "info", false, "print the plugin metadata")
+	flag.BoolVar(&flagDryRun, "dry-run", false, "run only the setup actions to verify functionality and configuration")
+
+	// Logging defaults: set the level to info and use a formatter that gives
+	// us millisecond resolution.
+	log.SetLevel(log.InfoLevel)
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
+	})
+}
+
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse server.
 type Plugin struct {
 	server *server
 	quit   chan os.Signal
-
 	config *cfg.Plugin
+
+	preRun  []pluginAction
+	postRun []pluginAction
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
-func NewPlugin(options ...PluginOption) *Plugin {
-	plugin := Plugin{
-		quit: make(chan os.Signal),
-		config: new(cfg.Plugin),
+func NewPlugin(options ...PluginOption) (*Plugin, error) {
+	// Normally, this would be a weird place to call Parse and do other config
+	// setup, but since this constructor is effectively acting as the entry point
+	// to the SDK, it works here.
+	flag.Parse()
+
+	// Prior to doing any other setup/loading, check if we are set to run
+	// in debug mode.
+	if flagDebug {
+		log.SetLevel(log.DebugLevel)
 	}
+
+	// Load the plugin configuration.
+	conf := new(cfg.Plugin)
+	if err := loadPluginConfig(conf); err != nil {
+		return nil, err
+	}
+
+	// If debug isn't set via command-line override and it is set in the
+	// configuration file, set the level to debug, otherwise, keep it at info.
+	if !flagDebug && conf.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	// Create the server used for gRPC communication. This will fail if the
+	// server can not be set up (e.g. misconfiguration).
+	server, err := newServer(conf.Network)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new instance of the plugin.
+	plugin := Plugin{
+		quit:   make(chan os.Signal),
+		config: conf,
+		server: server,
+	}
+
+	// Register system calls for graceful stopping.
+	signal.Notify(plugin.quit, syscall.SIGTERM)
+	signal.Notify(plugin.quit, syscall.SIGINT)
 
 	// Set custom options for the plugin.
 	for _, option := range options {
 		option(ctx)
 	}
-	return &plugin
+	return &plugin, nil
 }
 
 // RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
@@ -107,6 +167,18 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
 func (plugin *Plugin) Run() error {
+
+	// Before anything else is done, check to see if any command-line flags
+	// were set which would terminate the run (e.g. printing version info
+	// or plugin metadata).
+	preRunPrint()
+
+	// Run the pre-flight checks. If any check fails, we cannot run.
+	if err := plugin.preFlightChecks(); err != nil {
+		log.Error("[plugin] failed pre-flight check(s) - terminating")
+		return err
+	}
+
 	// Perform pre-run setup
 	err := plugin.setup()
 	if err != nil {
@@ -141,6 +213,10 @@ func (plugin *Plugin) Run() error {
 
 	log.Debug("[sdk] starting plugin run")
 
+	// todo: this should go somewhere here:
+	// Listen for signals to terminate the Plugin.
+	go plugin.onQuit()
+
 	// If the default health checks are enabled, register them now
 	if !plugin.config.Health.Checks.DisableDefaults {
 		log.Debug("[sdk] registering default health checks")
@@ -156,6 +232,53 @@ func (plugin *Plugin) Run() error {
 
 	// Start the gRPC server
 	return plugin.server.Serve()
+}
+
+// loadPluginConfig loads plugin configurations from file and environment
+// and marshals that data into the provided Plugin config struct.
+func loadPluginConfig(conf *cfg.Plugin) error {
+	// Setup the config loader for the plugin.
+	loader := cfg.NewYamlLoader("plugin")
+	loader.EnvPrefix = "PLUGIN"
+	loader.EnvOverride = "PLUGIN_CONFIG"
+	loader.AddSearchPaths(
+		".",                        // Current working directory
+		"./config",                 // Local config override directory
+		"/etc/synse/plugin/config", // Default plugin config directory
+	)
+
+	// Load the plugin configuration.
+	if err := loader.Load(); err != nil {
+		return err
+	}
+
+	// Marshal the configuration into the plugin config struct.
+	return loader.Scan(conf)
+}
+
+// preFlightChecks runs checks prior to starting the Plugin to ensure that it has
+// all of the information it needs defined and available. Any failure here means
+// that the Plugin will not be able to run.
+func (plugin *Plugin) preFlightChecks() error {
+	logOk := log.WithField("status", "ok")
+	logErr := log.WithField("status", "failed")
+
+	var failed bool
+
+	// Check that the plugin metadata is set; only the name is required.
+	// fixme (etd): there is probably a way to simplify this
+	if metainfo.Name == "" {
+		logErr.Error("[plugin] pre-flight: plugin name set")
+		failed = true
+	} else {
+		logOk.Info("[plugin] pre-flight: plugin name set")
+	}
+
+	if failed {
+		// fixme : custom pre-flight error?
+		return fmt.Errorf("preflight checks failed")
+	}
+	return nil
 }
 
 // onQuit is a function that waits for a signal to terminate the plugin's run
@@ -180,41 +303,21 @@ func (plugin *Plugin) onQuit() {
 	os.Exit(0)
 }
 
-// setupLogger sets up the logger. Currently this just gives us sub second time
-// resolution, but can be expanded on later.
-func setupLogger() error {
-	// Set formatter that gives at least milliseconds.
-	log.SetFormatter(&log.TextFormatter{
-		TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
-	})
-
-	return nil // There may be scenarios where we need to fail later (unclear).
-}
-
 // setup performs the pre-run setup actions for a plugin.
 func (plugin *Plugin) setup() error {
 	// Register system calls for graceful stopping.
-	signal.Notify(plugin.quit, syscall.SIGTERM)
-	signal.Notify(plugin.quit, syscall.SIGINT)
-	go plugin.onQuit()
+	//signal.Notify(plugin.quit, syscall.SIGTERM)
+	//signal.Notify(plugin.quit, syscall.SIGINT)
+	//go plugin.onQuit()
 
-	err := setupLogger()
-	if err != nil {
-		return err
-	}
-
-	// The plugin name must be set as metainfo, since it is used in the Device
-	// model. Check if it is set here. If not, return an error.
-	if metainfo.Name == "" {
-		return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
-	}
-
-	// Check for command line flags. If any flags are set that require an
-	// action, that action will be resolved here.
-	parseFlags()
+	//// The plugin name must be set as metainfo, since it is used in the Device
+	//// model. Check if it is set here. If not, return an error.
+	//if metainfo.Name == "" {
+	//	return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
+	//}
 
 	// Check that the registered device handlers do not have any conflicting names.
-	err = ctx.checkDeviceHandlers()
+	err := ctx.checkDeviceHandlers()
 	if err != nil {
 		return err
 	}
@@ -226,16 +329,16 @@ func (plugin *Plugin) setup() error {
 		return err
 	}
 
-	// Read in all configs and verify that they are correct.
-	err = plugin.processConfig()
-	if err != nil {
-		return err
-	}
+	//// Read in all configs and verify that they are correct.
+	//err = plugin.processConfig()
+	//if err != nil {
+	//	return err
+	//}
 
-	// If the plugin config specifies debug mode, enable debug mode
-	if plugin.config.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
+	//// If the plugin config specifies debug mode, enable debug mode
+	//if plugin.config.Debug {
+	//	log.SetLevel(log.DebugLevel)
+	//}
 
 	// Initialize Device instances for each of the devices configured with
 	// the plugin.
@@ -250,11 +353,6 @@ func (plugin *Plugin) setup() error {
 	// Set up the readings cache, if its configured
 	setupReadingsCache()
 
-	// Initialize a gRPC server for the Plugin to use.
-	plugin.server = newServer(
-		plugin.config.Network.Type,
-		plugin.config.Network.Address,
-	)
 	return nil
 }
 
@@ -267,31 +365,32 @@ func (plugin *Plugin) setup() error {
 // config data is correct. These steps should happen for all config types.
 func (plugin *Plugin) processConfig() error {
 
-	// Resolve the plugin config.
-	log.Debug("[sdk] resolving plugin config")
-	err := processPluginConfig()
-	if err != nil {
-		return err
-	}
+	//// Resolve the plugin config.
+	//log.Debug("[sdk] resolving plugin config")
+	//err := processPluginConfig()
+	//if err != nil {
+	//	return err
+	//}
 
-	// Resolve the output type config(s).
-	log.Debug("[sdk] resolving output type config(s)")
-	outputTypes, err := processOutputTypeConfig()
-	if err != nil {
-		return err
-	}
-
-	// Register the found output types, if any.
-	for _, output := range outputTypes {
-		err = plugin.RegisterOutputTypes(output)
-		if err != nil {
-			return err
-		}
-	}
+	//// Resolve the output type config(s).
+	//log.Debug("[sdk] resolving output type config(s)")
+	//outputTypes, err := processOutputTypeConfig()
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//// Register the found output types, if any.
+	//for _, output := range outputTypes {
+	//	err = plugin.RegisterOutputTypes(output)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 
 	// Finally, make sure that we have output types. If we
 	// don't, return an error, since we won't be able to properly
 	// register devices.
+	// todo: update output type registration
 	if len(ctx.outputTypes) == 0 {
 		return fmt.Errorf(
 			"no output types found. you must either register output types " +
@@ -300,8 +399,9 @@ func (plugin *Plugin) processConfig() error {
 	}
 
 	// Resolve the device config(s).
+	// todo: this should be done elsewhere (device manager?)
 	log.Debug("[sdk] resolving device config(s)")
-	err = processDeviceConfigs()
+	err := processDeviceConfigs()
 	if err != nil {
 		return err
 	}
@@ -310,18 +410,26 @@ func (plugin *Plugin) processConfig() error {
 	return nil
 }
 
-//// The current (latest) version of the plugin config scheme.
-//var currentPluginSchemeVersion = 3
+// preRunPrint prints out information about the plugin prior to doing any setup
+// or run actions.
 //
-//// NewDefaultPluginConfig creates a new instance of a PluginConfig with its
-//// default values resolved.
-//func NewDefaultPluginConfig() (*PluginConfig, error) {
-//	config := &PluginConfig{
-//		Version: currentPluginSchemeVersion,
-//	}
-//	err := defaults.Set(config)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return config, nil
-//}
+// If the item being printed is a command line option, it will terminate the
+// plugin after printing.
+func preRunPrint() {
+	var terminate bool
+
+	// --info was set; print the plugin metadata.
+	if flagInfo {
+		fmt.Println(metainfo.Format())
+	}
+
+	// --version was set; print the plugin version.
+	if flagVersion {
+		fmt.Println(version.Format())
+	}
+
+	if terminate {
+		// fixme: for testing, should we use an Exiter interface?
+		os.Exit(0)
+	}
+}
