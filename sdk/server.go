@@ -7,8 +7,12 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
+	// TODO: "config" is in the package namespace.. we'll need to clean
+	//  that up so we don't need to alias the import
+	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 
@@ -19,43 +23,115 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+const (
+	networkTypeTCP  = "tcp"
+	networkTypeUnix = "unix"
+)
+
+var (
+	// The directory where Unix sockets are placed for unix-based
+	// gRPC communication. This is a var instead of const so that
+	// it can be modified for testing.
+	socketDir = "/tmp/synse"
+)
+
 // server implements the Synse Plugin gRPC server. It is used by the
 // plugin to communicate via gRPC over tcp or unix socket to Synse server.
 type server struct {
-	network string
-	address string
-	grpc    *grpc.Server
+	cfg  *cfg.NetworkSettings
+	grpc *grpc.Server
 }
 
-// newServer creates a new instance of a server. This should be used
-// by the plugin to create its server instance.
-func newServer(network, address string) *server {
-	return &server{
-		network: network,
-		address: address,
+// newServer creates a new instance of a server. This is used by the Plugin
+// constructor to create a Plugin's server instance.
+func newServer(conf *cfg.NetworkSettings) (*server, error) {
+	grpcServer, err := newGrpcServer(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	server := &server{
+		cfg:  conf,
+		grpc: grpcServer,
+	}
+	synse.RegisterV3PluginServer(grpcServer, server)
+
+	return server, nil
+}
+
+// Stop stops the gRPC server from serving and immediately terminates all open
+// connections and listeners.
+func (server *server) Stop() {
+	log.Info("[server] stopping server")
+	if server.grpc != nil {
+		server.grpc.Stop()
 	}
 }
 
-// setup runs any steps needed to set up the environment for the server to run.
-// In particular, this makes sure that the proper directories exist if the server
-// is running in "unix" mode.
-func (server *server) setup() error {
-	// Set the server cleanup function as a post-run action for the plugin.
-	ctx.postRunActions = append(ctx.postRunActions, func(plugin *Plugin) error {
-		return server.cleanup()
-	})
-	log.WithField("mode", server.network).Debug("[grpc] setting up server")
+// Serve sets up the gRPC server and runs it.
+func (server *server) Serve() error {
+	if server.grpc == nil {
+		return fmt.Errorf("gRPC server not initialized, can not run")
+	}
 
-	switch server.network {
+	// Create the listener over the configured protocol and address.
+	listener, err := net.Listen(server.cfg.Type, server.address())
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{
+		"mode": server.cfg.Type,
+		"addr": server.cfg.Address,
+	}).Info("[server] serving...")
+	return server.grpc.Serve(listener)
+}
+
+// address gets the address for the configured server. The configured address
+// may need additional formatting depending on the networking mode, so this
+// should be the preferred means of getting the address.
+func (server *server) address() string {
+	switch t := server.cfg.Type; t {
 	case networkTypeUnix:
-		if !strings.HasPrefix(server.address, sockPath) {
-			server.address = fmt.Sprintf("%s/%s", sockPath, server.address)
+		address := server.cfg.Address
+		if !strings.HasPrefix(address, socketDir) {
+			address = filepath.Join(socketDir, address)
 		}
+		return address
+
+	case networkTypeTCP:
+		return server.cfg.Address
+
+	default:
+		return ""
+	}
+}
+
+// registerActions registers preRun (setup) and postRun (teardown) actions
+// for the server.
+func (server *server) registerActions(plugin *Plugin) {
+	// Register pre-run actions.
+	plugin.RegisterPreRunActions(
+		func(plugin *Plugin) error { return server.setup() },
+	)
+
+	// Register post-run actions.
+	plugin.RegisterPostRunActions(
+		func(plugin *Plugin) error { return server.teardown() },
+	)
+}
+
+// setup the server pre-run. This is called as a pluginAction.
+func (server *server) setup() error {
+	log.Debug("[server] setting up server")
+
+	switch t := server.cfg.Type; t {
+	case networkTypeUnix:
 		// If the path containing the sockets does not exist, create it.
-		_, err := os.Stat(sockPath)
+		_, err := os.Stat(socketDir)
 		if err != nil {
 			if os.IsNotExist(err) {
-				if err = os.MkdirAll(sockPath, os.ModePerm); err != nil {
+				if err = os.MkdirAll(socketDir, os.ModePerm); err != nil {
 					return err
 				}
 			} else {
@@ -63,172 +139,154 @@ func (server *server) setup() error {
 			}
 		}
 		// If the socket path does exist, try removing the socket if it is
-		// there and left over from a previous run.
-		if err = os.Remove(server.address); !os.IsNotExist(err) {
+		// there (left over from a previous run).
+		if err = os.Remove(server.address()); !os.IsNotExist(err) {
 			return err
 		}
 		return nil
 
 	case networkTypeTCP:
-		// There is nothing for us to do in this case.
+		// No setup required.
 		return nil
 
 	default:
-		return fmt.Errorf("unsupported network type: %s", server.network)
+		return fmt.Errorf("unsupported network type: %s", t)
 	}
 }
 
-// cleanup cleans up the server. The action it takes will depend on the mode it is
-// running in. If running in 'unix' mode, it will remove the socket.
-func (server *server) cleanup() error {
-	log.Info("[grpc] cleaning up server")
-	switch server.network {
+// teardown the server post-run. This is called as a pluginAction.
+func (server *server) teardown() error {
+	log.Debug("[server] tearing down server")
+
+	// Stop the server.
+	server.Stop()
+
+	// Perform any other cleanup.
+	switch t := server.cfg.Type; t {
 	case networkTypeUnix:
-		if err := os.Remove(server.address); !os.IsNotExist(err) {
+		// Remove the unix socket that was being used.
+		if err := os.Remove(server.address()); !os.IsNotExist(err) {
 			return err
 		}
 		return nil
 
 	case networkTypeTCP:
-		// There is nothing for us to do in this case.
+		// No cleanup required.
 		return nil
 
 	default:
-		return fmt.Errorf("unsupported network type: %s", server.network)
+		return fmt.Errorf("unsupported network type: %s", t)
 	}
 }
 
-// Serve sets up the gRPC server and runs it.
-func (server *server) Serve() error {
-	e := server.setup()
-	if e != nil {
-		return e
-	}
-
+func newGrpcServer(conf *cfg.NetworkSettings) (*grpc.Server, error) {
 	// Options for the gRPC server to be passed in to the constructor.
 	var opts []grpc.ServerOption
-	err := setCredsOption(&opts)
-	if err != nil {
-		return err
-	}
 
-	// Create the listener over the configured network type and address.
-	lis, err := net.Listen(server.network, server.address)
-	if err != nil {
-		return err
+	if err := addTLSOptions(&opts, conf.TLS); err != nil {
+		return nil, err
 	}
 
 	// Create the grpc server instance, passing in any server options.
 	svr := grpc.NewServer(opts...)
-	synse.RegisterV3PluginServer(svr, server)
-	server.grpc = svr
-
-	log.Infof("[grpc] listening on %s:%s", server.network, server.address)
-	return svr.Serve(lis)
+	return svr, nil
 }
 
-// setCredsOptions will add a credentials option to the server options slice, if the
-// plugin is configured to use TLS/SSL with gRPC.
-func setCredsOption(options *[]grpc.ServerOption) error {
-	// If the plugin is configured to use TLS/SSL for communicating with Synse Server,
-	// load in the specified certs, make sure everything is happy, and add a gRPC Creds
-	// option to the slice of server options.
-	if Config.Plugin.Network.TLS != nil {
-		tlsConfig := Config.Plugin.Network.TLS
-		log.WithFields(log.Fields{
-			"cert": tlsConfig.Cert,
-			"key":  tlsConfig.Key,
-			"ca":   tlsConfig.CACerts,
-		}).Debugf("[server] configuring grpc server for tls/ssl transport")
+// addTLSOptions updates the options slice with any TLS/SSL options for the gRPC server,
+// as configured via the plugin network config.
+func addTLSOptions(options *[]grpc.ServerOption, settings *cfg.TLSNetworkSettings) error {
+	// If there is no TLS config, there are no options to add here.
+	if settings == nil {
+		return nil
+	}
 
-		cert, err := tls.LoadX509KeyPair(tlsConfig.Cert, tlsConfig.Key)
+	tlsLog := log.WithFields(log.Fields{
+		"cert":       settings.Cert,
+		"key":        settings.Key,
+		"ca":         settings.CACerts,
+		"skipVerify": settings.SkipVerify,
+	})
+	tlsLog.Info("[server] configuring for tls/ssl transport")
+
+	cert, err := tls.LoadX509KeyPair(settings.Cert, settings.Key)
+	if err != nil {
+		tlsLog.WithField("error", err).Error("[server] failed to load TLS key pair")
+		return err
+	}
+
+	var certPool *x509.CertPool
+
+	// If custom certificate authority certs are specified, use those, otherwise
+	// use the system-wide root certs from the OS.
+	if len(settings.CACerts) > 0 {
+		tlsLog.Info("[server] loading custom CA certs")
+		certPool, err = loadCACerts(settings.CACerts)
 		if err != nil {
-			log.Errorf("[server] failed to load TLS key pair: %v", err)
+			tlsLog.WithField("error", err).Error("[server] failed to load custom CA certs")
 			return err
 		}
-
-		var certPool *x509.CertPool
-
-		// If custom certificate authority certs are specified, use those, otherwise
-		// use the system-wide root certs from the OS.
-		if len(tlsConfig.CACerts) > 0 {
-			log.Debugf("[server] loading custom CA certs: %v", tlsConfig.CACerts)
-			certPool, err = loadCACerts(tlsConfig.CACerts)
-			if err != nil {
-				log.Errorf("[server] failed to load custom CA certs: %v", err)
-				return err
-			}
-		} else {
-			log.Debug("[server] loading default CA certs from OS")
-			certPool, err = x509.SystemCertPool()
-			if err != nil {
-				log.Errorf("[server] failed to load default OS CA certs: %v", err)
-				return err
-			}
-		}
-
-		clientAuth := tls.RequireAndVerifyClientCert
-		if tlsConfig.SkipVerify {
-			clientAuth = tls.NoClientCert
-		}
-
-		creds := credentials.NewTLS(&tls.Config{
-			ClientAuth:               clientAuth,
-			ClientCAs:                certPool,
-			Certificates:             []tls.Certificate{cert},
-			MinVersion:               tls.VersionTLS12,
-			PreferServerCipherSuites: true,
-			// https://www.acunetix.com/blog/articles/tls-ssl-cipher-hardening/
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-			},
-		})
-		*options = append(*options, grpc.Creds(creds))
 	} else {
-		log.Debug("[server] configuring grpc server for insecure transport")
+		tlsLog.Info("[server] loading default CA certs from OS")
+		certPool, err = x509.SystemCertPool()
+		if err != nil {
+			tlsLog.WithField("error", err).Error("[server] failed to load default CA certs from OS")
+			return err
+		}
 	}
+
+	clientAuth := tls.RequireAndVerifyClientCert
+	if settings.SkipVerify {
+		clientAuth = tls.NoClientCert
+	}
+
+	creds := credentials.NewTLS(&tls.Config{
+		ClientAuth:               clientAuth,
+		ClientCAs:                certPool,
+		Certificates:             []tls.Certificate{cert},
+		MinVersion:               tls.VersionTLS12,
+		PreferServerCipherSuites: true,
+		// https://www.acunetix.com/blog/articles/tls-ssl-cipher-hardening/
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+		},
+	})
+	*options = append(*options, grpc.Creds(creds))
+
 	return nil
 }
 
 // loadCACerts loads the certs from the provided certificate authority/authorities.
-func loadCACerts(cacerts []string) (*x509.CertPool, error) {
+func loadCACerts(certs []string) (*x509.CertPool, error) {
 	certPool := x509.NewCertPool()
-	for _, c := range cacerts {
+	for _, c := range certs {
 		ca, err := ioutil.ReadFile(c) // #nosec
 		if err != nil {
-			log.Errorf("[server] failed to read CA file: %v", err)
+			log.WithField("error", err).Error("[server] failed to read CA file")
 			return nil, err
 		}
 
 		if ok := certPool.AppendCertsFromPEM(ca); !ok {
-			log.Errorf("[server] failed to append CA cert: %v", c)
-			return nil, fmt.Errorf("failed to append ca cert")
+			log.WithField("error", err).Error("[server] failed to append CA cert from PEM")
+			return nil, fmt.Errorf("failed to append CA cert from PEM")
 		}
 	}
 	return certPool, nil
 }
 
-// Stop stops the GRPC server from serving and immediately terminates all open
-// connections and listeners.
-func (server *server) Stop() {
-	log.Info("[grpc] stopping server")
-	if server.grpc != nil {
-		server.grpc.Stop()
-	}
-}
-
+// --------------------------------------------------------
 //
 // gRPC API Routes
 //
+// --------------------------------------------------------
 
 // Test checks whether the plugin is reachable and ready.
 //
