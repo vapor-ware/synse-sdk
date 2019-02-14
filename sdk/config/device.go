@@ -26,7 +26,7 @@ type Devices struct {
 	Version int `yaml:"version,omitempty"`
 
 	// Devices is the collection of devices defined in the configuration.
-	Devices []DeviceProto `yaml:"devices,omitempty"`
+	Devices []*DeviceProto `yaml:"devices,omitempty"`
 }
 
 // DeviceProto defines the "prototype" of a device. It contains some high-level
@@ -73,11 +73,20 @@ type DeviceProto struct {
 
 	// Instances contains the data for all configured instances of the
 	// device prototype.
-	Instances []DeviceInstance `yaml:"instances,omitempty"`
+	Instances []*DeviceInstance `yaml:"instances,omitempty"`
 }
 
 // DeviceInstance defines the instance-specific configuration for a device.
 type DeviceInstance struct {
+	// Type is the type of device. Device types are not strictly defined and
+	// are primarily used as metadata for the high-level consumer to help
+	// identify and categorize the device. Example types are: LED, fan,
+	// temperature, humidity, power, etc.
+	//
+	// The type should be descriptive and categorical, but is not well-defined,
+	// meaning that devices are free to define their own types.
+	Type string `yaml:"type,omitempty"`
+
 	// Info is a string which provides a short human-understandable description
 	// or summary of the device instance.
 	Info string `yaml:"info,omitempty"`
@@ -115,7 +124,7 @@ type DeviceInstance struct {
 	// It is up to the configurer to ensure that there are no alias collisions.
 	// The SDK can check to ensure no collisions within a single plugin, but
 	// can not do so across multiple plugins which may be active in the system.
-	Alias DeviceAlias `yaml:"alias,omitempty"`
+	Alias *DeviceAlias `yaml:"alias,omitempty"`
 
 	// ScalingFactor is an optional value which indicates a scaling transformation
 	// to be applied to a device reading. Generally, this will only be used for

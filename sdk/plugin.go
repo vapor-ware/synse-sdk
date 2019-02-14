@@ -42,9 +42,10 @@ func init() {
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse server.
 type Plugin struct {
-	server *server
 	quit   chan os.Signal
 	config *cfg.Plugin
+
+	server *server
 
 	preRun  []pluginAction
 	postRun []pluginAction
@@ -241,6 +242,7 @@ func loadPluginConfig(conf *cfg.Plugin) error {
 	loader := cfg.NewYamlLoader("plugin")
 	loader.EnvPrefix = "PLUGIN"
 	loader.EnvOverride = "PLUGIN_CONFIG"
+	loader.FileName = "config"
 	loader.AddSearchPaths(
 		".",                        // Current working directory
 		"./config",                 // Local config override directory
