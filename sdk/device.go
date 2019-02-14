@@ -3,131 +3,161 @@ package sdk
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/imdario/mergo"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// The current (latest) version of the device config scheme.
-var currentDeviceSchemeVersion = 3
+// TODO (etd): consider not exporting the Device fields. The reason being that
+//  while a plugin may need to interact with a device, it should never really
+//  be modifying device data once it has been loaded (I don't think..)
 
-// DeviceHandler specifies the read and write handlers for a Device
-// based on its type and model.
-type DeviceHandler struct {
 
-	// Name is the name of the handler. This is how the handler will be referenced
-	// and associated with Device instances via their DeviceConfig. This name should
-	// be the same as the "Kind" of the device which it corresponds with.
-	//
-	// Additionally, there are cases where we may not want the DeviceHandler to match
-	// on the name of the Kind, or we may want a subset of a Device Kind's instances
-	// to match to a different handler. In that case, the "handlerName" field can be
-	// set in the DeviceConfig at either the DeviceKind level (where it would apply
-	// for all instances of that kind), or at the DeviceInstance level (where it would
-	// apply for only that instance.
-	//
-	// If the "handlerName" field is specified, it will be used to match against
-	// this Name field. Otherwise, the Kind of the device will be used to match
-	// against this Name field.
-	Name string
-
-	// Write is a function that handles Write requests for the device. If the
-	// device does not support writing, this can be left as nil.
-	Write func(*Device, *WriteData) error
-
-	// Read is a function that handles Read requests for the device. If the device
-	// does not support reading, this can be left as nil.
-	Read func(*Device) ([]*Reading, error)
-
-	// BulkRead is a function that handles bulk reading for the device. A bulk read
-	// is where all devices of a given kind are read at once, instead of individually.
-	// If a device does not support bulk read, this can be left as nil. Additionally,
-	// a device can only be bulk read if there is no Read handler set.
-	BulkRead func([]*Device) ([]*ReadContext, error)
-
-	// Listen is a function that will listen for push-based data from the device.
-	// This function is called one per device using the handler, even if there are
-	// other handler functions (e.g. read, write) defined. The listener function
-	// will run in a separate goroutine for each device. The goroutines are started
-	// before the read/write loops.
-	Listen func(*Device, chan *ReadContext) error
-}
-
-// supportsBulkRead checks if the handler supports bulk reading for its Devices.
+// Device is a single physical or virtual device which the Plugin manages.
 //
-// If BulkRead is set for the device handler and Read is not, then the handler
-// supports bulk reading. If both BulkRead and Read are defined, bulk reading
-// will not be considered supported and the handler will default to individual
-// reads.
-func (deviceHandler *DeviceHandler) supportsBulkRead() bool {
-	return deviceHandler.Read == nil && deviceHandler.BulkRead != nil
-}
-
-// getDevicesForHandler gets a list of all the devices which use the DeviceHandler.
-func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
-	var devices []*Device
-
-	for _, v := range ctx.devices {
-		if v.Handler == deviceHandler {
-			devices = append(devices, v)
-		}
-	}
-	return devices
-}
-
-// getHandlerForDevice gets the DeviceHandler for a device, based on the handler name.
-func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
-	for _, handler := range ctx.deviceHandlers {
-		if handler.Name == handlerName {
-			return handler, nil
-		}
-	}
-	return nil, fmt.Errorf("no handler found with name: %s", handlerName)
-}
-
-// Device is the internal model for a single device (physical or virtual) that
-// a plugin can read to or write from.
+// It defines all of the information known about the device, which typically
+// comes from configuration file. A Device's supported actions are determined
+// by the DeviceHandler which it is configured to use.
 type Device struct {
+	Type string
+	Metadata map[string]string
+	Info string
+	Tags []*Tag
+	Data map[string]interface{}
+	Handler string
+	SortIndex int32
+	Alias string
+	ScalingFactor string
+
+	System string
+	Output string
+
+	id string
+	handler *DeviceHandler
+
+
+
 	// The name of the device kind. This is essentially the identifier
 	// for the device type.
-	Kind string
+	//Kind string
 
 	// Any metadata associated with the device kind.
-	Metadata map[string]string
+	//Metadata map[string]string
 
 	// The name of the plugin this device is managed by.
-	Plugin string
+	//Plugin string
 
 	// Device-level information specified in the Device's config.
-	Info string
+	//Info string
 
 	// The location of the Device.
-	Location *Location
+	//Location *Location
 
 	// Any plugin-specific configuration data associated with the Device.
-	Data map[string]interface{}
+	//Data map[string]interface{}
 
 	// The outputs supported by the device. A device output may supply more
 	// info, such as Data, Info, Type, etc. It is up to the user to extract
 	// and use that output info when they perform reads for the Device outputs.
-	Outputs []*Output
+	//Outputs []*Output
 
 	// The read/write handler for the device. Handlers should be registered globally.
-	Handler *DeviceHandler `json:"-"`
+	//Handler *DeviceHandler `json:"-"`
 
 	// id is the deterministic id of the device
-	id string
+	//id string
 
 	// bulkRead is a flag that determines whether or not the device should be
 	// read in bulk, i.e. in a batch with other devices of the same kind.
-	bulkRead bool
+	//bulkRead bool
 
 	// SortOrdinal is a one based sort ordinal for a device in a scan. Zero for
 	// don't care.
-	SortOrdinal int32
+	//SortOrdinal int32
 }
+
+// NewDeviceFromConfig creates a new instance of a Device from its device prototype
+// and device instance configuration.
+//
+// These configuration components are loaded from config file.
+func NewDeviceFromConfig(proto *cfg.DeviceProto, instance *cfg.DeviceInstance) (*Device, error) {
+	// Define variable for the Device fields that can be inherited from the
+	// device prototype configuration.
+	var (
+		data map[string]interface{}
+		tags []string
+		handler string
+		system string
+		deviceType string
+	)
+
+	// If inheritance is enabled, use the prototype defined value as the base.
+	if !instance.DisableInheritance {
+		data = proto.Data
+		tags = proto.Tags
+		handler = proto.Handler
+		system = proto.System
+		deviceType = proto.Type
+	}
+
+	// If the instance also defines the same variable, we either need to merge
+	// the values or overwrite them.
+
+	// Merge instance data.
+	if err := mergo.Map(&data, instance.Data, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
+		// todo: log
+		return nil, err
+	}
+
+	// Merge tags. It is okay if the same tag is defined more than once, (e.g.
+	// no need to error), but we do ultimately just want the set of tags.
+	tags = append(tags, instance.Tags...)
+	var deviceTags []*Tag
+	encountered := map[string]struct{}{}
+	for _, t := range tags {
+		if _, ok := encountered[t]; !ok {
+			encountered[t] = struct{}{}
+			deviceTags = append(deviceTags, NewTag(t))
+		}
+	}
+
+	// Override handler, if set.
+	if instance.Handler != "" {
+		handler = instance.Handler
+	}
+
+	// Override system, if set.
+	if instance.System != "" {
+		system = instance.System
+	}
+
+	// Override type, if set.
+	if instance.Type != "" {
+		deviceType = instance.Type
+	}
+
+	// TODO: get a ref to the handler with the given name
+	// TODO: generate the device ID
+	// TODO: generate the device alias
+
+	return &Device{
+		Type: deviceType,
+		Tags: deviceTags,
+		Data: data,
+		Handler: handler,
+		System: system,
+		Metadata: proto.Metadata,
+		Info: instance.Info,
+		SortIndex: instance.SortIndex,
+		ScalingFactor: instance.ScalingFactor,
+		Output: instance.Output,
+	}, nil
+}
+
 
 // JSON encodes the device as JSON. This can be useful for logging and debugging.
 func (device *Device) JSON() (string, error) {
@@ -142,11 +172,7 @@ func (device *Device) JSON() (string, error) {
 // element in its Kind namespace. For example, with the Kind "foo.bar.temperature",
 // the type would be "temperature".
 func (device *Device) GetType() string {
-	if strings.Contains(device.Kind, ".") {
-		nameSpace := strings.Split(device.Kind, ".")
-		return nameSpace[len(nameSpace)-1]
-	}
-	return device.Kind
+	return device.Type
 }
 
 // GetOutput gets the named Output from the Device's output list. If the Output
@@ -160,64 +186,64 @@ func (device *Device) GetOutput(name string) *Output {
 	return nil
 }
 
-// makeDevices creates Device instances from a DeviceConfig. The DeviceConfig
-// used here should be a unified config, meaning that all DeviceConfigs (either from
-// different files or from file and dynamic registration) are merged into a single
-// DeviceConfig. This should only be called once all configs have been parsed and
-// validated to ensure that the information we have is all correct.
-func makeDevices(config *DeviceConfig) ([]*Device, error) { // nolint: gocyclo
-	var devices []*Device
-
-	// The DeviceConfig we get here should be the unified config.
-	for _, kind := range config.Devices {
-		for _, instance := range kind.Instances {
-
-			// Get the outputs for the instance.
-			instanceOutputs, err := getInstanceOutputs(kind, instance)
-			if err != nil {
-				return nil, err
-			}
-
-			// Get the location
-			l, err := config.GetLocation(instance.Location)
-			if err != nil {
-				return nil, err
-			}
-			location, err := l.Resolve()
-			if err != nil {
-				return nil, err
-			}
-
-			// Get the DeviceHandler. If a specific handlerName is set in the config,
-			// we will use that as the definitive handler. Otherwise, use the kind.
-			handlerName := kind.Name
-			if kind.HandlerName != "" {
-				handlerName = kind.HandlerName
-			}
-			if instance.HandlerName != "" {
-				handlerName = instance.HandlerName
-			}
-			handler, err := getHandlerForDevice(handlerName)
-			if err != nil {
-				return nil, err
-			}
-
-			device := &Device{
-				Kind:        kind.Name,
-				Metadata:    kind.Metadata,
-				Plugin:      metainfo.Name,
-				Info:        instance.Info,
-				Location:    location,
-				Data:        instance.Data,
-				Outputs:     instanceOutputs,
-				Handler:     handler,
-				SortOrdinal: instance.SortOrdinal,
-			}
-			devices = append(devices, device)
-		}
-	}
-	return devices, nil
-}
+//// makeDevices creates Device instances from a DeviceConfig. The DeviceConfig
+//// used here should be a unified config, meaning that all DeviceConfigs (either from
+//// different files or from file and dynamic registration) are merged into a single
+//// DeviceConfig. This should only be called once all configs have been parsed and
+//// validated to ensure that the information we have is all correct.
+//func makeDevices(config *DeviceConfig) ([]*Device, error) { // nolint: gocyclo
+//	var devices []*Device
+//
+//	// The DeviceConfig we get here should be the unified config.
+//	for _, kind := range config.Devices {
+//		for _, instance := range kind.Instances {
+//
+//			// Get the outputs for the instance.
+//			instanceOutputs, err := getInstanceOutputs(kind, instance)
+//			if err != nil {
+//				return nil, err
+//			}
+//
+//			// Get the location
+//			l, err := config.GetLocation(instance.Location)
+//			if err != nil {
+//				return nil, err
+//			}
+//			location, err := l.Resolve()
+//			if err != nil {
+//				return nil, err
+//			}
+//
+//			// Get the DeviceHandler. If a specific handlerName is set in the config,
+//			// we will use that as the definitive handler. Otherwise, use the kind.
+//			handlerName := kind.Name
+//			if kind.HandlerName != "" {
+//				handlerName = kind.HandlerName
+//			}
+//			if instance.HandlerName != "" {
+//				handlerName = instance.HandlerName
+//			}
+//			handler, err := getHandlerForDevice(handlerName)
+//			if err != nil {
+//				return nil, err
+//			}
+//
+//			device := &Device{
+//				Kind:        kind.Name,
+//				Metadata:    kind.Metadata,
+//				Plugin:      metainfo.Name,
+//				Info:        instance.Info,
+//				Location:    location,
+//				Data:        instance.Data,
+//				Outputs:     instanceOutputs,
+//				Handler:     handler,
+//				SortOrdinal: instance.SortOrdinal,
+//			}
+//			devices = append(devices, device)
+//		}
+//	}
+//	return devices, nil
+//}
 
 // getInstanceOutputs get the Outputs for a single device instance. It converts
 // the instance's DeviceOutput to an Output type, and by doing so unifies that
@@ -390,21 +416,38 @@ func (device *Device) GUID() string {
 }
 
 // encode translates the Device to the corresponding gRPC Device message.
-func (device *Device) encode() *synse.Device {
-	var output []*synse.Output
-	for _, out := range device.Outputs {
-		output = append(output, out.encode())
+func (device *Device) encode() *synse.V3Device {
+	//var output []*synse.Output
+	//for _, out := range device.Outputs {
+	//	output = append(output, out.encode())
+	//}
+	//return &synse.Device{
+	//	Timestamp:   GetCurrentTime(),
+	//	Uid:         device.ID(),
+	//	Kind:        device.Kind,
+	//	Metadata:    device.Metadata,
+	//	Plugin:      device.Plugin,
+	//	Info:        device.Info,
+	//	Location:    device.Location.encode(),
+	//	SortOrdinal: device.SortOrdinal,
+	//	Output:      output,
+	//}
+
+	var tags []*synse.V3Tag
+	for _, t := range device.Tags {
+		tags = append(tags, t.Encode())
 	}
-	return &synse.Device{
-		Timestamp:   GetCurrentTime(),
-		Uid:         device.ID(),
-		Kind:        device.Kind,
-		Metadata:    device.Metadata,
-		Plugin:      device.Plugin,
-		Info:        device.Info,
-		Location:    device.Location.encode(),
-		SortOrdinal: device.SortOrdinal,
-		Output:      output,
+
+	return &synse.V3Device{
+		Timestamp: GetCurrentTime(),
+		Id: device.id,
+		Type: device.Type,
+		Plugin: metainfo.Tag,
+		Info: device.Info,
+		Metadata: device.Metadata,
+		SortIndex: device.SortIndex,
+		Tags: tags,
+		// todo:  capabilities, outputs
 	}
 }
 
