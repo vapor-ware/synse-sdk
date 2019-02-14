@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -17,6 +18,22 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
+
+var (
+	flagDebug bool
+	flagVersion bool
+	flagInfo bool
+	flagDryRun bool
+)
+
+func init() {
+	flag.BoolVar(&flagDebug, "debug", false, "enable debug logging")
+	flag.BoolVar(&flagVersion, "version", false, "print the plugin version information")
+	flag.BoolVar(&flagInfo, "info", false, "print the plugin metadata")
+	flag.BoolVar(&flagDryRun, "dry-run", false, "run only the setup actions to verify functionality and configuration")
+}
+
+
 // A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
 // as data providers and device controllers for Synse server.
 type Plugin struct {
@@ -27,18 +44,56 @@ type Plugin struct {
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
-func NewPlugin(options ...PluginOption) *Plugin {
+func NewPlugin(options ...PluginOption) (*Plugin, error) {
+	flag.Parse()
+
+	// Prior to doing any other setup/loading, check if we are set to run
+	// in debug mode.
+	if flagDebug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	conf := new(cfg.Plugin)
+
+	// Load the plugin configuration.
+	if err := loadPluginConfig(conf); err != nil {
+		return nil, err
+	}
+
 	plugin := Plugin{
-		quit: make(chan os.Signal),
-		config: new(cfg.Plugin),
+		quit:   make(chan os.Signal),
+		config: conf,
 	}
 
 	// Set custom options for the plugin.
 	for _, option := range options {
 		option(ctx)
 	}
-	return &plugin
+	return &plugin, nil
 }
+
+// loadPluginConfig loads plugin configurations from file and environment
+// and marshals that data into the provided Plugin config struct.
+func loadPluginConfig(conf *cfg.Plugin) error {
+	// Setup the config loader for the plugin.
+	loader := cfg.NewYamlLoader("plugin")
+	loader.EnvPrefix = "PLUGIN"
+	loader.EnvOverride = "PLUGIN_CONFIG"
+	loader.AddSearchPaths(
+		".",                        // Current working directory
+		"./config",                 // Local config override directory
+		"/etc/synse/plugin/config", // Default plugin config directory
+	)
+
+	// Load the plugin configuration.
+	if err := loader.Load(); err != nil {
+		return err
+	}
+
+	// Marshal the configuration into the plugin config struct.
+	return loader.Scan(conf)
+}
+
 
 // RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
 // is able to define its output types statically, they would be registered with the
@@ -107,6 +162,12 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
 func (plugin *Plugin) Run() error {
+
+	// Before anything else is done, check to see if any command-line flags
+	// were set which would terminate the run (e.g. printing version info
+	// or plugin metadata).
+	preRunPrint()
+
 	// Perform pre-run setup
 	err := plugin.setup()
 	if err != nil {
@@ -156,6 +217,31 @@ func (plugin *Plugin) Run() error {
 
 	// Start the gRPC server
 	return plugin.server.Serve()
+}
+
+
+// preRunPrint prints out information about the plugin prior to doing any setup
+// or run actions.
+//
+// If the item being printed is a command line option, it will terminate the
+// plugin after printing.
+func preRunPrint() {
+	var terminate bool
+
+	// --info was set; print the plugin metadata.
+	if flagInfo {
+		fmt.Println(metainfo.Format())
+	}
+
+	// --version was set; print the plugin version.
+	if flagVersion {
+		fmt.Println(version.Format())
+	}
+
+	if terminate {
+		// fixme: for testing, should we use an Exiter interface?
+		os.Exit(0)
+	}
 }
 
 // onQuit is a function that waits for a signal to terminate the plugin's run
@@ -208,10 +294,6 @@ func (plugin *Plugin) setup() error {
 	if metainfo.Name == "" {
 		return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
 	}
-
-	// Check for command line flags. If any flags are set that require an
-	// action, that action will be resolved here.
-	parseFlags()
 
 	// Check that the registered device handlers do not have any conflicting names.
 	err = ctx.checkDeviceHandlers()
@@ -267,12 +349,12 @@ func (plugin *Plugin) setup() error {
 // config data is correct. These steps should happen for all config types.
 func (plugin *Plugin) processConfig() error {
 
-	// Resolve the plugin config.
-	log.Debug("[sdk] resolving plugin config")
-	err := processPluginConfig()
-	if err != nil {
-		return err
-	}
+	//// Resolve the plugin config.
+	//log.Debug("[sdk] resolving plugin config")
+	//err := processPluginConfig()
+	//if err != nil {
+	//	return err
+	//}
 
 	// Resolve the output type config(s).
 	log.Debug("[sdk] resolving output type config(s)")
