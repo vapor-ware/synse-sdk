@@ -8,6 +8,10 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+
+	// TODO: "config" is in the package namespace.. we'll need to clean
+	//  that up so we don't need to alias the import
+	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
@@ -18,12 +22,15 @@ import (
 type Plugin struct {
 	server *server
 	quit   chan os.Signal
+
+	config *cfg.Plugin
 }
 
 // NewPlugin creates a new instance of a Synse Plugin.
 func NewPlugin(options ...PluginOption) *Plugin {
 	plugin := Plugin{
 		quit: make(chan os.Signal),
+		config: new(cfg.Plugin),
 	}
 
 	// Set custom options for the plugin.
@@ -135,7 +142,7 @@ func (plugin *Plugin) Run() error {
 	log.Debug("[sdk] starting plugin run")
 
 	// If the default health checks are enabled, register them now
-	if Config.Plugin.Health.UseDefaults {
+	if !plugin.config.Health.Checks.DisableDefaults {
 		log.Debug("[sdk] registering default health checks")
 		health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
 		health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
@@ -226,7 +233,7 @@ func (plugin *Plugin) setup() error {
 	}
 
 	// If the plugin config specifies debug mode, enable debug mode
-	if Config.Plugin.Debug {
+	if plugin.config.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
@@ -238,19 +245,15 @@ func (plugin *Plugin) setup() error {
 	}
 
 	// Set up the transaction cache
-	ttl, err := Config.Plugin.Settings.Transaction.GetTTL()
-	if err != nil {
-		return err
-	}
-	setupTransactionCache(ttl)
+	setupTransactionCache(plugin.config.Settings.Transaction.TTL)
 
 	// Set up the readings cache, if its configured
 	setupReadingsCache()
 
 	// Initialize a gRPC server for the Plugin to use.
 	plugin.server = newServer(
-		Config.Plugin.Network.Type,
-		Config.Plugin.Network.Address,
+		plugin.config.Network.Type,
+		plugin.config.Network.Address,
 	)
 	return nil
 }
