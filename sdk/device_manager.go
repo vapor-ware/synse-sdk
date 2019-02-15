@@ -18,9 +18,10 @@ package sdk
 
 import (
 	"fmt"
+
+	log "github.com/Sirupsen/logrus"
 	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	log "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -35,25 +36,23 @@ func init() {
 	DeviceManager = NewDeviceManager()
 }
 
-func GetDeviceByID() {}
-func GetDeviceByAlias() {}
-func GetDevices() {}
+func GetDeviceByID()        {}
+func GetDeviceByAlias()     {}
+func GetDevices()           {}
 func GetDevicesForHandler() {}
 
-
 // todo: figure out where dynamic device registration fits in here.
-
 
 // DeviceAction defines an action that can be run before the main Plugin run
 // logic. This is generally used for doing device-specific setup actions.
 type DeviceAction struct {
-	Name string
+	Name   string
 	Action func(p *Plugin, d *Device) error
 }
 
 // DeviceManager loads and manages a Plugin's devices.
 type deviceManager struct {
-	config  *cfg.Devices
+	config *cfg.Devices
 
 	devices []*Device
 
@@ -86,7 +85,7 @@ func (manager *deviceManager) AddDevices(devices ...*Device) {
 // the format "key=value,key=value". The filter
 //     "kind=temperature,kind=ABC123"
 // would only match devices whose kind was temperature or ABC123.
-func (manager *deviceManager) RegisterDeviceSetupActions(filter string, actions...*DeviceAction) {
+func (manager *deviceManager) RegisterDeviceSetupActions(filter string, actions ...*DeviceAction) {
 	if _, exists := manager.setupActions[filter]; exists {
 		manager.setupActions[filter] = append(manager.setupActions[filter], actions...)
 	} else {
@@ -100,15 +99,15 @@ func (manager *deviceManager) registerActions(plugin *Plugin) {
 	// Register pre-run actions.
 	plugin.RegisterPreRunActions(
 		&PluginAction{
-			Name: "Load Device Configuration",
+			Name:   "Load Device Configuration",
 			Action: func(_ *Plugin) error { return manager.loadConfig() },
 		},
 		&PluginAction{
-			Name: "Generate Devices From Configuration",
+			Name:   "Generate Devices From Configuration",
 			Action: func(_ *Plugin) error { return manager.createDevices() },
 		},
 		&PluginAction{
-			Name: "Run Device Setup Actions",
+			Name:   "Run Device Setup Actions",
 			Action: func(p *Plugin) error { return manager.execDeviceSetupActions(p) },
 		},
 	)
@@ -149,7 +148,7 @@ func (manager *deviceManager) loadConfig() error {
 	loader := cfg.NewYamlLoader("device")
 	loader.EnvOverride = DeviceEnvOverride
 	loader.AddSearchPaths(
-		"./config/device", // Local device config directory
+		"./config/device",                 // Local device config directory
 		"/etc/synse/plugin/config/device", // Default device config directory
 	)
 
@@ -160,7 +159,6 @@ func (manager *deviceManager) loadConfig() error {
 
 	return loader.Scan(manager.config)
 }
-
 
 func (manager *deviceManager) execDeviceSetupActions(plugin *Plugin) error {
 	if len(manager.setupActions) == 0 {
@@ -187,7 +185,7 @@ func (manager *deviceManager) execDeviceSetupActions(plugin *Plugin) error {
 
 		log.WithFields(log.Fields{
 			"matches": len(devices),
-			"filter": filter,
+			"filter":  filter,
 		}).Debug("[device manager] applied filter to devices")
 		for _, action := range actions {
 			log.WithFields(log.Fields{

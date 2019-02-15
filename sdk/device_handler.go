@@ -82,7 +82,6 @@ func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
 	return devices
 }
 
-
 // getHandlerForDevice gets the DeviceHandler for a device, based on the handler name.
 func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
 	for _, handler := range ctx.deviceHandlers {

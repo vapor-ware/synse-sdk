@@ -3,8 +3,8 @@ package sdk
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/imdario/mergo"
-	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
@@ -16,30 +16,27 @@ import (
 //  while a plugin may need to interact with a device, it should never really
 //  be modifying device data once it has been loaded (I don't think..)
 
-
 // Device is a single physical or virtual device which the Plugin manages.
 //
 // It defines all of the information known about the device, which typically
 // comes from configuration file. A Device's supported actions are determined
 // by the DeviceHandler which it is configured to use.
 type Device struct {
-	Type string
-	Metadata map[string]string
-	Info string
-	Tags []*Tag
-	Data map[string]interface{}
-	Handler string
-	SortIndex int32
-	Alias string
+	Type          string
+	Metadata      map[string]string
+	Info          string
+	Tags          []*Tag
+	Data          map[string]interface{}
+	Handler       string
+	SortIndex     int32
+	Alias         string
 	ScalingFactor string
 
 	System string
 	Output string
 
-	id string
+	id      string
 	handler *DeviceHandler
-
-
 
 	// The name of the device kind. This is essentially the identifier
 	// for the device type.
@@ -88,10 +85,10 @@ func NewDeviceFromConfig(proto *cfg.DeviceProto, instance *cfg.DeviceInstance) (
 	// Define variable for the Device fields that can be inherited from the
 	// device prototype configuration.
 	var (
-		data map[string]interface{}
-		tags []string
-		handler string
-		system string
+		data       map[string]interface{}
+		tags       []string
+		handler    string
+		system     string
 		deviceType string
 	)
 
@@ -145,19 +142,18 @@ func NewDeviceFromConfig(proto *cfg.DeviceProto, instance *cfg.DeviceInstance) (
 	// TODO: generate the device alias
 
 	return &Device{
-		Type: deviceType,
-		Tags: deviceTags,
-		Data: data,
-		Handler: handler,
-		System: system,
-		Metadata: proto.Metadata,
-		Info: instance.Info,
-		SortIndex: instance.SortIndex,
+		Type:          deviceType,
+		Tags:          deviceTags,
+		Data:          data,
+		Handler:       handler,
+		System:        system,
+		Metadata:      proto.Metadata,
+		Info:          instance.Info,
+		SortIndex:     instance.SortIndex,
 		ScalingFactor: instance.ScalingFactor,
-		Output: instance.Output,
+		Output:        instance.Output,
 	}, nil
 }
-
 
 // JSON encodes the device as JSON. This can be useful for logging and debugging.
 func (device *Device) JSON() (string, error) {
@@ -440,13 +436,13 @@ func (device *Device) encode() *synse.V3Device {
 
 	return &synse.V3Device{
 		Timestamp: GetCurrentTime(),
-		Id: device.id,
-		Type: device.Type,
-		Plugin: metainfo.Tag,
-		Info: device.Info,
-		Metadata: device.Metadata,
+		Id:        device.id,
+		Type:      device.Type,
+		Plugin:    metainfo.Tag,
+		Info:      device.Info,
+		Metadata:  device.Metadata,
 		SortIndex: device.SortIndex,
-		Tags: tags,
+		Tags:      tags,
 		// todo:  capabilities, outputs
 	}
 }

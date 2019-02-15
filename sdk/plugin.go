@@ -48,7 +48,7 @@ func init() {
 // PluginAction defines an action that can be run before or after the main
 // Plugin run logic. This is generally used for setup/teardown.
 type PluginAction struct {
-	Name string
+	Name   string
 	Action func(p *Plugin) error
 }
 
@@ -458,13 +458,13 @@ func (plugin *Plugin) processConfig() error {
 		)
 	}
 
-	// Resolve the device config(s).
-	// todo: this should be done elsewhere (device manager?)
-	log.Debug("[sdk] resolving device config(s)")
-	err := processDeviceConfigs()
-	if err != nil {
-		return err
-	}
+	//// Resolve the device config(s).
+	//// todo: this should be done elsewhere (device manager?)
+	//log.Debug("[sdk] resolving device config(s)")
+	//err := processDeviceConfigs()
+	//if err != nil {
+	//	return err
+	//}
 
 	log.Debug("[sdk] finished processing configuration(s) for run")
 	return nil

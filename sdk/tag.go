@@ -17,15 +17,16 @@
 package sdk
 
 import (
-	"github.com/vapor-ware/synse-server-grpc/go"
 	"strings"
+
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Tag represents a group identifier which a Synse device can belong to.
 type Tag struct {
-	Namespace string
+	Namespace  string
 	Annotation string
-	Label string
+	Label      string
 
 	string string
 }
@@ -39,10 +40,10 @@ func NewTag(tag string) *Tag {
 	annotation, label := split[0], split[1]
 
 	return &Tag{
-		Namespace: namespace,
+		Namespace:  namespace,
 		Annotation: annotation,
-		Label: label,
-		string: tag,
+		Label:      label,
+		string:     tag,
 	}
 }
 
@@ -54,8 +55,8 @@ func (tag *Tag) String() string {
 // Encode translates the Tag to its corresponding gRPC message.
 func (tag *Tag) Encode() *synse.V3Tag {
 	return &synse.V3Tag{
-		Namespace: tag.Namespace,
+		Namespace:  tag.Namespace,
 		Annotation: tag.Annotation,
-		Label: tag.Label,
+		Label:      tag.Label,
 	}
 }
