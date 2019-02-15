@@ -1,15 +1,13 @@
 /*
-Package sdk provides an API for creating plugins for the Synse Platform.
+Package sdk enables the development of plugins for the Synse Platform.
 
-Synse plugins interface with Synse Server via an internal gRPC API which allows
-for HTTP access to data and control of devices for any protocol. The SDK serves
-as a base for these plugins. It provides the gRPC server needed for Synse Server
-to communicate with the plugin, and provides background device reading and
-asynchronous device writing capabilities.
+The Synse SDK implements the core plugin logic and makes it easy to create
+new plugins. These plugins form the backbone of the Synse platform, interfacing
+with devices and exposing them to Synse Server so all devices can be managed
+and controlled though a simple HTTP interface, regardless of backend protocol.
 
-While read/write behavior is defined on a per-plugin basis, the SDK provides
-built-in support for managing device meta information and for the generation
-and management of transaction state for each incoming write request.
+todo: overview of the SDK arch/flow.
+
 */
 package sdk
 
@@ -18,5 +16,10 @@ import (
 )
 
 func init() {
+	// Logging defaults: set the level to info and use a formatter that gives
+	// us millisecond resolution.
 	log.SetLevel(log.InfoLevel)
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
+	})
 }

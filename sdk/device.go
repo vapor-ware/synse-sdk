@@ -164,11 +164,12 @@ func (device *Device) JSON() (string, error) {
 	return string(bytes), nil
 }
 
-// GetType gets the type of the device. The type of the device is the last
-// element in its Kind namespace. For example, with the Kind "foo.bar.temperature",
-// the type would be "temperature".
-func (device *Device) GetType() string {
-	return device.Type
+func (device *Device) GetHandler() *DeviceHandler {
+	return device.handler
+}
+
+func (device *Device) GetID() string {
+	return device.id
 }
 
 // GetOutput gets the named Output from the Device's output list. If the Output
@@ -181,65 +182,6 @@ func (device *Device) GetOutput(name string) *Output {
 	}
 	return nil
 }
-
-//// makeDevices creates Device instances from a DeviceConfig. The DeviceConfig
-//// used here should be a unified config, meaning that all DeviceConfigs (either from
-//// different files or from file and dynamic registration) are merged into a single
-//// DeviceConfig. This should only be called once all configs have been parsed and
-//// validated to ensure that the information we have is all correct.
-//func makeDevices(config *DeviceConfig) ([]*Device, error) { // nolint: gocyclo
-//	var devices []*Device
-//
-//	// The DeviceConfig we get here should be the unified config.
-//	for _, kind := range config.Devices {
-//		for _, instance := range kind.Instances {
-//
-//			// Get the outputs for the instance.
-//			instanceOutputs, err := getInstanceOutputs(kind, instance)
-//			if err != nil {
-//				return nil, err
-//			}
-//
-//			// Get the location
-//			l, err := config.GetLocation(instance.Location)
-//			if err != nil {
-//				return nil, err
-//			}
-//			location, err := l.Resolve()
-//			if err != nil {
-//				return nil, err
-//			}
-//
-//			// Get the DeviceHandler. If a specific handlerName is set in the config,
-//			// we will use that as the definitive handler. Otherwise, use the kind.
-//			handlerName := kind.Name
-//			if kind.HandlerName != "" {
-//				handlerName = kind.HandlerName
-//			}
-//			if instance.HandlerName != "" {
-//				handlerName = instance.HandlerName
-//			}
-//			handler, err := getHandlerForDevice(handlerName)
-//			if err != nil {
-//				return nil, err
-//			}
-//
-//			device := &Device{
-//				Kind:        kind.Name,
-//				Metadata:    kind.Metadata,
-//				Plugin:      metainfo.Name,
-//				Info:        instance.Info,
-//				Location:    location,
-//				Data:        instance.Data,
-//				Outputs:     instanceOutputs,
-//				Handler:     handler,
-//				SortOrdinal: instance.SortOrdinal,
-//			}
-//			devices = append(devices, device)
-//		}
-//	}
-//	return devices, nil
-//}
 
 // getInstanceOutputs get the Outputs for a single device instance. It converts
 // the instance's DeviceOutput to an Output type, and by doing so unifies that
@@ -282,21 +224,6 @@ func getInstanceOutputs(kind *DeviceKind, instance *DeviceInstance) ([]*Output, 
 		}
 	}
 	return instanceOutputs, nil
-}
-
-// Location holds the location information for a Device. This is essentially just
-// the config.Location struct, but with all fields fully resolved.
-type Location struct {
-	Rack  string
-	Board string
-}
-
-// encode translates the Location to the corresponding gRPC Location message.
-func (location *Location) encode() *synse.Location {
-	return &synse.Location{
-		Rack:  location.Rack,
-		Board: location.Board,
-	}
 }
 
 // Output defines a single output that a device can support. It is the DeviceConfig's

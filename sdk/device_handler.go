@@ -57,7 +57,6 @@ func (handler *DeviceHandler) GetDevices() []*Device {
 	return DeviceManager.GetDevicesForHandler(handler.Name)
 }
 
-
 // supportsBulkRead checks if the handler supports bulk reading for its Devices.
 //
 // If BulkRead is set for the device handler and Read is not, then the handler
