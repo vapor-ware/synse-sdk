@@ -13,7 +13,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
 const (
@@ -34,13 +33,6 @@ func init() {
 	flag.BoolVar(&flagVersion, "version", false, "print the plugin version information")
 	flag.BoolVar(&flagInfo, "info", false, "print the plugin metadata")
 	flag.BoolVar(&flagDryRun, "dry-run", false, "run only the setup actions to verify functionality and configuration")
-
-	// Logging defaults: set the level to info and use a formatter that gives
-	// us millisecond resolution.
-	log.SetLevel(log.InfoLevel)
-	log.SetFormatter(&log.TextFormatter{
-		TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
-	})
 }
 
 // PluginAction defines an action that can be run before or after the main
@@ -50,30 +42,28 @@ type PluginAction struct {
 	Action func(p *Plugin) error
 }
 
-// A Plugin represents an instance of a Synse Plugin. Synse Plugins are used
-// as data providers and device controllers for Synse server.
+// Plugin is a Synse Plugin.
 type Plugin struct {
-	quit   chan os.Signal
-	config *config.Plugin
-
-	server *server
+	info    *PluginMetadata
+	version *pluginVersion
+	config  *config.Plugin
+	quit    chan os.Signal
 
 	preRun  []*PluginAction
 	postRun []*PluginAction
+
+	// Plugin components
+	deviceManager *deviceManager
+	server        *server
 }
 
-// NewPlugin creates a new instance of a Synse Plugin.
+// NewPlugin creates a new instance of a Plugin. This should be the only
+// way that a Plugin is initialized.
+//
+// This constructor will load the plugin configuration; if it is not present
+// or invalid, this will fail. All other Plugin component initialization
+// is deferred until Run is called.
 func NewPlugin(options ...PluginOption) (*Plugin, error) {
-	// Normally, this would be a weird place to call Parse and do other config
-	// setup, but since this constructor is effectively acting as the entry point
-	// to the SDK, it works here.
-	flag.Parse()
-
-	// Prior to doing any other setup/loading, check if we are set to run
-	// in debug mode.
-	if flagDebug {
-		log.SetLevel(log.DebugLevel)
-	}
 
 	// Load the plugin configuration.
 	conf := new(config.Plugin)
@@ -81,39 +71,71 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		return nil, err
 	}
 
-	// If debug isn't set via command-line override and it is set in the
-	// configuration file, set the level to debug, otherwise, keep it at info.
-	if !flagDebug && conf.Debug {
-		log.SetLevel(log.DebugLevel)
+	// Initialize plugin components.
+	deviceManager := newDeviceManager()
+	server := newServer(conf.Network)
+
+	p := Plugin{
+		quit:    make(chan os.Signal),
+		info:    new(PluginMetadata),
+		version: version,
+		config:  conf,
+
+		deviceManager: deviceManager,
+		server:        server,
 	}
-
-	// Create the server used for gRPC communication. This will fail if the
-	// server can not be set up (e.g. misconfiguration).
-	server, err := newServer(conf.Network)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a new instance of the plugin.
-	plugin := &Plugin{
-		quit:   make(chan os.Signal),
-		config: conf,
-		server: server,
-	}
-
-	// Register system calls for graceful stopping.
-	signal.Notify(plugin.quit, syscall.SIGTERM)
-	signal.Notify(plugin.quit, syscall.SIGINT)
-
-	// Register component actions with the plugin. Note that the order that things
-	// are added is the order in which they are executed.
-	server.registerActions(plugin)
 
 	// Set custom options for the plugin.
 	for _, option := range options {
 		option(ctx)
 	}
-	return plugin, nil
+	return &p, nil
+}
+
+func (plugin *Plugin) SetInfo(info *PluginMetadata) {
+	plugin.info = info
+}
+
+func (plugin *Plugin) RegisterOutputs() {
+	// todo
+}
+
+func (plugin *Plugin) Run() error {
+	// Plugin setup. This ensures that the plugin is set up and all
+	// plugin metadata that we need is present.
+	if err := plugin.init(); err != nil {
+		return err
+	}
+
+	// Initialize all plugin components
+	if err := plugin.deviceManager.init(); err != nil {
+		return err
+	}
+	if err := plugin.server.init(); err != nil {
+		return err
+	}
+
+	// If all components initialized without error, we can register
+	// any pre/post run actions which they may have.
+	plugin.server.registerActions(plugin)
+
+	// Run pre-run actions, if any exist.
+	if err := plugin.execPreRun(); err != nil {
+		return err
+	}
+
+	// Listen for plugin quit.
+	go plugin.onQuitSignal()
+
+	// If the plugin was run with the '--dry-run' flag, end the run here
+	// before we actually start any of the plugin components.
+	if flagDryRun {
+		log.Info("[plugin] dry-run successful")
+		os.Exit(0)
+	}
+
+	// Run the plugin.
+	return plugin.run()
 }
 
 // RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
@@ -139,8 +161,8 @@ func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
 // RegisterPreRunActions registers actions with the Plugin which will be called prior
 // to the business logic of the Plugin.
 //
-// Pre-run actions are considered setup actions / validator and as such, they are
-// included in the Plugin dry-run. These run before the final pre-flight checks.
+// Pre-run actions are considered setup/validator actions and as such, they are
+// included in the Plugin dry-run.
 func (plugin *Plugin) RegisterPreRunActions(actions ...*PluginAction) {
 	plugin.preRun = append(plugin.preRun, actions...)
 }
@@ -155,12 +177,25 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...*PluginAction) {
 
 // RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
 //
-// These DeviceHandlers are then matched with the Device instances
-// by their name and provide the read/write functionality for the
-// Devices. If a DeviceHandler is not registered for a Device, the
-// Device will not be usable by the plugin.
+// These DeviceHandlers are matched with the Device instances by their name and
+// provide the read/write functionality for Devices. If a DeviceHandler is not
+// registered for a Device, the Device will not be usable by the plugin.
 func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) error {
-	return DeviceManager.AddHandlers(handlers...)
+	return plugin.deviceManager.AddHandlers(handlers...)
+}
+
+// RegisterDeviceSetupActions registers actions with the device manager which will be
+// executed on start. These actions are used for device-specific setup.
+//
+// fixme: no more kind, need to fix the below.
+//
+// The filter parameter should be the filter to apply to devices. Currently
+// filtering is supported for device kind and type. Filter strings are specified in
+// the format "key=value,key=value". The filter
+//     "kind=temperature,kind=ABC123"
+// would only match devices whose kind was temperature or ABC123.
+func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...*DeviceAction) {
+	plugin.deviceManager.AddDeviceSetupActions(filter, actions...)
 }
 
 // Run starts the Plugin.
@@ -168,23 +203,7 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) error {
 // Before the gRPC server is started, and before the read and write goroutines
 // are started, Plugin setup and validation will happen. If successful, pre-run
 // actions are executed, and device setup actions are executed, if defined.
-func (plugin *Plugin) Run() error {
-
-	// Before anything else is done, check to see if any command-line flags
-	// were set which would terminate the run (e.g. printing version info
-	// or plugin metadata).
-	preRunPrint()
-
-	// Run the pre-flight checks. If any check fails, we cannot run.
-	if err := plugin.preFlightChecks(); err != nil {
-		log.Error("[plugin] failed pre-flight check(s) - terminating")
-		return err
-	}
-
-	// Perform pre-run setup
-	if err := plugin.setup(); err != nil {
-		return err
-	}
+func (plugin *Plugin) RunOrig() error {
 
 	// Before we start the dataManager goroutines or the gRPC server, we
 	// will execute the preRunActions, if any exist.
@@ -211,12 +230,6 @@ func (plugin *Plugin) Run() error {
 		os.Exit(0)
 	}
 
-	log.Debug("[sdk] starting plugin run")
-
-	// todo: this should go somewhere here:
-	// Listen for signals to terminate the Plugin.
-	go plugin.onQuit()
-
 	// If the default health checks are enabled, register them now
 	if !plugin.config.Health.Checks.DisableDefaults {
 		log.Debug("[sdk] registering default health checks")
@@ -230,7 +243,66 @@ func (plugin *Plugin) Run() error {
 	}
 
 	// Start the gRPC server
-	return plugin.server.Serve()
+	return plugin.server.start()
+}
+
+func (plugin *Plugin) init() error {
+	// Ensure command line flags have been parsed.
+	flag.Parse()
+
+	// Check if the plugin should run in debug mode.
+	if flagDebug || plugin.config.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	// The plugin needs a name in order to run.
+	if plugin.info.Name == "" {
+		// fixme
+		return fmt.Errorf("plugin needs a name to run")
+	}
+
+	return nil
+}
+
+func (plugin *Plugin) run() error {
+	// Start the plugin components. Order matters here.
+	// todo
+
+	// Run the gRPC server. This will block while running until the
+	// plugin is terminated.
+	return plugin.server.start()
+}
+
+// onQuitSignal is a function that runs as a goroutine during plugin Run. It
+// listens for a quit signal and will terminate the plugin when such a signal
+// is received.
+//
+// Post-run actions are executed here as part of plugin termination.
+func (plugin *Plugin) onQuitSignal() {
+	// Register system calls for graceful stopping.
+	signal.Notify(plugin.quit, syscall.SIGTERM)
+	signal.Notify(plugin.quit, syscall.SIGINT)
+
+	log.Info("[plugin] will terminate on: [SIGTERM, SIGINT]")
+
+	// Listen for the quit signal(s). This will block until a signal
+	// is received.
+	sig := <-plugin.quit
+
+	// If we get here, a signal was received, so we can run termination actions.
+	log.WithFields(log.Fields{
+		"signal": sig.String(),
+	}).Info("[plugin] terminating plugin...")
+
+	if err := plugin.execPostRun(); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("[plugin] failed post-run action execution")
+		os.Exit(1)
+	}
+
+	log.Info("[done]")
+	os.Exit(0)
 }
 
 // loadPluginConfig loads plugin configurations from file and environment
@@ -254,52 +326,6 @@ func loadPluginConfig(conf *config.Plugin) error {
 
 	// Marshal the configuration into the plugin config struct.
 	return loader.Scan(conf)
-}
-
-// preFlightChecks runs checks prior to starting the Plugin to ensure that it has
-// all of the information it needs defined and available. Any failure here means
-// that the Plugin will not be able to run.
-func (plugin *Plugin) preFlightChecks() error {
-	logOk := log.WithField("status", "ok")
-	logErr := log.WithField("status", "failed")
-
-	var failed bool
-
-	// Check that the plugin metadata is set; only the name is required.
-	// fixme (etd): there is probably a way to simplify this
-	if metainfo.Name == "" {
-		logErr.Error("[plugin] pre-flight: plugin name set")
-		failed = true
-	} else {
-		logOk.Info("[plugin] pre-flight: plugin name set")
-	}
-
-	if failed {
-		// fixme : custom pre-flight error?
-		return fmt.Errorf("preflight checks failed")
-	}
-	return nil
-}
-
-// onQuit is a function that waits for a signal to terminate the plugin's run
-// and run cleanup/post-run actions prior to terminating.
-func (plugin *Plugin) onQuit() {
-	sig := <-plugin.quit
-	log.Infof("[sdk] stopping plugin (%s)...", sig.String())
-
-	// TODO: any other stop/cleanup actions should go here (closing channels, etc)
-
-	// Immediately stop the gRPC server.
-	plugin.server.Stop()
-
-	// Execute post-run actions.
-	if err := plugin.execPostRun(); err != nil {
-		log.Error(err)
-		os.Exit(1)
-	}
-
-	log.Info("[done]")
-	os.Exit(0)
 }
 
 // execPreRun executes the pre-run actions for the plugin.
@@ -348,129 +374,42 @@ func (plugin *Plugin) execPostRun() error {
 	return multiErr.Err()
 }
 
-// setup performs the pre-run setup actions for a plugin.
-func (plugin *Plugin) setup() error {
-	// Register system calls for graceful stopping.
-	//signal.Notify(plugin.quit, syscall.SIGTERM)
-	//signal.Notify(plugin.quit, syscall.SIGINT)
-	//go plugin.onQuit()
-
-	//// The plugin name must be set as metainfo, since it is used in the Device
-	//// model. Check if it is set here. If not, return an error.
-	//if metainfo.Name == "" {
-	//	return fmt.Errorf("plugin name not set, but required; see sdk.SetPluginMetainfo")
-	//}
-
-	// Check that the registered device handlers do not have any conflicting names.
-	err := ctx.checkDeviceHandlers()
-	if err != nil {
-		return err
-	}
-
-	// Check for configuration policies. If no policy was set by the plugin,
-	// this will fall back on the default policies.
-	err = policies.Check()
-	if err != nil {
-		return err
-	}
-
-	//// Read in all configs and verify that they are correct.
-	//err = plugin.processConfig()
-	//if err != nil {
-	//	return err
-	//}
-
-	//// If the plugin config specifies debug mode, enable debug mode
-	//if plugin.config.Debug {
-	//	log.SetLevel(log.DebugLevel)
-	//}
-
-	// Initialize Device instances for each of the devices configured with
-	// the plugin.
-	err = registerDevices()
-	if err != nil {
-		return err
-	}
-
-	// Set up the transaction cache
-	setupTransactionCache(plugin.config.Settings.Transaction.TTL)
-
-	// Set up the readings cache, if its configured
-	setupReadingsCache()
-
-	return nil
-}
-
-// processConfig handles plugin configuration in a number of steps. The behavior
-// of config handling is dependent on the config policy that is set. If no config
-// policies are set, the plugin will terminate in error.
+//// setup performs the pre-run setup actions for a plugin.
+//func (plugin *Plugin) setupOrig() error {
 //
-// There are four major steps to processing plugin configuration: reading in the
-// config, validating the config scheme, config unification, and verifying the
-// config data is correct. These steps should happen for all config types.
-func (plugin *Plugin) processConfig() error {
-
-	//// Resolve the plugin config.
-	//log.Debug("[sdk] resolving plugin config")
-	//err := processPluginConfig()
-	//if err != nil {
-	//	return err
-	//}
-
-	//// Resolve the output type config(s).
-	//log.Debug("[sdk] resolving output type config(s)")
-	//outputTypes, err := processOutputTypeConfig()
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//// Register the found output types, if any.
-	//for _, output := range outputTypes {
-	//	err = plugin.RegisterOutputTypes(output)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-
-	// Finally, make sure that we have output types. If we
-	// don't, return an error, since we won't be able to properly
-	// register devices.
-	// todo: update output type registration
-	if len(ctx.outputTypes) == 0 {
-		return fmt.Errorf(
-			"no output types found. you must either register output types " +
-				"with the plugin, or configure them via file",
-		)
-	}
-
-	//// Resolve the device config(s).
-	//// todo: this should be done elsewhere (device manager?)
-	//log.Debug("[sdk] resolving device config(s)")
-	//err := processDeviceConfigs()
-	//if err != nil {
-	//	return err
-	//}
-
-	log.Debug("[sdk] finished processing configuration(s) for run")
-	return nil
-}
-
-// preRunPrint prints out information about the plugin prior to doing any setup
-// or run actions.
+//	// Check for configuration policies. If no policy was set by the plugin,
+//	// this will fall back on the default policies.
+//	err := policies.Check()
+//	if err != nil {
+//		return err
+//	}
 //
-// If the item being printed is a command line option, it will terminate the
-// plugin after printing.
-func preRunPrint() {
+//	// fixme: this will be the domain of the state manager:
+//
+//	// Set up the transaction cache
+//	setupTransactionCache(plugin.config.Settings.Transaction.TTL)
+//
+//	// Set up the readings cache, if its configured
+//	setupReadingsCache()
+//
+//	return nil
+//}
+
+// handleRunOptions checks whether any command line options were specified for
+// the plugin run. If any are set, it handles them appropriately.
+func (plugin *Plugin) handleRunOptions() {
 	var terminate bool
 
 	// --info was set; print the plugin metadata.
 	if flagInfo {
-		fmt.Println(metainfo.Format())
+		fmt.Println(plugin.info.format())
+		terminate = true
 	}
 
 	// --version was set; print the plugin version.
 	if flagVersion {
-		fmt.Println(version.Format())
+		fmt.Println(plugin.version.format())
+		terminate = true
 	}
 
 	if terminate {

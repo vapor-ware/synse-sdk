@@ -30,14 +30,10 @@ const (
 	DeviceEnvOverride = "PLUGIN_DEVICE_CONFIG"
 )
 
-var DeviceManager *deviceManager
-
-// todo: init and use global manager, or make this part of the Plugin?
-func init() {
-	DeviceManager = NewDeviceManager()
-}
-
 // todo: figure out where dynamic device registration fits in here.
+
+// todo: exec device startup actions.. probably not in init (just for startup
+//  ordering), but could be done in a start() fn.
 
 // DeviceAction defines an action that can be run before the main Plugin run
 // logic. This is generally used for doing device-specific setup actions.
@@ -46,30 +42,71 @@ type DeviceAction struct {
 	Action func(p *Plugin, d *Device) error
 }
 
-// DeviceManager loads and manages a Plugin's devices.
+// deviceManager loads and manages a Plugin's devices.
 type deviceManager struct {
 	config *config.Devices
 
-	devices []*Device
-
-	handlers map[string]*DeviceHandler
-
+	devices      map[string]*Device
+	handlers     map[string]*DeviceHandler
 	setupActions map[string][]*DeviceAction
 }
 
-// NewDeviceManager creates a new DeviceManager.
-func NewDeviceManager() *deviceManager {
-	return &deviceManager{}
+// newDeviceManager creates a new DeviceManager.
+func newDeviceManager() *deviceManager {
+	return &deviceManager{
+		devices:      make(map[string]*Device),
+		handlers:     make(map[string]*DeviceHandler),
+		setupActions: make(map[string][]*DeviceAction),
+	}
 }
 
-// AddDevice adds a device to the DeviceManager device slice.
-func (manager *deviceManager) AddDevice(device *Device) {
-	manager.devices = append(manager.devices, device)
+func (manager *deviceManager) init() error {
+	if err := manager.loadConfig(); err != nil {
+		return err
+	}
+
+	if err := manager.createDevices(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// AddDevices adds devices to the DeviceManager device slice.
-func (manager *deviceManager) AddDevices(devices ...*Device) {
-	manager.devices = append(manager.devices, devices...)
+// AddDevice adds a device to the DeviceManager and makes sure that it
+// has a reference to its DeviceHandler.
+//
+// All devices should be added to the DeviceManager with this function.
+//
+// If the Device specifies a handler that does not exist, this will
+// result in an error.
+func (manager *deviceManager) AddDevice(device *Device) error {
+	if device == nil {
+		return fmt.Errorf("can not add nil device to device manager")
+	}
+	if device.Handler == "" {
+		return fmt.Errorf("device does not specify a Handler, can not add to device manager")
+	}
+
+	// If the device does not have a handler set, look up the handler and
+	// update the Device instance with a reference to that handler.
+	if device.handler == nil {
+		handler, err := manager.GetHandler(device.Handler)
+		if err != nil {
+			return err
+		}
+		device.handler = handler
+	}
+
+	// Check if the Device ID collides with an existing device.
+	if _, exists := manager.devices[device.ID()]; exists {
+		// fixme
+		return fmt.Errorf("device id exists")
+	}
+
+	// Add the device to the manager.
+	manager.devices[device.ID()] = device
+
+	return nil
 }
 
 // AddHandlers adds DeviceHandlers to the DeviceManager.
@@ -108,7 +145,7 @@ func (manager *deviceManager) GetHandler(name string) (*DeviceHandler, error) {
 	return handler, nil
 }
 
-// RegisterDeviceSetupActions registers actions with the device manager which will be
+// AddDeviceSetupActions registers actions with the device manager which will be
 // executed on plugin startup, prior to device loading but before plugin run. These
 // actions are used for device-specific setup.
 //
@@ -119,7 +156,7 @@ func (manager *deviceManager) GetHandler(name string) (*DeviceHandler, error) {
 // the format "key=value,key=value". The filter
 //     "kind=temperature,kind=ABC123"
 // would only match devices whose kind was temperature or ABC123.
-func (manager *deviceManager) RegisterDeviceSetupActions(filter string, actions ...*DeviceAction) {
+func (manager *deviceManager) AddDeviceSetupActions(filter string, actions ...*DeviceAction) {
 	if _, exists := manager.setupActions[filter]; exists {
 		manager.setupActions[filter] = append(manager.setupActions[filter], actions...)
 	} else {
@@ -127,27 +164,7 @@ func (manager *deviceManager) RegisterDeviceSetupActions(filter string, actions 
 	}
 }
 
-// registerActions registers preRun (setup) and postRun (teardown) actions
-// for the DeviceManager.
-func (manager *deviceManager) registerActions(plugin *Plugin) {
-	// Register pre-run actions.
-	plugin.RegisterPreRunActions(
-		&PluginAction{
-			Name:   "Load Device Configuration",
-			Action: func(_ *Plugin) error { return manager.loadConfig() },
-		},
-		&PluginAction{
-			Name:   "Generate Devices From Configuration",
-			Action: func(p *Plugin) error { return manager.createDevices(p) },
-		},
-		&PluginAction{
-			Name:   "Run Device Setup Actions",
-			Action: func(p *Plugin) error { return manager.execDeviceSetupActions(p) },
-		},
-	)
-}
-
-func (manager *deviceManager) createDevices(plugin *Plugin) error {
+func (manager *deviceManager) createDevices() error {
 	if manager.config == nil {
 		// fixme: custom error?
 		return fmt.Errorf("device manager has no config")
@@ -166,7 +183,10 @@ func (manager *deviceManager) createDevices(plugin *Plugin) error {
 				continue
 			}
 			// Add it to the manager.
-			manager.AddDevice(device)
+			if err := manager.AddDevice(device); err != nil {
+				// todo: log
+				failedLoad = true
+			}
 		}
 	}
 

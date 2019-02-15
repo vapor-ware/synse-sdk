@@ -9,7 +9,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/policies"
 )
 
 // GetCurrentTime return the current time (time.Now()), with location set to UTC,
@@ -129,7 +128,7 @@ func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 		case "kind":
 			isValid = func(d *Device) bool { return d.Kind == v || v == "*" }
 		case "type":
-			isValid = func(d *Device) bool { return d.GetType() == v || v == "*" }
+			isValid = func(d *Device) bool { return d.Type == v || v == "*" }
 		default:
 			return nil, fmt.Errorf("unsupported filter key. expect 'kind' but got %s", k)
 		}
@@ -146,35 +145,36 @@ func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 	return devices, nil
 }
 
-// registerDevices registers devices with the plugin. Devices are created and
-// registered from the unified device configuration, and registered directly
-// from dynamic device registration.
-func registerDevices() error {
-
-	// devices from dynamic registration
-	policy := policies.GetDeviceConfigDynamicPolicy()
-	if policy != policies.DeviceConfigDynamicProhibited {
-		for _, data := range Config.Plugin.DynamicRegistration.Config {
-			devices, err := ctx.dynamicDeviceRegistrar(data)
-			if err != nil {
-				return err
-			}
-			log.Debugf("[sdk] adding %d devices from dynamic registration", len(devices))
-			updateDeviceMap(devices)
-		}
-	}
-
-	// devices from config. the config here is the unified device config which
-	// is joined from file and from dynamic registration, if set.
-	devices, err := makeDevices(Config.Device)
-	if err != nil {
-		return err
-	}
-	log.Debugf("[sdk] adding %d devices from config", len(devices))
-	updateDeviceMap(devices)
-
-	return nil
-}
+//
+//// registerDevices registers devices with the plugin. Devices are created and
+//// registered from the unified device configuration, and registered directly
+//// from dynamic device registration.
+//func registerDevices() error {
+//
+//	// devices from dynamic registration
+//	policy := policies.GetDeviceConfigDynamicPolicy()
+//	if policy != policies.DeviceConfigDynamicProhibited {
+//		for _, data := range Config.Plugin.DynamicRegistration.Config {
+//			devices, err := ctx.dynamicDeviceRegistrar(data)
+//			if err != nil {
+//				return err
+//			}
+//			log.Debugf("[sdk] adding %d devices from dynamic registration", len(devices))
+//			updateDeviceMap(devices)
+//		}
+//	}
+//
+//	// devices from config. the config here is the unified device config which
+//	// is joined from file and from dynamic registration, if set.
+//	devices, err := makeDevices(Config.Device)
+//	if err != nil {
+//		return err
+//	}
+//	log.Debugf("[sdk] adding %d devices from config", len(devices))
+//	updateDeviceMap(devices)
+//
+//	return nil
+//}
 
 // logStartupInfo is used to log plugin info at startup. This will log
 // the plugin metadata, version info, and registered devices.
