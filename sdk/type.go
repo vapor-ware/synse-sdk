@@ -185,9 +185,9 @@ func (unit Unit) Validate(multiErr *errors.MultiError) {
 	// nothing to validate
 }
 
-// encode translates the SDK Unit type to the corresponding gRPC Unit type.
-func (unit *Unit) encode() *synse.Unit {
-	return &synse.Unit{
+// encode translates the SDK Unit type to its corresponding gRPC message.
+func (unit *Unit) encode() *synse.V3OutputUnit {
+	return &synse.V3OutputUnit{
 		Name:   unit.Name,
 		Symbol: unit.Symbol,
 	}

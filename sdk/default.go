@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/vapor-ware/synse-sdk/sdk/config"
+
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -56,8 +58,8 @@ func defaultDynamicDeviceRegistration(_ map[string]interface{}) ([]*Device, erro
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
-func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*DeviceConfig, error) {
-	return []*DeviceConfig{}, nil
+func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*config.Devices, error) {
+	return []*config.Devices{}, nil
 }
 
 // defaultDeviceDataValidator is the default implementation that fulfils the

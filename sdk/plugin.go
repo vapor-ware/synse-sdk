@@ -10,9 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	// TODO: "config" is in the package namespace.. we'll need to clean
-	//  that up so we don't need to alias the import
-	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
@@ -48,7 +46,7 @@ func init() {
 // PluginAction defines an action that can be run before or after the main
 // Plugin run logic. This is generally used for setup/teardown.
 type PluginAction struct {
-	Name string
+	Name   string
 	Action func(p *Plugin) error
 }
 
@@ -56,7 +54,7 @@ type PluginAction struct {
 // as data providers and device controllers for Synse server.
 type Plugin struct {
 	quit   chan os.Signal
-	config *cfg.Plugin
+	config *config.Plugin
 
 	server *server
 
@@ -78,7 +76,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	}
 
 	// Load the plugin configuration.
-	conf := new(cfg.Plugin)
+	conf := new(config.Plugin)
 	if err := loadPluginConfig(conf); err != nil {
 		return nil, err
 	}
@@ -97,7 +95,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	}
 
 	// Create a new instance of the plugin.
-	plugin := Plugin{
+	plugin := &Plugin{
 		quit:   make(chan os.Signal),
 		config: conf,
 		server: server,
@@ -107,11 +105,15 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	signal.Notify(plugin.quit, syscall.SIGTERM)
 	signal.Notify(plugin.quit, syscall.SIGINT)
 
+	// Register component actions with the plugin. Note that the order that things
+	// are added is the order in which they are executed.
+	server.registerActions(plugin)
+
 	// Set custom options for the plugin.
 	for _, option := range options {
 		option(ctx)
 	}
-	return &plugin, nil
+	return plugin, nil
 }
 
 // RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
@@ -151,31 +153,14 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...*PluginAction) {
 	plugin.postRun = append(plugin.postRun, actions...)
 }
 
-//// RegisterDeviceSetupActions registers functions with the plugin that will be
-//// called on device initialization before it is ever read from / written to. The
-//// functions here can be used for device-specific setup actions.
-////
-//// The filter parameter should be the filter to apply to devices. Currently
-//// filtering is supported for device kind and type. Filter strings are specified in
-//// the format "key=value,key=value". The filter
-////     "kind=temperature,kind=ABC123"
-//// would only match devices whose kind was temperature or ABC123.
-//func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
-//	if _, exists := ctx.deviceSetupActions[filter]; exists {
-//		ctx.deviceSetupActions[filter] = append(ctx.deviceSetupActions[filter], actions...)
-//	} else {
-//		ctx.deviceSetupActions[filter] = actions
-//	}
-//}
-
 // RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
 //
 // These DeviceHandlers are then matched with the Device instances
 // by their name and provide the read/write functionality for the
 // Devices. If a DeviceHandler is not registered for a Device, the
 // Device will not be usable by the plugin.
-func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
-	ctx.deviceHandlers = append(ctx.deviceHandlers, handlers...)
+func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) error {
+	return DeviceManager.AddHandlers(handlers...)
 }
 
 // Run starts the Plugin.
@@ -250,9 +235,9 @@ func (plugin *Plugin) Run() error {
 
 // loadPluginConfig loads plugin configurations from file and environment
 // and marshals that data into the provided Plugin config struct.
-func loadPluginConfig(conf *cfg.Plugin) error {
+func loadPluginConfig(conf *config.Plugin) error {
 	// Setup the config loader for the plugin.
-	loader := cfg.NewYamlLoader("plugin")
+	loader := config.NewYamlLoader("plugin")
 	loader.EnvPrefix = "PLUGIN"
 	loader.EnvOverride = PluginEnvOverride
 	loader.FileName = "config"
@@ -458,13 +443,13 @@ func (plugin *Plugin) processConfig() error {
 		)
 	}
 
-	// Resolve the device config(s).
-	// todo: this should be done elsewhere (device manager?)
-	log.Debug("[sdk] resolving device config(s)")
-	err := processDeviceConfigs()
-	if err != nil {
-		return err
-	}
+	//// Resolve the device config(s).
+	//// todo: this should be done elsewhere (device manager?)
+	//log.Debug("[sdk] resolving device config(s)")
+	//err := processDeviceConfigs()
+	//if err != nil {
+	//	return err
+	//}
 
 	log.Debug("[sdk] finished processing configuration(s) for run")
 	return nil
