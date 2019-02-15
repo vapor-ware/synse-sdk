@@ -1,9 +1,7 @@
 package sdk
 
 import (
-	// TODO: "config" is in the package namespace.. we'll need to clean
-	//  that up so we don't need to alias the import
-	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
 // DeviceIdentifier is a handler function that produces a string that can be used to
@@ -19,7 +17,7 @@ type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
 // DynamicDeviceConfigRegistrar is a handler function that takes a Plugin config's "dynamic
 // registration" data and generates DeviceConfig instances from it. How this is done
 // is specific to the plugin/protocol.
-type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*cfg.Devices, error)
+type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.Devices, error)
 
 // DeviceDataValidator is a handler function that takes the `Data` field of a device config
 // and performs some validation on it. This allows users to provide validation on the

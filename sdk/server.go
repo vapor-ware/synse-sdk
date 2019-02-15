@@ -10,9 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	// TODO: "config" is in the package namespace.. we'll need to clean
-	//  that up so we don't need to alias the import
-	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 
@@ -38,20 +36,20 @@ var (
 // server implements the Synse Plugin gRPC server. It is used by the
 // plugin to communicate via gRPC over tcp or unix socket to Synse server.
 type server struct {
-	cfg  *cfg.NetworkSettings
+	conf *config.NetworkSettings
 	grpc *grpc.Server
 }
 
 // newServer creates a new instance of a server. This is used by the Plugin
 // constructor to create a Plugin's server instance.
-func newServer(conf *cfg.NetworkSettings) (*server, error) {
+func newServer(conf *config.NetworkSettings) (*server, error) {
 	grpcServer, err := newGrpcServer(conf)
 	if err != nil {
 		return nil, err
 	}
 
 	server := &server{
-		cfg:  conf,
+		conf: conf,
 		grpc: grpcServer,
 	}
 	synse.RegisterV3PluginServer(grpcServer, server)
@@ -75,14 +73,14 @@ func (server *server) Serve() error {
 	}
 
 	// Create the listener over the configured protocol and address.
-	listener, err := net.Listen(server.cfg.Type, server.address())
+	listener, err := net.Listen(server.conf.Type, server.address())
 	if err != nil {
 		return err
 	}
 
 	log.WithFields(log.Fields{
-		"mode": server.cfg.Type,
-		"addr": server.cfg.Address,
+		"mode": server.conf.Type,
+		"addr": server.conf.Address,
 	}).Info("[server] serving...")
 	return server.grpc.Serve(listener)
 }
@@ -91,16 +89,16 @@ func (server *server) Serve() error {
 // may need additional formatting depending on the networking mode, so this
 // should be the preferred means of getting the address.
 func (server *server) address() string {
-	switch t := server.cfg.Type; t {
+	switch t := server.conf.Type; t {
 	case networkTypeUnix:
-		address := server.cfg.Address
+		address := server.conf.Address
 		if !strings.HasPrefix(address, socketDir) {
 			address = filepath.Join(socketDir, address)
 		}
 		return address
 
 	case networkTypeTCP:
-		return server.cfg.Address
+		return server.conf.Address
 
 	default:
 		return ""
@@ -112,12 +110,18 @@ func (server *server) address() string {
 func (server *server) registerActions(plugin *Plugin) {
 	// Register pre-run actions.
 	plugin.RegisterPreRunActions(
-		func(plugin *Plugin) error { return server.setup() },
+		&PluginAction{
+			Name: "Setup gRPC Server",
+			Action: func(plugin *Plugin) error { return server.setup() },
+		},
 	)
 
 	// Register post-run actions.
 	plugin.RegisterPostRunActions(
-		func(plugin *Plugin) error { return server.teardown() },
+		&PluginAction{
+			Name: "Cleanup gRPC Server",
+			Action: func(plugin *Plugin) error { return server.teardown() },
+		},
 	)
 }
 
@@ -125,7 +129,7 @@ func (server *server) registerActions(plugin *Plugin) {
 func (server *server) setup() error {
 	log.Debug("[server] setting up server")
 
-	switch t := server.cfg.Type; t {
+	switch t := server.conf.Type; t {
 	case networkTypeUnix:
 		// If the path containing the sockets does not exist, create it.
 		_, err := os.Stat(socketDir)
@@ -162,7 +166,7 @@ func (server *server) teardown() error {
 	server.Stop()
 
 	// Perform any other cleanup.
-	switch t := server.cfg.Type; t {
+	switch t := server.conf.Type; t {
 	case networkTypeUnix:
 		// Remove the unix socket that was being used.
 		if err := os.Remove(server.address()); !os.IsNotExist(err) {
@@ -179,7 +183,7 @@ func (server *server) teardown() error {
 	}
 }
 
-func newGrpcServer(conf *cfg.NetworkSettings) (*grpc.Server, error) {
+func newGrpcServer(conf *config.NetworkSettings) (*grpc.Server, error) {
 	// Options for the gRPC server to be passed in to the constructor.
 	var opts []grpc.ServerOption
 
@@ -194,7 +198,7 @@ func newGrpcServer(conf *cfg.NetworkSettings) (*grpc.Server, error) {
 
 // addTLSOptions updates the options slice with any TLS/SSL options for the gRPC server,
 // as configured via the plugin network config.
-func addTLSOptions(options *[]grpc.ServerOption, settings *cfg.TLSNetworkSettings) error {
+func addTLSOptions(options *[]grpc.ServerOption, settings *config.TLSNetworkSettings) error {
 	// If there is no TLS config, there are no options to add here.
 	if settings == nil {
 		return nil

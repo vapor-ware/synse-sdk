@@ -1,22 +1,22 @@
 package sdk
 
-// Config holds the configuration for a plugin, its device configs, and
-// its type configs.
-var Config = config{}
+//// Config holds the configuration for a plugin, its device configs, and
+//// its type configs.
+//var Config = config{}
 
 // TODO (etd): this will largely, if not entirely, be stripped out once the simplified
 //  config flow is set up. for now, it will be kept around for reference while the
 //  new plumbing is built out.
 
-// config is a struct that holds all of the configs.
-type config struct {
-	OutputType *OutputType
-}
-
-// reset clears the config struct.
-func (config *config) reset() {
-	config.OutputType = nil
-}
+//// config is a struct that holds all of the configs.
+//type config struct {
+//	OutputType *OutputType
+//}
+//
+//// reset clears the config struct.
+//func (config *config) reset() {
+//	config.OutputType = nil
+//}
 
 //// ConfigComponent is an interface that all structs that define configuration
 //// components should implement.
@@ -104,8 +104,8 @@ func (config *config) reset() {
 //	// we will want to see what the configs are, if in debug mode.
 //	if log.GetLevel() == log.DebugLevel {
 //		for i, ctx := range fileCtxs {
-//			cfg := ctx.Config.(*DeviceConfig)
-//			json, e := cfg.JSON()
+//			conf := ctx.Config.(*DeviceConfig)
+//			json, e := conf.JSON()
 //			if e != nil {
 //				log.Errorf("[sdk] failed to marshal device config to json: %v", err)
 //			} else {
@@ -163,8 +163,8 @@ func (config *config) reset() {
 //			multiErr.Add(e)
 //			continue
 //		}
-//		for _, cfg := range dynamicCfgs {
-//			dynamicCtxs = append(dynamicCtxs, NewConfigContext("dynamic registration", cfg))
+//		for _, conf := range dynamicCfgs {
+//			dynamicCtxs = append(dynamicCtxs, NewConfigContext("dynamic registration", conf))
 //		}
 //	}
 //
@@ -182,8 +182,8 @@ func (config *config) reset() {
 //	// we will want to see what the configs are, if in debug mode.
 //	if log.GetLevel() == log.DebugLevel {
 //		for i, ctx := range dynamicCtxs {
-//			cfg := ctx.Config.(*DeviceConfig)
-//			json, e := cfg.JSON()
+//			conf := ctx.Config.(*DeviceConfig)
+//			json, e := conf.JSON()
 //			if e != nil {
 //				log.Errorf("[sdk] failed to marshal device config to json: %v", err)
 //			} else {
@@ -257,21 +257,21 @@ func (config *config) reset() {
 //	}
 //
 //	// Verify that the data defined in the configs is correct, references resolve, etc.
-//	cfg := unifiedCtx.Config.(*DeviceConfig)
-//	multiErr = verifyConfigs(cfg)
+//	conf := unifiedCtx.Config.(*DeviceConfig)
+//	multiErr = verifyConfigs(conf)
 //	if multiErr.HasErrors() {
 //		return multiErr
 //	}
 //
 //	// Validate that the `Data` fields in the config are correct using the plugin-specified
 //	// validator, since `Data` is plugin-specific.
-//	multiErr = cfg.ValidateDeviceConfigData(ctx.deviceDataValidator)
+//	multiErr = conf.ValidateDeviceConfigData(ctx.deviceDataValidator)
 //	if multiErr.HasErrors() {
 //		return multiErr
 //	}
 //
 //	// With the config validated and unified, we can now assign it to the global Device variable.
-//	Config.Device = cfg
+//	Config.Device = conf
 //	return nil
 //}
 
@@ -301,8 +301,8 @@ func (config *config) reset() {
 //	if pluginCtx == nil {
 //		log.Info("[sdk] no config found from file, checking policy and using defaults")
 //	} else {
-//		cfg := pluginCtx.Config.(*PluginConfig)
-//		json, e := cfg.JSON()
+//		conf := pluginCtx.Config.(*PluginConfig)
+//		json, e := conf.JSON()
 //		if e != nil {
 //			log.Errorf("[sdk] failed to marshal plugin config to json: %v", err)
 //		} else {
@@ -397,8 +397,8 @@ func (config *config) reset() {
 //	// we will want to see what the configs are, if in debug mode.
 //	if log.GetLevel() == log.DebugLevel {
 //		for i, ctx := range outputTypeCtxs {
-//			cfg := ctx.Config.(*OutputType)
-//			json, e := cfg.JSON()
+//			conf := ctx.Config.(*OutputType)
+//			json, e := conf.JSON()
 //			if e != nil {
 //				log.Errorf("[sdk] failed to marshal output type config to json: %v", err)
 //			} else {
@@ -454,8 +454,8 @@ func (config *config) reset() {
 //			)
 //		}
 //
-//		cfg := outputTypeCtx.Config.(*OutputType)
-//		outputs = append(outputs, cfg)
+//		conf := outputTypeCtx.Config.(*OutputType)
+//		outputs = append(outputs, conf)
 //	}
 //	return outputs, nil
 //}

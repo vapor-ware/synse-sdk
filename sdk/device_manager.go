@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
-	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
@@ -52,7 +52,7 @@ type DeviceAction struct {
 
 // DeviceManager loads and manages a Plugin's devices.
 type deviceManager struct {
-	config *cfg.Devices
+	config *config.Devices
 
 	devices []*Device
 
@@ -145,7 +145,7 @@ func (manager *deviceManager) createDevices() error {
 
 func (manager *deviceManager) loadConfig() error {
 	// Setup the config loader for the device manager.
-	loader := cfg.NewYamlLoader("device")
+	loader := config.NewYamlLoader("device")
 	loader.EnvOverride = DeviceEnvOverride
 	loader.AddSearchPaths(
 		"./config/device",                 // Local device config directory

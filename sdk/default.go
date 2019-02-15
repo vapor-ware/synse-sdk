@@ -5,9 +5,7 @@ import (
 	"reflect"
 	"sort"
 
-	// TODO: "config" is in the package namespace.. we'll need to clean
-	//  that up so we don't need to alias the import
-	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -60,8 +58,8 @@ func defaultDynamicDeviceRegistration(_ map[string]interface{}) ([]*Device, erro
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
-func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*cfg.Devices, error) {
-	return []*cfg.Devices{}, nil
+func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*config.Devices, error) {
+	return []*config.Devices{}, nil
 }
 
 // defaultDeviceDataValidator is the default implementation that fulfils the

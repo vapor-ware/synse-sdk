@@ -10,9 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	// TODO: "config" is in the package namespace.. we'll need to clean
-	//  that up so we don't need to alias the import
-	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/policies"
@@ -56,7 +54,7 @@ type PluginAction struct {
 // as data providers and device controllers for Synse server.
 type Plugin struct {
 	quit   chan os.Signal
-	config *cfg.Plugin
+	config *config.Plugin
 
 	server *server
 
@@ -78,7 +76,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	}
 
 	// Load the plugin configuration.
-	conf := new(cfg.Plugin)
+	conf := new(config.Plugin)
 	if err := loadPluginConfig(conf); err != nil {
 		return nil, err
 	}
@@ -150,23 +148,6 @@ func (plugin *Plugin) RegisterPreRunActions(actions ...*PluginAction) {
 func (plugin *Plugin) RegisterPostRunActions(actions ...*PluginAction) {
 	plugin.postRun = append(plugin.postRun, actions...)
 }
-
-//// RegisterDeviceSetupActions registers functions with the plugin that will be
-//// called on device initialization before it is ever read from / written to. The
-//// functions here can be used for device-specific setup actions.
-////
-//// The filter parameter should be the filter to apply to devices. Currently
-//// filtering is supported for device kind and type. Filter strings are specified in
-//// the format "key=value,key=value". The filter
-////     "kind=temperature,kind=ABC123"
-//// would only match devices whose kind was temperature or ABC123.
-//func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...deviceAction) {
-//	if _, exists := ctx.deviceSetupActions[filter]; exists {
-//		ctx.deviceSetupActions[filter] = append(ctx.deviceSetupActions[filter], actions...)
-//	} else {
-//		ctx.deviceSetupActions[filter] = actions
-//	}
-//}
 
 // RegisterDeviceHandlers adds DeviceHandlers to the Plugin.
 //
@@ -250,9 +231,9 @@ func (plugin *Plugin) Run() error {
 
 // loadPluginConfig loads plugin configurations from file and environment
 // and marshals that data into the provided Plugin config struct.
-func loadPluginConfig(conf *cfg.Plugin) error {
+func loadPluginConfig(conf *config.Plugin) error {
 	// Setup the config loader for the plugin.
-	loader := cfg.NewYamlLoader("plugin")
+	loader := config.NewYamlLoader("plugin")
 	loader.EnvPrefix = "PLUGIN"
 	loader.EnvOverride = PluginEnvOverride
 	loader.FileName = "config"

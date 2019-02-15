@@ -7,7 +7,7 @@ import (
 	"github.com/imdario/mergo"
 
 	log "github.com/Sirupsen/logrus"
-	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
@@ -81,7 +81,7 @@ type Device struct {
 // and device instance configuration.
 //
 // These configuration components are loaded from config file.
-func NewDeviceFromConfig(proto *cfg.DeviceProto, instance *cfg.DeviceInstance) (*Device, error) {
+func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInstance) (*Device, error) {
 	// Define variable for the Device fields that can be inherited from the
 	// device prototype configuration.
 	var (
