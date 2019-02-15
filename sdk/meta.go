@@ -11,42 +11,47 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-// metainfo is the global variable that tracks plugin meta-information.
-var metainfo meta
-
-// meta is a struct that holds the meta-information for a plugin.
-type meta struct {
+// PluginMeta is the metadata associated with a Plugin.
+type PluginMetadata struct {
 	Name        string
 	Maintainer  string
-	Tag         string
 	Description string
 	VCS         string
 }
 
-// log logs out the plugin meta-info at INFO level.
-func (m *meta) log() {
-	log.Info("Plugin Info:")
-	log.Infof("  Tag:         %s", m.Tag)
-	log.Infof("  Name:        %s", m.Name)
-	log.Infof("  Maintainer:  %s", m.Maintainer)
-	log.Infof("  VCS:         %s", m.VCS)
-	log.Infof("  Description: %s", m.Description)
+// Tag creates the tag used in the plugin meta information.
+func (info *PluginMetadata) Tag() string {
+	tag := fmt.Sprintf("%s/%s", info.Maintainer, info.Name)
+	tag = strings.ToLower(tag)
+	tag = strings.Replace(tag, "-", "_", -1)
+	tag = strings.Replace(tag, " ", "-", -1)
+	return tag
 }
 
-// Encode converts the metainfo struct to its corresponding Synse gRPC V3Metadata message.
-func (m *meta) Encode() *synse.V3Metadata {
+// log logs out the plugin metadata at INFO level.
+func (info *PluginMetadata) log() {
+	log.Info("Plugin Info:")
+	log.Infof("  Tag:         %s", info.Tag())
+	log.Infof("  Name:        %s", info.Name)
+	log.Infof("  Maintainer:  %s", info.Maintainer)
+	log.Infof("  VCS:         %s", info.VCS)
+	log.Infof("  Description: %s", info.Description)
+}
+
+// encode converts the metadata struct to its corresponding Synse gRPC message.
+func (info *PluginMetadata) encode() *synse.V3Metadata {
 	return &synse.V3Metadata{
-		Name:        m.Name,
-		Maintainer:  m.Maintainer,
-		Tag:         m.Tag,
-		Description: m.Description,
-		Vcs:         m.VCS,
+		Name:        info.Name,
+		Maintainer:  info.Maintainer,
+		Tag:         info.Tag(),
+		Description: info.Description,
+		Vcs:         info.VCS,
 	}
 }
 
-// Format returns a formatted string with the plugin metadata.
-func (m *meta) Format() string {
-	var info bytes.Buffer
+// format returns a formatted string with the plugin metadata.
+func (info *PluginMetadata) format() string {
+	var writer bytes.Buffer
 
 	out := `Plugin Info:
   Tag:         {{.Tag}}
@@ -56,27 +61,7 @@ func (m *meta) Format() string {
   Description: {{.Description}}`
 
 	t := template.Must(template.New("metadata").Parse(out))
-	_ = t.Execute(&info, version) // nolint
+	_ = t.Execute(&writer, version) // nolint
 
-	return info.String()
-}
-
-// SetPluginMeta sets the meta-information for a plugin.
-func SetPluginMeta(name, maintainer, desc, vcs string) {
-	metainfo = meta{
-		Name:        name,
-		Maintainer:  maintainer,
-		Tag:         makeTag(name, maintainer),
-		Description: desc,
-		VCS:         vcs,
-	}
-}
-
-// makeTag creates the tag used in the plugin meta information.
-func makeTag(name, maintainer string) string {
-	tag := fmt.Sprintf("%s/%s", maintainer, name)
-	tag = strings.ToLower(tag)
-	tag = strings.Replace(tag, "-", "_", -1)
-	tag = strings.Replace(tag, " ", "-", -1)
-	return tag
+	return writer.String()
 }

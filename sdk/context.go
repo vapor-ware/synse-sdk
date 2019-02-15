@@ -1,7 +1,5 @@
 package sdk
 
-import "fmt"
-
 // ctx is the global context for the plugin. It stores various plugin settings,
 // data, and handler functions for customizable plugin functionality.
 var ctx = newPluginContext()
@@ -41,26 +39,26 @@ type PluginContext struct {
 	//deviceSetupActions map[string][]deviceAction
 }
 
-// checkDeviceHandlers checks that the registered device handlers do not have duplicate
-// names. Device handler names should be unique.
-func (ctx *PluginContext) checkDeviceHandlers() error {
-	handlers := map[string]interface{}{}
-	var duplicates []string
-	for _, h := range ctx.deviceHandlers {
-		_, hasName := handlers[h.Name]
-		if !hasName {
-			// If we have not found the name, track it.
-			handlers[h.Name] = nil
-		} else {
-			// If we have previously found the name, then this is a conflict.
-			duplicates = append(duplicates, h.Name)
-		}
-	}
-	if len(duplicates) == 0 {
-		return nil
-	}
-	return fmt.Errorf("[sdk] device handler names should be unique, but found duplicates: %v", duplicates)
-}
+//// checkDeviceHandlers checks that the registered device handlers do not have duplicate
+//// names. Device handler names should be unique.
+//func (ctx *PluginContext) checkDeviceHandlers() error {
+//	handlers := map[string]interface{}{}
+//	var duplicates []string
+//	for _, h := range ctx.deviceHandlers {
+//		_, hasName := handlers[h.Name]
+//		if !hasName {
+//			// If we have not found the name, track it.
+//			handlers[h.Name] = nil
+//		} else {
+//			// If we have previously found the name, then this is a conflict.
+//			duplicates = append(duplicates, h.Name)
+//		}
+//	}
+//	if len(duplicates) == 0 {
+//		return nil
+//	}
+//	return fmt.Errorf("[sdk] device handler names should be unique, but found duplicates: %v", duplicates)
+//}
 
 // newPluginContext creates a new instance of the plugin context, supplying the default
 // values for any context fields that have defaults.

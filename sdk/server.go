@@ -38,36 +38,73 @@ var (
 type server struct {
 	conf *config.NetworkSettings
 	grpc *grpc.Server
+
+	initialized bool
 }
 
 // newServer creates a new instance of a server. This is used by the Plugin
 // constructor to create a Plugin's server instance.
-func newServer(conf *config.NetworkSettings) (*server, error) {
-	grpcServer, err := newGrpcServer(conf)
-	if err != nil {
-		return nil, err
-	}
-
-	server := &server{
+func newServer(conf *config.NetworkSettings) *server {
+	return &server{
 		conf: conf,
-		grpc: grpcServer,
-	}
-	synse.RegisterV3PluginServer(grpcServer, server)
-
-	return server, nil
-}
-
-// Stop stops the gRPC server from serving and immediately terminates all open
-// connections and listeners.
-func (server *server) Stop() {
-	log.Info("[server] stopping server")
-	if server.grpc != nil {
-		server.grpc.Stop()
 	}
 }
 
-// Serve sets up the gRPC server and runs it.
-func (server *server) Serve() error {
+func (server *server) init() error {
+	if server.conf == nil {
+		// fixme
+		return fmt.Errorf("no config")
+	}
+
+	log.Debug("[server] setting up server")
+
+	// Depending on the communication protocol, there may be some setup work.
+	switch t := server.conf.Type; t {
+	case networkTypeUnix:
+		// If the path containing the sockets does not exist, create it.
+		_, err := os.Stat(socketDir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				if err = os.MkdirAll(socketDir, os.ModePerm); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+		// If the socket path does exist, try removing the socket if it is
+		// there (left over from a previous run).
+		if err = os.Remove(server.address()); !os.IsNotExist(err) {
+			return err
+		}
+		break
+
+	case networkTypeTCP:
+		// No setup required.
+		break
+
+	default:
+		return fmt.Errorf("unsupported network type: %s", t)
+	}
+
+	// Get any options for the gRPC server.
+	var opts []grpc.ServerOption
+	if err := addTLSOptions(&opts, server.conf.TLS); err != nil {
+		return err
+	}
+
+	// Create the gRPC server instance, passing in any server options.
+	server.grpc = grpc.NewServer(opts...)
+
+	server.initialized = true
+	return nil
+}
+
+// start runs the gRPC server.
+func (server *server) start() error {
+	if !server.initialized {
+		return fmt.Errorf("server is not initialized, can not run")
+	}
 	if server.grpc == nil {
 		return fmt.Errorf("gRPC server not initialized, can not run")
 	}
@@ -78,11 +115,49 @@ func (server *server) Serve() error {
 		return err
 	}
 
+	// Register the server as an implementation of the gRPC server.
+	synse.RegisterV3PluginServer(server.grpc, server)
+
 	log.WithFields(log.Fields{
 		"mode": server.conf.Type,
 		"addr": server.conf.Address,
 	}).Info("[server] serving...")
 	return server.grpc.Serve(listener)
+}
+
+// stop stops the gRPC server from serving and immediately terminates all open
+// connections and listeners.
+func (server *server) stop() {
+	log.Info("[server] stopping server")
+	if server.grpc != nil {
+		server.grpc.Stop()
+	}
+}
+
+// teardown the server post-run. This is called as a PluginAction on plugin
+// termination.
+func (server *server) teardown() error {
+	log.Debug("[server] tearing down server")
+
+	// Stop the server.
+	server.stop()
+
+	// Perform any other cleanup.
+	switch t := server.conf.Type; t {
+	case networkTypeUnix:
+		// Remove the unix socket that was being used.
+		if err := os.Remove(server.address()); !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+
+	case networkTypeTCP:
+		// No cleanup required.
+		return nil
+
+	default:
+		return fmt.Errorf("unsupported network type: %s", t)
+	}
 }
 
 // address gets the address for the configured server. The configured address
@@ -108,14 +183,6 @@ func (server *server) address() string {
 // registerActions registers preRun (setup) and postRun (teardown) actions
 // for the server.
 func (server *server) registerActions(plugin *Plugin) {
-	// Register pre-run actions.
-	plugin.RegisterPreRunActions(
-		&PluginAction{
-			Name:   "Setup gRPC Server",
-			Action: func(plugin *Plugin) error { return server.setup() },
-		},
-	)
-
 	// Register post-run actions.
 	plugin.RegisterPostRunActions(
 		&PluginAction{
@@ -123,77 +190,6 @@ func (server *server) registerActions(plugin *Plugin) {
 			Action: func(plugin *Plugin) error { return server.teardown() },
 		},
 	)
-}
-
-// setup the server pre-run. This is called as a pluginAction.
-func (server *server) setup() error {
-	log.Debug("[server] setting up server")
-
-	switch t := server.conf.Type; t {
-	case networkTypeUnix:
-		// If the path containing the sockets does not exist, create it.
-		_, err := os.Stat(socketDir)
-		if err != nil {
-			if os.IsNotExist(err) {
-				if err = os.MkdirAll(socketDir, os.ModePerm); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
-		// If the socket path does exist, try removing the socket if it is
-		// there (left over from a previous run).
-		if err = os.Remove(server.address()); !os.IsNotExist(err) {
-			return err
-		}
-		return nil
-
-	case networkTypeTCP:
-		// No setup required.
-		return nil
-
-	default:
-		return fmt.Errorf("unsupported network type: %s", t)
-	}
-}
-
-// teardown the server post-run. This is called as a pluginAction.
-func (server *server) teardown() error {
-	log.Debug("[server] tearing down server")
-
-	// Stop the server.
-	server.Stop()
-
-	// Perform any other cleanup.
-	switch t := server.conf.Type; t {
-	case networkTypeUnix:
-		// Remove the unix socket that was being used.
-		if err := os.Remove(server.address()); !os.IsNotExist(err) {
-			return err
-		}
-		return nil
-
-	case networkTypeTCP:
-		// No cleanup required.
-		return nil
-
-	default:
-		return fmt.Errorf("unsupported network type: %s", t)
-	}
-}
-
-func newGrpcServer(conf *config.NetworkSettings) (*grpc.Server, error) {
-	// Options for the gRPC server to be passed in to the constructor.
-	var opts []grpc.ServerOption
-
-	if err := addTLSOptions(&opts, conf.TLS); err != nil {
-		return nil, err
-	}
-
-	// Create the grpc server instance, passing in any server options.
-	svr := grpc.NewServer(opts...)
-	return svr, nil
 }
 
 // addTLSOptions updates the options slice with any TLS/SSL options for the gRPC server,
@@ -307,7 +303,7 @@ func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3
 func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.V3Version, error) {
 	log.Debug("[grpc] VERSION request")
 
-	return version.Encode(), nil
+	return version.encode(), nil
 }
 
 // Health gets the overall health status of the plugin.

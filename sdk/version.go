@@ -12,9 +12,10 @@ import (
 // Version specifies the version of the Synse Plugin SDK.
 const Version = "3.0.0"
 
-// version is a reference to a binVersion that is used by the SDK to get
-// the version info for a plugin.
-var version *binVersion
+// version is a global reference to the pluginVersion which specifies the
+// version information for a Plugin. This is initialized on init and
+// populated with build-time arguments.
+var version *pluginVersion
 
 var (
 	// BuildDate is the timestamp for when the build happened.
@@ -34,7 +35,7 @@ var (
 )
 
 func init() {
-	version = &binVersion{
+	version = &pluginVersion{
 		Arch:          runtime.GOARCH,
 		OS:            runtime.GOOS,
 		SDKVersion:    Version,
@@ -46,11 +47,8 @@ func init() {
 	}
 }
 
-// binVersion describes the version of the binary for a plugin.
-//
-// This should be populated via build-time args passed in for
-// the corresponding variables.
-type binVersion struct {
+// pluginVersion describes the version of a Synse plugin.
+type pluginVersion struct {
 	Arch          string
 	BuildDate     string
 	GitCommit     string
@@ -61,8 +59,8 @@ type binVersion struct {
 	SDKVersion    string
 }
 
-// Encode converts the binVersion to its corresponding Synse GRPC V3Version message.
-func (version *binVersion) Encode() *synse.V3Version {
+// encode converts the pluginVersion to its corresponding Synse gRPC message.
+func (version *pluginVersion) encode() *synse.V3Version {
 	return &synse.V3Version{
 		PluginVersion: version.PluginVersion,
 		SdkVersion:    version.SDKVersion,
@@ -74,8 +72,8 @@ func (version *binVersion) Encode() *synse.V3Version {
 	}
 }
 
-// Format returns a formatted string with all of the binVersion info.
-func (version *binVersion) Format() string {
+// format returns a formatted string with all of the version info.
+func (version *pluginVersion) format() string {
 	var info bytes.Buffer
 
 	out := `Version Info:
@@ -93,8 +91,8 @@ func (version *binVersion) Format() string {
 	return info.String()
 }
 
-// Log logs out the binVersion at info level.
-func (version *binVersion) Log() {
+// Log logs out the version information at info level.
+func (version *pluginVersion) Log() {
 	log.Info("Version Info:")
 	log.Infof("  Plugin Version: %s", version.PluginVersion)
 	log.Infof("  SDK Version:    %s", version.SDKVersion)
@@ -105,7 +103,7 @@ func (version *binVersion) Log() {
 	log.Infof("  OS/Arch:        %s/%s", version.OS, version.Arch)
 }
 
-// setField is a helper function that checks whether a field is set.
+// setField is a helper function that checks whether a version field is set.
 // If the field is set, that field is returned, otherwise "-" is returned.
 func setField(field string) string {
 	if field == "" {
