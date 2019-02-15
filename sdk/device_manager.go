@@ -18,9 +18,10 @@ package sdk
 
 import (
 	"fmt"
-	cfg "github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
+
 	log "github.com/Sirupsen/logrus"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 )
 
 const (
@@ -31,31 +32,27 @@ const (
 
 var DeviceManager *deviceManager
 
+// todo: init and use global manager, or make this part of the Plugin?
 func init() {
 	DeviceManager = NewDeviceManager()
 }
 
-func GetDeviceByID() {}
-func GetDeviceByAlias() {}
-func GetDevices() {}
-func GetDevicesForHandler() {}
-
-
 // todo: figure out where dynamic device registration fits in here.
-
 
 // DeviceAction defines an action that can be run before the main Plugin run
 // logic. This is generally used for doing device-specific setup actions.
 type DeviceAction struct {
-	Name string
+	Name   string
 	Action func(p *Plugin, d *Device) error
 }
 
 // DeviceManager loads and manages a Plugin's devices.
 type deviceManager struct {
-	config  *cfg.Devices
+	config *config.Devices
 
 	devices []*Device
+
+	handlers map[string]*DeviceHandler
 
 	setupActions map[string][]*DeviceAction
 }
@@ -75,6 +72,42 @@ func (manager *deviceManager) AddDevices(devices ...*Device) {
 	manager.devices = append(manager.devices, devices...)
 }
 
+// AddHandlers adds DeviceHandlers to the DeviceManager.
+func (manager *deviceManager) AddHandlers(handlers ...*DeviceHandler) error {
+	for _, handler := range handlers {
+		if _, exists := manager.handlers[handler.Name]; exists {
+			return fmt.Errorf(
+				"unable to register multiple handlers with duplicate names: %s",
+				handler.Name,
+			)
+		}
+		manager.handlers[handler.Name] = handler
+	}
+	return nil
+}
+
+// GetDevicesForHandler gets all of the Devices which are configured to use the
+// DeviceHandler with the given name.
+func (manager *deviceManager) GetDevicesForHandler(handler string) []*Device {
+	var devices []*Device
+	for _, device := range manager.devices {
+		if device.Handler == handler {
+			devices = append(devices, device)
+		}
+	}
+	return devices
+}
+
+// GetHandler gets a DeviceHandler by name. If the named DeviceHandler does not
+// exist, an error is returned.
+func (manager *deviceManager) GetHandler(name string) (*DeviceHandler, error) {
+	handler, exists := manager.handlers[name]
+	if !exists {
+		return nil, fmt.Errorf("device handler '%s' does not exist", name)
+	}
+	return handler, nil
+}
+
 // RegisterDeviceSetupActions registers actions with the device manager which will be
 // executed on plugin startup, prior to device loading but before plugin run. These
 // actions are used for device-specific setup.
@@ -86,7 +119,7 @@ func (manager *deviceManager) AddDevices(devices ...*Device) {
 // the format "key=value,key=value". The filter
 //     "kind=temperature,kind=ABC123"
 // would only match devices whose kind was temperature or ABC123.
-func (manager *deviceManager) RegisterDeviceSetupActions(filter string, actions...*DeviceAction) {
+func (manager *deviceManager) RegisterDeviceSetupActions(filter string, actions ...*DeviceAction) {
 	if _, exists := manager.setupActions[filter]; exists {
 		manager.setupActions[filter] = append(manager.setupActions[filter], actions...)
 	} else {
@@ -100,21 +133,21 @@ func (manager *deviceManager) registerActions(plugin *Plugin) {
 	// Register pre-run actions.
 	plugin.RegisterPreRunActions(
 		&PluginAction{
-			Name: "Load Device Configuration",
+			Name:   "Load Device Configuration",
 			Action: func(_ *Plugin) error { return manager.loadConfig() },
 		},
 		&PluginAction{
-			Name: "Generate Devices From Configuration",
-			Action: func(_ *Plugin) error { return manager.createDevices() },
+			Name:   "Generate Devices From Configuration",
+			Action: func(p *Plugin) error { return manager.createDevices(p) },
 		},
 		&PluginAction{
-			Name: "Run Device Setup Actions",
+			Name:   "Run Device Setup Actions",
 			Action: func(p *Plugin) error { return manager.execDeviceSetupActions(p) },
 		},
 	)
 }
 
-func (manager *deviceManager) createDevices() error {
+func (manager *deviceManager) createDevices(plugin *Plugin) error {
 	if manager.config == nil {
 		// fixme: custom error?
 		return fmt.Errorf("device manager has no config")
@@ -146,10 +179,10 @@ func (manager *deviceManager) createDevices() error {
 
 func (manager *deviceManager) loadConfig() error {
 	// Setup the config loader for the device manager.
-	loader := cfg.NewYamlLoader("device")
+	loader := config.NewYamlLoader("device")
 	loader.EnvOverride = DeviceEnvOverride
 	loader.AddSearchPaths(
-		"./config/device", // Local device config directory
+		"./config/device",                 // Local device config directory
 		"/etc/synse/plugin/config/device", // Default device config directory
 	)
 
@@ -160,7 +193,6 @@ func (manager *deviceManager) loadConfig() error {
 
 	return loader.Scan(manager.config)
 }
-
 
 func (manager *deviceManager) execDeviceSetupActions(plugin *Plugin) error {
 	if len(manager.setupActions) == 0 {
@@ -187,7 +219,7 @@ func (manager *deviceManager) execDeviceSetupActions(plugin *Plugin) error {
 
 		log.WithFields(log.Fields{
 			"matches": len(devices),
-			"filter": filter,
+			"filter":  filter,
 		}).Debug("[device manager] applied filter to devices")
 		for _, action := range actions {
 			log.WithFields(log.Fields{
