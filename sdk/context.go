@@ -27,18 +27,18 @@ type PluginContext struct {
 	// deviceHandlers holds all of the DeviceHandlers that are registered with the plugin.
 	deviceHandlers []*DeviceHandler
 
-	/// preRunActions holds all of the known plugin actions to run prior to starting
-	// up the plugin server and data manager.
-	preRunActions []pluginAction
+	//// preRunActions holds all of the known plugin actions to run prior to starting
+	//// up the plugin server and data manager.
+	//preRunActions []pluginAction
 
-	// postRunActions holds all of the known plugin actions to run after terminating
-	// the plugin server and data manager.
-	postRunActions []pluginAction
+	//// postRunActions holds all of the known plugin actions to run after terminating
+	//// the plugin server and data manager.
+	//postRunActions []pluginAction
 
-	// deviceSetupActions holds all of the known device device setup actions to run
-	// prior to starting up the plugin server and data manager. The map key is the
-	// filter used to apply the deviceAction value to a Device instance.
-	deviceSetupActions map[string][]deviceAction
+	//// deviceSetupActions holds all of the known device device setup actions to run
+	//// prior to starting up the plugin server and data manager. The map key is the
+	//// filter used to apply the deviceAction value to a Device instance.
+	//deviceSetupActions map[string][]deviceAction
 }
 
 // checkDeviceHandlers checks that the registered device handlers do not have duplicate
@@ -71,12 +71,12 @@ func newPluginContext() *PluginContext {
 		dynamicDeviceConfigRegistrar: defaultDynamicDeviceConfigRegistration,
 		deviceDataValidator:          defaultDeviceDataValidator,
 
-		outputTypes:        map[string]*OutputType{},
-		devices:            map[string]*Device{},
-		deviceHandlers:     []*DeviceHandler{},
-		preRunActions:      []pluginAction{},
-		postRunActions:     []pluginAction{},
-		deviceSetupActions: map[string][]deviceAction{},
+		outputTypes:    map[string]*OutputType{},
+		devices:        map[string]*Device{},
+		deviceHandlers: []*DeviceHandler{},
+		//preRunActions:      []pluginAction{},
+		//postRunActions:     []pluginAction{},
+		//deviceSetupActions: map[string][]deviceAction{},
 	}
 }
 
