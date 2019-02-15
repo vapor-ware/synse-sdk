@@ -95,7 +95,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	}
 
 	// Create a new instance of the plugin.
-	plugin := Plugin{
+	plugin := &Plugin{
 		quit:   make(chan os.Signal),
 		config: conf,
 		server: server,
@@ -105,11 +105,15 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	signal.Notify(plugin.quit, syscall.SIGTERM)
 	signal.Notify(plugin.quit, syscall.SIGINT)
 
+	// Register component actions with the plugin. Note that the order that things
+	// are added is the order in which they are executed.
+	server.registerActions(plugin)
+
 	// Set custom options for the plugin.
 	for _, option := range options {
 		option(ctx)
 	}
-	return &plugin, nil
+	return plugin, nil
 }
 
 // RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
@@ -155,8 +159,8 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...*PluginAction) {
 // by their name and provide the read/write functionality for the
 // Devices. If a DeviceHandler is not registered for a Device, the
 // Device will not be usable by the plugin.
-func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) {
-	ctx.deviceHandlers = append(ctx.deviceHandlers, handlers...)
+func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) error {
+	return DeviceManager.AddHandlers(handlers...)
 }
 
 // Run starts the Plugin.

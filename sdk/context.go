@@ -71,9 +71,9 @@ func newPluginContext() *PluginContext {
 		dynamicDeviceConfigRegistrar: defaultDynamicDeviceConfigRegistration,
 		deviceDataValidator:          defaultDeviceDataValidator,
 
-		outputTypes:        map[string]*OutputType{},
-		devices:            map[string]*Device{},
-		deviceHandlers:     []*DeviceHandler{},
+		outputTypes:    map[string]*OutputType{},
+		devices:        map[string]*Device{},
+		deviceHandlers: []*DeviceHandler{},
 		//preRunActions:      []pluginAction{},
 		//postRunActions:     []pluginAction{},
 		//deviceSetupActions: map[string][]deviceAction{},

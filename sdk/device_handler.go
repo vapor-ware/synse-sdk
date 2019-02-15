@@ -23,31 +23,20 @@ import "fmt"
 type DeviceHandler struct {
 
 	// Name is the name of the handler. This is how the handler will be referenced
-	// and associated with Device instances via their DeviceConfig. This name should
-	// be the same as the "Kind" of the device which it corresponds with.
-	//
-	// Additionally, there are cases where we may not want the DeviceHandler to match
-	// on the name of the Kind, or we may want a subset of a Device Kind's instances
-	// to match to a different handler. In that case, the "handlerName" field can be
-	// set in the DeviceConfig at either the DeviceKind level (where it would apply
-	// for all instances of that kind), or at the DeviceInstance level (where it would
-	// apply for only that instance.
-	//
-	// If the "handlerName" field is specified, it will be used to match against
-	// this Name field. Otherwise, the Kind of the device will be used to match
-	// against this Name field.
+	// and associated with Device instances via their configuration. This name should
+	// match with the "Handler" configuration field.
 	Name string
 
-	// Write is a function that handles Write requests for the device. If the
-	// device does not support writing, this can be left as nil.
+	// Write is a function that handles Write requests for the handler's devices. If
+	// the devices do not support writing, this can be left unspecified.
 	Write func(*Device, *WriteData) error
 
-	// Read is a function that handles Read requests for the device. If the device
-	// does not support reading, this can be left as nil.
+	// Read is a function that handles Read requests for the handler's devices. If the
+	// devices do not support reading, this can be left unspecified.
 	Read func(*Device) ([]*Reading, error)
 
-	// BulkRead is a function that handles bulk reading for the device. A bulk read
-	// is where all devices of a given kind are read at once, instead of individually.
+	// BulkRead is a function that handles bulk read operations for the handler's devices.
+	// A bulk read is where all devices of a given kind are read at once, instead of individually.
 	// If a device does not support bulk read, this can be left as nil. Additionally,
 	// a device can only be bulk read if there is no Read handler set.
 	BulkRead func([]*Device) ([]*ReadContext, error)
@@ -60,27 +49,36 @@ type DeviceHandler struct {
 	Listen func(*Device, chan *ReadContext) error
 }
 
+// GetDevices gets all of the devices that use this handler.
+//
+// If the DeviceManager is not initialized or contains no devices, this
+// returns an empty slice.
+func (handler *DeviceHandler) GetDevices() []*Device {
+	return DeviceManager.GetDevicesForHandler(handler.Name)
+}
+
+
 // supportsBulkRead checks if the handler supports bulk reading for its Devices.
 //
 // If BulkRead is set for the device handler and Read is not, then the handler
 // supports bulk reading. If both BulkRead and Read are defined, bulk reading
 // will not be considered supported and the handler will default to individual
 // reads.
-func (deviceHandler *DeviceHandler) supportsBulkRead() bool {
-	return deviceHandler.Read == nil && deviceHandler.BulkRead != nil
+func (handler *DeviceHandler) supportsBulkRead() bool {
+	return handler.Read == nil && handler.BulkRead != nil
 }
 
-// getDevicesForHandler gets a list of all the devices which use the DeviceHandler.
-func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
-	var devices []*Device
-
-	for _, v := range ctx.devices {
-		if v.Handler == deviceHandler {
-			devices = append(devices, v)
-		}
-	}
-	return devices
-}
+//// getDevicesForHandler gets a list of all the devices which use the DeviceHandler.
+//func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
+//	var devices []*Device
+//
+//	for _, v := range ctx.devices {
+//		if v.Handler == deviceHandler {
+//			devices = append(devices, v)
+//		}
+//	}
+//	return devices
+//}
 
 // getHandlerForDevice gets the DeviceHandler for a device, based on the handler name.
 func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {

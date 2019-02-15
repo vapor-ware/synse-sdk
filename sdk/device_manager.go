@@ -32,14 +32,10 @@ const (
 
 var DeviceManager *deviceManager
 
+// todo: init and use global manager, or make this part of the Plugin?
 func init() {
 	DeviceManager = NewDeviceManager()
 }
-
-func GetDeviceByID()        {}
-func GetDeviceByAlias()     {}
-func GetDevices()           {}
-func GetDevicesForHandler() {}
 
 // todo: figure out where dynamic device registration fits in here.
 
@@ -55,6 +51,8 @@ type deviceManager struct {
 	config *config.Devices
 
 	devices []*Device
+
+	handlers map[string]*DeviceHandler
 
 	setupActions map[string][]*DeviceAction
 }
@@ -72,6 +70,42 @@ func (manager *deviceManager) AddDevice(device *Device) {
 // AddDevices adds devices to the DeviceManager device slice.
 func (manager *deviceManager) AddDevices(devices ...*Device) {
 	manager.devices = append(manager.devices, devices...)
+}
+
+// AddHandlers adds DeviceHandlers to the DeviceManager.
+func (manager *deviceManager) AddHandlers(handlers ...*DeviceHandler) error {
+	for _, handler := range handlers {
+		if _, exists := manager.handlers[handler.Name]; exists {
+			return fmt.Errorf(
+				"unable to register multiple handlers with duplicate names: %s",
+				handler.Name,
+			)
+		}
+		manager.handlers[handler.Name] = handler
+	}
+	return nil
+}
+
+// GetDevicesForHandler gets all of the Devices which are configured to use the
+// DeviceHandler with the given name.
+func (manager *deviceManager) GetDevicesForHandler(handler string) []*Device {
+	var devices []*Device
+	for _, device := range manager.devices {
+		if device.Handler == handler {
+			devices = append(devices, device)
+		}
+	}
+	return devices
+}
+
+// GetHandler gets a DeviceHandler by name. If the named DeviceHandler does not
+// exist, an error is returned.
+func (manager *deviceManager) GetHandler(name string) (*DeviceHandler, error) {
+	handler, exists := manager.handlers[name]
+	if !exists {
+		return nil, fmt.Errorf("device handler '%s' does not exist", name)
+	}
+	return handler, nil
 }
 
 // RegisterDeviceSetupActions registers actions with the device manager which will be
@@ -104,7 +138,7 @@ func (manager *deviceManager) registerActions(plugin *Plugin) {
 		},
 		&PluginAction{
 			Name:   "Generate Devices From Configuration",
-			Action: func(_ *Plugin) error { return manager.createDevices() },
+			Action: func(p *Plugin) error { return manager.createDevices(p) },
 		},
 		&PluginAction{
 			Name:   "Run Device Setup Actions",
@@ -113,7 +147,7 @@ func (manager *deviceManager) registerActions(plugin *Plugin) {
 	)
 }
 
-func (manager *deviceManager) createDevices() error {
+func (manager *deviceManager) createDevices(plugin *Plugin) error {
 	if manager.config == nil {
 		// fixme: custom error?
 		return fmt.Errorf("device manager has no config")

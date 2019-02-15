@@ -111,7 +111,7 @@ func (server *server) registerActions(plugin *Plugin) {
 	// Register pre-run actions.
 	plugin.RegisterPreRunActions(
 		&PluginAction{
-			Name: "Setup gRPC Server",
+			Name:   "Setup gRPC Server",
 			Action: func(plugin *Plugin) error { return server.setup() },
 		},
 	)
@@ -119,7 +119,7 @@ func (server *server) registerActions(plugin *Plugin) {
 	// Register post-run actions.
 	plugin.RegisterPostRunActions(
 		&PluginAction{
-			Name: "Cleanup gRPC Server",
+			Name:   "Cleanup gRPC Server",
 			Action: func(plugin *Plugin) error { return server.teardown() },
 		},
 	)
