@@ -281,11 +281,11 @@ func (device *Device) Read() (*ReadContext, error) {
 	if device == nil {
 		return nil, fmt.Errorf("device is nil")
 	}
-	if device.Handler == nil {
-		return nil, fmt.Errorf("device.Handler is nil")
+	if device.handler == nil {
+		return nil, fmt.Errorf("device.handler is nil")
 	}
-	if device.Handler.Read != nil {
-		readings, err := device.Handler.Read(device)
+	if device.handler.Read != nil {
+		readings, err := device.handler.Read(device)
 		if err != nil {
 			return nil, err
 		}
@@ -302,7 +302,7 @@ func (device *Device) Read() (*ReadContext, error) {
 // FIXME: should we update the unsupported command error to be more descriptive?
 func (device *Device) Write(data *WriteData) error {
 	if device.IsWritable() {
-		return device.Handler.Write(device, data)
+		return device.handler.Write(device, data)
 	}
 	return &errors.UnsupportedCommandError{}
 }
@@ -310,13 +310,19 @@ func (device *Device) Write(data *WriteData) error {
 // IsReadable checks if the Device is readable based on the presence/absence
 // of a Read/BulkRead action defined in its DeviceHandler.
 func (device *Device) IsReadable() bool {
-	return device.Handler.Read != nil || device.Handler.BulkRead != nil || device.Handler.Listen != nil
+	if device == nil {
+		return false
+	}
+	return device.handler.Read != nil || device.handler.BulkRead != nil || device.handler.Listen != nil
 }
 
 // IsWritable checks if the Device is writable based on the presence/absence
 // of a Write action defined in its DeviceHandler.
 func (device *Device) IsWritable() bool {
-	return device.Handler.Write != nil
+	if device == nil {
+		return false
+	}
+	return device.handler.Write != nil
 }
 
 // ID generates the deterministic ID for the Device using its config values.

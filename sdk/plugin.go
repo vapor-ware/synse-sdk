@@ -52,6 +52,16 @@ type Plugin struct {
 	preRun  []*PluginAction
 	postRun []*PluginAction
 
+	// Options and handlers
+	deviceIdentifier DeviceIdentifier
+	dynamicRegistrar DynamicDeviceRegistrar
+	dynamicConfigRegistrar DynamicDeviceConfigRegistrar
+	deviceDataValidator DeviceDataValidator
+
+	pluginCfgRequired bool
+	deviceCfgRequired bool
+	dynamicCfgRequired bool
+
 	// Plugin components
 	stateManager  *StateManager
 	deviceManager *deviceManager
@@ -83,6 +93,15 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		version: version,
 		config:  conf,
 
+		pluginCfgRequired: false,
+		deviceCfgRequired: true,
+		dynamicCfgRequired: false,
+
+		deviceIdentifier: defaultDeviceIdentifier,
+		dynamicRegistrar: defaultDynamicDeviceRegistration,
+		dynamicConfigRegistrar: defaultDynamicDeviceConfigRegistration,
+		deviceDataValidator: defaultDeviceDataValidator,
+
 		stateManager:  stateManager,
 		deviceManager: deviceManager,
 		server:        server,
@@ -90,7 +109,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 
 	// Set custom options for the plugin.
 	for _, option := range options {
-		option(ctx)
+		option(&p)
 	}
 	return &p, nil
 }
