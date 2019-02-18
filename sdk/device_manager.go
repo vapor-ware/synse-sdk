@@ -72,6 +72,27 @@ func (manager *deviceManager) init() error {
 	return nil
 }
 
+// GetDevice gets a device from the manager by ID.
+func (manager *deviceManager) GetDevice(id string) *Device {
+	device, exists := manager.devices[id]
+	if !exists {
+		log.WithFields(log.Fields{
+			"id": id,
+		}).Debug("[device manager] device does not exist")
+	}
+	return device
+}
+
+func (manager *deviceManager) IsDeviceReadable(id string) bool {
+	device := manager.GetDevice(id)
+	return device.IsReadable()
+}
+
+func (manager *deviceManager) IsDeviceWritable(id string) bool {
+	device := manager.GetDevice(id)
+	return device.IsWritable()
+}
+
 // AddDevice adds a device to the DeviceManager and makes sure that it
 // has a reference to its DeviceHandler.
 //
