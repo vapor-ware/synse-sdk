@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/vapor-ware/synse-sdk/sdk/output"
+
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -49,17 +51,21 @@ type Plugin struct {
 	config  *config.Plugin
 	quit    chan os.Signal
 
+	// Actions
 	preRun  []*PluginAction
 	postRun []*PluginAction
 
-	// Options and handlers
-	deviceIdentifier DeviceIdentifier
-	dynamicRegistrar DynamicDeviceRegistrar
-	dynamicConfigRegistrar DynamicDeviceConfigRegistrar
-	deviceDataValidator DeviceDataValidator
+	// Plugin outputs
+	outputs map[string]*output.Output
 
-	pluginCfgRequired bool
-	deviceCfgRequired bool
+	// Options and handlers
+	deviceIdentifier       DeviceIdentifier
+	dynamicRegistrar       DynamicDeviceRegistrar
+	dynamicConfigRegistrar DynamicDeviceConfigRegistrar
+	deviceDataValidator    DeviceDataValidator
+
+	pluginCfgRequired  bool
+	deviceCfgRequired  bool
 	dynamicCfgRequired bool
 
 	// Plugin components
@@ -88,19 +94,20 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	server := newServer(conf.Network)
 
 	p := Plugin{
+		outputs: make(map[string]*output.Output),
 		quit:    make(chan os.Signal),
 		info:    new(PluginMetadata),
 		version: version,
 		config:  conf,
 
-		pluginCfgRequired: false,
-		deviceCfgRequired: true,
+		pluginCfgRequired:  false,
+		deviceCfgRequired:  true,
 		dynamicCfgRequired: false,
 
-		deviceIdentifier: defaultDeviceIdentifier,
-		dynamicRegistrar: defaultDynamicDeviceRegistration,
+		deviceIdentifier:       defaultDeviceIdentifier,
+		dynamicRegistrar:       defaultDynamicDeviceRegistration,
 		dynamicConfigRegistrar: defaultDynamicDeviceConfigRegistration,
-		deviceDataValidator: defaultDeviceDataValidator,
+		deviceDataValidator:    defaultDeviceDataValidator,
 
 		stateManager:  stateManager,
 		deviceManager: deviceManager,
@@ -111,15 +118,17 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	for _, option := range options {
 		option(&p)
 	}
+
+	// Register the built-in outputs with the plugin.
+	if err := p.RegisterOutputs(output.GetBuiltins()...); err != nil {
+		return nil, err
+	}
+
 	return &p, nil
 }
 
 func (plugin *Plugin) SetInfo(info *PluginMetadata) {
 	plugin.info = info
-}
-
-func (plugin *Plugin) RegisterOutputs() {
-	// todo
 }
 
 func (plugin *Plugin) Run() error {
@@ -160,22 +169,21 @@ func (plugin *Plugin) Run() error {
 	return plugin.run()
 }
 
-// RegisterOutputTypes registers OutputType instances with the Plugin. If a plugin
-// is able to define its output types statically, they would be registered with the
-// plugin via this method. Output types can also be registered via configuration
-// file.
-func (plugin *Plugin) RegisterOutputTypes(types ...*OutputType) error {
-	multiErr := errors.NewMultiError("registering output types")
-	log.Debug("[sdk] registering output types")
-	for _, outputType := range types {
-		_, hasType := ctx.outputTypes[outputType.Name]
-		if hasType {
-			log.WithField("type", outputType.Name).Error("[sdk] output type already exists")
-			multiErr.Add(fmt.Errorf("output type with name '%s' already exists", outputType.Name))
+// RegisterOutputs registers new Outputs with the Plugin. A plugin will automatically
+// register the built-in SDK outputs. This function allows a plugin do augment that
+// set of outputs with its own custom outputs.
+//
+// If any registered output names conflict with those of built-in or other custom
+// outputs, an error is returned.
+func (plugin *Plugin) RegisterOutputs(outputs ...*output.Output) error {
+	multiErr := errors.NewMultiError("output registration")
+
+	for _, o := range outputs {
+		if _, exists := plugin.outputs[o.Name]; exists {
+			multiErr.Add(fmt.Errorf("conflict: output with name '%s' already exists", o.Name))
 			continue
 		}
-		log.WithField("type", outputType.Name).Debug("[sdk] adding new output type")
-		ctx.outputTypes[outputType.Name] = outputType
+		plugin.outputs[o.Name] = o
 	}
 	return multiErr.Err()
 }
