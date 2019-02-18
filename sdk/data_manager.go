@@ -107,9 +107,9 @@ func (manager *dataManager) run() error {
 	manager.goListen()
 	manager.goRead()
 	manager.goWrite()
-
-	// Update the manager readings state
-	manager.goUpdateData()
+	//
+	//// Update the manager readings state
+	//manager.goUpdateData()
 
 	// Watch for failed listeners to retry them
 	go manager.watchForListenerRetry()
@@ -127,11 +127,11 @@ func (manager *dataManager) setup() error {
 		return fmt.Errorf("plugin config not set, cannot setup data manager")
 	}
 
-	// Initialize the listen, read, and write channels
-	manager.listenerRetry = make(chan *ListenerCtx, 50)
-	manager.listenChannel = make(chan *ReadContext, Config.Plugin.Settings.Listen.Buffer)
-	manager.readChannel = make(chan *ReadContext, Config.Plugin.Settings.Read.Buffer)
-	manager.writeChannel = make(chan *WriteContext, Config.Plugin.Settings.Write.Buffer)
+	//// Initialize the listen, read, and write channels
+	//manager.listenerRetry = make(chan *ListenerCtx, 50)
+	//manager.listenChannel = make(chan *ReadContext, Config.Plugin.Settings.Listen.Buffer)
+	//manager.readChannel = make(chan *ReadContext, Config.Plugin.Settings.Read.Buffer)
+	//manager.writeChannel = make(chan *WriteContext, Config.Plugin.Settings.Write.Buffer)
 
 	// Initialize the limiter, if configured
 	if Config.Plugin.Limiter != nil && Config.Plugin.Limiter != (&LimiterSettings{}) {
@@ -499,64 +499,64 @@ func (manager *dataManager) write(w *WriteContext) {
 	w.transaction.setStatusDone()
 }
 
-// goUpdateData updates the DeviceManager's readings state with the latest
-// values that were read for each device.
-func (manager *dataManager) goUpdateData() {
-	go func() {
-		for {
-			var (
-				id       string
-				readings []*Reading
-			)
+//// goUpdateData updates the DeviceManager's readings state with the latest
+//// values that were read for each device.
+//func (manager *dataManager) goUpdateData() {
+//	go func() {
+//		for {
+//			var (
+//				id       string
+//				readings []*Reading
+//			)
+//
+//			// Read from the listen and read channel for incoming readings
+//			var reading *ReadContext
+//			select {
+//			case reading = <-manager.readChannel:
+//				id = reading.ID()
+//				readings = reading.Reading
+//			case reading = <-manager.listenChannel:
+//				id = reading.ID()
+//				readings = reading.Reading
+//			}
+//
+//			// Update the internal map of current reading state
+//			manager.dataLock.Lock()
+//			manager.readings[id] = readings
+//			manager.dataLock.Unlock()
+//
+//			// update the readings cache
+//			addReadingToCache(reading)
+//		}
+//	}()
+//}
 
-			// Read from the listen and read channel for incoming readings
-			var reading *ReadContext
-			select {
-			case reading = <-manager.readChannel:
-				id = reading.ID()
-				readings = reading.Reading
-			case reading = <-manager.listenChannel:
-				id = reading.ID()
-				readings = reading.Reading
-			}
-
-			// Update the internal map of current reading state
-			manager.dataLock.Lock()
-			manager.readings[id] = readings
-			manager.dataLock.Unlock()
-
-			// update the readings cache
-			addReadingToCache(reading)
-		}
-	}()
-}
-
-// getReadings safely gets a reading value from the dataManager readings field by
-// accessing the readings for the specified device within a lock context. Since the
-// readings map is updated in a separate goroutine, we want to lock access around the
-// map to prevent simultaneous access collisions.
-func (manager *dataManager) getReadings(device string) []*Reading {
-	manager.dataLock.RLock()
-	defer manager.dataLock.RUnlock()
-
-	return manager.readings[device]
-}
-
-// getAllReadings safely copies the current reading state in the data manager and
-// returns all of the readings.
-func (manager *dataManager) getAllReadings() map[string][]*Reading {
-	mapCopy := make(map[string][]*Reading)
-	manager.dataLock.RLock()
-	defer manager.dataLock.RUnlock()
-
-	// Iterate over the map to make a copy - we want a copy or else we would be
-	// returning a reference to the underlying data which should only be accessed
-	// in a lock context.
-	for k, v := range manager.readings {
-		mapCopy[k] = v
-	}
-	return mapCopy
-}
+//// getReadings safely gets a reading value from the dataManager readings field by
+//// accessing the readings for the specified device within a lock context. Since the
+//// readings map is updated in a separate goroutine, we want to lock access around the
+//// map to prevent simultaneous access collisions.
+//func (manager *dataManager) getReadings(device string) []*Reading {
+//	manager.dataLock.RLock()
+//	defer manager.dataLock.RUnlock()
+//
+//	return manager.readings[device]
+//}
+//
+//// getAllReadings safely copies the current reading state in the data manager and
+//// returns all of the readings.
+//func (manager *dataManager) getAllReadings() map[string][]*Reading {
+//	mapCopy := make(map[string][]*Reading)
+//	manager.dataLock.RLock()
+//	defer manager.dataLock.RUnlock()
+//
+//	// Iterate over the map to make a copy - we want a copy or else we would be
+//	// returning a reference to the underlying data which should only be accessed
+//	// in a lock context.
+//	for k, v := range manager.readings {
+//		mapCopy[k] = v
+//	}
+//	return mapCopy
+//}
 
 // Read fulfills a Read request by providing the latest data read from a device
 // and framing it up for the gRPC response.
