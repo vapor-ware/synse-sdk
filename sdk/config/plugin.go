@@ -37,9 +37,6 @@ type Plugin struct {
 	// registering devices to the plugin.
 	DynamicRegistration *DynamicRegistrationSettings `yaml:"dynamicRegistration,omitempty"`
 
-	// Limiter specifies settings for rate limiting for reads/writes.
-	Limiter *LimiterSettings `yaml:"limiter,omitempty"`
-
 	// Health specifies the health settings for the plugin.
 	Health *HealthSettings `yaml:"health,omitempty"`
 }
@@ -62,6 +59,9 @@ type PluginSettings struct {
 	// Transaction contains the settings to configure transaction
 	// handling behavior.
 	Transaction *TransactionSettings `yaml:"transaction,omitempty"`
+
+	// Limiter specifies settings for rate limiting for reads/writes.
+	Limiter *LimiterSettings `yaml:"limiter,omitempty"`
 
 	// Cache contains the settings to configure local data caching
 	// by the plugin.

@@ -118,30 +118,30 @@ func (manager *dataManager) run() error {
 	return nil
 }
 
-// setup initializes the remaining data manager structures based on the global
-// plugin configuration.
-func (manager *dataManager) setup() error {
-	log.Debug("[data manager] setting up data manager state")
-
-	if Config.Plugin == nil {
-		return fmt.Errorf("plugin config not set, cannot setup data manager")
-	}
-
-	//// Initialize the listen, read, and write channels
-	//manager.listenerRetry = make(chan *ListenerCtx, 50)
-	//manager.listenChannel = make(chan *ReadContext, Config.Plugin.Settings.Listen.Buffer)
-	//manager.readChannel = make(chan *ReadContext, Config.Plugin.Settings.Read.Buffer)
-	//manager.writeChannel = make(chan *WriteContext, Config.Plugin.Settings.Write.Buffer)
-
-	// Initialize the limiter, if configured
-	if Config.Plugin.Limiter != nil && Config.Plugin.Limiter != (&LimiterSettings{}) {
-		manager.limiter = rate.NewLimiter(
-			rate.Limit(Config.Plugin.Limiter.Rate),
-			Config.Plugin.Limiter.Burst,
-		)
-	}
-	return nil
-}
+//// setup initializes the remaining data manager structures based on the global
+//// plugin configuration.
+//func (manager *dataManager) setup() error {
+//	log.Debug("[data manager] setting up data manager state")
+//
+//	if Config.Plugin == nil {
+//		return fmt.Errorf("plugin config not set, cannot setup data manager")
+//	}
+//
+//	//// Initialize the listen, read, and write channels
+//	//manager.listenerRetry = make(chan *ListenerCtx, 50)
+//	//manager.listenChannel = make(chan *ReadContext, Config.Plugin.Settings.Listen.Buffer)
+//	//manager.readChannel = make(chan *ReadContext, Config.Plugin.Settings.Read.Buffer)
+//	//manager.writeChannel = make(chan *WriteContext, Config.Plugin.Settings.Write.Buffer)
+//
+//	// Initialize the limiter, if configured
+//	if Config.Plugin.Limiter != nil && Config.Plugin.Limiter != (&LimiterSettings{}) {
+//		manager.limiter = rate.NewLimiter(
+//			rate.Limit(Config.Plugin.Limiter.Rate),
+//			Config.Plugin.Limiter.Burst,
+//		)
+//	}
+//	return nil
+//}
 
 // writesEnabled checks to see whether writing is enabled for the plugin based on
 // the configuration.

@@ -93,6 +93,39 @@ func (manager *deviceManager) IsDeviceWritable(id string) bool {
 	return device.IsWritable()
 }
 
+// HasReadHandlers checks whether any of the DeviceHandlers registered with
+// the deviceManager implement a read function.
+func (manager *deviceManager) HasReadHandlers() bool {
+	for _, h := range manager.handlers {
+		if h.Read != nil || h.BulkRead != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// HasWriteHandlers checks whether any of the DeviceHandlers registered with
+// the deviceManager implement a write function.
+func (manager *deviceManager) HasWriteHandlers() bool {
+	for _, h := range manager.handlers {
+		if h.Write != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// HasListenerHandlers checks whether any of the DeviceHandlers registered with
+// the deviceManager implement a listener function.
+func (manager *deviceManager) HasListenerHandlers() bool {
+	for _, h := range manager.handlers {
+		if h.Listen != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // AddDevice adds a device to the DeviceManager and makes sure that it
 // has a reference to its DeviceHandler.
 //
