@@ -53,6 +53,7 @@ type Plugin struct {
 	postRun []*PluginAction
 
 	// Plugin components
+	stateManager  *StateManager
 	deviceManager *deviceManager
 	server        *server
 }
@@ -72,6 +73,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	}
 
 	// Initialize plugin components.
+	stateManager := NewStateManager(conf.Settings)
 	deviceManager := newDeviceManager()
 	server := newServer(conf.Network)
 
@@ -81,6 +83,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		version: version,
 		config:  conf,
 
+		stateManager:  stateManager,
 		deviceManager: deviceManager,
 		server:        server,
 	}
