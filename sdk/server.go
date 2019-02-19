@@ -180,7 +180,7 @@ func (server *server) address() string {
 	}
 }
 
-// registerActions registers preRun (setup) and postRun (teardown) actions
+// registerActions registers pre-run (setup) and post-run (teardown) actions
 // for the server.
 func (server *server) registerActions(plugin *Plugin) {
 	// Register post-run actions.

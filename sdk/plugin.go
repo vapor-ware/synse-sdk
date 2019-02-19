@@ -69,6 +69,7 @@ type Plugin struct {
 	dynamicCfgRequired bool
 
 	// Plugin components
+	scheduler     *Scheduler
 	stateManager  *StateManager
 	deviceManager *deviceManager
 	server        *server
@@ -92,6 +93,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	stateManager := NewStateManager(conf.Settings)
 	deviceManager := newDeviceManager()
 	server := newServer(conf.Network)
+	scheduler := NewScheduler(conf.Settings, deviceManager, stateManager)
 
 	p := Plugin{
 		outputs: make(map[string]*output.Output),
@@ -112,6 +114,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		stateManager:  stateManager,
 		deviceManager: deviceManager,
 		server:        server,
+		scheduler:     scheduler,
 	}
 
 	// Set custom options for the plugin.
@@ -149,6 +152,7 @@ func (plugin *Plugin) Run() error {
 	// If all components initialized without error, we can register
 	// any pre/post run actions which they may have.
 	plugin.server.registerActions(plugin)
+	plugin.scheduler.registerActions(plugin)
 
 	// Run pre-run actions, if any exist.
 	if err := plugin.execPreRun(); err != nil {
