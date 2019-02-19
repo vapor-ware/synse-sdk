@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vapor-ware/synse-sdk/sdk/output"
+
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 
 	log "github.com/Sirupsen/logrus"
@@ -41,7 +43,7 @@ type cacheContexts []*ReadContext
 type StateManager struct {
 	readChan chan *ReadContext
 
-	readings      map[string][]*Reading
+	readings      map[string][]*output.Reading
 	transactions  *cache.Cache
 	readingsCache *cache.Cache
 
@@ -61,7 +63,7 @@ func NewStateManager(conf *config.PluginSettings) *StateManager {
 	return &StateManager{
 		config:   conf,
 		readChan: make(chan *ReadContext, conf.Read.QueueSize),
-		readings: make(map[string][]*Reading),
+		readings: make(map[string][]*output.Reading),
 		transactions: cache.New(
 			conf.Transaction.TTL,
 			conf.Transaction.TTL*2,
@@ -112,7 +114,7 @@ func (manager *StateManager) addReadingToCache(ctx *ReadContext) {
 
 // GetReadingsForDevice gets the current reading(s) for the specified device from
 // the StateManager.
-func (manager *StateManager) GetReadingsForDevice(device string) []*Reading {
+func (manager *StateManager) GetReadingsForDevice(device string) []*output.Reading {
 	manager.readingsLock.RLock()
 	defer manager.readingsLock.RUnlock()
 
@@ -199,8 +201,8 @@ func (manager *StateManager) dumpCurrentReadings(readings chan *ReadContext) {
 }
 
 // GetReadings gets a copy of the entire current readings state in the StateManager.
-func (manager *StateManager) GetReadings() map[string][]*Reading {
-	readings := make(map[string][]*Reading)
+func (manager *StateManager) GetReadings() map[string][]*output.Reading {
+	readings := make(map[string][]*output.Reading)
 	manager.readingsLock.RLock()
 	defer manager.readingsLock.RUnlock()
 

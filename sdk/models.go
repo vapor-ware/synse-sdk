@@ -1,101 +1,100 @@
 package sdk
 
 import (
-	"fmt"
-
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// Reading describes a single device reading with a timestamp. The timestamp
-// should be formatted with the RFC3339 layout.
-type Reading struct {
-	// Timestamp describes the time at which the reading was taken.
-	Timestamp string
+//// Reading describes a single device reading with a timestamp. The timestamp
+//// should be formatted with the RFC3339 layout.
+//type Reading struct {
+//	// Timestamp describes the time at which the reading was taken.
+//	Timestamp string
+//
+//	// Type describes the output type of the reading.
+//	Type string
+//
+//	// Info provides additional info for the reading, from config.
+//	Info string
+//
+//	// Unit describes the unit of measure for the reading.
+//	Unit Unit
+//
+//	// Value is the reading value itself.
+//	Value interface{}
+//}
 
-	// Type describes the output type of the reading.
-	Type string
-
-	// Info provides additional info for the reading, from config.
-	Info string
-
-	// Unit describes the unit of measure for the reading.
-	Unit Unit
-
-	// Value is the reading value itself.
-	Value interface{}
-}
-
-// NewReading creates a new instance of a Reading. This is the recommended method
-// for creating new readings.
-func NewReading(output *Output, value interface{}) (reading *Reading, err error) {
-	if output == nil {
-		return nil, fmt.Errorf("Unable to create reading. output is nil")
-	}
-
-	return &Reading{
-		Timestamp: utils.GetCurrentTime(),
-		Type:      output.Type(),
-		Info:      output.Info,
-		Unit:      output.Unit,
-		Value:     output.Apply(value),
-	}, nil
-}
-
-// encode translates the Reading type to the corresponding gRPC Reading message.
-func (reading *Reading) encode() *synse.V3Reading { // nolint: gocyclo
-	r := synse.V3Reading{
-		Timestamp: reading.Timestamp,
-		Type:      reading.Type,
-		Context:   map[string]string{},
-		Unit:      reading.Unit.encode(),
-	}
-
-	if reading.Info != "" {
-		r.Context["info"] = reading.Info
-	}
-
-	switch t := reading.Value.(type) {
-	case string:
-		r.Value = &synse.V3Reading_StringValue{StringValue: t}
-	case bool:
-		r.Value = &synse.V3Reading_BoolValue{BoolValue: t}
-	case float64:
-		r.Value = &synse.V3Reading_Float64Value{Float64Value: t}
-	case float32:
-		r.Value = &synse.V3Reading_Float32Value{Float32Value: t}
-	case int64:
-		r.Value = &synse.V3Reading_Int64Value{Int64Value: t}
-	case int32:
-		r.Value = &synse.V3Reading_Int32Value{Int32Value: t}
-	case int16:
-		r.Value = &synse.V3Reading_Int32Value{Int32Value: int32(t)}
-	case int8:
-		r.Value = &synse.V3Reading_Int32Value{Int32Value: int32(t)}
-	case int:
-		r.Value = &synse.V3Reading_Int64Value{Int64Value: int64(t)}
-	case []byte:
-		r.Value = &synse.V3Reading_BytesValue{BytesValue: t}
-	case uint64:
-		r.Value = &synse.V3Reading_Uint64Value{Uint64Value: t}
-	case uint32:
-		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: t}
-	case uint16:
-		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: uint32(t)}
-	case uint8:
-		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: uint32(t)}
-	case uint:
-		r.Value = &synse.V3Reading_Uint64Value{Uint64Value: uint64(t)}
-	case nil:
-		r.Value = nil
-	default:
-		// If the reading type isn't one of the above, panic. The plugin should
-		// terminate. This is indicative of the plugin is providing bad data.
-		panic(fmt.Sprintf("unsupported reading value type: %s", t))
-	}
-	return &r
-}
+//// NewReading creates a new instance of a Reading. This is the recommended method
+//// for creating new readings.
+//func NewReading(output *output.Output, value interface{}) (reading *Reading, err error) {
+//	if output == nil {
+//		return nil, fmt.Errorf("Unable to create reading. output is nil")
+//	}
+//
+//	return &Reading{
+//		Timestamp: utils.GetCurrentTime(),
+//		Type:      output.Type(),
+//		Info:      output.Info,
+//		Unit:      output.Unit,
+//		Value:     output.Apply(value),
+//	}, nil
+//}
+//
+//// encode translates the Reading type to the corresponding gRPC Reading message.
+//func (reading *Reading) encode() *synse.V3Reading { // nolint: gocyclo
+//	r := synse.V3Reading{
+//		Timestamp: reading.Timestamp,
+//		Type:      reading.Type,
+//		Context:   map[string]string{},
+//		Unit:      reading.Unit.encode(),
+//	}
+//
+//	if reading.Info != "" {
+//		r.Context["info"] = reading.Info
+//	}
+//
+//	switch t := reading.Value.(type) {
+//	case string:
+//		r.Value = &synse.V3Reading_StringValue{StringValue: t}
+//	case bool:
+//		r.Value = &synse.V3Reading_BoolValue{BoolValue: t}
+//	case float64:
+//		r.Value = &synse.V3Reading_Float64Value{Float64Value: t}
+//	case float32:
+//		r.Value = &synse.V3Reading_Float32Value{Float32Value: t}
+//	case int64:
+//		r.Value = &synse.V3Reading_Int64Value{Int64Value: t}
+//	case int32:
+//		r.Value = &synse.V3Reading_Int32Value{Int32Value: t}
+//	case int16:
+//		r.Value = &synse.V3Reading_Int32Value{Int32Value: int32(t)}
+//	case int8:
+//		r.Value = &synse.V3Reading_Int32Value{Int32Value: int32(t)}
+//	case int:
+//		r.Value = &synse.V3Reading_Int64Value{Int64Value: int64(t)}
+//	case []byte:
+//		r.Value = &synse.V3Reading_BytesValue{BytesValue: t}
+//	case uint64:
+//		r.Value = &synse.V3Reading_Uint64Value{Uint64Value: t}
+//	case uint32:
+//		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: t}
+//	case uint16:
+//		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: uint32(t)}
+//	case uint8:
+//		r.Value = &synse.V3Reading_Uint32Value{Uint32Value: uint32(t)}
+//	case uint:
+//		r.Value = &synse.V3Reading_Uint64Value{Uint64Value: uint64(t)}
+//	case nil:
+//		r.Value = nil
+//	default:
+//		// If the reading type isn't one of the above, panic. The plugin should
+//		// terminate. This is indicative of the plugin is providing bad data.
+//		panic(fmt.Sprintf("unsupported reading value type: %s", t))
+//	}
+//	return &r
+//}
 
 // ReadContext provides the context for a device reading. This context
 // identifies the device being read and associates it with a set of readings
@@ -110,14 +109,14 @@ type ReadContext struct {
 	Device  string
 	Board   string
 	Rack    string
-	Reading []*Reading
+	Reading []*output.Reading
 }
 
 // NewReadContext creates a new instance of a ReadContext from the given
 // device and corresponding readings.
-func NewReadContext(device *Device, readings []*Reading) *ReadContext {
+func NewReadContext(device *Device, readings []*output.Reading) *ReadContext {
 	return &ReadContext{
-		Device: device.ID(),
+		Device: device.id,
 		//Board:   device.Location.Board,
 		//Rack:    device.Location.Rack,
 		Reading: readings,
