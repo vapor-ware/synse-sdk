@@ -3,6 +3,8 @@ package sdk
 import (
 	"fmt"
 
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
+
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -33,7 +35,7 @@ func NewReading(output *Output, value interface{}) (reading *Reading, err error)
 	}
 
 	return &Reading{
-		Timestamp: GetCurrentTime(),
+		Timestamp: utils.GetCurrentTime(),
 		Type:      output.Type(),
 		Info:      output.Info,
 		Unit:      output.Unit,
@@ -115,9 +117,9 @@ type ReadContext struct {
 // device and corresponding readings.
 func NewReadContext(device *Device, readings []*Reading) *ReadContext {
 	return &ReadContext{
-		Device:  device.ID(),
-		Board:   device.Location.Board,
-		Rack:    device.Location.Rack,
+		Device: device.ID(),
+		//Board:   device.Location.Board,
+		//Rack:    device.Location.Rack,
 		Reading: readings,
 	}
 }
@@ -126,7 +128,7 @@ func NewReadContext(device *Device, readings []*Reading) *ReadContext {
 // rack, board, and device. This ID should be globally unique. It simply follows
 // the pattern {rack}-{board}-{device}.
 func (ctx *ReadContext) ID() string {
-	return makeIDString(ctx.Rack, ctx.Board, ctx.Device)
+	return utils.MakeIDString(ctx.Rack, ctx.Board, ctx.Device)
 }
 
 // WriteContext describes a single write transaction.
@@ -142,7 +144,7 @@ type WriteContext struct {
 // rack, board, and device. This ID should be globally unique. It simply follows
 // the pattern {rack}-{board}-{device}.
 func (ctx *WriteContext) ID() string {
-	return makeIDString(ctx.rack, ctx.board, ctx.device)
+	return utils.MakeIDString(ctx.rack, ctx.board, ctx.device)
 }
 
 // WriteData is an SDK alias for the Synse gRPC WriteData. This is done to

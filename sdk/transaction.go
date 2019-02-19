@@ -3,9 +3,11 @@ package sdk
 import (
 	"time"
 
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
-	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -43,7 +45,7 @@ func newTransaction() *transaction {
 	}
 
 	id := xid.New().String()
-	now := GetCurrentTime()
+	now := utils.GetCurrentTime()
 	t := transaction{
 		id:      id,
 		status:  statusPending,
@@ -97,27 +99,27 @@ func (t *transaction) encode() *synse.V3TransactionStatus {
 // setStatusPending sets the transaction status to 'pending'.
 func (t *transaction) setStatusPending() {
 	log.WithField("id", t.id).Debug("[transaction] transaction status set to PENDING")
-	t.updated = GetCurrentTime()
+	t.updated = utils.GetCurrentTime()
 	t.status = statusPending
 }
 
 // setStatusWriting sets the transaction status to 'writing'.
 func (t *transaction) setStatusWriting() {
 	log.WithField("id", t.id).Debug("[transaction] transaction status set to WRITING")
-	t.updated = GetCurrentTime()
+	t.updated = utils.GetCurrentTime()
 	t.status = statusWriting
 }
 
 // setStatusDone sets the transaction status to 'done'.
 func (t *transaction) setStatusDone() {
 	log.WithField("id", t.id).Debug("[transaction] transaction status set to DONE")
-	t.updated = GetCurrentTime()
+	t.updated = utils.GetCurrentTime()
 	t.status = statusDone
 }
 
 // setStatusError sets the transaction status to 'error'.
 func (t *transaction) setStatusError() {
 	log.WithField("id", t.id).Debug("[transaction] transaction status set to ERROR")
-	t.updated = GetCurrentTime()
+	t.updated = utils.GetCurrentTime()
 	t.status = statusError
 }
