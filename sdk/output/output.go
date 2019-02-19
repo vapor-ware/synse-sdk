@@ -19,7 +19,8 @@ package output
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
+
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -144,7 +145,7 @@ func (output *Output) FromImperial(value interface{}) *Reading {
 	}
 
 	return &Reading{
-		Timestamp: sdk.GetCurrentTime(), // fixme: may be a cyclical import..
+		Timestamp: utils.GetCurrentTime(),
 		Type:      output.Type,
 		Unit:      unit,
 		Value:     value,
@@ -172,7 +173,7 @@ func (output *Output) FromMetric(value interface{}) *Reading {
 	}
 
 	return &Reading{
-		Timestamp: sdk.GetCurrentTime(), // fixme: may be a cyclical import..
+		Timestamp: utils.GetCurrentTime(),
 		Type:      output.Type,
 		Unit:      unit,
 		Value:     value,
@@ -194,7 +195,7 @@ func (output *Output) From(value interface{}) *Reading {
 	}
 
 	return &Reading{
-		Timestamp: sdk.GetCurrentTime(), // fixme: may be a cyclical import..
+		Timestamp: utils.GetCurrentTime(),
 		Type:      output.Type,
 		Unit:      unit,
 		Value:     value,
