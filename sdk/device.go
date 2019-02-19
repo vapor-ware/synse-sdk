@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
-
-	"github.com/imdario/mergo"
-
 	log "github.com/Sirupsen/logrus"
+	"github.com/imdario/mergo"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -24,59 +22,66 @@ import (
 // comes from configuration file. A Device's supported actions are determined
 // by the DeviceHandler which it is configured to use.
 type Device struct {
-	Type          string
-	Metadata      map[string]string
-	Info          string
-	Tags          []*Tag
-	Data          map[string]interface{}
-	Handler       string
-	SortIndex     int32
-	Alias         string
+	// Type is the type of the device. This is largely metadata that can
+	// be used upstream to categorize the device.
+	Type string
+
+	// Metadata is arbitrary metadata that is associated with the device.
+	Metadata map[string]string
+
+	// Info is a human-readable string that provides a summary of what
+	// the device is or what it does.
+	Info string
+
+	// Tags is the set of tags that are associated with the device.
+	Tags []*Tag
+
+	// Data contains any plugin-specific configuration data for the device.
+	Data map[string]interface{}
+
+	// Handler is the name of the device's handler.
+	Handler string
+
+	// SortIndex is an optional 1-based index sort ordinal that is used upstream
+	// (by Synse Server) to sort the device in Scan output. This can be set to
+	// give devices custom ordering. If not set, they will be sorted based on
+	// default sorting parameters.
+	SortIndex int32
+
+	// Alias is a human-readable alias for the device which can be used to
+	// to reference it as well.
+	Alias string
+
+	// ScalingFactor is an optional value by which to scale the device readings.
+	// If defined, the reading values for the device will be multiplied by this
+	// value.
+	//
+	// This value should resolve to a numeric. Negative values and fractional values
+	// are supported. This can be the value itself, e.g. "0.01", or a mathematical
+	// representation of the value, e.g. "1e-2".
 	ScalingFactor string
 
+	// System defines the System of Measure for the device. It is the default
+	// system of measure (imperial, metric) for the device's reading data. This
+	// is not required in all cases, as the DeviceHandler may specify the system
+	// as well. Generally, this should only be set for devices using generalized
+	// device handlers which do not define a system.
 	System string
+
+	// Output is the name of the Output that this device instance will use. This
+	// is not needed for all devices/plugins, as many DeviceHandlers will already
+	// know which output to use. This field is used in cases of generalized plugins,
+	// such as Modbus-IP, where a generalized handler will need to map something
+	// (like a set of registers) to a reading output.
 	Output string
 
-	id      string
+	// id is the unique ID for the device.
+	id string
+
+	// handler is a pointer to the actual DeviceHandler for the device. This is
+	// populated via the SDK on device loading and parsing and uses the Handler
+	// field to match the name of the handler to the actual instance.
 	handler *DeviceHandler
-
-	// The name of the device kind. This is essentially the identifier
-	// for the device type.
-	//Kind string
-
-	// Any metadata associated with the device kind.
-	//Metadata map[string]string
-
-	// The name of the plugin this device is managed by.
-	//Plugin string
-
-	// Device-level information specified in the Device's config.
-	//Info string
-
-	// The location of the Device.
-	//Location *Location
-
-	// Any plugin-specific configuration data associated with the Device.
-	//Data map[string]interface{}
-
-	// The outputs supported by the device. A device output may supply more
-	// info, such as Data, Info, Type, etc. It is up to the user to extract
-	// and use that output info when they perform reads for the Device outputs.
-	//Outputs []*Output
-
-	// The read/write handler for the device. Handlers should be registered globally.
-	//Handler *DeviceHandler `json:"-"`
-
-	// id is the deterministic id of the device
-	//id string
-
-	// bulkRead is a flag that determines whether or not the device should be
-	// read in bulk, i.e. in a batch with other devices of the same kind.
-	//bulkRead bool
-
-	// SortOrdinal is a one based sort ordinal for a device in a scan. Zero for
-	// don't care.
-	//SortOrdinal int32
 }
 
 // NewDeviceFromConfig creates a new instance of a Device from its device prototype
@@ -108,7 +113,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 
 	// Merge instance data.
 	if err := mergo.Map(&data, instance.Data, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
-		// todo: log
+		log.WithField("error", err).Error("[device] failed merging device instance config")
 		return nil, err
 	}
 
@@ -166,110 +171,14 @@ func (device *Device) JSON() (string, error) {
 	return string(bytes), nil
 }
 
+// GetHandler gets the DeviceHandler of the device.
 func (device *Device) GetHandler() *DeviceHandler {
 	return device.handler
 }
 
+// GetID gets the unique ID of the device.
 func (device *Device) GetID() string {
 	return device.id
-}
-
-// GetOutput gets the named Output from the Device's output list. If the Output
-// is not found, nil is returned.
-func (device *Device) GetOutput(name string) *Output {
-	for _, output := range device.Outputs {
-		if output.Name == name {
-			return output
-		}
-	}
-	return nil
-}
-
-// getInstanceOutputs get the Outputs for a single device instance. It converts
-// the instance's DeviceOutput to an Output type, and by doing so unifies that
-// output with its corresponding OutputType information.
-//
-// If output inheritance is enable for the instance (which is it by default),
-// this will also take the DeviceOutputs defined by the instance's kind.
-func getInstanceOutputs(kind *DeviceKind, instance *DeviceInstance) ([]*Output, error) {
-	var instanceOutputs []*Output
-
-	// Create the outputs specific to the instance first.
-	for _, o := range instance.Outputs {
-		output, err := NewOutputFromConfig(o)
-		if err != nil {
-			return nil, err
-		}
-		instanceOutputs = append(instanceOutputs, output)
-	}
-
-	// If output inheritance is not disabled, we will take any outputs
-	// from the DeviceKind as well. If there is an output with the same
-	// name already set from the instance config, we will ignore it.
-	if !instance.DisableOutputInheritance {
-		for _, o := range kind.Outputs {
-			output, err := NewOutputFromConfig(o)
-			if err != nil {
-				return nil, err
-			}
-			// Check if the output is already being tracked
-			duplicate := false
-			for _, tracked := range instanceOutputs {
-				if tracked.Name == output.Name {
-					duplicate = true
-					break
-				}
-			}
-			if !duplicate {
-				instanceOutputs = append(instanceOutputs, output)
-			}
-		}
-	}
-	return instanceOutputs, nil
-}
-
-// Output defines a single output that a device can support. It is the DeviceConfig's
-// Output merged with its associated output type.
-type Output struct {
-	OutputType
-
-	Info string
-	Data map[string]interface{}
-}
-
-// MakeReading makes a reading for the Output. This is a wrapper around `NewReading`.
-func (output *Output) MakeReading(value interface{}) (reading *Reading, err error) {
-	return NewReading(output, value)
-}
-
-// encode translates the Output to the corresponding gRPC Output message.
-func (output *Output) encode() *synse.Output {
-	sf, err := output.GetScalingFactor()
-	if err != nil {
-		log.Errorf("[sdk] error getting scaling factor: %v", err)
-	}
-
-	return &synse.Output{
-		Name:          output.Name,
-		Type:          output.Type(),
-		Precision:     int32(output.Precision),
-		ScalingFactor: sf,
-		Unit:          output.Unit.encode(),
-	}
-}
-
-// NewOutputFromConfig creates a new Output from the DeviceOutput config struct.
-func NewOutputFromConfig(config *DeviceOutput) (*Output, error) {
-	t, err := GetTypeByName(config.Type)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Output{
-		OutputType: *t,
-		Info:       config.Info,
-		Data:       config.Data,
-	}, nil
 }
 
 // Read performs the read action for the device, as set by its DeviceHandler.
@@ -327,43 +236,29 @@ func (device *Device) IsWritable() bool {
 	return device.handler.Write != nil
 }
 
-// ID generates the deterministic ID for the Device using its config values.
-func (device *Device) ID() string {
-	if device.id == "" {
-		protocolComp := ctx.deviceIdentifier(device.Data)
-		device.id = utils.NewUID(device.Plugin, device.Kind, protocolComp)
-	}
-	return device.id
-}
+// fixme: device ID generation
 
-// GUID generates a globally unique ID string by creating a composite
-// string from the rack, board, and device UID.
-func (device *Device) GUID() string {
-	return utils.MakeIDString( // fixme
-		"", //device.Location.Rack,
-		"", //device.Location.Board,
-		device.ID(),
-	)
-}
+//// ID generates the deterministic ID for the Device using its config values.
+//func (device *Device) ID() string {
+//	if device.id == "" {
+//		protocolComp := ctx.deviceIdentifier(device.Data)
+//		device.id = utils.NewUID(device.Plugin, device.Kind, protocolComp)
+//	}
+//	return device.id
+//}
+//
+//// GUID generates a globally unique ID string by creating a composite
+//// string from the rack, board, and device UID.
+//func (device *Device) GUID() string {
+//	return utils.MakeIDString( // fixme
+//		"", //device.Location.Rack,
+//		"", //device.Location.Board,
+//		device.ID(),
+//	)
+//}
 
 // encode translates the Device to the corresponding gRPC Device message.
 func (device *Device) encode() *synse.V3Device {
-	//var output []*synse.Output
-	//for _, out := range device.Outputs {
-	//	output = append(output, out.encode())
-	//}
-	//return &synse.Device{
-	//	Timestamp:   GetCurrentTime(),
-	//	Uid:         device.ID(),
-	//	Kind:        device.Kind,
-	//	Metadata:    device.Metadata,
-	//	Plugin:      device.Plugin,
-	//	Info:        device.Info,
-	//	Location:    device.Location.encode(),
-	//	SortOrdinal: device.SortOrdinal,
-	//	Output:      output,
-	//}
-
 	var tags []*synse.V3Tag
 	for _, t := range device.Tags {
 		tags = append(tags, t.Encode())
@@ -373,47 +268,11 @@ func (device *Device) encode() *synse.V3Device {
 		Timestamp: utils.GetCurrentTime(),
 		Id:        device.id,
 		Type:      device.Type,
-		Plugin:    metainfo.Tag,
 		Info:      device.Info,
 		Metadata:  device.Metadata,
 		SortIndex: device.SortIndex,
 		Tags:      tags,
 		// todo:  capabilities, outputs
-	}
-}
-
-// updateDeviceMap updates the global device map with the provided Devices.
-// If duplicate IDs are detected, the plugin will terminate.
-func updateDeviceMap(devices []*Device) {
-	var foundDuplicates bool
-	for _, d := range devices {
-		if existing, hasDevice := ctx.devices[d.GUID()]; hasDevice {
-			// If we have devices with the same ID, there is something very wrong
-			// happening and we will not want to proceed, since we won't be able
-			// to route to devices correctly.
-			log.WithField("id", d.ID()).Error("[sdk] duplicate device found")
-			foundDuplicates = true
-
-			// Get a dump of the device data, including all nested structs
-			existingJSON, err := existing.JSON()
-			if err != nil {
-				log.Errorf("[sdk] failed to dump device to JSON: %v", err)
-				log.Errorf("[sdk] existing device: %v", existing)
-			} else {
-				log.Errorf("[sdk] existing device: %v", existingJSON)
-			}
-			duplicateJSON, err := d.JSON()
-			if err != nil {
-				log.Errorf("[sdk] failed to dump device to JSON: %v", err)
-				log.Errorf("[sdk] duplicate device: %v", d)
-			} else {
-				log.Errorf("[sdk] duplicate device: %v", duplicateJSON)
-			}
-		}
-		ctx.devices[d.GUID()] = d
-	}
-	if foundDuplicates {
-		log.Panic("[sdk] unable to run plugin with duplicate device configurations")
 	}
 }
 

@@ -159,13 +159,13 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 	}
 
 	// Check if the Device ID collides with an existing device.
-	if _, exists := manager.devices[device.ID()]; exists {
+	if _, exists := manager.devices[device.id]; exists {
 		// fixme
 		return fmt.Errorf("device id exists")
 	}
 
 	// Add the device to the manager.
-	manager.devices[device.ID()] = device
+	manager.devices[device.id] = device
 
 	// Update the tag cache for the device.
 	for _, t := range device.Tags {
