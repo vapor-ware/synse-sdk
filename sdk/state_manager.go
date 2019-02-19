@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
+
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/patrickmn/go-cache"
@@ -35,8 +37,7 @@ type cacheContexts []*ReadContext
 
 // StateManager manages the read and write (transaction) state for plugin devices.
 type StateManager struct {
-	readChan   chan *ReadContext
-	listenChan chan *ReadContext
+	readChan chan *ReadContext
 
 	readings      map[string][]*Reading
 	transactions  *cache.Cache
@@ -56,10 +57,9 @@ func NewStateManager(conf *config.PluginSettings) *StateManager {
 	}
 
 	return &StateManager{
-		config:     conf,
-		readChan:   make(chan *ReadContext, conf.Read.QueueSize),
-		listenChan: make(chan *ReadContext, conf.Listen.QueueSize),
-		readings:   make(map[string][]*Reading),
+		config:   conf,
+		readChan: make(chan *ReadContext, conf.Read.QueueSize),
+		readings: make(map[string][]*Reading),
 		transactions: cache.New(
 			conf.Transaction.TTL,
 			conf.Transaction.TTL*2,
@@ -77,22 +77,10 @@ func (manager *StateManager) Start() {
 func (manager *StateManager) updateReadings() {
 	// todo: figure out how to test this...
 	for {
-		var (
-			id       string
-			readings []*Reading
-			reading  *ReadContext
-		)
-
-		// Read from the listen and read channels for incoming readings.
-		// fixme: could we just use a single channel to collect readings?
-		select {
-		case reading = <-manager.readChan:
-			id = reading.ID()
-			readings = reading.Reading
-		case reading = <-manager.listenChan:
-			id = reading.ID()
-			readings = reading.Reading
-		}
+		// Read from the read channel for incoming readings.
+		reading := <-manager.readChan
+		id := reading.ID()
+		readings := reading.Reading
 
 		// Update the reading state.
 		manager.readingsLock.Lock()
@@ -108,7 +96,7 @@ func (manager *StateManager) updateReadings() {
 // is configured to enable read caching.
 func (manager *StateManager) addReadingToCache(ctx *ReadContext) {
 	if manager.config.Cache.Enabled {
-		now := GetCurrentTime()
+		now := utils.GetCurrentTime()
 		item, exists := manager.readingsCache.Get(now)
 		if !exists {
 			newCtxs := cacheContexts([]*ReadContext{ctx})
@@ -139,14 +127,14 @@ func (manager *StateManager) GetCachedReadings(start, end string, readings chan 
 	defer close(readings)
 
 	// Parse the timestamps for the start/end bounds of the data window.
-	startTime, err := ParseRFC3339(start)
+	startTime, err := utils.ParseRFC3339(start)
 	if err != nil {
 		// todo: logging
 
 		// if we can't parse the time... we don't really have any business returning data..
 		return
 	}
-	endTime, err := ParseRFC3339(end)
+	endTime, err := utils.ParseRFC3339(end)
 	if err != nil {
 		// todo: logging
 		return
@@ -165,7 +153,7 @@ func (manager *StateManager) GetCachedReadings(start, end string, readings chan 
 // dumpCachedReadings dumps the cached reading
 func (manager *StateManager) dumpCachedReadings(start, end time.Time, readings chan *ReadContext) {
 	for timestamp, item := range manager.readingsCache.Items() {
-		ts, err := ParseRFC3339(timestamp)
+		ts, err := utils.ParseRFC3339(timestamp)
 		if err != nil {
 			// If we can't parse the timestamp from the cache, an error is logged
 			// and we move on. We should always be using RFC3339 formatted timestamps

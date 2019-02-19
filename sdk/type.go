@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-server-grpc/go"
@@ -123,7 +125,7 @@ func (outputType *OutputType) applyScalingFactor(value interface{}) interface{} 
 
 	// Otherwise, the scaling factor is non-zero and not 1, so it will
 	// need to be applied.
-	f, err := ConvertToFloat64(value)
+	f, err := utils.ConvertToFloat64(value)
 	if err != nil {
 		log.Errorf("[type] Unable to apply scaling factor %v to value %v of type %T", scalingFactor, value, value)
 		// TODO: Return the error.
@@ -141,7 +143,7 @@ func (outputType *OutputType) applyConversion(value interface{}) (result interfa
 		return value, nil
 	case "englishToMetricTemperature":
 		var f float64
-		f, err = ConvertToFloat64(value)
+		f, err = utils.ConvertToFloat64(value)
 		if err != nil {
 			return
 		}

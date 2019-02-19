@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
+
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
@@ -40,13 +42,24 @@ type server struct {
 	grpc *grpc.Server
 
 	initialized bool
+
+	meta *PluginMetadata
+
+	// Plugin components
+	deviceManager *deviceManager
+	stateManager  *StateManager
+	scheduler     *Scheduler
 }
 
 // newServer creates a new instance of a server. This is used by the Plugin
 // constructor to create a Plugin's server instance.
-func newServer(conf *config.NetworkSettings) *server {
+func newServer(conf *config.NetworkSettings, dm *deviceManager, sm *StateManager, sched *Scheduler, meta *PluginMetadata) *server {
 	return &server{
-		conf: conf,
+		conf:          conf,
+		deviceManager: dm,
+		stateManager:  sm,
+		scheduler:     sched,
+		meta:          meta,
 	}
 }
 
@@ -329,7 +342,7 @@ func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.
 	}
 
 	return &synse.V3Health{
-		Timestamp: GetCurrentTime(),
+		Timestamp: utils.GetCurrentTime(),
 		Status:    healthStatus,
 		Checks:    healthChecks,
 	}, nil
@@ -345,7 +358,7 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 	}).Debug("[grpc] DEVICES request")
 
 	// Encode and stream the devices back to the client.
-	for _, device := range ctx.devices {
+	for _, device := range server.deviceManager.devices {
 		// TODO (etd): filter upon the tags/id. first, we need to update how devices are
 		//  cached/routed to. for now, returning all devices.
 		if err := stream.Send(device.encode()); err != nil {
@@ -361,7 +374,7 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
 	log.Debug("[grpc] METADATA request")
 
-	return metainfo.Encode(), nil
+	return server.meta.encode(), nil
 }
 
 // Read gets readings for the specified plugin device(s).
@@ -374,15 +387,14 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 		"system": request.SystemOfMeasure,
 	}).Debug("[grpc] READ request")
 
-	// Get device readings from the DataManager.
-	responses, err := DataManager.Read(request)
-	if err != nil {
-		return err
-	}
+	// FIXME: we need a util of some kind to resolve the device selector into
+	//  a set of devices and get the readings for all of them. this is being
+	//  done for now just as a placeholder while components are being re-wired.
+	readings := server.stateManager.GetReadingsForDevice(request.Selector.Id)
 
 	// Encode and stream the readings back to the client.
-	for _, response := range responses {
-		if err := stream.Send(response); err != nil {
+	for _, reading := range readings {
+		if err := stream.Send(reading.encode()); err != nil {
 			return err
 		}
 	}
@@ -401,7 +413,8 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 
 	// Create a channel that will be used to collect the cached readings.
 	readings := make(chan *ReadContext, 128)
-	go getReadingsFromCache(request.Start, request.End, readings)
+
+	go server.stateManager.GetCachedReadings(request.Start, request.End, readings)
 
 	// Encode and stream the readings back to the client.
 	for r := range readings {
