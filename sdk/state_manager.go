@@ -28,6 +28,8 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
+// todo: for readings, check if reading is enabled on the device
+
 // fixme: better way of defining this?
 // cacheContexts is how ReadContexts are stored in the readings cache. Since
 // we may want to filter readings based on the timestamp they were added, we
