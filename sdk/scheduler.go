@@ -60,7 +60,7 @@ type Scheduler struct {
 }
 
 // NewScheduler creates a new instance of the plugin's scheduler component.
-func NewScheduler(conf *config.PluginSettings, deviceManager *deviceManager, stateManager *StateManager) *Scheduler {
+func NewScheduler(conf *config.PluginSettings, dm *deviceManager, sm *StateManager) *Scheduler {
 	var limiter *rate.Limiter
 	// fixme: test if this is actually checking the same thing
 	if conf.Limiter != nil && conf.Limiter != (&config.LimiterSettings{}) {
@@ -72,8 +72,8 @@ func NewScheduler(conf *config.PluginSettings, deviceManager *deviceManager, sta
 	}
 
 	return &Scheduler{
-		deviceManager: deviceManager,
-		stateManager:  stateManager,
+		deviceManager: dm,
+		stateManager:  sm,
 		config:        conf,
 		limiter:       limiter,
 		serialLock:    &sync.Mutex{},

@@ -89,16 +89,18 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		return nil, err
 	}
 
+	meta := new(PluginMetadata)
+
 	// Initialize plugin components.
-	stateManager := NewStateManager(conf.Settings)
-	deviceManager := newDeviceManager()
-	server := newServer(conf.Network)
-	scheduler := NewScheduler(conf.Settings, deviceManager, stateManager)
+	dm := newDeviceManager()
+	sm := NewStateManager(conf.Settings)
+	sched := NewScheduler(conf.Settings, dm, sm)
+	server := newServer(conf.Network, dm, sm, sched, meta)
 
 	p := Plugin{
 		outputs: make(map[string]*output.Output),
 		quit:    make(chan os.Signal),
-		info:    new(PluginMetadata),
+		info:    meta,
 		version: version,
 		config:  conf,
 
@@ -111,10 +113,10 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		dynamicConfigRegistrar: defaultDynamicDeviceConfigRegistration,
 		deviceDataValidator:    defaultDeviceDataValidator,
 
-		stateManager:  stateManager,
-		deviceManager: deviceManager,
+		deviceManager: dm,
+		stateManager:  sm,
+		scheduler:     sched,
 		server:        server,
-		scheduler:     scheduler,
 	}
 
 	// Set custom options for the plugin.
@@ -130,22 +132,24 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	return &p, nil
 }
 
+// SetInfo sets the metadata for the Plugin. At a minimum, the Plugin name
+// needs to be set.
 func (plugin *Plugin) SetInfo(info *PluginMetadata) {
 	plugin.info = info
 }
 
+// Run starts the plugin.
+//
+// This is the functional starting point for all plugins. Once this is called,
+// the plugin will initialize all of its components and validate its state. Once
+// everything is ready, it will run each of its components. The gRPC server is
+// run in the foreground; all other components are run as goroutines.
 func (plugin *Plugin) Run() error {
-	// Plugin setup. This ensures that the plugin is set up and all
-	// plugin metadata that we need is present.
-	if err := plugin.init(); err != nil {
-		return err
-	}
+	// Check if anything needs to happen based on command line arguments.
+	plugin.handleRunOptions()
 
-	// Initialize all plugin components
-	if err := plugin.deviceManager.init(); err != nil {
-		return err
-	}
-	if err := plugin.server.init(); err != nil {
+	// Initialize the plugin and its components.
+	if err := plugin.initialize(); err != nil {
 		return err
 	}
 
@@ -167,6 +171,14 @@ func (plugin *Plugin) Run() error {
 	if flagDryRun {
 		log.Info("[plugin] dry-run successful")
 		os.Exit(0)
+	}
+
+	// If the default health checks are enabled, register them now
+	// fixme (etd) - this will move to the health manager
+	if !plugin.config.Health.Checks.DisableDefaults {
+		log.Debug("[sdk] registering default health checks")
+		health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
+		health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
 	}
 
 	// Run the plugin.
@@ -232,54 +244,25 @@ func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...*Devi
 	plugin.deviceManager.AddDeviceSetupActions(filter, actions...)
 }
 
-// Run starts the Plugin.
-//
-// Before the gRPC server is started, and before the read and write goroutines
-// are started, Plugin setup and validation will happen. If successful, pre-run
-// actions are executed, and device setup actions are executed, if defined.
-func (plugin *Plugin) RunOrig() error {
-
-	// Before we start the dataManager goroutines or the gRPC server, we
-	// will execute the preRunActions, if any exist.
-	if err := plugin.execPreRun(); err != nil {
+// initialize initializes the plugin and all plugin components.
+func (plugin *Plugin) initialize() error {
+	// Plugin setup. This ensures that the plugin is set up and all
+	// plugin metadata that we need is present.
+	if err := plugin.init(); err != nil {
 		return err
 	}
 
-	//// At this point all state that the plugin will need should be available.
-	//// With a complete view of the plugin, devices, and configuration, we can
-	//// now process any device setup actions prior to reading to/writing from
-	//// the device(s).
-	//multiErr = execDeviceSetup(plugin)
-	//if multiErr.HasErrors() {
-	//	return multiErr
-	//}
-
-	// Log info at plugin startup
-	logStartupInfo()
-
-	// If the --dry-run flag is set, we will end here. The gRPC server and
-	// data manager do not get started up in the dry run.
-	if flagDryRun {
-		log.Info("dry-run successful")
-		os.Exit(0)
-	}
-
-	// If the default health checks are enabled, register them now
-	if !plugin.config.Health.Checks.DisableDefaults {
-		log.Debug("[sdk] registering default health checks")
-		health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
-		health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
-	}
-
-	// Start the data manager
-	if err := DataManager.run(); err != nil {
+	// Initialize all plugin components
+	if err := plugin.deviceManager.init(); err != nil {
 		return err
 	}
-
-	// Start the gRPC server
-	return plugin.server.start()
+	if err := plugin.server.init(); err != nil {
+		return err
+	}
+	return nil
 }
 
+// init initializes the plugin.
 func (plugin *Plugin) init() error {
 	// Ensure command line flags have been parsed.
 	flag.Parse()
@@ -298,9 +281,11 @@ func (plugin *Plugin) init() error {
 	return nil
 }
 
+// run runs the plugin by starting all of the configured plugin components.
 func (plugin *Plugin) run() error {
 	// Start the plugin components. Order matters here.
-	// todo
+	plugin.stateManager.Start()
+	plugin.scheduler.Start()
 
 	// Run the gRPC server. This will block while running until the
 	// plugin is terminated.
@@ -337,29 +322,6 @@ func (plugin *Plugin) onQuitSignal() {
 
 	log.Info("[done]")
 	os.Exit(0)
-}
-
-// loadPluginConfig loads plugin configurations from file and environment
-// and marshals that data into the provided Plugin config struct.
-func loadPluginConfig(conf *config.Plugin) error {
-	// Setup the config loader for the plugin.
-	loader := config.NewYamlLoader("plugin")
-	loader.EnvPrefix = "PLUGIN"
-	loader.EnvOverride = PluginEnvOverride
-	loader.FileName = "config"
-	loader.AddSearchPaths(
-		".",                        // Current working directory
-		"./config",                 // Local config override directory
-		"/etc/synse/plugin/config", // Default plugin config directory
-	)
-
-	// Load the plugin configuration.
-	if err := loader.Load(); err != nil {
-		return err
-	}
-
-	// Marshal the configuration into the plugin config struct.
-	return loader.Scan(conf)
 }
 
 // execPreRun executes the pre-run actions for the plugin.
@@ -408,27 +370,6 @@ func (plugin *Plugin) execPostRun() error {
 	return multiErr.Err()
 }
 
-//// setup performs the pre-run setup actions for a plugin.
-//func (plugin *Plugin) setupOrig() error {
-//
-//	// Check for configuration policies. If no policy was set by the plugin,
-//	// this will fall back on the default policies.
-//	err := policies.Check()
-//	if err != nil {
-//		return err
-//	}
-//
-//	// fixme: this will be the domain of the state manager:
-//
-//	// Set up the transaction cache
-//	setupTransactionCache(plugin.config.Settings.Transaction.TTL)
-//
-//	// Set up the readings cache, if its configured
-//	setupReadingsCache()
-//
-//	return nil
-//}
-
 // handleRunOptions checks whether any command line options were specified for
 // the plugin run. If any are set, it handles them appropriately.
 func (plugin *Plugin) handleRunOptions() {
@@ -450,4 +391,27 @@ func (plugin *Plugin) handleRunOptions() {
 		// fixme: for testing, should we use an Exiter interface?
 		os.Exit(0)
 	}
+}
+
+// loadPluginConfig loads plugin configurations from file and environment
+// and marshals that data into the provided Plugin config struct.
+func loadPluginConfig(conf *config.Plugin) error {
+	// Setup the config loader for the plugin.
+	loader := config.NewYamlLoader("plugin")
+	loader.EnvPrefix = "PLUGIN"
+	loader.EnvOverride = PluginEnvOverride
+	loader.FileName = "config"
+	loader.AddSearchPaths(
+		".",                        // Current working directory
+		"./config",                 // Local config override directory
+		"/etc/synse/plugin/config", // Default plugin config directory
+	)
+
+	// Load the plugin configuration.
+	if err := loader.Load(); err != nil {
+		return err
+	}
+
+	// Marshal the configuration into the plugin config struct.
+	return loader.Scan(conf)
 }
