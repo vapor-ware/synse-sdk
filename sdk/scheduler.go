@@ -18,8 +18,11 @@ package sdk
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
+
+	"github.com/vapor-ware/synse-server-grpc/go"
 
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 
@@ -109,6 +112,46 @@ func (scheduler *Scheduler) Stop() error {
 
 	close(scheduler.stop)
 	return nil
+}
+
+// Write queues up a write request into the scheduler's write queue.
+// fixme: instead of taking the payload, just take the device?
+func (scheduler *Scheduler) Write(payload *synse.V3WritePayload) (map[string]*synse.V3WriteData, error) {
+	devices := scheduler.deviceManager.GetDevices(DeviceSelectorToTags(payload.Selector)...)
+
+	if len(devices) > 1 {
+		// fixme: better err handling
+		return nil, fmt.Errorf("cannot write to more than one device at a time")
+	}
+
+	if len(devices) == 0 {
+		// fixme: better err handling
+		return nil, fmt.Errorf("no such device")
+	}
+
+	device := devices[0]
+	if !device.IsWritable() {
+		// fixme: better err handling
+		return nil, fmt.Errorf("writing not enabled for device")
+	}
+
+	var response = make(map[string]*synse.V3WriteData)
+	for _, data := range payload.Data {
+		t := newTransaction()
+		t.setStatusPending()
+
+		// Map the transaction ID to the write context for the response.
+		response[t.id] = data
+
+		// Queue up the write.
+		scheduler.writeChan <- &WriteContext{
+			transaction: t,
+			device:      device.id,
+			data:        data,
+		}
+	}
+
+	return response, nil
 }
 
 // scheduleReads schedules device reads based on the plugin configuration.
