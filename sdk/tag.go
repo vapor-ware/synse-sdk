@@ -36,6 +36,11 @@ func NewTag(tag string) *Tag {
 	split := strings.SplitN(tag, "/", 2)
 	namespace, component := split[0], split[1]
 
+	// If no namespace is specified, use the default namespace.
+	if namespace == "" {
+		namespace = "default"
+	}
+
 	split = strings.SplitN(component, ":", 2)
 	annotation, label := split[0], split[1]
 
@@ -44,6 +49,25 @@ func NewTag(tag string) *Tag {
 		Annotation: annotation,
 		Label:      label,
 		string:     tag,
+	}
+}
+
+// NewTagFromGRPC creates a new Tag from the gRPC tag message.
+func NewTagFromGRPC(tag *synse.V3Tag) *Tag {
+	var tagString string
+	if tag.Namespace != "" {
+		tagString += tag.Namespace + "/"
+	}
+	if tag.Annotation != "" {
+		tagString += tag.Annotation + ":"
+	}
+	tagString += tag.Label
+
+	return &Tag{
+		Namespace:  tag.Namespace,
+		Annotation: tag.Annotation,
+		Label:      tag.Label,
+		string:     tagString,
 	}
 }
 
@@ -59,4 +83,164 @@ func (tag *Tag) Encode() *synse.V3Tag {
 		Annotation: tag.Annotation,
 		Label:      tag.Label,
 	}
+}
+
+// filterSet is a type which makes it easier to aggregate Devices based on tag filters.
+//
+// Tag filtering is subtractive, that is to say: get only the devices which match every
+// specified tag. This essentially means that when joining Device slices for tag matches,
+// we need to keep only those devices which are the same (set intersection).
+type filterSet struct {
+	devices     []*Device
+	initialized bool
+}
+
+// Filter filters the filterSet's devices with the new device set provided. This is
+// effectively a set intersection.
+func (set *filterSet) Filter(devices []*Device) {
+	// If the filterSet is not initialized, just update the internal device slice
+	// with the provided devices.
+	if len(set.devices) == 0 && !set.initialized {
+		set.devices = devices
+		set.initialized = true
+		return
+	}
+
+	// We already have devices, so we need to get the intersection.
+	var intersection []*Device
+	for _, device := range set.devices {
+		for _, d := range devices {
+			if device.id == d.id {
+				intersection = append(intersection, device)
+				break
+			}
+		}
+	}
+	set.devices = intersection
+}
+
+// Results gets the filtered slice of Devices.
+func (set *filterSet) Results() []*Device {
+	return set.devices
+}
+
+// TagCache is a cache which can be used for looking up devices based on
+// their tags.
+type TagCache struct {
+	// cache is the internal cache data structure which is used to do tag
+	// routing to lookup matching devices.
+	//
+	// The outer map key is the namespace. The middle map key is the annotation.
+	// The inner map key is the label.
+	//
+	// With this cache structure, we can find all devices which match a tag
+	// by decomposing the tag into its searchable components and traversing
+	// the cache.
+	cache map[string]map[string]map[string][]*Device
+}
+
+// NewTagCache creates a new TagCache instance.
+func NewTagCache() *TagCache {
+	return &TagCache{
+		cache: make(map[string]map[string]map[string][]*Device),
+	}
+}
+
+// Add adds a device to the tag cache for the specified tag.
+func (cache *TagCache) Add(tag *Tag, device *Device) {
+	annotations, exists := cache.cache[tag.Namespace]
+	if !exists {
+		// If the namespace doesn't exist, add it with the rest of the tag info.
+		cache.cache[tag.Namespace] = map[string]map[string][]*Device{
+			tag.Annotation: {tag.Label: {device}},
+		}
+		return
+	}
+
+	labels, exists := annotations[tag.Annotation]
+	if !exists {
+		// If the annotation doesn't exist, add it with the rest of the tag info.
+		annotations[tag.Annotation] = map[string][]*Device{
+			tag.Label: {device},
+		}
+		return
+	}
+
+	devices, exists := labels[tag.Label]
+	if !exists {
+		// If the label doesn't exist, add it with the device.
+		labels[tag.Label] = []*Device{device}
+		return
+	}
+
+	// If we get here, the namespace, annotation, and label all exist. We just want
+	// to add the device, but only if it is not already there.
+	var duplicate bool
+	for _, d := range devices {
+		if d.id == device.id {
+			duplicate = true
+			break
+		}
+	}
+	if !duplicate {
+		devices = append(devices, device)
+	}
+}
+
+// GetDevicesFromStrings gets the list of Devices which match the given set
+// of tag strings.
+func (cache *TagCache) GetDevicesFromStrings(tags ...string) []*Device {
+	var t = make([]*Tag, len(tags))
+	for i, tag := range tags {
+		t[i] = NewTag(tag)
+	}
+	return cache.GetDevicesFromTags(t...)
+}
+
+// GetDevicesFromTags gets the list of Devices which match the given set of tags.
+func (cache *TagCache) GetDevicesFromTags(tags ...*Tag) []*Device {
+	var deviceSet filterSet
+
+	for _, tag := range tags {
+		annotations, exists := cache.cache[tag.Namespace]
+		if !exists {
+			// If a tag namespace is specified which doesn't exist in the cache,
+			// there is no way a Device can match to it, so stop searching.
+			return nil
+		}
+
+		labels, exists := annotations[tag.Annotation]
+		if !exists {
+			// If a tag annotation is specified which doesn't exist in the cache,
+			// there is no way a Device can match to it, so stop searching.
+			return nil
+		}
+
+		devices, exists := labels[tag.Label]
+		if !exists {
+			// If a tag label is specified which doesn't exist in the cache,
+			// there is no way a Device can match to it, so stop searching.
+			return nil
+		}
+
+		deviceSet.Filter(devices)
+	}
+
+	return deviceSet.Results()
+}
+
+// DeviceSelectorToTags is a utility that converts a gRPC device selector message
+// into its corresponding tags.
+func DeviceSelectorToTags(selector *synse.V3DeviceSelector) []*Tag {
+	var tags []*Tag
+
+	for _, t := range selector.Tags {
+		tags = append(tags, NewTagFromGRPC(t))
+	}
+
+	// TODO (etd):
+	//  1) check if id is set, if so only create a tag for ID.
+	//  2) figure out how ID tags are represented internally.
+
+	return tags
 }

@@ -46,6 +46,7 @@ type DeviceAction struct {
 type deviceManager struct {
 	config *config.Devices
 
+	tagCache     *TagCache
 	devices      map[string]*Device
 	handlers     map[string]*DeviceHandler
 	setupActions map[string][]*DeviceAction
@@ -54,6 +55,7 @@ type deviceManager struct {
 // newDeviceManager creates a new DeviceManager.
 func newDeviceManager() *deviceManager {
 	return &deviceManager{
+		tagCache:     NewTagCache(),
 		devices:      make(map[string]*Device),
 		handlers:     make(map[string]*DeviceHandler),
 		setupActions: make(map[string][]*DeviceAction),
@@ -81,6 +83,11 @@ func (manager *deviceManager) GetDevice(id string) *Device {
 		}).Debug("[device manager] device does not exist")
 	}
 	return device
+}
+
+// GetDevices gets all devices which match the given set of tags.
+func (manager *deviceManager) GetDevices(tags ...*Tag) []*Device {
+	return manager.tagCache.GetDevicesFromTags(tags...)
 }
 
 func (manager *deviceManager) IsDeviceReadable(id string) bool {
@@ -159,6 +166,11 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 
 	// Add the device to the manager.
 	manager.devices[device.ID()] = device
+
+	// Update the tag cache for the device.
+	for _, t := range device.Tags {
+		manager.tagCache.Add(t, device)
+	}
 
 	return nil
 }
