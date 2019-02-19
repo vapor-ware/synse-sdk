@@ -16,7 +16,7 @@
 
 package sdk
 
-import "fmt"
+import "github.com/vapor-ware/synse-sdk/sdk/output"
 
 // DeviceHandler specifies the read and write handlers for a Device
 // based on its type and model.
@@ -33,7 +33,7 @@ type DeviceHandler struct {
 
 	// Read is a function that handles Read requests for the handler's devices. If the
 	// devices do not support reading, this can be left unspecified.
-	Read func(*Device) ([]*Reading, error)
+	Read func(*Device) ([]*output.Reading, error)
 
 	// BulkRead is a function that handles bulk read operations for the handler's devices.
 	// A bulk read is where all devices of a given kind are read at once, instead of individually.
@@ -49,14 +49,6 @@ type DeviceHandler struct {
 	Listen func(*Device, chan *ReadContext) error
 }
 
-// GetDevices gets all of the devices that use this handler.
-//
-// If the DeviceManager is not initialized or contains no devices, this
-// returns an empty slice.
-func (handler *DeviceHandler) GetDevices() []*Device {
-	return DeviceManager.GetDevicesForHandler(handler.Name)
-}
-
 // supportsBulkRead checks if the handler supports bulk reading for its Devices.
 //
 // If BulkRead is set for the device handler and Read is not, then the handler
@@ -65,26 +57,4 @@ func (handler *DeviceHandler) GetDevices() []*Device {
 // reads.
 func (handler *DeviceHandler) supportsBulkRead() bool {
 	return handler.Read == nil && handler.BulkRead != nil
-}
-
-//// getDevicesForHandler gets a list of all the devices which use the DeviceHandler.
-//func (deviceHandler *DeviceHandler) getDevicesForHandler() []*Device {
-//	var devices []*Device
-//
-//	for _, v := range ctx.devices {
-//		if v.Handler == deviceHandler {
-//			devices = append(devices, v)
-//		}
-//	}
-//	return devices
-//}
-
-// getHandlerForDevice gets the DeviceHandler for a device, based on the handler name.
-func getHandlerForDevice(handlerName string) (*DeviceHandler, error) {
-	for _, handler := range ctx.deviceHandlers {
-		if handler.Name == handlerName {
-			return handler, nil
-		}
-	}
-	return nil, fmt.Errorf("no handler found with name: %s", handlerName)
 }

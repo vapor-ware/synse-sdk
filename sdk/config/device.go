@@ -101,7 +101,7 @@ type DeviceInstance struct {
 	// plugin to handle these values correctly.
 	Data map[string]interface{} `yaml:"data,omitempty"`
 
-	// Output specifies the name of the OutputType that this device instance
+	// Output specifies the name of the Output that this device instance
 	// will use. This is not needed for all devices/plugins, as many DeviceHandlers
 	// will already know which output to use. This field is used in cases of
 	// generalized plugins, such as Modbus-IP, where a generalized handler

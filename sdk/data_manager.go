@@ -3,6 +3,8 @@ package sdk
 import (
 	"sync"
 
+	"github.com/vapor-ware/synse-sdk/sdk/output"
+
 	log "github.com/Sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -63,7 +65,7 @@ type dataManager struct {
 
 	// readings is a map of readings, where the key is the GUID of a
 	// device, and the values are the readings associated with that device.
-	readings map[string][]*Reading
+	readings map[string][]*output.Reading
 
 	// Lock around access/update of the `readings` map data.
 	dataLock *sync.RWMutex
@@ -80,7 +82,7 @@ func newDataManager() *dataManager {
 	return &dataManager{
 		// Do not make the read/write channel. Those channels will be set up
 		// when the DataManger is initialized via `dataManager.init()`
-		readings: make(map[string][]*Reading),
+		readings: make(map[string][]*output.Reading),
 		dataLock: &sync.RWMutex{},
 		rwLock:   &sync.Mutex{},
 	}

@@ -316,7 +316,7 @@ func (scheduler *Scheduler) scheduleListen() {
 			hlog.Info("[scheduler] starting listener scheduling")
 
 			// Get the devices for the handler.
-			devices := handler.GetDevices()
+			devices := scheduler.deviceManager.GetDevicesForHandler(handler.Name)
 			if len(devices) == 0 {
 				hlog.Debug("[scheduler] handler has no devices to listen")
 				continue
@@ -339,7 +339,7 @@ func (scheduler *Scheduler) read(device *Device) {
 	rlog := log.WithFields(log.Fields{
 		"delay":  delay,
 		"mode":   mode,
-		"device": device.ID(),
+		"device": device.id,
 	})
 
 	// Rate limiting, if configured. We want to do this before potentially
@@ -410,7 +410,7 @@ func (scheduler *Scheduler) bulkRead(handler *DeviceHandler) {
 	// If the handler supports bulk reading, execute bulk reads. Devices using the
 	// handler will not have been read individually yet.
 	if handler.supportsBulkRead() {
-		devices := handler.GetDevices()
+		devices := scheduler.deviceManager.GetDevicesForHandler(handler.Name)
 		if len(devices) == 0 {
 			rlog.Debug("[scheduler] handler has no devices to read")
 			return
@@ -505,7 +505,7 @@ func (scheduler *Scheduler) write(writeCtx *WriteContext) {
 func (scheduler *Scheduler) listen(listenerCtx *ListenerCtx) {
 	llog := log.WithFields(log.Fields{
 		"handler": listenerCtx.handler.Name,
-		"device":  listenerCtx.device.ID(),
+		"device":  listenerCtx.device.id,
 	})
 
 	llog.Info("[scheduler] starting listener for device")

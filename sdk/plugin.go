@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 
@@ -14,7 +13,6 @@ import (
 
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/health"
 )
 
 const (
@@ -173,13 +171,13 @@ func (plugin *Plugin) Run() error {
 		os.Exit(0)
 	}
 
-	// If the default health checks are enabled, register them now
-	// fixme (etd) - this will move to the health manager
-	if !plugin.config.Health.Checks.DisableDefaults {
-		log.Debug("[sdk] registering default health checks")
-		health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
-		health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
-	}
+	//// If the default health checks are enabled, register them now
+	//// fixme (etd) - this will move to the health manager
+	//if !plugin.config.Health.Checks.DisableDefaults {
+	//	log.Debug("[sdk] registering default health checks")
+	//	health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
+	//	health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
+	//}
 
 	// Run the plugin.
 	return plugin.run()
