@@ -1,12 +1,9 @@
 package sdk
 
 import (
-	"fmt"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	log "github.com/Sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
@@ -552,83 +549,83 @@ func (manager *dataManager) run() error {
 //	}
 //	return mapCopy
 //}
+//
+//// Read fulfills a Read request by providing the latest data read from a device
+//// and framing it up for the gRPC response.
+//func (manager *dataManager) Read(req *synse.DeviceFilter) ([]*synse.Reading, error) {
+//	// Validate that the incoming request has the requisite fields populated.
+//	err := validateDeviceFilter(req)
+//	if err != nil {
+//		log.WithField("request", req).Error("[data manager] request failed validation")
+//		return nil, err
+//	}
+//
+//	// Create the id for the device.
+//	deviceID := makeIDString(req.Rack, req.Board, req.Device)
+//	err = validateForRead(deviceID)
+//	if err != nil {
+//		log.WithField("id", deviceID).Error("[data manager] unable to read device")
+//		return nil, err
+//	}
+//
+//	// Get the readings for the device.
+//	readings := manager.getReadings(deviceID)
+//	if readings == nil {
+//		log.WithField("id", deviceID).Error("[data manager] no readings found")
+//		return nil, errors.NotFoundErr("no readings found for device: %s", deviceID)
+//	}
+//
+//	// Create the response containing the device readings.
+//	var resp []*synse.Reading
+//	for _, r := range readings {
+//		resp = append(resp, r.encode())
+//	}
+//	return resp, nil
+//}
 
-// Read fulfills a Read request by providing the latest data read from a device
-// and framing it up for the gRPC response.
-func (manager *dataManager) Read(req *synse.DeviceFilter) ([]*synse.Reading, error) {
-	// Validate that the incoming request has the requisite fields populated.
-	err := validateDeviceFilter(req)
-	if err != nil {
-		log.WithField("request", req).Error("[data manager] request failed validation")
-		return nil, err
-	}
-
-	// Create the id for the device.
-	deviceID := makeIDString(req.Rack, req.Board, req.Device)
-	err = validateForRead(deviceID)
-	if err != nil {
-		log.WithField("id", deviceID).Error("[data manager] unable to read device")
-		return nil, err
-	}
-
-	// Get the readings for the device.
-	readings := manager.getReadings(deviceID)
-	if readings == nil {
-		log.WithField("id", deviceID).Error("[data manager] no readings found")
-		return nil, errors.NotFoundErr("no readings found for device: %s", deviceID)
-	}
-
-	// Create the response containing the device readings.
-	var resp []*synse.Reading
-	for _, r := range readings {
-		resp = append(resp, r.encode())
-	}
-	return resp, nil
-}
-
-// Write fulfills a Write request by queuing up the write context and framing
-// up the corresponding gRPC response.
-func (manager *dataManager) Write(req *synse.WriteInfo) (map[string]*synse.WriteData, error) {
-	// Validate that the incoming request has the requisite fields populated.
-	err := validateWriteInfo(req)
-	if err != nil {
-		log.WithField("request", req).Error("[data manager] request failed validation")
-		return nil, err
-	}
-
-	filter := req.DeviceFilter
-
-	// Create the id for the device.
-	deviceID := makeIDString(filter.Rack, filter.Board, filter.Device)
-	err = validateForWrite(deviceID)
-	if err != nil {
-		log.WithField("id", deviceID).Error("[data manager] unable to write to device")
-		return nil, err
-	}
-
-	// Ensure writes are enabled.
-	if enabled := manager.writesEnabled(); !enabled {
-		return nil, fmt.Errorf("writing is not enabled")
-	}
-
-	// Perform the write and build the response.
-	var resp = make(map[string]*synse.WriteData)
-	for _, data := range req.Data {
-		t := newTransaction()
-		t.setStatusPending()
-
-		// Map the transaction ID to the write context for the response
-		resp[t.id] = data
-
-		// Pass the write context to the write channel to be queued for writing.
-		manager.writeChannel <- &WriteContext{
-			transaction: t,
-			device:      filter.Device,
-			board:       filter.Board,
-			rack:        filter.Rack,
-			data:        data,
-		}
-	}
-	log.Debugf("[data manager] write response data: %#v", resp)
-	return resp, nil
-}
+//// Write fulfills a Write request by queuing up the write context and framing
+//// up the corresponding gRPC response.
+//func (manager *dataManager) Write(req *synse.WriteInfo) (map[string]*synse.WriteData, error) {
+//	// Validate that the incoming request has the requisite fields populated.
+//	err := validateWriteInfo(req)
+//	if err != nil {
+//		log.WithField("request", req).Error("[data manager] request failed validation")
+//		return nil, err
+//	}
+//
+//	filter := req.DeviceFilter
+//
+//	// Create the id for the device.
+//	deviceID := makeIDString(filter.Rack, filter.Board, filter.Device)
+//	err = validateForWrite(deviceID)
+//	if err != nil {
+//		log.WithField("id", deviceID).Error("[data manager] unable to write to device")
+//		return nil, err
+//	}
+//
+//	// Ensure writes are enabled.
+//	if enabled := manager.writesEnabled(); !enabled {
+//		return nil, fmt.Errorf("writing is not enabled")
+//	}
+//
+//	// Perform the write and build the response.
+//	var resp = make(map[string]*synse.WriteData)
+//	for _, data := range req.Data {
+//		t := newTransaction()
+//		t.setStatusPending()
+//
+//		// Map the transaction ID to the write context for the response
+//		resp[t.id] = data
+//
+//		// Pass the write context to the write channel to be queued for writing.
+//		manager.writeChannel <- &WriteContext{
+//			transaction: t,
+//			device:      filter.Device,
+//			board:       filter.Board,
+//			rack:        filter.Rack,
+//			data:        data,
+//		}
+//	}
+//	log.Debugf("[data manager] write response data: %#v", resp)
+//	return resp, nil
+//}
