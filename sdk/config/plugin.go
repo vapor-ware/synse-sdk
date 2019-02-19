@@ -37,9 +37,6 @@ type Plugin struct {
 	// registering devices to the plugin.
 	DynamicRegistration *DynamicRegistrationSettings `yaml:"dynamicRegistration,omitempty"`
 
-	// Limiter specifies settings for rate limiting for reads/writes.
-	Limiter *LimiterSettings `yaml:"limiter,omitempty"`
-
 	// Health specifies the health settings for the plugin.
 	Health *HealthSettings `yaml:"health,omitempty"`
 }
@@ -63,6 +60,9 @@ type PluginSettings struct {
 	// handling behavior.
 	Transaction *TransactionSettings `yaml:"transaction,omitempty"`
 
+	// Limiter specifies settings for rate limiting for reads/writes.
+	Limiter *LimiterSettings `yaml:"limiter,omitempty"`
+
 	// Cache contains the settings to configure local data caching
 	// by the plugin.
 	Cache *CacheSettings `yaml:"cache,omitempty"`
@@ -73,14 +73,6 @@ type ListenSettings struct {
 	// Disable can be used to globally disable listening for the plugin.
 	// By default, plugin listening is enabled.
 	Disable bool `yaml:"disable,omitempty"`
-
-	// QueueSize defines the size of the listen queue. This will be the
-	// size of the channel that queues up and passes along readings as
-	// they are collected.
-	//
-	// Generally this does not need to be set, but can be used to tune
-	// performance.
-	QueueSize int `yaml:"queueSize,omitempty"`
 }
 
 // ReadSettings are the settings for read behavior.
