@@ -435,6 +435,13 @@ func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayl
 		"id":   request.Selector.Id,
 	}).Debug("[grpc] WRITE ASYNC request")
 
+	writeData, err := server.scheduler.Write(request)
+	if err != nil {
+		return nil, err
+	}
+	// fixme: still need to update the data we get back/the api expectations..
+	log.Debugf("write async data: %v", writeData)
+
 	// TODO (etd): update this once various other transaction updates are completed.
 
 	return &synse.V3WriteTransaction{}, nil
