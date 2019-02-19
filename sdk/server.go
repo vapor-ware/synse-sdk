@@ -358,9 +358,7 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 	}).Debug("[grpc] DEVICES request")
 
 	// Encode and stream the devices back to the client.
-	for _, device := range server.deviceManager.devices {
-		// TODO (etd): filter upon the tags/id. first, we need to update how devices are
-		//  cached/routed to. for now, returning all devices.
+	for _, device := range server.deviceManager.GetDevices(DeviceSelectorToTags(request)...) {
 		if err := stream.Send(device.encode()); err != nil {
 			return err
 		}
@@ -387,15 +385,15 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 		"system": request.SystemOfMeasure,
 	}).Debug("[grpc] READ request")
 
-	// FIXME: we need a util of some kind to resolve the device selector into
-	//  a set of devices and get the readings for all of them. this is being
-	//  done for now just as a placeholder while components are being re-wired.
-	readings := server.stateManager.GetReadingsForDevice(request.Selector.Id)
+	devices := server.deviceManager.GetDevices(DeviceSelectorToTags(request.Selector)...)
+	for _, device := range devices {
+		readings := server.stateManager.GetReadingsForDevice(device.id)
 
-	// Encode and stream the readings back to the client.
-	for _, reading := range readings {
-		if err := stream.Send(reading.encode()); err != nil {
-			return err
+		// Encode and stream the readings back to the client.
+		for _, reading := range readings {
+			if err := stream.Send(reading.encode()); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
