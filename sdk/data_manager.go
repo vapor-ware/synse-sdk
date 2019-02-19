@@ -10,9 +10,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// DataManager is the global data manager for the plugin.
-var DataManager = newDataManager()
-
 // ListenerCtx is the context needed for a listener function to be called
 // and retried at a later time if it errors out after the listener goroutine
 // is initially dispatched.

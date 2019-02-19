@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
+
 	"github.com/imdario/mergo"
 
 	log "github.com/Sirupsen/logrus"
@@ -329,7 +331,7 @@ func (device *Device) IsWritable() bool {
 func (device *Device) ID() string {
 	if device.id == "" {
 		protocolComp := ctx.deviceIdentifier(device.Data)
-		device.id = newUID(device.Plugin, device.Kind, protocolComp)
+		device.id = utils.NewUID(device.Plugin, device.Kind, protocolComp)
 	}
 	return device.id
 }
@@ -337,9 +339,9 @@ func (device *Device) ID() string {
 // GUID generates a globally unique ID string by creating a composite
 // string from the rack, board, and device UID.
 func (device *Device) GUID() string {
-	return makeIDString(
-		device.Location.Rack,
-		device.Location.Board,
+	return utils.MakeIDString( // fixme
+		"", //device.Location.Rack,
+		"", //device.Location.Board,
 		device.ID(),
 	)
 }
@@ -368,7 +370,7 @@ func (device *Device) encode() *synse.V3Device {
 	}
 
 	return &synse.V3Device{
-		Timestamp: GetCurrentTime(),
+		Timestamp: utils.GetCurrentTime(),
 		Id:        device.id,
 		Type:      device.Type,
 		Plugin:    metainfo.Tag,
