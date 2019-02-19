@@ -46,9 +46,6 @@ type Output struct {
 	// generated from it.
 	Type string
 
-	// fixme: should this be part of the output spec?
-	ScalingFactor string
-
 	// Units defines all possible units that this output can provide. A reading
 	// derived from this output can only use a single unit. An output's unit
 	// may differ based on the system of measure being used.

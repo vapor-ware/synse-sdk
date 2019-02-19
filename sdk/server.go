@@ -359,7 +359,14 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 
 	// Encode and stream the devices back to the client.
 	for _, device := range server.deviceManager.GetDevices(DeviceSelectorToTags(request)...) {
-		if err := stream.Send(device.encode()); err != nil {
+		d := device.encode()
+
+		// Set the plugin info here. This is done prior to sending back rather than
+		// keeping the plugin info in the device model due to the scoping of the
+		// plugin metadata.
+		d.Plugin = server.meta.Tag()
+
+		if err := stream.Send(d); err != nil {
 			return err
 		}
 	}
@@ -391,7 +398,7 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 
 		// Encode and stream the readings back to the client.
 		for _, reading := range readings {
-			if err := stream.Send(reading.encode()); err != nil {
+			if err := stream.Send(reading.Encode()); err != nil {
 				return err
 			}
 		}
@@ -417,7 +424,7 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 	// Encode and stream the readings back to the client.
 	for r := range readings {
 		for _, data := range r.Reading {
-			if err := stream.Send(data.encode()); err != nil {
+			if err := stream.Send(data.Encode()); err != nil {
 				return err
 			}
 		}
