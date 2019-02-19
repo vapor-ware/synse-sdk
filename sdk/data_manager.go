@@ -1,10 +1,8 @@
 package sdk
 
 import (
-	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
@@ -98,21 +96,21 @@ func newDataManager() *dataManager {
 // allowing it to provide data from, and access to, configured devices.
 func (manager *dataManager) run() error {
 
-	err := manager.setup()
-	if err != nil {
-		return err
-	}
+	//err := manager.setup()
+	//if err != nil {
+	//	return err
+	//}
 
 	// Start the listeners/reader/writer
-	manager.goListen()
-	manager.goRead()
-	manager.goWrite()
+	//manager.goListen()
+	//manager.goRead()
+	//manager.goWrite()
 	//
 	//// Update the manager readings state
 	//manager.goUpdateData()
 
 	// Watch for failed listeners to retry them
-	go manager.watchForListenerRetry()
+	//go manager.watchForListenerRetry()
 
 	log.Info("[data manager] running")
 	return nil
@@ -143,361 +141,361 @@ func (manager *dataManager) run() error {
 //	return nil
 //}
 
-// writesEnabled checks to see whether writing is enabled for the plugin based on
-// the configuration.
-func (manager *dataManager) writesEnabled() bool {
-	return Config.Plugin.Settings.Write.Enabled
-}
+//// writesEnabled checks to see whether writing is enabled for the plugin based on
+//// the configuration.
+//func (manager *dataManager) writesEnabled() bool {
+//	return Config.Plugin.Settings.Write.Enabled
+//}
+//
+//// goListen starts the goroutines for any listener functions for the configured
+//// devices. If there are no listener functions defined, this will do nothing.
+//func (manager *dataManager) goListen() {
+//	// Although we consider listening to be a type of "read" behavior (e.g. collecting
+//	// push-based readings vs. collecting pull-based readings), we use different
+//	// configuration fields for listening to make it easier to tune independent of
+//	// pull-based collection needs. If listening is globally disabled, there is
+//	// nothing to do here.
+//	if !Config.Plugin.Settings.Listen.Enabled {
+//		log.Info("[data manager] skipping listener goroutine(s) (listen disabled)")
+//		return
+//	}
+//
+//	// For each handler that has a listener function defined, get the devices for
+//	// that handler and start the listener for the devices.
+//	for _, handler := range ctx.deviceHandlers {
+//		hlog := log.WithField("handler", handler.Name)
+//		if handler.Listen != nil {
+//			hlog.Info("[data manager] setting up listeners")
+//
+//			// Get all of the devices that have registered with the handler
+//			devices := handler.getDevicesForHandler()
+//			if len(devices) == 0 {
+//				hlog.Debugf("[data manager] found no devices for handler")
+//				continue
+//			}
+//
+//			// For each device, run the listener goroutine
+//			for _, device := range devices {
+//				ctx := NewListenerCtx(handler, device)
+//				go manager.runListener(ctx)
+//			}
+//		}
+//	}
+//}
+//
+//// runListener runs the listener function for a device. If the listener
+//// fails, it will attempt to restart the listener.
+//func (manager *dataManager) runListener(ctx *ListenerCtx) {
+//	log.WithFields(log.Fields{
+//		"handler": ctx.handler.Name,
+//		"device":  ctx.device.ID(),
+//	}).Info("[data manager] running listener")
+//
+//	err := ctx.handler.Listen(ctx.device, manager.listenChannel)
+//	if err != nil {
+//		log.WithField("device", ctx.device.ID()).Errorf(
+//			"[data manager] failed to listen for device readings: %v", err,
+//		)
+//		// pass the context to retry channel
+//		manager.listenerRetry <- ctx
+//	}
+//}
+//
+//// watchForListenerRetry waits for the 'runListener' function to pass a
+//// listener context to it via the 'listenerRetry' channel. If it gets
+//// a context, that listener had failed and needs to be restarted.
+//func (manager *dataManager) watchForListenerRetry() {
+//	for {
+//		ctx := <-manager.listenerRetry
+//		// increment the restart counter
+//		ctx.restarts++
+//
+//		llog := log.WithFields(log.Fields{
+//			"manager": ctx.handler.Name,
+//			"device":  ctx.device.ID(),
+//		})
+//		llog.Infof("[data manager] restarting failed listener (restarts %v)", ctx.restarts)
+//		go manager.runListener(ctx)
+//	}
+//}
 
-// goListen starts the goroutines for any listener functions for the configured
-// devices. If there are no listener functions defined, this will do nothing.
-func (manager *dataManager) goListen() {
-	// Although we consider listening to be a type of "read" behavior (e.g. collecting
-	// push-based readings vs. collecting pull-based readings), we use different
-	// configuration fields for listening to make it easier to tune independent of
-	// pull-based collection needs. If listening is globally disabled, there is
-	// nothing to do here.
-	if !Config.Plugin.Settings.Listen.Enabled {
-		log.Info("[data manager] skipping listener goroutine(s) (listen disabled)")
-		return
-	}
+//// goRead starts the goroutine for reading from configured devices.
+//func (manager *dataManager) goRead() {
+//	mode := Config.Plugin.Settings.Mode
+//	readLog := log.WithField("mode", mode)
+//
+//	// If reads are not enabled, there is nothing to do here.
+//	if !Config.Plugin.Settings.Read.Enabled {
+//		readLog.Info("[data manager] skipping read goroutine (reads disabled)")
+//		return
+//	}
+//
+//	readLog.Info("[data manager] starting read goroutine (reads enabled)")
+//	go func() {
+//		interval, err := Config.Plugin.Settings.Read.GetInterval()
+//		if err != nil {
+//			readLog.WithField("error", err).
+//				Warn("[data manager] misconfiguration: failed to get read interval")
+//		}
+//		for {
+//			// Perform the reads. This is done in a separate function
+//			// to allow for cleaner lock/unlock semantics.
+//			log.Infof("Starting reads in mode %v", mode)
+//			switch mode {
+//			case "serial":
+//				// Get device readings in serial
+//				serialReadInterval, err := Config.Plugin.Settings.Read.GetSerialReadInterval()
+//				if err != nil {
+//					readLog.WithField("error", err).
+//						Warn("[data manager] misconfiguration: failed to get serial read interval")
+//				}
+//				manager.serialRead(serialReadInterval)
+//			case "parallel":
+//				// Get device readings in parallel
+//				manager.parallelRead()
+//			default:
+//				readLog.Error("[data manager] exiting read loop: unsupported plugin run mode")
+//				return
+//			}
+//
+//			log.Infof("Completed reads in mode %v", mode)
+//			log.Infof("Sleeping for interval %v", interval)
+//			time.Sleep(interval)
+//			log.Infof("Slept for interval %v", interval)
+//		}
+//	}()
+//}
 
-	// For each handler that has a listener function defined, get the devices for
-	// that handler and start the listener for the devices.
-	for _, handler := range ctx.deviceHandlers {
-		hlog := log.WithField("handler", handler.Name)
-		if handler.Listen != nil {
-			hlog.Info("[data manager] setting up listeners")
+//// readOne implements the logic for reading from an individual device that is
+//// configured with the Plugin.
+//func (manager *dataManager) readOne(device *Device) {
+//	// Rate limiting, if configured
+//	if manager.limiter != nil {
+//		err := manager.limiter.Wait(context.Background())
+//		if err != nil {
+//			log.Errorf("[data manager] error from limiter when reading %v: %v", device.GUID(), err)
+//		}
+//	}
+//
+//	// If the device does not get its readings from a bulk read operation,
+//	// then it is read individually. If a device is read in bulk, it will
+//	// not be read here; it will be read via the readBulk function.
+//	if !device.bulkRead {
+//		resp, err := device.Read()
+//		if err != nil {
+//			// Check to see if the error is that of unsupported error. If it is, we
+//			// do not want to log out here (low-interval read polling would cause this
+//			// to pollute the logs for something that we should already know).
+//			_, unsupported := err.(*errors.UnsupportedCommandError)
+//			if !unsupported {
+//				log.Errorf("[data manager] failed to read from device %v: %v", device.GUID(), err)
+//			}
+//		} else {
+//			manager.readChannel <- resp
+//		}
+//	}
+//}
 
-			// Get all of the devices that have registered with the handler
-			devices := handler.getDevicesForHandler()
-			if len(devices) == 0 {
-				hlog.Debugf("[data manager] found no devices for handler")
-				continue
-			}
+//// readBulk will execute bulk reads on all device handlers that support
+//// bulk reading. If a handler does not support bulk reading, it's devices
+//// will be read individually via readOne instead.
+//func (manager *dataManager) readBulk(handler *DeviceHandler) {
+//	// Rate limiting, if configured
+//	if manager.limiter != nil {
+//		err := manager.limiter.Wait(context.Background())
+//		if err != nil {
+//			log.Errorf("[data manager] error from limiter when bulk reading with handler for %v: %v", handler.Name, err)
+//		}
+//	}
+//
+//	// If the handler supports bulk read, execute bulk read. Otherwise,
+//	// do nothing. Individual reads are done via the readOne function.
+//	if handler.supportsBulkRead() {
+//		devices := handler.getDevicesForHandler()
+//		if len(devices) == 0 {
+//			return
+//		}
+//		resp, err := handler.BulkRead(devices)
+//		if err != nil {
+//			log.Errorf("[data manager] failed to bulk read from device handler for: %v: %v", handler.Name, err)
+//		} else {
+//			for _, readCtx := range resp {
+//				manager.readChannel <- readCtx
+//			}
+//		}
+//	}
+//}
 
-			// For each device, run the listener goroutine
-			for _, device := range devices {
-				ctx := NewListenerCtx(handler, device)
-				go manager.runListener(ctx)
-			}
-		}
-	}
-}
+//// serialRead reads all devices configured with the Plugin in serial.
+//func (manager *dataManager) serialRead(serialReadInterval time.Duration) {
+//	// If the plugin is a serial plugin, we want to lock around reads
+//	// and writes so the two operations do not stomp on one another.
+//	manager.rwLock.Lock()
+//	defer manager.rwLock.Unlock()
+//
+//	log.Infof("Starting serial read of %v devices", len(ctx.devices))
+//	for _, dev := range ctx.devices {
+//		manager.readOne(dev)
+//		log.Infof("Sleeping after read %v", serialReadInterval)
+//		time.Sleep(serialReadInterval)
+//	}
+//	log.Infof("Completed serial read of %v devices", len(ctx.devices))
+//
+//	for _, handler := range ctx.deviceHandlers {
+//		manager.readBulk(handler)
+//	}
+//}
+//
+//// parallelRead reads all devices configured with the Plugin in parallel.
+//func (manager *dataManager) parallelRead() {
+//	var waitGroup sync.WaitGroup
+//
+//	for _, dev := range ctx.devices {
+//		// Increment the WaitGroup counter.
+//		waitGroup.Add(1)
+//
+//		// Launch a goroutine to read from the device
+//		go func(wg *sync.WaitGroup, device *Device) {
+//			manager.readOne(device)
+//			wg.Done()
+//		}(&waitGroup, dev)
+//	}
+//
+//	for _, handler := range ctx.deviceHandlers {
+//		// Increment the WaitGroup counter.
+//		waitGroup.Add(1)
+//
+//		// Launch a goroutine to bulk read from the handler
+//		go func(wg *sync.WaitGroup, handler *DeviceHandler) {
+//			manager.readBulk(handler)
+//			wg.Done()
+//		}(&waitGroup, handler)
+//	}
+//
+//	// Wait for all device reads to complete.
+//	waitGroup.Wait()
+//}
 
-// runListener runs the listener function for a device. If the listener
-// fails, it will attempt to restart the listener.
-func (manager *dataManager) runListener(ctx *ListenerCtx) {
-	log.WithFields(log.Fields{
-		"handler": ctx.handler.Name,
-		"device":  ctx.device.ID(),
-	}).Info("[data manager] running listener")
+//// goWrite starts the goroutine for writing to configured devices.
+//func (manager *dataManager) goWrite() {
+//	mode := Config.Plugin.Settings.Mode
+//	writeLog := log.WithField("mode", mode)
+//
+//	// If writes are not enabled, there is nothing to do here.
+//	if !manager.writesEnabled() {
+//		writeLog.Info("[data manager] skipping write goroutine (writes disabled)")
+//		return
+//	}
+//
+//	writeLog.Info("[data manager] starting write goroutine (writes enabled)")
+//	go func() {
+//		interval, err := Config.Plugin.Settings.Write.GetInterval()
+//		if err != nil {
+//			writeLog.WithField("error", err).
+//				Warn("[data manager] misconfiguration: failed to get write interval")
+//		}
+//		for {
+//			// Perform the writes. This is done in a separate function
+//			// to allow for cleaner lock/unlock semantics.
+//			switch mode := Config.Plugin.Settings.Mode; mode {
+//			case "serial":
+//				// Write to devices in serial
+//				manager.serialWrite()
+//			case "parallel":
+//				// Write to devices in parallel
+//				manager.parallelWrite()
+//			default:
+//				writeLog.Error("[data manager] exiting write loop: unsupported plugin run mode")
+//				return
+//			}
+//
+//			time.Sleep(interval)
+//		}
+//	}()
+//}
 
-	err := ctx.handler.Listen(ctx.device, manager.listenChannel)
-	if err != nil {
-		log.WithField("device", ctx.device.ID()).Errorf(
-			"[data manager] failed to listen for device readings: %v", err,
-		)
-		// pass the context to retry channel
-		manager.listenerRetry <- ctx
-	}
-}
+//// serialWrite writes to devices configured with the Plugin in serial.
+//func (manager *dataManager) serialWrite() {
+//	// If the plugin is a serial plugin, we want to lock around reads
+//	// and writes so the two operations do not stomp on one another.
+//	manager.rwLock.Lock()
+//	defer manager.rwLock.Unlock()
+//
+//	// Check for any pending writes and, if any exist, attempt to fulfill
+//	// the writes and update their transaction state accordingly.
+//	for i := 0; i < Config.Plugin.Settings.Write.Max; i++ {
+//		select {
+//		case w := <-manager.writeChannel:
+//			manager.write(w)
+//
+//		default:
+//			// if there is nothing to write, do nothing
+//		}
+//	}
+//}
 
-// watchForListenerRetry waits for the 'runListener' function to pass a
-// listener context to it via the 'listenerRetry' channel. If it gets
-// a context, that listener had failed and needs to be restarted.
-func (manager *dataManager) watchForListenerRetry() {
-	for {
-		ctx := <-manager.listenerRetry
-		// increment the restart counter
-		ctx.restarts++
+//// parallelWrite writes to devices configured with the Plugin in parallel.
+//func (manager *dataManager) parallelWrite() {
+//	var waitGroup sync.WaitGroup
+//
+//	// Check for any pending writes and, if any exist, attempt to fulfill
+//	// the writes and update their transaction state accordingly.
+//	for i := 0; i < Config.Plugin.Settings.Write.Max; i++ {
+//		select {
+//		case w := <-manager.writeChannel:
+//			// Increment the WaitGroup counter.
+//			waitGroup.Add(1)
+//
+//			// Launch a goroutine to write to the device
+//			go func(wg *sync.WaitGroup, writeContext *WriteContext) {
+//				manager.write(writeContext)
+//				wg.Done()
+//			}(&waitGroup, w)
+//
+//		default:
+//			// if there is nothing to write, do nothing
+//		}
+//	}
+//
+//	// Wait for all device reads to complete.
+//	waitGroup.Wait()
+//}
 
-		llog := log.WithFields(log.Fields{
-			"manager": ctx.handler.Name,
-			"device":  ctx.device.ID(),
-		})
-		llog.Infof("[data manager] restarting failed listener (restarts %v)", ctx.restarts)
-		go manager.runListener(ctx)
-	}
-}
-
-// goRead starts the goroutine for reading from configured devices.
-func (manager *dataManager) goRead() {
-	mode := Config.Plugin.Settings.Mode
-	readLog := log.WithField("mode", mode)
-
-	// If reads are not enabled, there is nothing to do here.
-	if !Config.Plugin.Settings.Read.Enabled {
-		readLog.Info("[data manager] skipping read goroutine (reads disabled)")
-		return
-	}
-
-	readLog.Info("[data manager] starting read goroutine (reads enabled)")
-	go func() {
-		interval, err := Config.Plugin.Settings.Read.GetInterval()
-		if err != nil {
-			readLog.WithField("error", err).
-				Warn("[data manager] misconfiguration: failed to get read interval")
-		}
-		for {
-			// Perform the reads. This is done in a separate function
-			// to allow for cleaner lock/unlock semantics.
-			log.Infof("Starting reads in mode %v", mode)
-			switch mode {
-			case "serial":
-				// Get device readings in serial
-				serialReadInterval, err := Config.Plugin.Settings.Read.GetSerialReadInterval()
-				if err != nil {
-					readLog.WithField("error", err).
-						Warn("[data manager] misconfiguration: failed to get serial read interval")
-				}
-				manager.serialRead(serialReadInterval)
-			case "parallel":
-				// Get device readings in parallel
-				manager.parallelRead()
-			default:
-				readLog.Error("[data manager] exiting read loop: unsupported plugin run mode")
-				return
-			}
-
-			log.Infof("Completed reads in mode %v", mode)
-			log.Infof("Sleeping for interval %v", interval)
-			time.Sleep(interval)
-			log.Infof("Slept for interval %v", interval)
-		}
-	}()
-}
-
-// readOne implements the logic for reading from an individual device that is
-// configured with the Plugin.
-func (manager *dataManager) readOne(device *Device) {
-	// Rate limiting, if configured
-	if manager.limiter != nil {
-		err := manager.limiter.Wait(context.Background())
-		if err != nil {
-			log.Errorf("[data manager] error from limiter when reading %v: %v", device.GUID(), err)
-		}
-	}
-
-	// If the device does not get its readings from a bulk read operation,
-	// then it is read individually. If a device is read in bulk, it will
-	// not be read here; it will be read via the readBulk function.
-	if !device.bulkRead {
-		resp, err := device.Read()
-		if err != nil {
-			// Check to see if the error is that of unsupported error. If it is, we
-			// do not want to log out here (low-interval read polling would cause this
-			// to pollute the logs for something that we should already know).
-			_, unsupported := err.(*errors.UnsupportedCommandError)
-			if !unsupported {
-				log.Errorf("[data manager] failed to read from device %v: %v", device.GUID(), err)
-			}
-		} else {
-			manager.readChannel <- resp
-		}
-	}
-}
-
-// readBulk will execute bulk reads on all device handlers that support
-// bulk reading. If a handler does not support bulk reading, it's devices
-// will be read individually via readOne instead.
-func (manager *dataManager) readBulk(handler *DeviceHandler) {
-	// Rate limiting, if configured
-	if manager.limiter != nil {
-		err := manager.limiter.Wait(context.Background())
-		if err != nil {
-			log.Errorf("[data manager] error from limiter when bulk reading with handler for %v: %v", handler.Name, err)
-		}
-	}
-
-	// If the handler supports bulk read, execute bulk read. Otherwise,
-	// do nothing. Individual reads are done via the readOne function.
-	if handler.supportsBulkRead() {
-		devices := handler.getDevicesForHandler()
-		if len(devices) == 0 {
-			return
-		}
-		resp, err := handler.BulkRead(devices)
-		if err != nil {
-			log.Errorf("[data manager] failed to bulk read from device handler for: %v: %v", handler.Name, err)
-		} else {
-			for _, readCtx := range resp {
-				manager.readChannel <- readCtx
-			}
-		}
-	}
-}
-
-// serialRead reads all devices configured with the Plugin in serial.
-func (manager *dataManager) serialRead(serialReadInterval time.Duration) {
-	// If the plugin is a serial plugin, we want to lock around reads
-	// and writes so the two operations do not stomp on one another.
-	manager.rwLock.Lock()
-	defer manager.rwLock.Unlock()
-
-	log.Infof("Starting serial read of %v devices", len(ctx.devices))
-	for _, dev := range ctx.devices {
-		manager.readOne(dev)
-		log.Infof("Sleeping after read %v", serialReadInterval)
-		time.Sleep(serialReadInterval)
-	}
-	log.Infof("Completed serial read of %v devices", len(ctx.devices))
-
-	for _, handler := range ctx.deviceHandlers {
-		manager.readBulk(handler)
-	}
-}
-
-// parallelRead reads all devices configured with the Plugin in parallel.
-func (manager *dataManager) parallelRead() {
-	var waitGroup sync.WaitGroup
-
-	for _, dev := range ctx.devices {
-		// Increment the WaitGroup counter.
-		waitGroup.Add(1)
-
-		// Launch a goroutine to read from the device
-		go func(wg *sync.WaitGroup, device *Device) {
-			manager.readOne(device)
-			wg.Done()
-		}(&waitGroup, dev)
-	}
-
-	for _, handler := range ctx.deviceHandlers {
-		// Increment the WaitGroup counter.
-		waitGroup.Add(1)
-
-		// Launch a goroutine to bulk read from the handler
-		go func(wg *sync.WaitGroup, handler *DeviceHandler) {
-			manager.readBulk(handler)
-			wg.Done()
-		}(&waitGroup, handler)
-	}
-
-	// Wait for all device reads to complete.
-	waitGroup.Wait()
-}
-
-// goWrite starts the goroutine for writing to configured devices.
-func (manager *dataManager) goWrite() {
-	mode := Config.Plugin.Settings.Mode
-	writeLog := log.WithField("mode", mode)
-
-	// If writes are not enabled, there is nothing to do here.
-	if !manager.writesEnabled() {
-		writeLog.Info("[data manager] skipping write goroutine (writes disabled)")
-		return
-	}
-
-	writeLog.Info("[data manager] starting write goroutine (writes enabled)")
-	go func() {
-		interval, err := Config.Plugin.Settings.Write.GetInterval()
-		if err != nil {
-			writeLog.WithField("error", err).
-				Warn("[data manager] misconfiguration: failed to get write interval")
-		}
-		for {
-			// Perform the writes. This is done in a separate function
-			// to allow for cleaner lock/unlock semantics.
-			switch mode := Config.Plugin.Settings.Mode; mode {
-			case "serial":
-				// Write to devices in serial
-				manager.serialWrite()
-			case "parallel":
-				// Write to devices in parallel
-				manager.parallelWrite()
-			default:
-				writeLog.Error("[data manager] exiting write loop: unsupported plugin run mode")
-				return
-			}
-
-			time.Sleep(interval)
-		}
-	}()
-}
-
-// serialWrite writes to devices configured with the Plugin in serial.
-func (manager *dataManager) serialWrite() {
-	// If the plugin is a serial plugin, we want to lock around reads
-	// and writes so the two operations do not stomp on one another.
-	manager.rwLock.Lock()
-	defer manager.rwLock.Unlock()
-
-	// Check for any pending writes and, if any exist, attempt to fulfill
-	// the writes and update their transaction state accordingly.
-	for i := 0; i < Config.Plugin.Settings.Write.Max; i++ {
-		select {
-		case w := <-manager.writeChannel:
-			manager.write(w)
-
-		default:
-			// if there is nothing to write, do nothing
-		}
-	}
-}
-
-// parallelWrite writes to devices configured with the Plugin in parallel.
-func (manager *dataManager) parallelWrite() {
-	var waitGroup sync.WaitGroup
-
-	// Check for any pending writes and, if any exist, attempt to fulfill
-	// the writes and update their transaction state accordingly.
-	for i := 0; i < Config.Plugin.Settings.Write.Max; i++ {
-		select {
-		case w := <-manager.writeChannel:
-			// Increment the WaitGroup counter.
-			waitGroup.Add(1)
-
-			// Launch a goroutine to write to the device
-			go func(wg *sync.WaitGroup, writeContext *WriteContext) {
-				manager.write(writeContext)
-				wg.Done()
-			}(&waitGroup, w)
-
-		default:
-			// if there is nothing to write, do nothing
-		}
-	}
-
-	// Wait for all device reads to complete.
-	waitGroup.Wait()
-}
-
-// write implements the logic for writing to a devices that is configured
-// with the Plugin.
-func (manager *dataManager) write(w *WriteContext) {
-	// Rate limiting, if configured
-	if manager.limiter != nil {
-		err := manager.limiter.Wait(context.Background())
-		if err != nil {
-			log.Errorf("[data manager] error from limiter when writing %v: %v", w, err)
-		}
-	}
-
-	// Write to the device
-	log.WithFields(log.Fields{
-		"device":      w.device,
-		"transaction": w.transaction.id,
-	}).Debug("[data manager] fulfilling write transaction")
-	w.transaction.setStatusWriting()
-
-	device := ctx.devices[w.ID()]
-	if device == nil {
-		w.transaction.setStatusError()
-		msg := "no device found with ID " + w.ID()
-		w.transaction.message = msg
-		log.Error(msg)
-	} else {
-		data := decodeWriteData(w.data)
-		err := device.Write(data)
-		if err != nil {
-			w.transaction.setStatusError()
-			w.transaction.message = err.Error()
-			log.Errorf("[data manager] failed to write to device %v: %v", w.device, err)
-		}
-	}
-	w.transaction.setStatusDone()
-}
+//// write implements the logic for writing to a devices that is configured
+//// with the Plugin.
+//func (manager *dataManager) write(w *WriteContext) {
+//	// Rate limiting, if configured
+//	if manager.limiter != nil {
+//		err := manager.limiter.Wait(context.Background())
+//		if err != nil {
+//			log.Errorf("[data manager] error from limiter when writing %v: %v", w, err)
+//		}
+//	}
+//
+//	// Write to the device
+//	log.WithFields(log.Fields{
+//		"device":      w.device,
+//		"transaction": w.transaction.id,
+//	}).Debug("[data manager] fulfilling write transaction")
+//	w.transaction.setStatusWriting()
+//
+//	device := ctx.devices[w.ID()]
+//	if device == nil {
+//		w.transaction.setStatusError()
+//		msg := "no device found with ID " + w.ID()
+//		w.transaction.message = msg
+//		log.Error(msg)
+//	} else {
+//		data := decodeWriteData(w.data)
+//		err := device.Write(data)
+//		if err != nil {
+//			w.transaction.setStatusError()
+//			w.transaction.message = err.Error()
+//			log.Errorf("[data manager] failed to write to device %v: %v", w.device, err)
+//		}
+//	}
+//	w.transaction.setStatusDone()
+//}
 
 //// goUpdateData updates the DeviceManager's readings state with the latest
 //// values that were read for each device.

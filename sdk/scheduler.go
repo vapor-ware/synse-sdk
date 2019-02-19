@@ -50,6 +50,10 @@ type Scheduler struct {
 	// limiter is a rate limiter for making requests.
 	limiter *rate.Limiter
 
+	// writeChan is the channel that is used to queue write actions for
+	// devices.
+	writeChan chan *WriteContext
+
 	// stop is a channel used to signal that the scheduler should stop.
 	// This is generally used for graceful shutdown.
 	stop chan struct{}
@@ -73,6 +77,7 @@ func NewScheduler(conf *config.PluginSettings, deviceManager *deviceManager, sta
 		config:        conf,
 		limiter:       limiter,
 		serialLock:    &sync.Mutex{},
+		writeChan:     make(chan *WriteContext, conf.Write.QueueSize),
 		stop:          make(chan struct{}),
 	}
 }
@@ -91,6 +96,8 @@ func (scheduler *Scheduler) registerActions(plugin *Plugin) {
 
 // Start starts the scheduler.
 func (scheduler *Scheduler) Start() {
+	log.Info("[scheduler] starting...")
+
 	go scheduler.scheduleReads()
 	go scheduler.scheduleWrites()
 	go scheduler.scheduleListen()
@@ -98,8 +105,9 @@ func (scheduler *Scheduler) Start() {
 
 // Stop the scheduler.
 func (scheduler *Scheduler) Stop() error {
-	close(scheduler.stop)
+	log.Info("[scheduler] stopping...")
 
+	close(scheduler.stop)
 	return nil
 }
 
@@ -129,7 +137,6 @@ func (scheduler *Scheduler) scheduleReads() {
 		"mode":     mode,
 	})
 
-	// todo: figure out better way to handle this.. exiter channel??
 	rlog.Info("[scheduler] starting read scheduling")
 	for {
 		// If the stop channel is closed, stop the read loop.
@@ -159,10 +166,13 @@ func (scheduler *Scheduler) scheduleReads() {
 
 			// Launch the bulk read.
 			go func(wg *sync.WaitGroup, handler *DeviceHandler) {
-				// todo: bulk read
+				scheduler.bulkRead(handler)
 				wg.Done()
 			}(&waitGroup, handler)
 		}
+
+		// Wait for all device reads to complete.
+		waitGroup.Wait()
 
 		if interval != 0 {
 			rlog.Debug("[scheduler] sleeping for read interval")
@@ -188,6 +198,54 @@ func (scheduler *Scheduler) scheduleWrites() {
 		return
 	}
 
+	interval := scheduler.config.Write.Interval
+	delay := scheduler.config.Write.Delay
+	mode := scheduler.config.Mode
+
+	wlog := log.WithFields(log.Fields{
+		"interval": interval,
+		"delay":    delay,
+		"mode":     mode,
+	})
+
+	wlog.Info("[scheduler] starting write scheduling")
+	for {
+		// If the stop channel is closed, stop the write loop.
+		select {
+		case <-scheduler.stop:
+			break
+		}
+
+		var waitGroup sync.WaitGroup
+
+		// Check for any pending writes. If any exist, attempt to fulfill
+		// the writes and update their transaction state accordingly.
+		for i := 0; i < scheduler.config.Write.BatchSize; i++ {
+			select {
+			case w := <-scheduler.writeChan:
+				// Increment the WaitGroup counter for all writes being executed
+				// in this batch.
+				waitGroup.Add(1)
+
+				// Launch the device write.
+				go func(wg *sync.WaitGroup, writeContext *WriteContext) {
+					scheduler.write(writeContext)
+				}(&waitGroup, w)
+
+			default:
+				// If there is nothing to write, do nothing.
+			}
+		}
+
+		// Wait for all device writes to complete.
+		waitGroup.Wait()
+
+		if interval != 0 {
+			wlog.Debug("[scheduler] sleeping for write interval")
+			time.Sleep(interval)
+			wlog.Debug("[scheduler] waking up for write interval")
+		}
+	}
 }
 
 // scheduleListen schedulers device listeners based on the plugin configuration.
@@ -205,8 +263,32 @@ func (scheduler *Scheduler) scheduleListen() {
 		log.Info("[scheduler] listeners will not be scheduled (no listener handlers registered)")
 		return
 	}
+
+	// For each handler which has a listener function defined, get the devices for
+	// the handler and start the listener for those devices.
+	for _, handler := range scheduler.deviceManager.handlers {
+		hlog := log.WithField("handler", handler.Name)
+
+		if handler.Listen != nil {
+			hlog.Info("[scheduler] starting listener scheduling")
+
+			// Get the devices for the handler.
+			devices := handler.GetDevices()
+			if len(devices) == 0 {
+				hlog.Debug("[scheduler] handler has no devices to listen")
+				continue
+			}
+
+			// For each device, run the listener goroutine.
+			for _, device := range devices {
+				ctx := NewListenerCtx(handler, device)
+				go scheduler.listen(ctx)
+			}
+		}
+	}
 }
 
+// read reads from a single device using a handler's Read function.
 func (scheduler *Scheduler) read(device *Device) {
 	delay := scheduler.config.Read.Delay
 	mode := scheduler.config.Mode
@@ -226,17 +308,18 @@ func (scheduler *Scheduler) read(device *Device) {
 		}
 	}
 
-	// If we are running in serial mode, acquire the serial lock.
-	if mode == modeSerial {
-		scheduler.serialLock.Lock()
-		defer scheduler.serialLock.Unlock()
-	}
-	// fixme: think about where this goes w.r.t the bulk read check...
-
 	// If the device does not get its readings from a bulk read operation, then
 	// it is read individually. If a device is read in bulk, it will not be read
 	// here; it will be read later via the bulkRead function.
 	if !device.handler.supportsBulkRead() {
+
+		// If we are running in serial mode, acquire the serial lock.
+		if mode == modeSerial {
+			scheduler.serialLock.Lock()
+			defer scheduler.serialLock.Unlock()
+		}
+
+		// Read from the device.
 		response, err := device.Read()
 		if err != nil {
 			// Check to see if the error is that of unsupported error. If it is, we
@@ -261,6 +344,154 @@ func (scheduler *Scheduler) read(device *Device) {
 
 }
 
+// bulkRead reads from multiple devices using a handler's BulkRead function.
 func (scheduler *Scheduler) bulkRead(handler *DeviceHandler) {
+	delay := scheduler.config.Read.Delay
+	mode := scheduler.config.Mode
 
+	rlog := log.WithFields(log.Fields{
+		"delay":   delay,
+		"mode":    mode,
+		"handler": handler.Name,
+	})
+
+	// Rate limiting, if configured. We want to do this before potentially
+	// acquiring the serial lock so something isn't holding on to the lock
+	// and just waiting.
+	if scheduler.limiter != nil {
+		if err := scheduler.limiter.Wait(context.Background()); err != nil {
+			rlog.WithField("error", err).Error("[scheduler] error with rate limiter")
+		}
+	}
+
+	// If the handler supports bulk reading, execute bulk reads. Devices using the
+	// handler will not have been read individually yet.
+	if handler.supportsBulkRead() {
+		devices := handler.GetDevices()
+		if len(devices) == 0 {
+			rlog.Debug("[scheduler] handler has no devices to read")
+			return
+		}
+
+		// If we are running in serial mode, acquire the serial lock.
+		if mode == modeSerial {
+			scheduler.serialLock.Lock()
+			defer scheduler.serialLock.Unlock()
+		}
+
+		response, err := handler.BulkRead(devices)
+		if err != nil {
+			rlog.WithField("error", err).Error("[scheduler] handler failed bulk read")
+		} else {
+			for _, readCtx := range response {
+				scheduler.stateManager.readChan <- readCtx
+			}
+		}
+
+		// If a delay is configured, wait for the delay before continuing
+		// (and relinquishing the lock, if in serial mode).
+		if delay != 0 {
+			rlog.Debug("[scheduler] sleeping for bulk read delay")
+			time.Sleep(delay)
+			rlog.Debug("[scheduler] waking up for bulk read delay")
+		}
+	}
+}
+
+// write writes to devices using a handler's Write function.
+func (scheduler *Scheduler) write(writeCtx *WriteContext) {
+	delay := scheduler.config.Write.Delay
+	mode := scheduler.config.Mode
+
+	wlog := log.WithFields(log.Fields{
+		"delay":       delay,
+		"mode":        mode,
+		"transaction": writeCtx.transaction.id,
+		"device":      writeCtx.device,
+	})
+
+	// Rate limiting, if configured. We want to do this before potentially
+	// acquiring the serial lock so something isn't holding on to the lock
+	// and just waiting.
+	if scheduler.limiter != nil {
+		if err := scheduler.limiter.Wait(context.Background()); err != nil {
+			wlog.WithField("error", err).Error("[scheduler] error with rate limiter")
+		}
+	}
+
+	// If we are running in serial mode, acquire the serial lock.
+	if mode == modeSerial {
+		scheduler.serialLock.Lock()
+		defer scheduler.serialLock.Unlock()
+	}
+
+	wlog.Debug("[scheduler] starting device write")
+
+	// Get the device.
+	device := scheduler.deviceManager.GetDevice(writeCtx.ID())
+	if device == nil {
+		writeCtx.transaction.setStatusError()
+		writeCtx.transaction.message = "no device found with ID: " + writeCtx.ID()
+		wlog.Error("[scheduler] " + writeCtx.transaction.message)
+		return
+	}
+
+	if !device.IsWritable() {
+		writeCtx.transaction.setStatusError()
+		writeCtx.transaction.message = "device is not writable: " + writeCtx.ID()
+		wlog.Error("[scheduler] " + writeCtx.transaction.message)
+		return
+	}
+
+	writeCtx.transaction.setStatusWriting()
+
+	// Write to the device.
+	data := decodeWriteData(writeCtx.data)
+	err := device.Write(data)
+	if err != nil {
+		wlog.WithField("error", err).Error("[scheduler] failed to write to device")
+		writeCtx.transaction.setStatusError()
+		writeCtx.transaction.message = err.Error()
+		return
+	}
+	wlog.Debug("[scheduler] successfully wrote to device")
+	writeCtx.transaction.setStatusDone()
+}
+
+// listen listens to devices to collect readings using a device's Listen function.
+func (scheduler *Scheduler) listen(listenerCtx *ListenerCtx) {
+	llog := log.WithFields(log.Fields{
+		"handler": listenerCtx.handler.Name,
+		"device":  listenerCtx.device.ID(),
+	})
+
+	llog.Info("[scheduler] starting listener for device")
+
+	for {
+		// Run the listener fore the device. Pass in the state manager's read channel,
+		// as the listener is really just collecting readings.
+		err := listenerCtx.handler.Listen(
+			listenerCtx.device,
+			scheduler.stateManager.readChan,
+		)
+		if err != nil {
+			// Increment the number of restarts.
+			listenerCtx.restarts++
+
+			// If a listener function results in error, we want to restart it to try and
+			// keep listening. Log the error and re-try listening.
+			llog.WithFields(log.Fields{
+				"restarts": listenerCtx.restarts,
+				"error":    err,
+			}).Error("[scheduler] listener failed, will restart and try again")
+			continue
+
+		} else {
+			// If the listener ended without any error, we take this to mean
+			// that it terminated in a way that is considered ok, so we do not
+			// want to try and restart. Instead, just stop listening.
+			llog.Info("[scheduler] listener completed without error, ending device listen")
+			return
+		}
+	}
 }
