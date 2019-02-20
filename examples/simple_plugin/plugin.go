@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
 // The Plugin metadata. At a minimum, all plugins need a name. This information
@@ -23,18 +24,26 @@ var (
 // A single device could support multiple outputs, but at a minimum requires one.
 var (
 	// The output for temperature devices.
-	temperatureOutput = sdk.OutputType{
-		Name:      "simple.temperature",
+	temperatureOutput = output.Output{
+		Name:      "temperature",
 		Precision: 2,
-		Unit: sdk.Unit{
-			Name:   "celsius",
-			Symbol: "C",
+		Type:      "temperature",
+		Units: map[output.SystemOfMeasure]*output.Unit{
+			// fixme: use built-in once it exists
+			output.NONE: {Name: "Fahrenheit", Symbol: "F", System: string(output.NONE)},
+		},
+		Converters: map[output.SystemOfMeasure]func(value interface{}, to output.SystemOfMeasure) (interface{}, error){
+			// Define a converter that just returns the same value.
+			// fixme: once we have built-in outputs, we can just use that here instead.
+			output.NONE: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
+				return value, nil
+			},
 		},
 	}
 
-	// The output for LED devices.
-	ledOutput = sdk.OutputType{
-		Name: "simple.led",
+	// The output for on/off state devices.
+	stateOutput = output.Output{
+		Name: "state",
 	}
 )
 
@@ -45,17 +54,15 @@ var (
 	ledHandler = sdk.DeviceHandler{
 		Name: "example.led",
 
-		Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-			reading, err := device.GetOutput("simple.led").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas, gosec
-			if err != nil {
-				return nil, err
-			}
-			return []*sdk.Reading{
+		Read: func(device *sdk.Device) ([]*output.Reading, error) {
+			reading := stateOutput.From(strconv.Itoa(rand.Int()))
+
+			return []*output.Reading{
 				reading,
 			}, nil
 		},
 		Write: func(device *sdk.Device, data *sdk.WriteData) error {
-			fmt.Printf("[led handler]: WRITE (%v)\n", device.ID())
+			fmt.Printf("[led handler]: WRITE (%v)\n", device.GetID())
 			fmt.Printf("Data   -> %v\n", data.Data)
 			fmt.Printf("Action -> %v\n", data.Action)
 			return nil
@@ -66,15 +73,15 @@ var (
 	temperatureHandler = sdk.DeviceHandler{
 		Name: "example.temperature",
 
-		Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-			reading, err := device.GetOutput("simple.temperature").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas, gosec
-			if err != nil {
-				return nil, err
-			}
-			return []*sdk.Reading{reading}, nil
+		Read: func(device *sdk.Device) ([]*output.Reading, error) {
+			reading := temperatureOutput.From(strconv.Itoa(rand.Int())) // nolint: gas, gosec
+
+			return []*output.Reading{
+				reading,
+			}, nil
 		},
 		Write: func(device *sdk.Device, data *sdk.WriteData) error {
-			fmt.Printf("[temperature handler]: WRITE (%v)\n", device.ID())
+			fmt.Printf("[temperature handler]: WRITE (%v)\n", device.GetID())
 			fmt.Printf("Data   -> %v\n", data.Data)
 			fmt.Printf("Action -> %v\n", data.Action)
 			return nil
@@ -83,31 +90,37 @@ var (
 )
 
 func main() {
-	// Set the metadata for the plugin.
-	sdk.SetPluginMeta(
-		pluginName,
-		pluginMaintainer,
-		pluginDesc,
-		"",
-	)
-
 	// Create a new Plugin instance.
-	plugin := sdk.NewPlugin()
+	plugin, err := sdk.NewPlugin()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// Register our output types with the Plugin.
-	err := plugin.RegisterOutputTypes(
+	// Set plugin metadata.
+	plugin.SetInfo(&sdk.PluginMetadata{
+		Name:        pluginName,
+		Maintainer:  pluginMaintainer,
+		Description: pluginDesc,
+	})
+
+	// Register custom outputs
+	// fixme: won't need to do this once there are built-ins
+	err = plugin.RegisterOutputs(
 		&temperatureOutput,
-		&ledOutput,
+		&stateOutput,
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Register our device handlers with the Plugin.
-	plugin.RegisterDeviceHandlers(
+	// Register device handlers for the plugin.
+	err = plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
 		&ledHandler,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Run the plugin.
 	if err := plugin.Run(); err != nil {
