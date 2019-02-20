@@ -125,7 +125,11 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	for _, t := range tags {
 		if _, ok := encountered[t]; !ok {
 			encountered[t] = struct{}{}
-			deviceTags = append(deviceTags, NewTag(t))
+			tag, err := NewTag(t)
+			if err != nil {
+				return nil, err
+			}
+			deviceTags = append(deviceTags, tag)
 		}
 	}
 

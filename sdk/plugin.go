@@ -33,6 +33,9 @@ func init() {
 	flag.BoolVar(&flagVersion, "version", false, "print the plugin version information")
 	flag.BoolVar(&flagInfo, "info", false, "print the plugin metadata")
 	flag.BoolVar(&flagDryRun, "dry-run", false, "run only the setup actions to verify functionality and configuration")
+
+	flag.Parse()
+	handleRunOptions()
 }
 
 // PluginAction defines an action that can be run before or after the main
@@ -412,4 +415,31 @@ func loadPluginConfig(conf *config.Plugin) error {
 
 	// Marshal the configuration into the plugin config struct.
 	return loader.Scan(conf)
+}
+
+// handleRunOptions checks whether any command line options were specified for
+// the plugin run. If any are set, it handles them appropriately.
+func handleRunOptions() {
+	var terminate bool
+
+	if flagDebug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	//// --info was set; print the plugin metadata.
+	//if flagInfo {
+	//	fmt.Println(plugin.info.format())
+	//	terminate = true
+	//}
+
+	// --version was set; print the plugin version.
+	if flagVersion {
+		fmt.Println(version.format())
+		terminate = true
+	}
+
+	if terminate {
+		// fixme: for testing, should we use an Exiter interface?
+		os.Exit(0)
+	}
 }

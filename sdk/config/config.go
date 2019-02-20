@@ -21,11 +21,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
+	"github.com/creasty/defaults"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/imdario/mergo"
+	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v2"
 )
 
@@ -160,7 +163,29 @@ func (loader *Loader) Scan(out interface{}) error {
 		// fixme
 		return fmt.Errorf("unable to scan, no merged content, did you Load first")
 	}
-	return mapstructure.WeakDecode(loader.merged, out)
+
+	log.WithFields(log.Fields{
+		"type": reflect.TypeOf(out),
+	}).Debug("[config] scanning config into struct")
+
+	if err := defaults.Set(out); err != nil {
+		return err
+	}
+
+	// Use a custom decoder config for decoding so we can pick up time durations.
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		Metadata:         nil,
+		Result:           out,
+		WeaklyTypedInput: true,
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
+	})
+	if err != nil {
+		return err
+	}
+
+	return decoder.Decode(loader.merged)
 }
 
 // checkOverrides checks to see if an override configuration file/path is set

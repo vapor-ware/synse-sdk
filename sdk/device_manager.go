@@ -55,6 +55,7 @@ type deviceManager struct {
 // newDeviceManager creates a new DeviceManager.
 func newDeviceManager() *deviceManager {
 	return &deviceManager{
+		config:       new(config.Devices),
 		tagCache:     NewTagCache(),
 		devices:      make(map[string]*Device),
 		handlers:     make(map[string]*DeviceHandler),
@@ -245,12 +246,14 @@ func (manager *deviceManager) createDevices() error {
 			device, err := NewDeviceFromConfig(proto, instance)
 			if err != nil {
 				// todo: log
+				log.WithField("error", err).Error("[device manager] failed to create device from config")
 				failedLoad = true
 				continue
 			}
 			// Add it to the manager.
 			if err := manager.AddDevice(device); err != nil {
 				// todo: log
+				log.WithField("error", err).Error("[device manager] failed to add device to manager")
 				failedLoad = true
 			}
 		}
