@@ -1,7 +1,7 @@
 version: 3
 devices:
   - type: temperature
-    handler: temperature
+    handler: example.temperature
     metadata:
       - model: sample-temperature
     tags:
