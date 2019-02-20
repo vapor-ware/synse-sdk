@@ -17,6 +17,8 @@
 package sdk
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/vapor-ware/synse-server-grpc/go"
@@ -32,24 +34,57 @@ type Tag struct {
 }
 
 // NewTag creates a new Tag from a tag string.
-func NewTag(tag string) *Tag {
-	split := strings.SplitN(tag, "/", 2)
-	namespace, component := split[0], split[1]
+func NewTag(tag string) (*Tag, error) {
+	tag = strings.TrimSpace(tag)
+	validTag := regexp.MustCompile(`(([^:/]+)/)?(([^:/]+):)?([^:/\s]+$)`)
+
+	// The regular expression we match to has 5 groups:
+	//   group 1: ((.+)/)?    -> namespace component with trailing slash
+	//   group 2: (.+)        -> namespace without trailing slash
+	//   group 3: ((.+):)?    -> annotation component with trailing colon
+	//   group 4: (.+)        -> annotation without trailing colon
+	//   group 5: ([^:/\s]+?) -> label
+	//
+	// We only care about group 2 (namespace), group 4 (annotation), and
+	// group 5 (label), which are found in the corresponding indices.
+	// (index 0 is the full match)
+	matches := validTag.FindStringSubmatch(tag)
+
+	// If we don't get the expected number of groups, the string does not
+	// represent a tag we can do anything with.
+	if len(matches) != 6 {
+		return nil, fmt.Errorf("invalid tag string (match check): %s", tag)
+	}
+
+	namespace := matches[2]
+	annotation := matches[4]
+	label := matches[5]
+
+	// Make sure that the original tag does not have a namespace delimiter
+	// if no namespace was matched. This is indicative of a malformed tag which
+	// the regex may not have choked on.
+	if strings.Contains(tag, "/") && namespace == "" {
+		return nil, fmt.Errorf("invalid tag string (namespace check): %s", tag)
+	}
+
+	// Make sure that the original tag does not have an annotation delimiter
+	// if no annotation was matched. This is indicative of a malformed tag which
+	// the regex may not have choked on.
+	if strings.Contains(tag, ":") && annotation == "" {
+		return nil, fmt.Errorf("invalid tag string (annotation check): %s", tag)
+	}
 
 	// If no namespace is specified, use the default namespace.
 	if namespace == "" {
 		namespace = "default"
 	}
 
-	split = strings.SplitN(component, ":", 2)
-	annotation, label := split[0], split[1]
-
 	return &Tag{
 		Namespace:  namespace,
 		Annotation: annotation,
 		Label:      label,
 		string:     tag,
-	}
+	}, nil
 }
 
 // NewTagFromGRPC creates a new Tag from the gRPC tag message.
@@ -189,12 +224,16 @@ func (cache *TagCache) Add(tag *Tag, device *Device) {
 
 // GetDevicesFromStrings gets the list of Devices which match the given set
 // of tag strings.
-func (cache *TagCache) GetDevicesFromStrings(tags ...string) []*Device {
+func (cache *TagCache) GetDevicesFromStrings(tags ...string) ([]*Device, error) {
 	var t = make([]*Tag, len(tags))
 	for i, tag := range tags {
-		t[i] = NewTag(tag)
+		nt, err := NewTag(tag)
+		if err != nil {
+			return nil, err
+		}
+		t[i] = nt
 	}
-	return cache.GetDevicesFromTags(t...)
+	return cache.GetDevicesFromTags(t...), nil
 }
 
 // GetDevicesFromTags gets the list of Devices which match the given set of tags.

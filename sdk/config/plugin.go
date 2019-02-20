@@ -25,61 +25,61 @@ type Plugin struct {
 
 	// Debug is a flag to determine whether the plugin should be run with
 	// debug logging or regular logging.
-	Debug bool `yaml:"debug,omitempty"`
+	Debug bool `default:"false" yaml:"debug,omitempty"`
 
 	// Settings specifies how the plugin should run.
-	Settings *PluginSettings `yaml:"settings,omitempty"`
+	Settings *PluginSettings `default:"{}" yaml:"settings,omitempty"`
 
 	// Network specifies the networking configuration for the the plugin.
-	Network *NetworkSettings `yaml:"network,omitempty"`
+	Network *NetworkSettings `default:"{}" yaml:"network,omitempty"`
 
 	// DynamicRegistration specifies the settings and data for dynamically
 	// registering devices to the plugin.
-	DynamicRegistration *DynamicRegistrationSettings `yaml:"dynamicRegistration,omitempty"`
+	DynamicRegistration *DynamicRegistrationSettings `default:"{}" yaml:"dynamicRegistration,omitempty"`
 
 	// Health specifies the health settings for the plugin.
-	Health *HealthSettings `yaml:"health,omitempty"`
+	Health *HealthSettings `default:"{}" yaml:"health,omitempty"`
 }
 
 // PluginSettings are the settings around the runtime behavior of a plugin.
 type PluginSettings struct {
 	// Mode is the run mode of the read and write loops. This can either
 	// be "serial" or "parallel".
-	Mode string `yaml:"mode,omitempty"`
+	Mode string `default:"parallel" yaml:"mode,omitempty"`
 
 	// Listen contains the settings to configure listener behavior.
-	Listen *ListenSettings `yaml:"listen,omitempty"`
+	Listen *ListenSettings `default:"{}" yaml:"listen,omitempty"`
 
 	// Read contains the settings to configure read behavior.
-	Read *ReadSettings `yaml:"read,omitempty"`
+	Read *ReadSettings `default:"{}" yaml:"read,omitempty"`
 
 	// Write contains the settings to configure write behavior.
-	Write *WriteSettings `yaml:"write,omitempty"`
+	Write *WriteSettings `default:"{}" yaml:"write,omitempty"`
 
 	// Transaction contains the settings to configure transaction
 	// handling behavior.
-	Transaction *TransactionSettings `yaml:"transaction,omitempty"`
+	Transaction *TransactionSettings `default:"{}" yaml:"transaction,omitempty"`
 
 	// Limiter specifies settings for rate limiting for reads/writes.
-	Limiter *LimiterSettings `yaml:"limiter,omitempty"`
+	Limiter *LimiterSettings `default:"{}" yaml:"limiter,omitempty"`
 
 	// Cache contains the settings to configure local data caching
 	// by the plugin.
-	Cache *CacheSettings `yaml:"cache,omitempty"`
+	Cache *CacheSettings `default:"{}" yaml:"cache,omitempty"`
 }
 
 // ListenSettings are the settings for listener behavior.
 type ListenSettings struct {
 	// Disable can be used to globally disable listening for the plugin.
 	// By default, plugin listening is enabled.
-	Disable bool `yaml:"disable,omitempty"`
+	Disable bool `default:"false" yaml:"disable,omitempty"`
 }
 
 // ReadSettings are the settings for read behavior.
 type ReadSettings struct {
 	// Disable can be used to globally disable reading for the plugin.
 	// By default, plugin reading is enabled.
-	Disable bool `yaml:"disable,omitempty"`
+	Disable bool `default:"false" yaml:"disable,omitempty"`
 
 	// Interval specifies the duration that the read loop should
 	// sleep between iterations. By default, no interval is specified.
@@ -87,7 +87,7 @@ type ReadSettings struct {
 	// An interval may be useful for tuning the performance of a plugin. In
 	// particular, it can be useful for serial protocols to introduce a
 	// bit of a delay so the serial bus is not constantly hammered.
-	Interval time.Duration `yaml:"interval,omitempty"`
+	Interval time.Duration `default:"0s" yaml:"interval,omitempty"`
 
 	// Delay specifies a plugin-global delay between successive reads.
 	// By default, no delay is specified.
@@ -95,7 +95,7 @@ type ReadSettings struct {
 	// A delay can be useful for tuning the performance of a plugin. In
 	// particular, it can be useful for serial protocols to introduce a
 	// bit of a delay so the serial bus is not constantly hammered.
-	Delay time.Duration `yaml:"delay,omitempty"`
+	Delay time.Duration `default:"0s" yaml:"delay,omitempty"`
 
 	// QueueSize defines the size of the read queue. This will be the
 	// size of the channel that queues up and passes along readings as
@@ -118,7 +118,7 @@ type WriteSettings struct {
 	// An interval may be useful for tuning the performance of a plugin. In
 	// particular, it can be useful for serial protocols to introduce a
 	// bit of a delay so the serial bus is not constantly hammered.
-	Interval time.Duration `yaml:"interval,omitempty"`
+	Interval time.Duration `default:"0s" yaml:"interval,omitempty"`
 
 	// Delay specifies a plugin-global delay between successive writes.
 	// By default, no delay is specified.
@@ -126,7 +126,7 @@ type WriteSettings struct {
 	// A delay can be useful for tuning the performance of a plugin. In
 	// particular, it can be useful for serial protocols to introduce a
 	// bit of a delay so the serial bus is not constantly hammered.
-	Delay time.Duration `yaml:"delay,omitempty"`
+	Delay time.Duration `default:"0s" yaml:"delay,omitempty"`
 
 	// QueueSize defines the size of the write queue. This will be the
 	// size of the channel that queues up and passes along write requests.
@@ -146,7 +146,7 @@ type WriteSettings struct {
 // TransactionSettings are the settings for transaction operations.
 type TransactionSettings struct {
 	// TTL is the time-to-live for a transaction in the transaction cache.
-	TTL time.Duration `yaml:"ttl,omitempty"`
+	TTL time.Duration `default:"5m" yaml:"ttl,omitempty"`
 }
 
 // CacheSettings are the settings for an in-memory windowed cache of plugin readings.
