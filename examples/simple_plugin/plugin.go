@@ -90,18 +90,18 @@ var (
 )
 
 func main() {
+	sdk.SetPluginInfo(
+		pluginName,
+		pluginMaintainer,
+		pluginDesc,
+		"",
+	)
+
 	// Create a new Plugin instance.
 	plugin, err := sdk.NewPlugin()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Set plugin metadata.
-	plugin.SetInfo(&sdk.PluginMetadata{
-		Name:        pluginName,
-		Maintainer:  pluginMaintainer,
-		Description: pluginDesc,
-	})
 
 	// Register custom outputs
 	// fixme: won't need to do this once there are built-ins

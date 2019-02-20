@@ -27,6 +27,9 @@ type Plugin struct {
 	// debug logging or regular logging.
 	Debug bool `default:"false" yaml:"debug,omitempty"`
 
+	// ID specifies the options for generating a plugin namespace ID.
+	ID *IDSettings `default:"{}" yaml:"id,omitempty"`
+
 	// Settings specifies how the plugin should run.
 	Settings *PluginSettings `default:"{}" yaml:"settings,omitempty"`
 
@@ -39,6 +42,25 @@ type Plugin struct {
 
 	// Health specifies the health settings for the plugin.
 	Health *HealthSettings `default:"{}" yaml:"health,omitempty"`
+}
+
+// IDSettings are the settings around the plugin ID namespace.
+type IDSettings struct {
+	// UseMachineID determines whether the machine ID should be used as a
+	// part of the namespace for the plugin ID.
+	UseMachineID bool `default:"true" yaml:"useMachineID,omitempty"`
+
+	// UsePluginTag determines whether the plugin metadata tag should be used
+	// as a part of the namespace for the plugin ID.
+	UsePluginTag bool `default:"true" yaml:"usePluginTag,omitempty"`
+
+	// UseEnv allows environment variables to be used when generating the namespace
+	// for the plugin ID.
+	UseEnv []string `yaml:"useEnv,omitempty"`
+
+	// UseCustom allows setting custom identifiers to be used in generating the namespace
+	// for the plugin ID.
+	UseCustom []string `yaml:"useCustom,omitempty"`
 }
 
 // PluginSettings are the settings around the runtime behavior of a plugin.

@@ -26,6 +26,14 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:ecaca8524449859fb08112667afb43c090a0fd5a7e51e5d7e10853a144e0973e"
+  name = "github.com/denisbrodbeck/machineid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e2e48f90c87f1f77286682531a46ff99e95d8089"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:4c0989ca0bcd10799064318923b9bc2db6b4d6338dd75f3f2d86c3511aaaf5cf"
   name = "github.com/golang/protobuf"
   packages = [
@@ -38,6 +46,14 @@
   pruneopts = "UT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:236d7e1bdb50d8f68559af37dbcf9d142d56b431c9b2176d41e2a009b664cda8"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:a0cefd27d12712af4b5018dc7046f245e1e3b5760e2e848c30b171b570708f9b"
@@ -129,11 +145,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d10678d54787343b2250cdf8ede1d7ce2a80941823f33ca9e4ca33eebb63a3c9"
+  digest = "1:60c2cf2d38aa981d48a2c64ee768a02145f0b2ff628fdde2e0beb5a3a4bd98df"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
+    "windows/registry",
   ]
   pruneopts = "UT"
   revision = "629670e5acc5b3e069375d323404911dc8fe1d19"
@@ -231,6 +248,8 @@
   input-imports = [
     "github.com/Sirupsen/logrus",
     "github.com/creasty/defaults",
+    "github.com/denisbrodbeck/machineid",
+    "github.com/google/uuid",
     "github.com/imdario/mergo",
     "github.com/mitchellh/mapstructure",
     "github.com/patrickmn/go-cache",

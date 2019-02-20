@@ -1,7 +1,7 @@
 version: 3
 devices:
   - type: led
-    handler: state
+    handler: example.led
     metadata:
       model: sample-led
     tags:
