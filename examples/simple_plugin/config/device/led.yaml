@@ -1,22 +1,17 @@
 version: 3
-locations:
-  - name: unknown
-    rack:
-      name: unknown
-    board:
-      name: unknown
 devices:
-  - name: example.led
+  - type: led
+    handler: state
     metadata:
-      author: vaporio
-    outputs:
-      - type: simple.led
+      model: sample-led
+    tags:
+      - foobar/xyz:led
     instances:
-      - info: Chamber LED 1
-        location: unknown
+      - info: LED 1
+        tags:
+          - zone:1
         data:
-          id: 5
-      - info: Chamber LED 2
-        location: unknown
-        data:
-          id: 6
+          id: 1
+      - info: LED 2
+        tags:
+          - zone:2
