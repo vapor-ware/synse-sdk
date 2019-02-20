@@ -36,6 +36,29 @@ const (
 	modeParallel = "parallel"
 )
 
+// ListenerCtx is the context needed for a listener function to be called
+// and retried at a later time if it errors out after the listener goroutine
+// is initially dispatched.
+type ListenerCtx struct {
+	// handler is the DeviceHandler that defines the handler function.
+	handler *DeviceHandler
+
+	// device is the Device that is being listened to via the listener.
+	device *Device
+
+	// restarts is the number of times the listener has been restarted.
+	restarts int
+}
+
+// NewListenerCtx creates a new ListenerCtx for the given handler and device.
+func NewListenerCtx(handler *DeviceHandler, device *Device) *ListenerCtx {
+	return &ListenerCtx{
+		handler:  handler,
+		device:   device,
+		restarts: 0,
+	}
+}
+
 // Scheduler is the plugin component which runs the read, write, and
 // listen jobs to get data from devices and write data to devices.
 type Scheduler struct {
