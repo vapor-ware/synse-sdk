@@ -265,4 +265,3 @@ func (unit *Unit) Encode() *synse.V3OutputUnit {
 //	}
 //	return f * scalingFactor
 //}
-
