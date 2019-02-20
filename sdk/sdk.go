@@ -16,10 +16,7 @@ import (
 )
 
 func init() {
-	// Logging defaults: set the level to info and use a formatter that gives
-	// us millisecond resolution.
-
-	//log.SetLevel(log.InfoLevel)
+	// Logging defaults: use a formatter that gives us millisecond resolution.
 	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
 	})
