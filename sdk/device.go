@@ -78,6 +78,10 @@ type Device struct {
 	// id is the unique ID for the device.
 	id string
 
+	// idName is the generated name of the device based on its components which
+	// is ultimately used to generate its ID.
+	idName string
+
 	// handler is a pointer to the actual DeviceHandler for the device. This is
 	// populated via the SDK on device loading and parsing and uses the Handler
 	// field to match the name of the handler to the actual instance.

@@ -9,7 +9,7 @@ type PluginOption func(*Plugin)
 // identifier for a device using the config data for the device.
 func CustomDeviceIdentifier(identifier DeviceIdentifier) PluginOption {
 	return func(plugin *Plugin) {
-		plugin.deviceIdentifier = identifier
+		plugin.pluginHandlers.DeviceIdentifier = identifier
 	}
 }
 
@@ -17,7 +17,7 @@ func CustomDeviceIdentifier(identifier DeviceIdentifier) PluginOption {
 // Device instances using the data from the "dynamic registration" field in the Plugin config.
 func CustomDynamicDeviceRegistration(registrar DynamicDeviceRegistrar) PluginOption {
 	return func(plugin *Plugin) {
-		plugin.dynamicRegistrar = registrar
+		plugin.pluginHandlers.DynamicRegistrar = registrar
 	}
 }
 
@@ -26,7 +26,7 @@ func CustomDynamicDeviceRegistration(registrar DynamicDeviceRegistrar) PluginOpt
 // in the Plugin config.
 func CustomDynamicDeviceConfigRegistration(registrar DynamicDeviceConfigRegistrar) PluginOption {
 	return func(plugin *Plugin) {
-		plugin.dynamicConfigRegistrar = registrar
+		plugin.pluginHandlers.DynamicConfigRegistrar = registrar
 	}
 }
 
@@ -35,7 +35,7 @@ func CustomDynamicDeviceConfigRegistration(registrar DynamicDeviceConfigRegistra
 // plugin-specific.
 func CustomDeviceDataValidator(validator DeviceDataValidator) PluginOption {
 	return func(plugin *Plugin) {
-		plugin.deviceDataValidator = validator
+		plugin.pluginHandlers.DeviceDataValidator = validator
 	}
 }
 
