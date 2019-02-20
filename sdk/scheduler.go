@@ -494,17 +494,17 @@ func (scheduler *Scheduler) write(writeCtx *WriteContext) {
 	wlog.Debug("[scheduler] starting device write")
 
 	// Get the device.
-	device := scheduler.deviceManager.GetDevice(writeCtx.ID())
+	device := scheduler.deviceManager.GetDevice(writeCtx.device)
 	if device == nil {
 		writeCtx.transaction.setStatusError()
-		writeCtx.transaction.message = "no device found with ID: " + writeCtx.ID()
+		writeCtx.transaction.message = "no device found with ID: " + writeCtx.device
 		wlog.Error("[scheduler] " + writeCtx.transaction.message)
 		return
 	}
 
 	if !device.IsWritable() {
 		writeCtx.transaction.setStatusError()
-		writeCtx.transaction.message = "device is not writable: " + writeCtx.ID()
+		writeCtx.transaction.message = "device is not writable: " + writeCtx.device
 		wlog.Error("[scheduler] " + writeCtx.transaction.message)
 		return
 	}

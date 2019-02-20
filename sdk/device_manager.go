@@ -252,6 +252,48 @@ func (manager *deviceManager) AddDeviceSetupActions(filter string, actions ...*D
 	}
 }
 
+// FilterDevices applies a filter to the compete set of registered devices and returns
+// the set of devices which match the filter.
+//
+// The filter provided should be a map, where the key is the field to filter on and the
+// value are the allowable values for that field. This filtering is additive, e.g.
+// type=temperature and type=led will return all temperature and led devices.
+func (manager *deviceManager) FilterDevices(filter map[string][]string) ([]*Device, error) {
+	var filteredSet []*Device
+	var checks []func(d *Device) bool
+
+	for k, v := range filter {
+		var check func(d *Device) bool
+
+		// todo: support more filters...
+		switch k {
+		case "type":
+			check = func(d *Device) bool {
+				for _, val := range v {
+					if d.Type == val || val == "*" {
+						return true
+					}
+				}
+				return false
+			}
+		default:
+			// fixme: better errors
+			return nil, fmt.Errorf("unsupported filter key")
+		}
+
+		checks = append(checks, check)
+	}
+
+	for _, device := range manager.devices {
+		for _, check := range checks {
+			if check(device) {
+				filteredSet = append(filteredSet, device)
+			}
+		}
+	}
+	return filteredSet, nil
+}
+
 func (manager *deviceManager) createDevices() error {
 	if manager.config == nil {
 		// fixme: custom error?
