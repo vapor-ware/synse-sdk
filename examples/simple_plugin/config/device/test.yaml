@@ -1,26 +1,24 @@
 version: 3
-locations:
-  - name: unknown
-    rack:
-      name: unknown
-    board:
-      name: unknown
 devices:
-  - name: example.temperature
+  - type: temperature
+    handler: temperature
     metadata:
-      author: vaporio
-    outputs:
-      - type: simple.temperature
+      - model: sample-temperature
+    tags:
+      - foobar/xyz:temp
     instances:
-      - info: CEC Temperature 1
-        location: unknown
+      - info: Temperature 1
+        tags:
+          - zone:1
         data:
           id: 1
-      - info: CEC Temperature 2
-        location: unknown
+      - info: Temperature 2
+        tags:
+          - zone:2
         data:
           id: 2
-      - info: CEC Temperature 3
-        location: unknown
+      - info: Temperature 3
+        tags:
+          - zone:3
         data:
           id: 3
