@@ -18,6 +18,7 @@ package sdk
 
 import (
 	"fmt"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -44,7 +45,9 @@ type DeviceAction struct {
 
 // deviceManager loads and manages a Plugin's devices.
 type deviceManager struct {
-	config *config.Devices
+	config         *config.Devices
+	id             *pluginID
+	pluginHandlers *PluginHandlers
 
 	tagCache     *TagCache
 	devices      map[string]*Device
@@ -53,13 +56,15 @@ type deviceManager struct {
 }
 
 // newDeviceManager creates a new DeviceManager.
-func newDeviceManager() *deviceManager {
+func newDeviceManager(id *pluginID, handlers *PluginHandlers) *deviceManager {
 	return &deviceManager{
-		config:       new(config.Devices),
-		tagCache:     NewTagCache(),
-		devices:      make(map[string]*Device),
-		handlers:     make(map[string]*DeviceHandler),
-		setupActions: make(map[string][]*DeviceAction),
+		config:         new(config.Devices),
+		id:             id,
+		pluginHandlers: handlers,
+		tagCache:       NewTagCache(),
+		devices:        make(map[string]*Device),
+		handlers:       make(map[string]*DeviceHandler),
+		setupActions:   make(map[string][]*DeviceAction),
 	}
 }
 
@@ -157,6 +162,22 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 			return err
 		}
 		device.handler = handler
+	}
+
+	// If the device ID has not already been set, generate it and set
+	// it before adding it to the deviceManager.
+	if device.id == "" {
+		// todo: see about cleaning this up/making it its own fn so it can be reused.
+		component := manager.pluginHandlers.DeviceIdentifier(device.Data)
+		name := strings.Join([]string{
+			device.Type,
+			device.Handler,
+			component,
+		}, ".")
+		device.idName = name
+
+		deviceID := manager.id.NewNamespacedID(name)
+		device.id = deviceID
 	}
 
 	// Check if the Device ID collides with an existing device.

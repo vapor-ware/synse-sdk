@@ -24,39 +24,17 @@ const (
 var (
 	flagDebug   bool
 	flagVersion bool
-	flagInfo    bool
 	flagDryRun  bool
 )
 
 func init() {
 	flag.BoolVar(&flagDebug, "debug", false, "enable debug logging")
 	flag.BoolVar(&flagVersion, "version", false, "print the plugin version information")
-	flag.BoolVar(&flagInfo, "info", false, "print the plugin metadata")
 	flag.BoolVar(&flagDryRun, "dry-run", false, "run only the setup actions to verify functionality and configuration")
 
 	flag.Parse()
 	handleRunOptions()
 }
-
-// DeviceIdentifier is a handler function that produces a string that can be used to
-// identify a device deterministically. The returned string should be a composite
-// from the Device's config data.
-type DeviceIdentifier func(map[string]interface{}) string
-
-// DynamicDeviceRegistrar is a handler function that takes a Plugin config's "dynamic
-// registration" data and generates Device instances from it. How this is done
-// is specific to the plugin/protocol.
-type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
-
-// DynamicDeviceConfigRegistrar is a handler function that takes a Plugin config's "dynamic
-// registration" data and generates DeviceConfig instances from it. How this is done
-// is specific to the plugin/protocol.
-type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.Devices, error)
-
-// DeviceDataValidator is a handler function that takes the `Data` field of a device config
-// and performs some validation on it. This allows users to provide validation on the
-// plugin-specific config fields.
-type DeviceDataValidator func(map[string]interface{}) error
 
 // PluginAction defines an action that can be run before or after the main
 // Plugin run logic. This is generally used for setup/teardown.
@@ -71,6 +49,7 @@ type Plugin struct {
 	version *pluginVersion
 	config  *config.Plugin
 	quit    chan os.Signal
+	id      *pluginID
 
 	// Actions
 	preRun  []*PluginAction
@@ -80,10 +59,7 @@ type Plugin struct {
 	outputs map[string]*output.Output
 
 	// Options and handlers
-	deviceIdentifier       DeviceIdentifier
-	dynamicRegistrar       DynamicDeviceRegistrar
-	dynamicConfigRegistrar DynamicDeviceConfigRegistrar
-	deviceDataValidator    DeviceDataValidator
+	pluginHandlers *PluginHandlers
 
 	pluginCfgRequired  bool
 	deviceCfgRequired  bool
@@ -103,6 +79,12 @@ type Plugin struct {
 // or invalid, this will fail. All other Plugin component initialization
 // is deferred until Run is called.
 func NewPlugin(options ...PluginOption) (*Plugin, error) {
+	if metadata.Name == "" {
+		return nil, fmt.Errorf(
+			"plugin metadata must be set prior to calling 'NewPlugin()'; " +
+				"this can be done via 'sdk.SetPluginInfo()'",
+		)
+	}
 
 	// Load the plugin configuration.
 	conf := new(config.Plugin)
@@ -110,29 +92,38 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		return nil, err
 	}
 
-	meta := new(PluginMetadata)
+	// Check if the plugin should run in debug mode.
+	if flagDebug || conf.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	// Initialize the plugin ID namespace.
+	id, err := newPluginID(conf.ID, &metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	pluginHandlers := NewDefaultPluginHandlers()
 
 	// Initialize plugin components.
-	dm := newDeviceManager()
+	dm := newDeviceManager(id, pluginHandlers)
 	sm := NewStateManager(conf.Settings)
 	sched := NewScheduler(conf.Settings, dm, sm)
-	server := newServer(conf.Network, dm, sm, sched, meta)
+	server := newServer(conf.Network, dm, sm, sched, &metadata)
 
 	p := Plugin{
 		outputs: make(map[string]*output.Output),
 		quit:    make(chan os.Signal),
-		info:    meta,
+		info:    &metadata,
 		version: version,
 		config:  conf,
+		id:      id,
 
 		pluginCfgRequired:  false,
 		deviceCfgRequired:  true,
 		dynamicCfgRequired: false,
 
-		deviceIdentifier:       defaultDeviceIdentifier,
-		dynamicRegistrar:       defaultDynamicDeviceRegistration,
-		dynamicConfigRegistrar: defaultDynamicDeviceConfigRegistration,
-		deviceDataValidator:    defaultDeviceDataValidator,
+		pluginHandlers: pluginHandlers,
 
 		deviceManager: dm,
 		stateManager:  sm,
@@ -153,12 +144,6 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	return &p, nil
 }
 
-// SetInfo sets the metadata for the Plugin. At a minimum, the Plugin name
-// needs to be set.
-func (plugin *Plugin) SetInfo(info *PluginMetadata) {
-	plugin.info = info
-}
-
 // Run starts the plugin.
 //
 // This is the functional starting point for all plugins. Once this is called,
@@ -166,9 +151,6 @@ func (plugin *Plugin) SetInfo(info *PluginMetadata) {
 // everything is ready, it will run each of its components. The gRPC server is
 // run in the foreground; all other components are run as goroutines.
 func (plugin *Plugin) Run() error {
-	// Check if anything needs to happen based on command line arguments.
-	plugin.handleRunOptions()
-
 	// Initialize the plugin and its components.
 	if err := plugin.initialize(); err != nil {
 		return err
@@ -267,12 +249,6 @@ func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...*Devi
 
 // initialize initializes the plugin and all plugin components.
 func (plugin *Plugin) initialize() error {
-	// Plugin setup. This ensures that the plugin is set up and all
-	// plugin metadata that we need is present.
-	if err := plugin.init(); err != nil {
-		return err
-	}
-
 	// Initialize all plugin components
 	if err := plugin.deviceManager.init(); err != nil {
 		return err
@@ -280,25 +256,6 @@ func (plugin *Plugin) initialize() error {
 	if err := plugin.server.init(); err != nil {
 		return err
 	}
-	return nil
-}
-
-// init initializes the plugin.
-func (plugin *Plugin) init() error {
-	// Ensure command line flags have been parsed.
-	flag.Parse()
-
-	// Check if the plugin should run in debug mode.
-	if flagDebug || plugin.config.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
-
-	// The plugin needs a name in order to run.
-	if plugin.info.Name == "" {
-		// fixme
-		return fmt.Errorf("plugin needs a name to run")
-	}
-
 	return nil
 }
 
@@ -391,29 +348,6 @@ func (plugin *Plugin) execPostRun() error {
 	return multiErr.Err()
 }
 
-// handleRunOptions checks whether any command line options were specified for
-// the plugin run. If any are set, it handles them appropriately.
-func (plugin *Plugin) handleRunOptions() {
-	var terminate bool
-
-	// --info was set; print the plugin metadata.
-	if flagInfo {
-		fmt.Println(plugin.info.format())
-		terminate = true
-	}
-
-	// --version was set; print the plugin version.
-	if flagVersion {
-		fmt.Println(plugin.version.format())
-		terminate = true
-	}
-
-	if terminate {
-		// fixme: for testing, should we use an Exiter interface?
-		os.Exit(0)
-	}
-}
-
 // loadPluginConfig loads plugin configurations from file and environment
 // and marshals that data into the provided Plugin config struct.
 func loadPluginConfig(conf *config.Plugin) error {
@@ -445,12 +379,6 @@ func handleRunOptions() {
 	if flagDebug {
 		log.SetLevel(log.DebugLevel)
 	}
-
-	//// --info was set; print the plugin metadata.
-	//if flagInfo {
-	//	fmt.Println(plugin.info.format())
-	//	terminate = true
-	//}
 
 	// --version was set; print the plugin version.
 	if flagVersion {

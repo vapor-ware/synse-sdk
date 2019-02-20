@@ -11,6 +11,20 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// metadata is a plugin-global reference to the plugin metadata.
+var metadata PluginMetadata
+
+// SetPluginInfo sets the meta-information for a Plugin. This should
+// be this first step in creating a new plugin.
+func SetPluginInfo(name, maintainer, desc, vcs string) {
+	metadata = PluginMetadata{
+		Name:        name,
+		Maintainer:  maintainer,
+		Description: desc,
+		VCS:         vcs,
+	}
+}
+
 // PluginMeta is the metadata associated with a Plugin.
 type PluginMetadata struct {
 	Name        string
