@@ -1,16 +1,5 @@
 package sdk
 
-//// GetTypeByName gets the output type with the given name from the collection of
-//// output types registered with the SDK for the plugin. If an output type with the
-//// given name does not exist, an error is returned.
-//func GetTypeByName(name string) (*OutputType, error) {
-//	t, ok := ctx.outputTypes[name]
-//	if !ok {
-//		return nil, fmt.Errorf("no output type with name '%s' found", name)
-//	}
-//	return t, nil
-//}
-
 // filterDevices returns a list of Devices (a subset of the deviceMap) which
 // match the specified filter(s) in the given filter string.
 // FIXME: this needs to not use the context to get devices.. use device manager
@@ -51,50 +40,3 @@ func filterDevices(filter string) ([]*Device, error) { // nolint: gocyclo
 	//}
 	return devices, nil
 }
-
-//
-//// registerDevices registers devices with the plugin. Devices are created and
-//// registered from the unified device configuration, and registered directly
-//// from dynamic device registration.
-//func registerDevices() error {
-//
-//	// devices from dynamic registration
-//	policy := policies.GetDeviceConfigDynamicPolicy()
-//	if policy != policies.DeviceConfigDynamicProhibited {
-//		for _, data := range Config.Plugin.DynamicRegistration.Config {
-//			devices, err := ctx.dynamicDeviceRegistrar(data)
-//			if err != nil {
-//				return err
-//			}
-//			log.Debugf("[sdk] adding %d devices from dynamic registration", len(devices))
-//			updateDeviceMap(devices)
-//		}
-//	}
-//
-//	// devices from config. the config here is the unified device config which
-//	// is joined from file and from dynamic registration, if set.
-//	devices, err := makeDevices(Config.Device)
-//	if err != nil {
-//		return err
-//	}
-//	log.Debugf("[sdk] adding %d devices from config", len(devices))
-//	updateDeviceMap(devices)
-//
-//	return nil
-//}
-
-//// logStartupInfo is used to log plugin info at startup. This will log
-//// the plugin metadata, version info, and registered devices.
-//func logStartupInfo() {
-//	// Log plugin metadata
-//	metainfo.log()
-//	// Log plugin version info
-//	version.Log()
-//
-//	// Log registered devices
-//	log.Info("Registered Devices:")
-//	for id, dev := range ctx.devices {
-//		log.Infof("  %v (%v)", id, dev.Kind)
-//	}
-//	log.Info("--------------------------------")
-//}
