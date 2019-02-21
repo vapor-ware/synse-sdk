@@ -26,13 +26,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
-
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-
-	log "github.com/Sirupsen/logrus"
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -225,7 +223,15 @@ func (server *server) registerActions(plugin *Plugin) {
 // as configured via the plugin network config.
 func addTLSOptions(options *[]grpc.ServerOption, settings *config.TLSNetworkSettings) error {
 	// If there is no TLS config, there are no options to add here.
-	if settings == nil {
+	if settings == nil || settings == (&config.TLSNetworkSettings{}) {
+		log.Info("[server] tls/ssl not configured, using insecure transport")
+		return nil
+	}
+
+	// If there is no key and cert, the other options don't matter,
+	// so we have nothing to do.
+	if settings.Key == "" && settings.Cert == "" {
+		log.Info("[server] tls/ssl not configured, using insecure transport")
 		return nil
 	}
 
