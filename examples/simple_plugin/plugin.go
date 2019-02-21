@@ -19,34 +19,6 @@ var (
 	pluginDesc       = "A simple example plugin"
 )
 
-// Output types are defined, either statically in the plugin code, or via YAML
-// configuration files. They define the potential outputs of the plugin's devices.
-// A single device could support multiple outputs, but at a minimum requires one.
-var (
-	// The output for temperature devices.
-	temperatureOutput = output.Output{
-		Name:      "temperature",
-		Precision: 2,
-		Type:      "temperature",
-		Units: map[output.SystemOfMeasure]*output.Unit{
-			// fixme: use built-in once it exists
-			output.NONE: {Name: "Fahrenheit", Symbol: "F", System: string(output.NONE)},
-		},
-		Converters: map[output.SystemOfMeasure]func(value interface{}, to output.SystemOfMeasure) (interface{}, error){
-			// Define a converter that just returns the same value.
-			// fixme: once we have built-in outputs, we can just use that here instead.
-			output.NONE: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
-				return value, nil
-			},
-		},
-	}
-
-	// The output for on/off state devices.
-	stateOutput = output.Output{
-		Name: "state",
-	}
-)
-
 // Device Handlers need to be defined to tell the plugin how to handle reads and
 // writes for the different kinds of devices it supports.
 var (
@@ -55,7 +27,7 @@ var (
 		Name: "example.led",
 
 		Read: func(device *sdk.Device) ([]*output.Reading, error) {
-			reading := stateOutput.From(strconv.Itoa(rand.Int()))
+			reading := output.State.From(strconv.Itoa(rand.Int()))
 
 			return []*output.Reading{
 				reading,
@@ -74,7 +46,7 @@ var (
 		Name: "example.temperature",
 
 		Read: func(device *sdk.Device) ([]*output.Reading, error) {
-			reading := temperatureOutput.From(strconv.Itoa(rand.Int())) // nolint: gas, gosec
+			reading := output.Temperature.FromImperial(strconv.Itoa(rand.Int())) // nolint: gas, gosec
 
 			return []*output.Reading{
 				reading,
@@ -99,16 +71,6 @@ func main() {
 
 	// Create a new Plugin instance.
 	plugin, err := sdk.NewPlugin()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Register custom outputs
-	// fixme: won't need to do this once there are built-ins
-	err = plugin.RegisterOutputs(
-		&temperatureOutput,
-		&stateOutput,
-	)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -16,21 +16,21 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// Frequency is the output type for a frequency reading. This output
+// supports the following units:
+//   * Hertz (no system)
+var Frequency = Output{
+	Name:      "frequency",
+	Type:      "frequency",
+	Precision: 2,
+	Units: map[SystemOfMeasure]*Unit{
+		NONE: {
+			Name:   "hertz",
+			Symbol: "Hz",
+			System: string(NONE),
+		},
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }
