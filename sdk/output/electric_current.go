@@ -16,21 +16,21 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// ElectricCurrent is the output type for a current reading. This output
+// supports the following units:
+//   * Ampere (no-system)
+var ElectricCurrent = Output{
+	Name:      "electric_current",
+	Type:      "current",
+	Precision: 2,
+	Units: map[SystemOfMeasure]*Unit{
+		NONE: {
+			Name:   "amps",
+			Symbol: "A",
+			System: string(NONE),
+		},
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }

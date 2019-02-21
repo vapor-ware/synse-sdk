@@ -1,4 +1,4 @@
-// Synse SDK
+// synse-sdk
 // Copyright (c) 2019 Vapor IO
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,21 +16,17 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// Color is the output type for a color reading. This output has no unit.
+// A color reading is generally a string which represents some kind of
+// color. This can be the name ("red"), a hex string ("ff0000"), an
+// RBG string ("255,0,0"), or anything else.
+var Color = Output{
+	Name:  "color",
+	Type:  "color",
+	Units: map[SystemOfMeasure]*Unit{
+		// no unit(s)
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }
