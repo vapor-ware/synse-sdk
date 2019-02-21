@@ -88,13 +88,16 @@ type Scheduler struct {
 // NewScheduler creates a new instance of the plugin's scheduler component.
 func NewScheduler(conf *config.PluginSettings, dm *deviceManager, sm *StateManager) *Scheduler {
 	var limiter *rate.Limiter
-	// fixme: test if this is actually checking the same thing
-	if conf.Limiter != nil && conf.Limiter != (&config.LimiterSettings{}) {
-		// todo: check if zero-valued, set defaults if so.
-		limiter = rate.NewLimiter(
-			rate.Limit(conf.Limiter.Rate),
-			conf.Limiter.Burst,
-		)
+
+	// If the limiter is configured and non-0 values (which signify unlimited),
+	// set up the limiter.
+	if conf.Limiter != nil {
+		if conf.Limiter.Rate != 0 || conf.Limiter.Burst != 0 {
+			limiter = rate.NewLimiter(
+				rate.Limit(conf.Limiter.Rate),
+				conf.Limiter.Burst,
+			)
+		}
 	}
 
 	return &Scheduler{
@@ -209,6 +212,8 @@ func (scheduler *Scheduler) scheduleReads() {
 		select {
 		case <-scheduler.stop:
 			break
+		default:
+			// no stop signal
 		}
 
 		var waitGroup sync.WaitGroup
@@ -280,6 +285,8 @@ func (scheduler *Scheduler) scheduleWrites() {
 		select {
 		case <-scheduler.stop:
 			break
+		default:
+			// no stop signal
 		}
 
 		var waitGroup sync.WaitGroup

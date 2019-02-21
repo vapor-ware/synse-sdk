@@ -87,6 +87,8 @@ func newDeviceManager(id *pluginID, handlers *PluginHandlers, policies *policy.P
 // the device config is loaded and that the config is parsed into the appropriate
 // Device models.
 func (manager *deviceManager) init() error {
+	log.Info("[device manager] initializing")
+
 	if err := manager.loadConfig(); err != nil {
 		return err
 	}
@@ -104,6 +106,7 @@ func (manager *deviceManager) init() error {
 // off here. This is just where device setup actions are executed. This should be
 // done here rather than in init.
 func (manager *deviceManager) Start(plugin *Plugin) error {
+	log.Info("[device manager] starting")
 	return manager.execDeviceSetupActions(plugin)
 }
 
@@ -222,6 +225,11 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 	for _, t := range device.Tags {
 		manager.tagCache.Add(t, device)
 	}
+
+	log.WithFields(log.Fields{
+		"id":   device.id,
+		"type": device.Type,
+	}).Info("[device manager] added new device")
 
 	return nil
 }
@@ -355,8 +363,11 @@ func (manager *deviceManager) createDevices() error {
 
 	if failedLoad {
 		// fixme
+		log.Errorf("[device manager] failed to create devices from config")
 		return fmt.Errorf("failed to load devices from config")
 	}
+
+	log.WithField("devices", len(manager.devices)).Info("[device manager] created devices")
 	return nil
 }
 

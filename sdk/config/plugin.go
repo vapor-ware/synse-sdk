@@ -16,7 +16,11 @@
 
 package config
 
-import "time"
+import (
+	"time"
+
+	log "github.com/Sirupsen/logrus"
+)
 
 // Plugin contains the configuration for a Synse Plugin.
 type Plugin struct {
@@ -42,6 +46,55 @@ type Plugin struct {
 
 	// Health specifies the health settings for the plugin.
 	Health *HealthSettings `default:"{}" yaml:"health,omitempty"`
+}
+
+// Log logs out the plugin config at INFO level.
+func (conf *Plugin) Log() {
+	log.Info("Plugin Config:")
+	log.Infof("  Version: %d", conf.Version)
+	log.Infof("  Debug:   %v", conf.Debug)
+	log.Infof("  ID:")
+	log.Infof("    UsePluginTag: %v", conf.ID.UsePluginTag)
+	log.Infof("    UseMachineID: %v", conf.ID.UseMachineID)
+	log.Infof("    UseEnv:       %v", conf.ID.UseEnv)
+	log.Infof("    UseCustom:    %v", conf.ID.UseCustom)
+	log.Infof("  Settings:")
+	log.Infof("    Mode: %s", conf.Settings.Mode)
+	log.Infof("    Listen:")
+	log.Infof("      Disable: %v", conf.Settings.Listen.Disable)
+	log.Infof("    Read:")
+	log.Infof("      Disable:   %v", conf.Settings.Read.Disable)
+	log.Infof("      QueueSize: %d", conf.Settings.Read.QueueSize)
+	log.Infof("      Interval:  %v", conf.Settings.Read.Interval)
+	log.Infof("      Delay:     %v", conf.Settings.Read.Delay)
+	log.Infof("    Write:")
+	log.Infof("      Disable:   %v", conf.Settings.Write.Disable)
+	log.Infof("      QueueSize: %d", conf.Settings.Write.QueueSize)
+	log.Infof("      BatchSize: %d", conf.Settings.Write.BatchSize)
+	log.Infof("      Interval:  %v", conf.Settings.Write.Interval)
+	log.Infof("      Delay:     %v", conf.Settings.Write.Delay)
+	log.Infof("    Transaction:")
+	log.Infof("      TTL: %v", conf.Settings.Transaction.TTL)
+	log.Infof("    Limiter:")
+	log.Infof("      Rate:  %d", conf.Settings.Limiter.Rate)
+	log.Infof("      Burst: %d", conf.Settings.Limiter.Burst)
+	log.Infof("    Cache:")
+	log.Infof("      Enabled: %v", conf.Settings.Cache.Enabled)
+	log.Infof("      TTL:     %v", conf.Settings.Cache.TTL)
+	log.Infof("  Network:")
+	log.Infof("    Type:    %s", conf.Network.Type)
+	log.Infof("    Address: %s", conf.Network.Address)
+	log.Infof("    TLS:")
+	log.Infof("      Key:        %s", conf.Network.TLS.Key)
+	log.Infof("      Cert:       %s", conf.Network.TLS.Cert)
+	log.Infof("      CACerts:    %v", conf.Network.TLS.CACerts)
+	log.Infof("      SkipVerify: %v", conf.Network.TLS.SkipVerify)
+	log.Infof("  DynamicRegistration:")
+	log.Infof("    Config: %v", conf.DynamicRegistration.Config)
+	log.Infof("  Health:")
+	log.Infof("    HealthFile: %s", conf.Health.HealthFile)
+	log.Infof("    Checks:")
+	log.Infof("      DisableDefaults: %v", conf.Health.Checks.DisableDefaults)
 }
 
 // IDSettings are the settings around the plugin ID namespace.
@@ -125,7 +178,7 @@ type ReadSettings struct {
 	//
 	// Generally this does not need to be set, but can be used to tune
 	// performance for read-intensive plugins.
-	QueueSize int `yaml:"queueSize,omitempty"`
+	QueueSize int `default:"128" yaml:"queueSize,omitempty"`
 }
 
 // WriteSettings are the settings for write behavior.
@@ -155,14 +208,14 @@ type WriteSettings struct {
 	//
 	// Generally this does not need to be set, but can be used to tune
 	// performance for write-intensive plugins.
-	QueueSize int `yaml:"queueSize,omitempty"`
+	QueueSize int `default:"128" yaml:"queueSize,omitempty"`
 
 	// BatchSize defines the maximum number of writes to process in a
 	// single batch.
 	//
 	// Generally, this does not need to be set, but can be used to tune
 	// performance particularly for slow writing serial plugins.
-	BatchSize int `yaml:"batchSize,omitempty"`
+	BatchSize int `default:"128" yaml:"batchSize,omitempty"`
 }
 
 // TransactionSettings are the settings for transaction operations.
@@ -175,12 +228,12 @@ type TransactionSettings struct {
 type CacheSettings struct {
 	// Enabled determines whether a plugin will use a local in-memory cache
 	// to store a small window of readings. It is disabled by default.
-	Enabled bool `yaml:"enabled,omitempty"`
+	Enabled bool `default:"false" yaml:"enabled,omitempty"`
 
 	// TTL is the time-to-live for a reading in the readings cache. This will
 	// only be used if the cache is enabled. Once a reading exceeds this TTL,
 	// it is removed from the cache.
-	TTL time.Duration `yaml:"ttl,omitempty"`
+	TTL time.Duration `default:"3m" yaml:"ttl,omitempty"`
 }
 
 // NetworkSettings are the settings for a plugin's networking behavior.
@@ -196,7 +249,7 @@ type NetworkSettings struct {
 
 	// TLS contains the TLS/SSL settings for the gRPC server. If this
 	// is not set, insecure transport will be used.
-	TLS *TLSNetworkSettings `yaml:"tls,omitempty"`
+	TLS *TLSNetworkSettings `default:"{}" yaml:"tls,omitempty"`
 }
 
 // TLSNetworkSettings are the settings for TLS/SSL for the gRPC server.
@@ -220,19 +273,19 @@ type DynamicRegistrationSettings struct {
 	// Config holds the configuration(s) for dynamic device registration. It holds
 	// the plugin/protocol/device-specific data which will be used to register
 	// devices at runtime, e.g. a server address and port.
-	Config []map[string]interface{} `yaml:"config,omitempty"`
+	Config []map[string]interface{} `default:"[]" yaml:"config,omitempty"`
 }
 
 // LimiterSettings are the settings for rate limiting on reads and writes.
 type LimiterSettings struct {
 	// Rate is the limit, or maximum frequency of events. A rate of
 	// 0 signifies 'unlimited'.
-	Rate int `yaml:"rate,omitempty"`
+	Rate int `default:"0" yaml:"rate,omitempty"`
 
 	// Burst defines the bucket size for the limiter, or maximum number
 	// of events that can be fulfilled at once. If this is 0, it will take
 	// the same value as the rate.
-	Burst int `yaml:"burst,omitempty"`
+	Burst int `default:"0" yaml:"burst,omitempty"`
 }
 
 // HealthSettings are the settings for plugin health.
@@ -240,15 +293,15 @@ type HealthSettings struct {
 	// HealthFile is the fully qualified path to the file that will be used
 	// to signal that the plugin is healthy. If not set, this will default to
 	// "/etc/synse/plugin/healthy".
-	HealthFile string `yaml:"healthFile,omitempty"`
+	HealthFile string `default:"/etc/synse/plugin/healthy" yaml:"healthFile,omitempty"`
 
 	// Checks are the settings for plugin health checks.
-	Checks *HealthCheckSettings `yaml:"checks,omitempty"`
+	Checks *HealthCheckSettings `default:"{}" yaml:"checks,omitempty"`
 }
 
 // HealthCheckSettings are the settings for plugin health checks.
 type HealthCheckSettings struct {
 	// DisableDefaults determines whether the default plugin health checks
 	// should be disabled.
-	DisableDefaults bool `yaml:"disableDefaults,omitempty"`
+	DisableDefaults bool `default:"false" yaml:"disableDefaults,omitempty"`
 }
