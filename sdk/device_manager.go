@@ -39,7 +39,21 @@ const (
 // DeviceAction defines an action that can be run before the main Plugin run
 // logic. This is generally used for doing device-specific setup actions.
 type DeviceAction struct {
-	Name   string
+	// Name is the name of the action. This is used to identify the action.
+	Name string
+
+	// Filter is the device filter that scopes which devices this action
+	// should apply to. This filter is run on the entire set of registered
+	// devices and is additive (e.g. a device does not need to match all
+	// filters to be included, it just needs to match one).
+	//
+	// The filter provided should be a map, where the key is the field to filter
+	// on and the value are the allowable values for that field. The currently
+	// supported filters include:
+	//  * "type" : the device type
+	Filter map[string][]string
+
+	// The action to execute for the device.
 	Action func(p *Plugin, d *Device) error
 }
 
@@ -50,9 +64,9 @@ type deviceManager struct {
 	pluginHandlers *PluginHandlers
 
 	tagCache     *TagCache
+	setupActions []*DeviceAction
 	devices      map[string]*Device
 	handlers     map[string]*DeviceHandler
-	setupActions map[string][]*DeviceAction
 }
 
 // newDeviceManager creates a new DeviceManager.
@@ -64,10 +78,12 @@ func newDeviceManager(id *pluginID, handlers *PluginHandlers) *deviceManager {
 		tagCache:       NewTagCache(),
 		devices:        make(map[string]*Device),
 		handlers:       make(map[string]*DeviceHandler),
-		setupActions:   make(map[string][]*DeviceAction),
 	}
 }
 
+// init is the initialization function for the deviceManager. This ensures that
+// the device config is loaded and that the config is parsed into the appropriate
+// Device models.
 func (manager *deviceManager) init() error {
 	if err := manager.loadConfig(); err != nil {
 		return err
@@ -78,6 +94,15 @@ func (manager *deviceManager) init() error {
 	}
 
 	return nil
+}
+
+// Start starts the deviceManager.
+//
+// Unlike other components, there is no long-running action which will be kicked
+// off here. This is just where device setup actions are executed. This should be
+// done here rather than in init.
+func (manager *deviceManager) Start(plugin *Plugin) error {
+	return manager.execDeviceSetupActions(plugin)
 }
 
 // GetDevice gets a device from the manager by ID.
@@ -96,11 +121,13 @@ func (manager *deviceManager) GetDevices(tags ...*Tag) []*Device {
 	return manager.tagCache.GetDevicesFromTags(tags...)
 }
 
+// IsDeviceReadable checks whether a given device is readable.
 func (manager *deviceManager) IsDeviceReadable(id string) bool {
 	device := manager.GetDevice(id)
 	return device.IsReadable()
 }
 
+// IsDeviceWritable checks whether a given device is writable.
 func (manager *deviceManager) IsDeviceWritable(id string) bool {
 	device := manager.GetDevice(id)
 	return device.IsWritable()
@@ -237,19 +264,19 @@ func (manager *deviceManager) GetHandler(name string) (*DeviceHandler, error) {
 // executed on plugin startup, prior to device loading but before plugin run. These
 // actions are used for device-specific setup.
 //
-// fixme: no more kind, need to fix the below.
-//
-// The filter parameter should be the filter to apply to devices. Currently
-// filtering is supported for device kind and type. Filter strings are specified in
-// the format "key=value,key=value". The filter
-//     "kind=temperature,kind=ABC123"
-// would only match devices whose kind was temperature or ABC123.
-func (manager *deviceManager) AddDeviceSetupActions(filter string, actions ...*DeviceAction) {
-	if _, exists := manager.setupActions[filter]; exists {
-		manager.setupActions[filter] = append(manager.setupActions[filter], actions...)
-	} else {
-		manager.setupActions[filter] = actions
+// A DeviceAction should specify a filter which is used to target the devices which
+// the action should apply to. If a DeviceAction does not have a filter, it will
+// not be accepted by the deviceManager.
+func (manager *deviceManager) AddDeviceSetupActions(actions ...*DeviceAction) error {
+	for _, action := range actions {
+		if len(action.Filter) == 0 {
+			log.WithFields(log.Fields{
+				"action": action.Name,
+			}).Error("[device manager] no filter set for device setup action")
+		}
+		manager.setupActions = append(manager.setupActions, action)
 	}
+	return nil
 }
 
 // FilterDevices applies a filter to the compete set of registered devices and returns
@@ -294,6 +321,8 @@ func (manager *deviceManager) FilterDevices(filter map[string][]string) ([]*Devi
 	return filteredSet, nil
 }
 
+// createDevices takes the manager configuration and generates all corresponding
+// Device instances from it.
 func (manager *deviceManager) createDevices() error {
 	if manager.config == nil {
 		// fixme: custom error?
@@ -329,6 +358,8 @@ func (manager *deviceManager) createDevices() error {
 	return nil
 }
 
+// loadConfig is a helper function used to load device configurations into the
+// deviceManager.
 func (manager *deviceManager) loadConfig() error {
 	// Setup the config loader for the device manager.
 	loader := config.NewYamlLoader("device")
@@ -346,6 +377,9 @@ func (manager *deviceManager) loadConfig() error {
 	return loader.Scan(manager.config)
 }
 
+// execDeviceStartupActions runs all the device startup actions registered with
+// the manager. This should be done before any reads/write occur (e.g. before
+// the scheduler is started).
 func (manager *deviceManager) execDeviceSetupActions(plugin *Plugin) error {
 	if len(manager.setupActions) == 0 {
 		return nil
@@ -357,12 +391,10 @@ func (manager *deviceManager) execDeviceSetupActions(plugin *Plugin) error {
 		"actions": len(manager.setupActions),
 	}).Info("[device manager] executing device setup actions")
 
-	for filter, actions := range manager.setupActions {
-		// todo: this will be updated to use devices from the device manager, not
-		//  the global context thing.
-		devices, err := filterDevices(filter)
+	for _, action := range manager.setupActions {
+		devices, err := manager.FilterDevices(action.Filter)
 		if err != nil {
-			log.WithField("filter", filter).Error(
+			log.WithField("filter", action.Filter).Error(
 				"[device manager] failed to filter device for setup actions",
 			)
 			multiErr.Add(err)
@@ -370,22 +402,19 @@ func (manager *deviceManager) execDeviceSetupActions(plugin *Plugin) error {
 		}
 
 		log.WithFields(log.Fields{
+			"action":  action.Name,
 			"matches": len(devices),
-			"filter":  filter,
+			"filter":  action.Filter,
 		}).Debug("[device manager] applied filter to devices")
-		for _, action := range actions {
-			log.WithFields(log.Fields{
-				"action": action.Name,
-			}).Debug("[device manager] running device setup action")
-			for _, device := range devices {
-				if err := action.Action(plugin, device); err != nil {
-					log.WithFields(log.Fields{
-						"action": action.Name,
-						"device": device.id,
-					}).Error("[device manager] failed to run setup action for device")
-					multiErr.Add(err)
-					continue
-				}
+
+		for _, device := range devices {
+			if err := action.Action(plugin, device); err != nil {
+				log.WithFields(log.Fields{
+					"action": action.Name,
+					"device": device.id,
+				}).Error("[device manager] failed to run setup action for device")
+				multiErr.Add(err)
+				continue
 			}
 		}
 	}

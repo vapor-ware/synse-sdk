@@ -251,16 +251,8 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) error {
 
 // RegisterDeviceSetupActions registers actions with the device manager which will be
 // executed on start. These actions are used for device-specific setup.
-//
-// fixme: no more kind, need to fix the below.
-//
-// The filter parameter should be the filter to apply to devices. Currently
-// filtering is supported for device kind and type. Filter strings are specified in
-// the format "key=value,key=value". The filter
-//     "kind=temperature,kind=ABC123"
-// would only match devices whose kind was temperature or ABC123.
-func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...*DeviceAction) {
-	plugin.deviceManager.AddDeviceSetupActions(filter, actions...)
+func (plugin *Plugin) RegisterDeviceSetupActions(actions ...*DeviceAction) error {
+	return plugin.deviceManager.AddDeviceSetupActions(actions...)
 }
 
 // initialize initializes the plugin and all plugin components.
@@ -278,6 +270,9 @@ func (plugin *Plugin) initialize() error {
 // run runs the plugin by starting all of the configured plugin components.
 func (plugin *Plugin) run() error {
 	// Start the plugin components. Order matters here.
+	if err := plugin.deviceManager.Start(plugin); err != nil {
+		return err
+	}
 	plugin.stateManager.Start()
 	plugin.scheduler.Start()
 
