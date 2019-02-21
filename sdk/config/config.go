@@ -28,6 +28,8 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/imdario/mergo"
 	"github.com/mitchellh/mapstructure"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/policy"
 	"gopkg.in/yaml.v2"
 )
 
@@ -127,16 +129,21 @@ func (loader *Loader) AddSearchPaths(paths ...string) {
 //
 // Environmental configuration takes precedence, so it will override any values
 // that were set in config files.
-func (loader *Loader) Load() error {
+//
+// This function takes a policy as a parameter. The policy determines whether the
+// configuration file is required or not. In cases where it is required and not
+// found, Load will return an error. If the config is optional and not found, no
+// error will be returned.
+func (loader *Loader) Load(pol policy.Policy) error {
 	if err := loader.checkOverrides(); err != nil {
 		return err
 	}
 
-	if err := loader.search(); err != nil {
+	if err := loader.search(pol); err != nil {
 		return err
 	}
 
-	if err := loader.read(); err != nil {
+	if err := loader.read(pol); err != nil {
 		return err
 	}
 
@@ -286,26 +293,58 @@ func (loader *Loader) loadEnv() error {
 
 // search searches for configuration files based on the specified search
 // path(s) and file name given to the Loader.
-func (loader *Loader) search() error {
+func (loader *Loader) search(pol policy.Policy) error {
+	var required = pol == policy.Required
+
 	for _, path := range loader.SearchPaths {
+		plog := log.WithFields(log.Fields{
+			"loader": loader.Name,
+			"path": path,
+			"policy": pol,
+		})
+
 		dirContents, err := ioutil.ReadDir(path)
 		if err != nil {
-			return err
+			plog.Debug("[config] no config found, searching next path")
+			continue
 		}
 
+		var foundInPath bool
 		for _, file := range dirContents {
 			if loader.isValidFile(file) {
+				plog.WithFields(log.Fields{
+					"file": file.Name(),
+				}).Info("[config] found valid config")
+				foundInPath = true
 				fileName := filepath.Join(path, file.Name())
 				loader.files = append(loader.files, fileName)
 			}
 		}
+
+		// If configuration was found in the current path, break to stop
+		// searching. We do not want to search all potential config paths
+		// if we have already found valid config.
+		if foundInPath {
+			break
+		}
 	}
+
+	// If the config is required, make sure that we found something. If no
+	// config was found on any of the search paths, return an error.
+	if required && len(loader.files) == 0 {
+		return errors.NewConfigsNotFoundError(loader.SearchPaths)
+	}
+
 	return nil
 }
 
 // read reads each of the found configuration files into a data mapping.
 // These data mappings are collected by the Loader to be merged later.
-func (loader *Loader) read() error {
+func (loader *Loader) read(pol policy.Policy) error {
+	if pol == policy.Required && len(loader.files) == 0 {
+		return errors.NewConfigsNotFoundError(loader.SearchPaths)
+	}
+
 	for _, path := range loader.files {
 		data, err := ioutil.ReadFile(path)
 		if err != nil {

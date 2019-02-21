@@ -23,6 +23,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/policy"
 )
 
 const (
@@ -32,9 +33,6 @@ const (
 )
 
 // todo: figure out where dynamic device registration fits in here.
-
-// todo: exec device startup actions.. probably not in init (just for startup
-//  ordering), but could be done in a start() fn.
 
 // DeviceAction defines an action that can be run before the main Plugin run
 // logic. This is generally used for doing device-specific setup actions.
@@ -62,6 +60,7 @@ type deviceManager struct {
 	config         *config.Devices
 	id             *pluginID
 	pluginHandlers *PluginHandlers
+	policies       *policy.Policies
 
 	tagCache     *TagCache
 	setupActions []*DeviceAction
@@ -70,11 +69,14 @@ type deviceManager struct {
 }
 
 // newDeviceManager creates a new DeviceManager.
-func newDeviceManager(id *pluginID, handlers *PluginHandlers) *deviceManager {
+// fixme (etd): this constructor will be cleaned up in the future. instead of passing everything in
+//  one at a time, we can pass in some sort of context which has everything it needs...
+func newDeviceManager(id *pluginID, handlers *PluginHandlers, policies *policy.Policies) *deviceManager {
 	return &deviceManager{
 		config:         new(config.Devices),
 		id:             id,
 		pluginHandlers: handlers,
+		policies:       policies,
 		tagCache:       NewTagCache(),
 		devices:        make(map[string]*Device),
 		handlers:       make(map[string]*DeviceHandler),
@@ -370,7 +372,7 @@ func (manager *deviceManager) loadConfig() error {
 	)
 
 	// Load the device configurations.
-	if err := loader.Load(); err != nil {
+	if err := loader.Load(manager.policies.DeviceConfig); err != nil {
 		return err
 	}
 

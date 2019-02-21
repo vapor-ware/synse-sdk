@@ -23,12 +23,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/sdk/policy"
 
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
 const (
@@ -61,11 +61,12 @@ type PluginAction struct {
 
 // Plugin is a Synse Plugin.
 type Plugin struct {
-	info    *PluginMetadata
-	version *pluginVersion
-	config  *config.Plugin
-	quit    chan os.Signal
-	id      *pluginID
+	info     *PluginMetadata
+	version  *pluginVersion
+	config   *config.Plugin
+	quit     chan os.Signal
+	id       *pluginID
+	policies *policy.Policies
 
 	// Actions
 	preRun  []*PluginAction
@@ -76,10 +77,6 @@ type Plugin struct {
 
 	// Options and handlers
 	pluginHandlers *PluginHandlers
-
-	pluginCfgRequired  bool
-	deviceCfgRequired  bool
-	dynamicCfgRequired bool
 
 	// Plugin components
 	scheduler     *Scheduler
@@ -104,7 +101,11 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 
 	// Load the plugin configuration.
 	conf := new(config.Plugin)
-	if err := loadPluginConfig(conf); err != nil {
+	// FIXME: we should not hardcode the policy here.. we should see whether any plugin
+	//  options specify a plugin policy first. keeping this as-is for now, but we will
+	//  need to change this. this will likely require a change to how the plugin is
+	//  constructed entirely here.
+	if err := loadPluginConfig(conf, policy.Optional); err != nil {
 		return nil, err
 	}
 
@@ -120,31 +121,27 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	}
 
 	pluginHandlers := NewDefaultPluginHandlers()
+	pluginPolicies := policy.NewDefaultPolicies()
 
 	// Initialize plugin components.
-	dm := newDeviceManager(id, pluginHandlers)
+	dm := newDeviceManager(id, pluginHandlers, pluginPolicies)
 	sm := NewStateManager(conf.Settings)
 	sched := NewScheduler(conf.Settings, dm, sm)
 	server := newServer(conf.Network, dm, sm, sched, &metadata)
 
 	p := Plugin{
-		outputs: make(map[string]*output.Output),
-		quit:    make(chan os.Signal),
-		info:    &metadata,
-		version: version,
-		config:  conf,
-		id:      id,
-
-		pluginCfgRequired:  false,
-		deviceCfgRequired:  true,
-		dynamicCfgRequired: false,
-
+		outputs:        make(map[string]*output.Output),
+		quit:           make(chan os.Signal),
+		info:           &metadata,
+		version:        version,
+		config:         conf,
+		id:             id,
+		policies:       pluginPolicies,
 		pluginHandlers: pluginHandlers,
-
-		deviceManager: dm,
-		stateManager:  sm,
-		scheduler:     sched,
-		server:        server,
+		deviceManager:  dm,
+		stateManager:   sm,
+		scheduler:      sched,
+		server:         server,
 	}
 
 	// Set custom options for the plugin.
@@ -361,7 +358,7 @@ func (plugin *Plugin) execPostRun() error {
 
 // loadPluginConfig loads plugin configurations from file and environment
 // and marshals that data into the provided Plugin config struct.
-func loadPluginConfig(conf *config.Plugin) error {
+func loadPluginConfig(conf *config.Plugin, pol policy.Policy) error {
 	// Setup the config loader for the plugin.
 	loader := config.NewYamlLoader("plugin")
 	loader.EnvPrefix = "PLUGIN"
@@ -374,7 +371,7 @@ func loadPluginConfig(conf *config.Plugin) error {
 	)
 
 	// Load the plugin configuration.
-	if err := loader.Load(); err != nil {
+	if err := loader.Load(pol); err != nil {
 		return err
 	}
 
