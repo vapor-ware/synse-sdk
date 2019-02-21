@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
-
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
