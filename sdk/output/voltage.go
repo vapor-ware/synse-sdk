@@ -16,21 +16,21 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// Voltage is the output type for a voltage reading. This output
+// supports the following units:
+//   * volt (no system)
+var Voltage = Output{
+	Name:      "voltage",
+	Type:      "voltage",
+	Precision: 3,
+	Units: map[SystemOfMeasure]*Unit{
+		NONE: {
+			Name:   "volt",
+			Symbol: "V",
+			System: string(NONE),
+		},
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }

@@ -299,7 +299,7 @@ func (loader *Loader) search(pol policy.Policy) error {
 	for _, path := range loader.SearchPaths {
 		plog := log.WithFields(log.Fields{
 			"loader": loader.Name,
-			"path": path,
+			"path":   path,
 			"policy": pol,
 		})
 

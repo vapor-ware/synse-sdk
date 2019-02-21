@@ -16,21 +16,21 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// Duration is the output type for a duration reading. This output
+// supports the following units:
+//   * second (no system)
+var Duration = Output{
+	Name:      "duration",
+	Type:      "duration",
+	Precision: 3,
+	Units: map[SystemOfMeasure]*Unit{
+		NONE: {
+			Name:   "second",
+			Symbol: "s",
+			System: string(NONE),
+		},
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }

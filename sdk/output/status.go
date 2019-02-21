@@ -16,21 +16,16 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// Status is the output type for a status reading. This output has no unit.
+// A status reading is generally a string which describes the status of
+// a device, e.g. "operational".
+var Status = Output{
+	Name:  "status",
+	Type:  "status",
+	Units: map[SystemOfMeasure]*Unit{
+		// no unit(s)
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }

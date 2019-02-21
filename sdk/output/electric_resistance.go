@@ -16,21 +16,22 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// ElectricResistance is the output type for a resistance reading. This output
+// supports the following units:
+//   * (metric)
+//   * (imperial)
+var ElectricResistance = Output{
+	Name:      "electric_resistance",
+	Type:      "resistance",
+	Precision: 2,
+	Units: map[SystemOfMeasure]*Unit{
+		NONE: {
+			Name:   "ohms",
+			Symbol: "Ω",
+			System: string(NONE),
+		},
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }

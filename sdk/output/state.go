@@ -16,21 +16,16 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// State is the output type for a state reading. This output has no unit.
+// A state reading is generally a string which represents some kind of
+// state (e.g. "on"/"off").
+var State = Output{
+	Name:  "state",
+	Type:  "state",
+	Units: map[SystemOfMeasure]*Unit{
+		// no unit(s)
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }

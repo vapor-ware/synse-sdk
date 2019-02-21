@@ -16,21 +16,21 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// Humidity is the output type for a humidity reading. This output
+// supports the following units:
+//   * Percent   (no system)
+var Humidity = Output{
+	Name:      "humidity",
+	Type:      "humidity",
+	Precision: 2,
+	Units: map[SystemOfMeasure]*Unit{
+		NONE: {
+			Name:   "percent humidity",
+			Symbol: "%",
+			System: string(NONE),
+		},
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }
