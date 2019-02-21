@@ -1,3 +1,19 @@
+// Synse SDK
+// Copyright (c) 2019 Vapor IO
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package sdk
 
 import (
@@ -235,16 +251,8 @@ func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) error {
 
 // RegisterDeviceSetupActions registers actions with the device manager which will be
 // executed on start. These actions are used for device-specific setup.
-//
-// fixme: no more kind, need to fix the below.
-//
-// The filter parameter should be the filter to apply to devices. Currently
-// filtering is supported for device kind and type. Filter strings are specified in
-// the format "key=value,key=value". The filter
-//     "kind=temperature,kind=ABC123"
-// would only match devices whose kind was temperature or ABC123.
-func (plugin *Plugin) RegisterDeviceSetupActions(filter string, actions ...*DeviceAction) {
-	plugin.deviceManager.AddDeviceSetupActions(filter, actions...)
+func (plugin *Plugin) RegisterDeviceSetupActions(actions ...*DeviceAction) error {
+	return plugin.deviceManager.AddDeviceSetupActions(actions...)
 }
 
 // initialize initializes the plugin and all plugin components.
@@ -262,6 +270,9 @@ func (plugin *Plugin) initialize() error {
 // run runs the plugin by starting all of the configured plugin components.
 func (plugin *Plugin) run() error {
 	// Start the plugin components. Order matters here.
+	if err := plugin.deviceManager.Start(plugin); err != nil {
+		return err
+	}
 	plugin.stateManager.Start()
 	plugin.scheduler.Start()
 
