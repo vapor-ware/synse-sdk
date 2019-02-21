@@ -83,7 +83,7 @@ func (manager *StateManager) updateReadings() {
 	for {
 		// Read from the read channel for incoming readings.
 		reading := <-manager.readChan
-		id := reading.ID()
+		id := reading.Device
 		readings := reading.Reading
 
 		// Update the reading state.
