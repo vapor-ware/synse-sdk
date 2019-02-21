@@ -20,9 +20,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor-ware/synse-sdk/internal/test"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/vapor-ware/synse-sdk/internal/test"
 )
 
 func TestNewYamlLoader(t *testing.T) {
@@ -716,7 +715,7 @@ func TestLoader_isValidExt(t *testing.T) {
 // -----
 // Testing SDK use cases (device config, plugin config)
 // -----
-// TODO (): add more tests cases here..
+// TODO (etd): add more tests cases here..
 
 func TestLoader_Load(t *testing.T) {
 	l := NewYamlLoader("test")

@@ -24,9 +24,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/creasty/defaults"
-
 	log "github.com/Sirupsen/logrus"
+	"github.com/creasty/defaults"
 	"github.com/imdario/mergo"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v2"
