@@ -16,21 +16,21 @@
 
 package output
 
-// GetBuiltins returns a list of all the built-in outputs supplied by the SDK.
-func GetBuiltins() []*Output {
-	return []*Output{
-		&Color,
-		&Duration,
-		&ElectricCurrent,
-		&ElectricResistance,
-		&Frequency,
-		&Humidity,
-		&Pressure,
-		&RotationalSpeed,
-		&Speed,
-		&State,
-		&Status,
-		&Temperature,
-		&Voltage,
-	}
+// RotationalSpeed is the output type for a speed reading. This output
+// supports the following units:
+//   * Revolutions per Minute (no system)
+var RotationalSpeed = Output{
+	Name:      "rotational_speed",
+	Type:      "speed",
+	Precision: 2,
+	Units: map[SystemOfMeasure]*Unit{
+		NONE: {
+			Name:   "revolutions per minute",
+			Symbol: "RPM",
+			System: string(NONE),
+		},
+	},
+	Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
+		// no system(s) to convert between
+	},
 }

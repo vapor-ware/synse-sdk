@@ -23,12 +23,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/vapor-ware/synse-sdk/sdk/policy"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/sdk/policy"
 )
 
 const (
@@ -113,6 +112,10 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	if flagDebug || conf.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
+
+	// Log the plugin metadata and version info.
+	metadata.log()
+	version.Log()
 
 	// Initialize the plugin ID namespace.
 	id, err := newPluginID(conf.ID, &metadata)
