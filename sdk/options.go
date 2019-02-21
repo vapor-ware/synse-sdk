@@ -16,6 +16,8 @@
 
 package sdk
 
+import "github.com/vapor-ware/synse-sdk/sdk/policy"
+
 // A PluginOption sets optional configurations or functional capabilities for
 // a plugin. This includes things like device identification and device
 // registration behaviors.
@@ -60,7 +62,7 @@ func CustomDeviceDataValidator(validator DeviceDataValidator) PluginOption {
 // them optional and will use a set of default configurations if no config is found.
 func PluginConfigRequired() PluginOption {
 	return func(plugin *Plugin) {
-		plugin.pluginCfgRequired = true
+		plugin.policies.PluginConfig = policy.Required
 	}
 }
 
@@ -70,7 +72,7 @@ func PluginConfigRequired() PluginOption {
 // be specified.
 func DeviceConfigOptional() PluginOption {
 	return func(plugin *Plugin) {
-		plugin.deviceCfgRequired = false
+		plugin.policies.DeviceConfig = policy.Optional
 	}
 }
 
@@ -80,6 +82,6 @@ func DeviceConfigOptional() PluginOption {
 // pre-defined config files.
 func DynamicConfigRequired() PluginOption {
 	return func(plugin *Plugin) {
-		plugin.dynamicCfgRequired = true
+		plugin.policies.DynamicDeviceConfig = policy.Required
 	}
 }

@@ -20,6 +20,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/policy"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
 )
@@ -323,51 +326,112 @@ func TestLoader_loadEnv_noPrefixesMatch(t *testing.T) {
 	assert.Empty(t, loader.data)
 }
 
-func TestLoader_search_ok(t *testing.T) {
+func TestLoader_searchOptional_ok(t *testing.T) {
 	loader := Loader{
 		Ext:         ExtYaml,
 		SearchPaths: []string{"./testdata"},
 	}
 	assert.Empty(t, loader.data)
 
-	err := loader.search()
+	err := loader.search(policy.Optional)
 	assert.NoError(t, err)
 	// we should only match two files in testdata/: invalid.yaml, test.yaml
 	assert.Equal(t, 2, len(loader.files))
 }
 
-func TestLoader_search_ok2(t *testing.T) {
+func TestLoader_searchRequired_ok(t *testing.T) {
+	loader := Loader{
+		Ext:         ExtYaml,
+		SearchPaths: []string{"./testdata"},
+	}
+	assert.Empty(t, loader.data)
+
+	err := loader.search(policy.Required)
+	assert.NoError(t, err)
+	// we should only match two files in testdata/: invalid.yaml, test.yaml
+	assert.Equal(t, 2, len(loader.files))
+}
+
+func TestLoader_searchOptional_notFound(t *testing.T) {
 	loader := Loader{
 		Ext:         ExtYaml,
 		SearchPaths: []string{"."}, // no valid configs in current dir
 	}
 	assert.Empty(t, loader.data)
 
-	err := loader.search()
+	err := loader.search(policy.Optional)
 	assert.NoError(t, err)
 	assert.Empty(t, loader.data)
+	assert.Empty(t, loader.files)
 }
 
-func TestLoader_search_noPaths(t *testing.T) {
+func TestLoader_searchRequired_notFound(t *testing.T) {
+	loader := Loader{
+		Ext:         ExtYaml,
+		SearchPaths: []string{"."}, // no valid configs in current dir
+	}
+	assert.Empty(t, loader.data)
+
+	err := loader.search(policy.Required)
+	assert.Error(t, err)
+	assert.IsType(t, &errors.ConfigsNotFound{}, err)
+	assert.Empty(t, loader.data)
+	assert.Empty(t, loader.files)
+}
+
+func TestLoader_searchOptional_noPaths(t *testing.T) {
 	loader := Loader{
 		Ext:         ExtYaml,
 		SearchPaths: []string{},
 	}
 	assert.Empty(t, loader.data)
 
-	err := loader.search()
+	err := loader.search(policy.Optional)
 	assert.NoError(t, err)
 	assert.Empty(t, loader.data)
+	assert.Empty(t, loader.files)
 }
 
-func TestLoader_read_ok(t *testing.T) {
+func TestLoader_searchRequired_noPaths(t *testing.T) {
+	loader := Loader{
+		Ext:         ExtYaml,
+		SearchPaths: []string{},
+	}
+	assert.Empty(t, loader.data)
+
+	err := loader.search(policy.Required)
+	assert.Error(t, err)
+	assert.IsType(t, &errors.ConfigsNotFound{}, err)
+	assert.Empty(t, loader.data)
+	assert.Empty(t, loader.files)
+}
+
+func TestLoader_readOptional_ok(t *testing.T) {
 	loader := Loader{
 		Ext: ExtYaml,
 	}
 	loader.files = []string{"./testdata/test.yaml"}
 	assert.Empty(t, loader.data)
 
-	err := loader.read()
+	err := loader.read(policy.Optional)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(loader.data))
+
+	expected := map[string]interface{}{
+		"foo": 1,
+		"bar": 2,
+	}
+	assert.Equal(t, expected, loader.data[0])
+}
+
+func TestLoader_readRequired_ok(t *testing.T) {
+	loader := Loader{
+		Ext: ExtYaml,
+	}
+	loader.files = []string{"./testdata/test.yaml"}
+	assert.Empty(t, loader.data)
+
+	err := loader.read(policy.Required)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(loader.data))
 
@@ -388,7 +452,7 @@ func TestLoader_read_ok2(t *testing.T) {
 	}
 	assert.Empty(t, loader.data)
 
-	err := loader.read()
+	err := loader.read(policy.Optional)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(loader.data))
 
@@ -400,14 +464,26 @@ func TestLoader_read_ok2(t *testing.T) {
 	assert.Equal(t, expected, loader.data[1])
 }
 
-func TestLoader_read_noFiles(t *testing.T) {
+func TestLoader_readOptional_noFiles(t *testing.T) {
 	loader := Loader{
 		Ext: ExtYaml,
 	}
 	assert.Empty(t, loader.data)
 
-	err := loader.read()
+	err := loader.read(policy.Optional)
 	assert.NoError(t, err)
+	assert.Empty(t, loader.data)
+}
+
+func TestLoader_readRequired_noFiles(t *testing.T) {
+	loader := Loader{
+		Ext: ExtYaml,
+	}
+	assert.Empty(t, loader.data)
+
+	err := loader.read(policy.Required)
+	assert.Error(t, err)
+	assert.IsType(t, &errors.ConfigsNotFound{}, err)
 	assert.Empty(t, loader.data)
 }
 
@@ -418,7 +494,7 @@ func TestLoader_read_fileNotFound(t *testing.T) {
 	loader.files = []string{"./testdata/nonexistent-file.yaml"}
 	assert.Empty(t, loader.data)
 
-	err := loader.read()
+	err := loader.read(policy.Optional)
 	assert.Error(t, err)
 	assert.Empty(t, loader.data)
 }
@@ -430,7 +506,7 @@ func TestLoader_read_badExt(t *testing.T) {
 	loader.files = []string{"./testdata/test.yaml"}
 	assert.Empty(t, loader.data)
 
-	err := loader.read()
+	err := loader.read(policy.Optional)
 	assert.Error(t, err)
 	assert.Empty(t, loader.data)
 }
@@ -442,7 +518,7 @@ func TestLoader_read_badData(t *testing.T) {
 	loader.files = []string{"./testdata/invalid.yaml"}
 	assert.Empty(t, loader.data)
 
-	err := loader.read()
+	err := loader.read(policy.Optional)
 	assert.Error(t, err)
 	assert.Empty(t, loader.data)
 }
@@ -721,7 +797,7 @@ func TestLoader_Load(t *testing.T) {
 	l := NewYamlLoader("test")
 	l.AddSearchPaths("./testdata/device")
 
-	err := l.Load()
+	err := l.Load(policy.Required)
 	assert.NoError(t, err)
 
 	d := &Devices{}
@@ -753,7 +829,7 @@ func TestLoader_Load2(t *testing.T) {
 	l := NewYamlLoader("test")
 	l.EnvPrefix = "SDKTEST"
 
-	err = l.Load()
+	err = l.Load(policy.Optional)
 	assert.NoError(t, err)
 
 	d := &Tst{}
