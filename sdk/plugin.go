@@ -113,9 +113,10 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	// Log the plugin metadata and version info.
+	// Log the plugin metadata, version info, and config.
 	metadata.log()
 	version.Log()
+	conf.Log()
 
 	// Initialize the plugin ID namespace.
 	id, err := newPluginID(conf.ID, &metadata)

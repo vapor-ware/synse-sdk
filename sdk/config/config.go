@@ -135,6 +135,13 @@ func (loader *Loader) AddSearchPaths(paths ...string) {
 // found, Load will return an error. If the config is optional and not found, no
 // error will be returned.
 func (loader *Loader) Load(pol policy.Policy) error {
+	log.WithFields(log.Fields{
+		"loader": loader.Name,
+		"paths":  loader.SearchPaths,
+		"name":   loader.FileName,
+		"ext":    loader.Ext,
+	}).Info("[config] loading configuration")
+
 	if err := loader.checkOverrides(); err != nil {
 		return err
 	}
@@ -314,7 +321,7 @@ func (loader *Loader) search(pol policy.Policy) error {
 			if loader.isValidFile(file) {
 				plog.WithFields(log.Fields{
 					"file": file.Name(),
-				}).Info("[config] found valid config")
+				}).Info("[config] found matching config")
 				foundInPath = true
 				fileName := filepath.Join(path, file.Name())
 				loader.files = append(loader.files, fileName)
@@ -323,7 +330,7 @@ func (loader *Loader) search(pol policy.Policy) error {
 
 		// If configuration was found in the current path, break to stop
 		// searching. We do not want to search all potential config paths
-		// if we have already found valid config.
+		// if we have already found matching config.
 		if foundInPath {
 			break
 		}
