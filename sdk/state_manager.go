@@ -243,23 +243,3 @@ func (manager *StateManager) GetReadings() map[string][]*output.Reading {
 	}
 	return readings
 }
-
-func (manager *StateManager) NewTransaction() *transaction {
-	return nil
-}
-
-func (manager *StateManager) UpdateTransactionStatusPending() {
-
-}
-
-func (manager *StateManager) UpdateTransactionStatusWriting() {
-
-}
-
-func (manager *StateManager) UpdateTransactionStatusDone() {
-
-}
-
-func (manager *StateManager) UpdateTransactionStatusError() {
-
-}

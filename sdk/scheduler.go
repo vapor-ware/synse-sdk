@@ -553,6 +553,34 @@ func (scheduler *Scheduler) write(writeCtx *WriteContext) {
 	}()
 
 	// Wait for the write to complete, or timeout.
+	// FIXME (etd): this does technically give us a timeout, where we will stop
+	//  waiting for the write after the given timeout and just mark the transaction
+	//  dead, but thats kinda all this does.
+	//
+	//  from an upstream perspective, this is fine.. we want to be able to say
+	//  "we expect this write to complete after N time, afterwards, timeout and consider
+	//  it failed".
+	//
+	//  from the backend, it does present this to the frontend consumer, but it doesn't
+	//  actually stop the write from happening, so while we have "timed out", the write
+	//  is still going on in the background and could eventually resolve, which is
+	//  not at all what we want to do.
+	//
+	//  this could be resolved by passing in a context and cancelling, but uhh.. its
+	//  complicated and the internet has many mixed feeling-ed blog posts about it.
+	//
+	//  this relates to #365. I'll need to spend more time thinking this through.
+	//  essentially the issue lies in the fact that context cancellation relies on the
+	//  fact that you can terminate the work at some point (e.g. if iterating in an
+	//  infinite loop.., emitting from a channel, ...), then you can wait on the context
+	//  done signal, wait for the fn to finish up, and then you're done. to me, it seems
+	//  like the write will need to be waited on either way, so i'm not sure there is
+	//  a benefit to using a cancellation context unless writing is handled in a different
+	//  manner..
+	//
+	//  it seems like having a cancelation context could be useful if there is some
+	//  retry logic on the write, but thats mostly it..
+
 	var err error
 	select {
 	case writeErr := <-writer:
