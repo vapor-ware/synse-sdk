@@ -22,12 +22,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vapor-ware/synse-server-grpc/go"
-
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/time/rate"
 )
 
@@ -114,13 +114,39 @@ func NewScheduler(conf *config.PluginSettings, dm *deviceManager, sm *StateManag
 // registerActions registers pre-run (setup) and post-run (teardown) actions
 // for the scheduler.
 func (scheduler *Scheduler) registerActions(plugin *Plugin) {
+	// Register pre-run actions.
+	plugin.RegisterPreRunActions(
+		&PluginAction{
+			Name:   "Register default scheduler health checks",
+			Action: scheduler.healthChecks,
+		},
+	)
+
 	// Register post-run actions.
 	plugin.RegisterPostRunActions(
 		&PluginAction{
 			Name:   "Stop scheduler",
-			Action: func(plugin *Plugin) error { return scheduler.Stop() },
+			Action: func(p *Plugin) error { return scheduler.Stop() },
 		},
 	)
+}
+
+// healthChecks defines and registers the scheduler's default health checks with
+// the plugin.
+func (scheduler *Scheduler) healthChecks(plugin *Plugin) error {
+	wqh := health.NewPeriodicHealthCheck("write queue health", 30*time.Second, func() error {
+		// Determine the percent usage of the write queue.
+		pctUsage := (float64(len(scheduler.writeChan)) / float64(cap(scheduler.writeChan))) * 100
+
+		// If the write queue is at 95% usage, we consider it unhealthy; the write
+		// queue should be configured to be larger.
+		if pctUsage > 95 {
+			return fmt.Errorf("write queue usage >95%%, consider increasing size in configuration")
+		}
+		return nil
+	})
+	plugin.healthManager.RegisterDefault(wqh)
+	return nil
 }
 
 // Start starts the scheduler.
