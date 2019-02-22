@@ -26,6 +26,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
 )
@@ -82,6 +83,7 @@ type Plugin struct {
 	stateManager  *StateManager
 	deviceManager *deviceManager
 	server        *server
+	healthManager *health.Manager
 }
 
 // NewPlugin creates a new instance of a Plugin. This should be the only
@@ -131,7 +133,8 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	dm := newDeviceManager(id, pluginHandlers, pluginPolicies)
 	sm := NewStateManager(conf.Settings)
 	sched := NewScheduler(conf.Settings, dm, sm)
-	server := newServer(conf.Network, dm, sm, sched, &metadata)
+	hm := health.NewManager(conf.Health)
+	server := newServer(conf.Network, dm, sm, sched, &metadata, hm)
 
 	p := Plugin{
 		outputs:        make(map[string]*output.Output),
@@ -146,6 +149,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		stateManager:   sm,
 		scheduler:      sched,
 		server:         server,
+		healthManager:  hm,
 	}
 
 	// Set custom options for the plugin.
@@ -175,8 +179,9 @@ func (plugin *Plugin) Run() error {
 
 	// If all components initialized without error, we can register
 	// any pre/post run actions which they may have.
-	plugin.server.registerActions(plugin)
+	plugin.stateManager.registerActions(plugin)
 	plugin.scheduler.registerActions(plugin)
+	plugin.server.registerActions(plugin)
 
 	// Run pre-run actions, if any exist.
 	if err := plugin.execPreRun(); err != nil {
@@ -203,6 +208,16 @@ func (plugin *Plugin) Run() error {
 
 	// Run the plugin.
 	return plugin.run()
+}
+
+// RegisterHealthChecks registers custom health checks with the plugin.
+func (plugin *Plugin) RegisterHealthChecks(checks ...health.Check) error {
+	for _, check := range checks {
+		if err := plugin.healthManager.Register(check); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // RegisterOutputs registers new Outputs with the Plugin. A plugin will automatically

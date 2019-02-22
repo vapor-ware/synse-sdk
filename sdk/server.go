@@ -30,7 +30,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	"github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -63,17 +62,20 @@ type server struct {
 	deviceManager *deviceManager
 	stateManager  *StateManager
 	scheduler     *Scheduler
+	healthManager *health.Manager
 }
 
 // newServer creates a new instance of a server. This is used by the Plugin
 // constructor to create a Plugin's server instance.
-func newServer(conf *config.NetworkSettings, dm *deviceManager, sm *StateManager, sched *Scheduler, meta *PluginMetadata) *server {
+// fixme: this can be cleaned up by using a context to pass stuff around
+func newServer(conf *config.NetworkSettings, dm *deviceManager, sm *StateManager, sched *Scheduler, meta *PluginMetadata, hm *health.Manager) *server {
 	return &server{
 		conf:          conf,
 		deviceManager: dm,
 		stateManager:  sm,
 		scheduler:     sched,
 		meta:          meta,
+		healthManager: hm,
 	}
 }
 
@@ -347,27 +349,8 @@ func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse
 func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.V3Health, error) {
 	log.Debug("[grpc] HEALTH request")
 
-	// Get the health statuses from the health catalog.
-	statuses := health.GetStatus()
-
-	// Determine whether we are ok or failing. If all checks are okay, the plugin is
-	// healthy. If there are any checks that are failing, the plugin is considered
-	// unhealthy. Synse plugins do not support the notion of partially degraded.
-	healthStatus := synse.HealthStatus_OK
-
-	var healthChecks []*synse.V3HealthCheck
-	for _, status := range statuses {
-		if !status.Ok {
-			healthStatus = synse.HealthStatus_FAILING
-		}
-		healthChecks = append(healthChecks, status.Encode())
-	}
-
-	return &synse.V3Health{
-		Timestamp: utils.GetCurrentTime(),
-		Status:    healthStatus,
-		Checks:    healthChecks,
-	}, nil
+	status := server.healthManager.Status()
+	return status.Encode(), nil
 }
 
 // Devices gets all of the devices which a plugin manages.

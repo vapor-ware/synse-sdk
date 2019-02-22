@@ -22,9 +22,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/vapor-ware/synse-server-grpc/go"
-
 	log "github.com/Sirupsen/logrus"
+	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // metadata is a plugin-global reference to the plugin metadata.

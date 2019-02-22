@@ -19,11 +19,10 @@ package sdk
 import (
 	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
