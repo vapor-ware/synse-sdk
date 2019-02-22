@@ -16,6 +16,8 @@
 
 package config
 
+import "time"
+
 // Devices is the top-level configuration for devices for Synse plugins.
 //
 // Devices can be specified in a single configuration file, or in multiple
@@ -70,6 +72,12 @@ type DeviceProto struct {
 	// required in all cases, since the DeviceHandler may specify the system
 	// as well.
 	System string `yaml:"system,omitempty"`
+
+	// WriteTimeout defines a custom write timeout for all instances of
+	// the device prototype. This is the time within which the write
+	// transaction will remain valid. If left unspecified, it will fall
+	// back to the default value of 30s.
+	WriteTimeout time.Duration `yaml:"writeTimeout,omitempty"`
 
 	// Instances contains the data for all configured instances of the
 	// device prototype.
@@ -142,9 +150,14 @@ type DeviceInstance struct {
 	// plugins, such as Modbus-IP.
 	System string `yaml:"system,omitempty"`
 
+	// WriteTimeout defines a custom write timeout for the device instance. This
+	// is the time within which the write transaction will remain valid. If left
+	// unspecified, it will fall back to the default value of 30s.
+	WriteTimeout time.Duration `default:"30s" yaml:"writeTimeout,omitempty"`
+
 	// DisableInheritance determines whether the device instance should inherit
 	// from its device prototype.
-	DisableInheritance bool `yaml:"disableInheritance,omitempty"`
+	DisableInheritance bool `default:"false" yaml:"disableInheritance,omitempty"`
 }
 
 // DeviceAlias defines the configuration for setting a device alias.
