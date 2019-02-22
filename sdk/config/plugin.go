@@ -92,7 +92,8 @@ func (conf *Plugin) Log() {
 	log.Infof("  DynamicRegistration:")
 	log.Infof("    Config: %v", conf.DynamicRegistration.Config)
 	log.Infof("  Health:")
-	log.Infof("    HealthFile: %s", conf.Health.HealthFile)
+	log.Infof("    HealthFile:     %s", conf.Health.HealthFile)
+	log.Infof("    UpdateInterval: %s", conf.Health.UpdateInterval)
 	log.Infof("    Checks:")
 	log.Infof("      DisableDefaults: %v", conf.Health.Checks.DisableDefaults)
 }
@@ -294,6 +295,10 @@ type HealthSettings struct {
 	// to signal that the plugin is healthy. If not set, this will default to
 	// "/etc/synse/plugin/healthy".
 	HealthFile string `default:"/etc/synse/plugin/healthy" yaml:"healthFile,omitempty"`
+
+	// UpdateInterval is the frequency with which the health file will be updated
+	// to designate the health status of the plugin.
+	UpdateInterval time.Duration `default:"30s" yaml:"updateInterval,omitempty"`
 
 	// Checks are the settings for plugin health checks.
 	Checks *HealthCheckSettings `default:"{}" yaml:"checks,omitempty"`
