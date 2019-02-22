@@ -198,14 +198,6 @@ func (plugin *Plugin) Run() error {
 		os.Exit(0)
 	}
 
-	//// If the default health checks are enabled, register them now
-	//// fixme (etd) - this will move to the health manager
-	//if !plugin.config.Health.Checks.DisableDefaults {
-	//	log.Debug("[sdk] registering default health checks")
-	//	health.RegisterPeriodicCheck("read buffer health", 30*time.Second, readBufferHealthCheck)
-	//	health.RegisterPeriodicCheck("write buffer health", 30*time.Second, writeBufferHealthCheck)
-	//}
-
 	// Run the plugin.
 	return plugin.run()
 }
