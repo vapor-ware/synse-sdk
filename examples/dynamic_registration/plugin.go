@@ -6,8 +6,10 @@ import (
 	"math/rand"
 	"strconv"
 
+	"github.com/vapor-ware/synse-sdk/sdk/config"
+
 	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/policies"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
 var (
@@ -16,29 +18,14 @@ var (
 	pluginDesc       = "An example plugin that demonstrates dynamically registering devices"
 )
 
-var (
-	// The output for temperature devices.
-	temperatureOutput = sdk.OutputType{
-		Name:      "temperature",
-		Precision: 2,
-		Unit: sdk.Unit{
-			Name:   "celsius",
-			Symbol: "C",
-		},
-	}
-)
-
 // temperatureHandler defines the read/write behavior for the "temp2010"
 // temperature device.
 var temperatureHandler = sdk.DeviceHandler{
 	Name: "temperature",
-	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
+	Read: func(device *sdk.Device) ([]*output.Reading, error) {
 		value := strconv.Itoa(rand.Int()) // nolint: gas, gosec
-		reading, err := device.GetOutput("temperature").MakeReading(value)
-		if err != nil {
-			return nil, err
-		}
-		return []*sdk.Reading{reading}, nil
+		reading := output.Temperature.FromMetric(value)
+		return []*output.Reading{reading}, nil
 	},
 }
 
@@ -58,8 +45,8 @@ func ProtocolIdentifier(data map[string]interface{}) string {
 // "dynamic registration" by definition, but it is a valid usage. A more appropriate
 // example could be taking an IP from the configuration, and using that to hit some
 // endpoint which would give back all the information on the devices it manages.
-func DynamicDeviceConfig(cfg map[string]interface{}) ([]*sdk.DeviceConfig, error) {
-	var res []*sdk.DeviceConfig
+func DynamicDeviceConfig(cfg map[string]interface{}) ([]*config.Devices, error) {
+	var res []*config.Devices
 
 	// create a new device - here, we are using the base address and appending
 	// index of the loop to create the id of the device. we are hardcoding in
@@ -67,32 +54,19 @@ func DynamicDeviceConfig(cfg map[string]interface{}) ([]*sdk.DeviceConfig, error
 	// devices to match to their device handlers. in a real case, all of this info
 	// should be gathered from whatever the real source of dynamic registration is,
 	// e.g. for IPMI - the SDR records.
-	d := sdk.DeviceConfig{
+	d := config.Devices{
 		Version: 3,
-		Locations: []*sdk.LocationConfig{
+		Devices: []*config.DeviceProto{
 			{
-				Name:  "foobar",
-				Rack:  &sdk.LocationData{Name: "foo"},
-				Board: &sdk.LocationData{Name: "bar"},
-			},
-		},
-		Devices: []*sdk.DeviceKind{
-			{
-				Name: "temperature",
+				Type: "temperature",
 				Metadata: map[string]string{
 					"model": "temp2010",
 				},
-				Instances: []*sdk.DeviceInstance{
+				Instances: []*config.DeviceInstance{
 					{
-						Info:     "test device",
-						Location: "foobar",
+						Info: "test device",
 						Data: map[string]interface{}{
 							"id": fmt.Sprint(cfg["base"]),
-						},
-						Outputs: []*sdk.DeviceOutput{
-							{
-								Type: "temperature",
-							},
 						},
 					},
 				},
@@ -105,8 +79,8 @@ func DynamicDeviceConfig(cfg map[string]interface{}) ([]*sdk.DeviceConfig, error
 }
 
 func main() {
-	// Set the metainfo for the plugin.
-	sdk.SetPluginMeta(
+	// Set the metadata for the plugin.
+	sdk.SetPluginInfo(
 		pluginName,
 		pluginMaintainer,
 		pluginDesc,
@@ -115,23 +89,21 @@ func main() {
 
 	// Create a new Plugin instance with custom identifier and dynamic registration
 	// functions supplied.
-	plugin := sdk.NewPlugin(
+	plugin, err := sdk.NewPlugin(
 		sdk.CustomDeviceIdentifier(ProtocolIdentifier),
 		sdk.CustomDynamicDeviceConfigRegistration(DynamicDeviceConfig),
+		sdk.DynamicConfigRequired(),
+		sdk.DeviceConfigOptional(),
 	)
-
-	// Set the device config policy to optional - this means that we will not
-	// fail if there are no device config files found.
-	policies.Add(policies.DeviceConfigFileOptional)
-
-	// Register output types
-	err := plugin.RegisterOutputTypes(&temperatureOutput)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Register device handlers
-	plugin.RegisterDeviceHandlers(&temperatureHandler)
+	err = plugin.RegisterDeviceHandlers(&temperatureHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Run the plugin.
 	if err := plugin.Run(); err != nil {

@@ -22,8 +22,8 @@ func ProtocolIdentifier(data map[string]interface{}) string {
 }
 
 func main() {
-	// Set the metainfo for the plugin.
-	sdk.SetPluginMeta(
+	// Set the metadata for the plugin.
+	sdk.SetPluginInfo(
 		pluginName,
 		pluginMaintainer,
 		pluginDesc,
@@ -31,26 +31,30 @@ func main() {
 	)
 
 	// Create a new Plugin instance with a custom device identifier.
-	plugin := sdk.NewPlugin(
+	plugin, err := sdk.NewPlugin(
 		sdk.CustomDeviceIdentifier(ProtocolIdentifier),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// Register our output types with the plugin
-	err := plugin.RegisterOutputTypes(
+	// Register custom output types with the plugin
+	err = plugin.RegisterOutputs(
 		&outputs.AirflowOutput,
-		&outputs.TemperatureOutput,
-		&outputs.VoltageOutput,
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Register device handlers
-	plugin.RegisterDeviceHandlers(
+	err = plugin.RegisterDeviceHandlers(
 		&devices.Temp2010,
 		&devices.Air8884,
 		&devices.Volt1103,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Run the plugin.
 	if err := plugin.Run(); err != nil {

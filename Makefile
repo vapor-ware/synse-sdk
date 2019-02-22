@@ -78,7 +78,7 @@ setup:  ## Install the build and development dependencies
 .PHONY: test
 test:  ## Run all tests
 	@ # Note: this requires go1.10+ in order to do multi-package coverage reports
-	go test -race -coverprofile=coverage.out -covermode=atomic ./...  || exit
+	go test -race -coverprofile=coverage.out -covermode=atomic ./sdk/...  || exit
 
 .PHONY: version
 version: ## Print the version of the SDK
