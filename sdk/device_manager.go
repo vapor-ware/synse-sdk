@@ -196,6 +196,8 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 		device.handler = handler
 	}
 
+	// TODO: verify device Data with the custom verification fn
+
 	// If the device ID has not already been set, generate it and set
 	// it before adding it to the deviceManager.
 	if device.id == "" {

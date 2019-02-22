@@ -276,27 +276,6 @@ func (device *Device) IsWritable() bool {
 	return device.handler.Write != nil
 }
 
-// fixme: device ID generation
-
-//// ID generates the deterministic ID for the Device using its config values.
-//func (device *Device) ID() string {
-//	if device.id == "" {
-//		protocolComp := ctx.deviceIdentifier(device.Data)
-//		device.id = utils.NewUID(device.Plugin, device.Kind, protocolComp)
-//	}
-//	return device.id
-//}
-//
-//// GUID generates a globally unique ID string by creating a composite
-//// string from the rack, board, and device UID.
-//func (device *Device) GUID() string {
-//	return utils.MakeIDString( // fixme
-//		"", //device.Location.Rack,
-//		"", //device.Location.Board,
-//		device.ID(),
-//	)
-//}
-
 // encode translates the Device to the corresponding gRPC Device message.
 func (device *Device) encode() *synse.V3Device {
 	var tags []*synse.V3Tag
@@ -315,38 +294,3 @@ func (device *Device) encode() *synse.V3Device {
 		// todo:  capabilities, outputs
 	}
 }
-
-//// ValidateDeviceConfigData validates the `Data` field(s) of a Device Config to
-//// ensure that they are correct. The `Data` fields are plugin-specific, so its
-//// up to the user to provide us with a validation function.
-//func (config *DeviceConfig) ValidateDeviceConfigData(validator func(map[string]interface{}) error) *errors.MultiError {
-//	multiErr := errors.NewMultiError("device config 'data' field validation")
-//
-//	for _, device := range config.Devices {
-//		// Verify that the DeviceKind Instances' `Data` field is correct
-//		for _, instance := range device.Instances {
-//			err := validator(instance.Data)
-//			if err != nil {
-//				multiErr.Add(err)
-//			}
-//			// Instance Outputs can have their own data too. Verify instance
-//			// output data.
-//			for _, output := range instance.Outputs {
-//				err := validator(output.Data)
-//				if err != nil {
-//					multiErr.Add(err)
-//				}
-//			}
-//		}
-//
-//		// Device kind outputs can have their own data too. Verify the
-//		// device kind output data.
-//		for _, output := range device.Outputs {
-//			err := validator(output.Data)
-//			if err != nil {
-//				multiErr.Add(err)
-//			}
-//		}
-//	}
-//	return multiErr
-//}
