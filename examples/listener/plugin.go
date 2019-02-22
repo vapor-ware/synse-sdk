@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
 var (
@@ -21,8 +22,9 @@ var (
 var (
 	// The random data coming back from the pusher is random and meaningless,
 	// so we don't ascribe any precision or unit to it.
-	pusherOutput = sdk.OutputType{
+	pusherOutput = output.Output{
 		Name: "push_data",
+		Type: "push_data",
 	}
 )
 
@@ -57,11 +59,9 @@ var (
 				}
 				value := binary.LittleEndian.Uint32(buffer)
 				fmt.Printf("[listener] got data: %v\n", value)
-				reading, err := device.GetOutput("push_data").MakeReading(value)
-				if err != nil {
-					return err
-				}
-				data <- sdk.NewReadContext(device, []*sdk.Reading{reading})
+
+				reading := pusherOutput.From(value)
+				data <- sdk.NewReadContext(device, []*output.Reading{reading})
 			}
 		},
 	}
@@ -69,7 +69,7 @@ var (
 
 func main() {
 	// Set the metadata for the plugin.
-	sdk.SetPluginMeta(
+	sdk.SetPluginInfo(
 		pluginName,
 		pluginMaintainer,
 		pluginDesc,
@@ -77,10 +77,13 @@ func main() {
 	)
 
 	// Create a new Plugin instance.
-	plugin := sdk.NewPlugin()
+	plugin, err := sdk.NewPlugin()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register our output types with the Plugin.
-	err := plugin.RegisterOutputTypes(
+	err = plugin.RegisterOutputs(
 		&pusherOutput,
 	)
 	if err != nil {
@@ -88,9 +91,12 @@ func main() {
 	}
 
 	// Register our device handlers with the Plugin.
-	plugin.RegisterDeviceHandlers(
+	err = plugin.RegisterDeviceHandlers(
 		&pusherHandler,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Run the plugin.
 	if err := plugin.Run(); err != nil {

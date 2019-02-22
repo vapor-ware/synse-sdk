@@ -6,9 +6,9 @@ network:
 settings:
   read:
     interval: 5s
-    buffer: 150
+    queueSize: 150
   write:
     interval: 5s
-    buffer: 150
+    queueSize: 150
   transaction:
     ttl: 8m

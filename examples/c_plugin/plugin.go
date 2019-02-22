@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
 var (
@@ -12,39 +13,25 @@ var (
 	pluginDesc       = "An example plugin that demonstrates C code integration"
 )
 
-var (
-	// The output for temperature devices.
-	temperatureOutput = sdk.OutputType{
-		Name:      "temperature",
-		Precision: 2,
-		Unit: sdk.Unit{
-			Name:   "celsius",
-			Symbol: "C",
-		},
-	}
-)
-
 // temperatureHandler defines the read/write behavior for the "temp2010"
 // temperature device.
 var temperatureHandler = sdk.DeviceHandler{
 	Name: "temperature",
-	Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
+	Read: func(device *sdk.Device) ([]*output.Reading, error) {
 		id, ok := device.Data["id"].(int)
 		if !ok {
 			log.Fatalf("invalid device ID - should be an integer in configuration")
 		}
-		value := cRead(id, device.Kind)
-		reading, err := device.GetOutput("temperature").MakeReading(value)
-		if err != nil {
-			return nil, err
-		}
-		return []*sdk.Reading{reading}, nil
+		value := cRead(id, device.Type)
+
+		reading := output.Temperature.FromMetric(value)
+		return []*output.Reading{reading}, nil
 	},
 }
 
 func main() {
-	// Set the metainfo for the plugin.
-	sdk.SetPluginMeta(
+	// Set the metadata for the plugin.
+	sdk.SetPluginInfo(
 		pluginName,
 		pluginMaintainer,
 		pluginDesc,
@@ -52,20 +39,18 @@ func main() {
 	)
 
 	// Create a new Plugin instance
-	plugin := sdk.NewPlugin()
-
-	// Register the output types
-	err := plugin.RegisterOutputTypes(
-		&temperatureOutput,
-	)
+	plugin, err := sdk.NewPlugin()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Register device handlers
-	plugin.RegisterDeviceHandlers(
+	err = plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Run the plugin
 	if err := plugin.Run(); err != nil {

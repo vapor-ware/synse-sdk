@@ -1,36 +1,16 @@
 version: 3
-locations:
-  - name: r1b1
-    rack:
-      name: rack-1
-    board:
-      name: board-1
-  - name: r1b2
-    rack:
-      name: rack-1
-    board:
-      name: board-2
-  - name: r2b1
-    rack:
-      name: rack-2
-    board:
-      name: board-1
 devices:
-  - name: temperature
+  - type: temperature
+    handler: temperature
     metadata:
       model: temp2010
-    outputs:
-      - type: temperature
     instances:
       - info: Temperature Device 1
-        location: r1b1
         data:
           id: 1
       - info: Temperature Device 2
-        location: r1b2
         data:
           id: 2
       - info: Temperature Device 3
-        location: r2b1
         data:
           id: 3
