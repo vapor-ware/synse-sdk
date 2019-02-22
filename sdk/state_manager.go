@@ -21,11 +21,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk/health"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 )

@@ -16,7 +16,9 @@
 
 package health
 
-import "github.com/vapor-ware/synse-server-grpc/go"
+import (
+	synse "github.com/vapor-ware/synse-server-grpc/go"
+)
 
 // Summary provides a summary of overall plugin health.
 type Summary struct {
