@@ -218,6 +218,9 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 		return fmt.Errorf("device id exists")
 	}
 
+	// Update the device with the SDK auto-generated tags.
+	device.Tags = append(device.Tags, newIDTag(device.id), newTypeTag(device.Type))
+
 	// Add the device to the manager.
 	manager.devices[device.id] = device
 

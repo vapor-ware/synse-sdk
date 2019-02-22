@@ -174,6 +174,11 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	if instance.Type != "" {
 		deviceType = instance.Type
 	}
+	// We require devices to have a type; error if there is none set.
+	if deviceType == "" {
+		// fixme: err message
+		return nil, fmt.Errorf("device requires type")
+	}
 
 	// Override write timeout, if set.
 	if instance.WriteTimeout != 0 {
