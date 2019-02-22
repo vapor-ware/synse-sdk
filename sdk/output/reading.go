@@ -19,7 +19,7 @@ package output
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Reading describes a single device reading at a given time. The timestamp

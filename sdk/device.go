@@ -19,13 +19,14 @@ package sdk
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/imdario/mergo"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // TODO (etd): consider not exporting the Device fields. The reason being that
@@ -84,6 +85,10 @@ type Device struct {
 	// device handlers which do not define a system.
 	System string
 
+	// WriteTimeout defines the time within which a write action (transaction)
+	// will remain valid for this device.
+	WriteTimeout time.Duration
+
 	// Output is the name of the Output that this device instance will use. This
 	// is not needed for all devices/plugins, as many DeviceHandlers will already
 	// know which output to use. This field is used in cases of generalized plugins,
@@ -112,11 +117,12 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	// Define variable for the Device fields that can be inherited from the
 	// device prototype configuration.
 	var (
-		data       map[string]interface{}
-		tags       []string
-		handler    string
-		system     string
-		deviceType string
+		data         map[string]interface{}
+		tags         []string
+		handler      string
+		system       string
+		deviceType   string
+		writeTimeout time.Duration
 	)
 
 	// If inheritance is enabled, use the prototype defined value as the base.
@@ -126,6 +132,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		handler = proto.Handler
 		system = proto.System
 		deviceType = proto.Type
+		writeTimeout = proto.WriteTimeout
 	}
 
 	// If the instance also defines the same variable, we either need to merge
@@ -168,8 +175,11 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		deviceType = instance.Type
 	}
 
-	// TODO: get a ref to the handler with the given name
-	// TODO: generate the device ID
+	// Override write timeout, if set.
+	if instance.WriteTimeout != 0 {
+		writeTimeout = instance.WriteTimeout
+	}
+
 	// TODO: generate the device alias
 
 	return &Device{
@@ -182,6 +192,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		Info:          instance.Info,
 		SortIndex:     instance.SortIndex,
 		ScalingFactor: instance.ScalingFactor,
+		WriteTimeout:  writeTimeout,
 		Output:        instance.Output,
 	}, nil
 }

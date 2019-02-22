@@ -18,7 +18,7 @@ package sdk
 
 import (
 	"github.com/vapor-ware/synse-sdk/sdk/output"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // ReadContext provides the context for a device reading. This context

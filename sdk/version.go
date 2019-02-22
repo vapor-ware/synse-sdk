@@ -21,8 +21,8 @@ import (
 	"runtime"
 	"text/template"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	log "github.com/Sirupsen/logrus"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Version specifies the version of the Synse Plugin SDK.

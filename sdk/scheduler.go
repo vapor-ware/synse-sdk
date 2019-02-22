@@ -22,12 +22,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk/health"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/time/rate"
 )
 
@@ -189,7 +188,7 @@ func (scheduler *Scheduler) Write(payload *synse.V3WritePayload) (map[string]*sy
 
 	var response = make(map[string]*synse.V3WriteData)
 	for _, data := range payload.Data {
-		t := newTransaction()
+		t := newTransaction(device.WriteTimeout)
 		t.setStatusPending()
 
 		// Map the transaction ID to the write context for the response.
@@ -544,9 +543,25 @@ func (scheduler *Scheduler) write(writeCtx *WriteContext) {
 
 	writeCtx.transaction.setStatusWriting()
 
-	// Write to the device.
-	data := decodeWriteData(writeCtx.data)
-	err := device.Write(data)
+	// Write to the device. If the device write does not complete within
+	// the set time bounds, error out with timeout.
+	// See: https://gobyexample.com/timeouts
+	writer := make(chan error, 1)
+	go func() {
+		data := decodeWriteData(writeCtx.data)
+		writer <- device.Write(data)
+	}()
+
+	// Wait for the write to complete, or timeout.
+	var err error
+	select {
+	case writeErr := <-writer:
+		err = writeErr
+	case <-time.After(device.WriteTimeout):
+		// fixme: improve err message
+		err = fmt.Errorf("device write timeout")
+	}
+
 	if err != nil {
 		wlog.WithField("error", err).Error("[scheduler] failed to write to device")
 		writeCtx.transaction.setStatusError()

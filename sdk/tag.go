@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Tag represents a group identifier which a Synse device can belong to.
