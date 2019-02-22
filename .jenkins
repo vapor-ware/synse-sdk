@@ -4,6 +4,10 @@ pipeline {
 
   agent any
 
+  environment {
+    PROJ_PATH = '/go/src/github.com/vapor-ware/synse-sdk'
+  }
+
   stages {
     stage('Checkout') {
       steps {
@@ -11,16 +15,33 @@ pipeline {
       }
     }
 
-    // Run linting on project source code.
-    stage('Lint') {
+    // This stage is done first in order to get the vendored dependencies
+    // if they do not already exist. This should improve the build time of
+    // all subsequent stages which require the vendored dependencies to
+    // exist (e.g. testing, building)
+    stage('Vendor Dependencies') {
       agent {
         docker {
-          image 'vaporio/golang:1.13'
+          image 'vaporio/golang:1.11'
           reuseNode true
         }
       }
       steps {
-        sh 'make lint'
+        // Set up the project in the docker container. The project must be
+        // on the GOPATH (/go) in order to correctly vendor dependencies and
+        // build the project artifacts.
+        sh 'mkdir -p ${PROJ_PATH} && cp -r ${WORKSPACE}/* ${PROJ_PATH}'
+
+        // The pipeline's 'dir()' directive is broken when run inside a docker
+        // container, so we need to 'cd' into the project directory prior to
+        // running the required commands.
+        sh 'cd ${PROJ_PATH} && make dep'
+
+        // Copy the vendor directory back down to the WORKSPACE, since it is
+        // volume mounted. This way all subsequent stages will have the
+        // project already vendored.
+        sh 'mkdir -p ${WORKSPACE}/vendor'
+        sh 'cp -r ${PROJ_PATH}/vendor/* ${WORKSPACE}/vendor'
       }
     }
 
@@ -28,7 +49,7 @@ pipeline {
     stage('Test') {
       agent {
         docker {
-          image 'vaporio/golang:1.13'
+          image 'vaporio/golang:1.11'
           reuseNode true
         }
       }
@@ -36,8 +57,16 @@ pipeline {
         CODECOV_TOKEN = credentials('codecov-token')
       }
       steps {
-        sh 'make test'
-        sh 'mv coverage.out coverage.txt && curl -s https://codecov.io/bash | bash -s - -t ${CODECOV_TOKEN}'
+        // Set up the project in the docker container. The project must be
+        // on the GOPATH (/go) in order to correctly vendor dependencies and
+        // build the project artifacts.
+        sh 'mkdir -p ${PROJ_PATH} && cp -r ${WORKSPACE}/* ${PROJ_PATH}'
+
+        // The pipeline's 'dir()' directive is broken when run inside a docker
+        // container, so we need to 'cd' into the project directory prior to
+        // running the required commands.
+        sh 'cd ${PROJ_PATH} && make test'
+        sh 'cd ${PROJ_PATH} && mv coverage.out coverage.txt && curl -s https://codecov.io/bash | bash -s - -t ${CODECOV_TOKEN}'
       }
     }
 
@@ -45,14 +74,22 @@ pipeline {
     stage('Build') {
       agent {
         docker {
-          image 'vaporio/golang:1.13'
+          image 'vaporio/golang:1.11'
           reuseNode true
         }
       }
       steps {
-        sh 'make build'
-        sh 'make examples'
-        sh 'make check-examples'
+        // Set up the project in the docker container. The project must be
+        // on the GOPATH (/go) in order to correctly vendor dependencies and
+        // build the project artifacts.
+        sh 'mkdir -p ${PROJ_PATH} && cp -r ${WORKSPACE}/* ${PROJ_PATH}'
+
+        // The pipeline's 'dir()' directive is broken when run inside a docker
+        // container, so we need to 'cd' into the project directory prior to
+        // running the required commands.
+        sh 'cd ${PROJ_PATH} && make build'
+        sh 'cd ${PROJ_PATH} && make examples'
+        sh 'cd ${PROJ_PATH} && make check-examples'
       }
     }
 
