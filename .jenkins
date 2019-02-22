@@ -45,27 +45,6 @@ pipeline {
       }
     }
 
-    // Run linting on project source code.
-    stage('Lint') {
-      agent {
-        docker {
-          image 'vaporio/golang:1.11'
-          reuseNode true
-        }
-      }
-      steps {
-        // Set up the project in the docker container. The project must be
-        // on the GOPATH (/go) in order to correctly vendor dependencies and
-        // build the project artifacts.
-        sh 'mkdir -p ${PROJ_PATH} && cp -r ${WORKSPACE}/* ${PROJ_PATH}'
-
-        // The pipeline's 'dir()' directive is broken when run inside a docker
-        // container, so we need to 'cd' into the project directory prior to
-        // running the required commands.
-        sh 'cd ${PROJ_PATH} && make lint'
-      }
-    }
-
     // Run unit tests and upload the coverage report to codecov.
     stage('Test') {
       agent {
