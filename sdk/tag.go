@@ -21,7 +21,18 @@ import (
 	"regexp"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
+)
+
+const (
+	// Tag namespace constants
+	TagNamespaceDefault = "default"
+	TagNamespaceSystem  = "system"
+
+	// Tag annotation constants
+	TagAnnotationID   = "id"
+	TagAnnotationType = "type"
 )
 
 // Tag represents a group identifier which a Synse device can belong to.
@@ -76,7 +87,7 @@ func NewTag(tag string) (*Tag, error) {
 
 	// If no namespace is specified, use the default namespace.
 	if namespace == "" {
-		namespace = "default"
+		namespace = TagNamespaceDefault
 	}
 
 	return &Tag{
@@ -268,18 +279,45 @@ func (cache *TagCache) GetDevicesFromTags(tags ...*Tag) []*Device {
 	return deviceSet.Results()
 }
 
+// newIDTag creates a new Tag for a device ID. These tags are auto-generated
+// by the SDK and are considered system-wide tags.
+func newIDTag(deviceID string) *Tag {
+	return &Tag{
+		Namespace:  TagNamespaceSystem,
+		Annotation: TagAnnotationID,
+		Label:      deviceID,
+		string:     fmt.Sprintf("%s/%s:%s", TagNamespaceSystem, TagAnnotationID, deviceID),
+	}
+}
+
+// newTypeTag creates a new Tag for a device Type. These tags are auto-generated
+// by the SDK and are considered system-wide tags.
+func newTypeTag(deviceType string) *Tag {
+	return &Tag{
+		Namespace:  TagNamespaceSystem,
+		Annotation: TagAnnotationType,
+		Label:      deviceType,
+		string:     fmt.Sprintf("%s/%s:%s", TagNamespaceSystem, TagAnnotationType, deviceType),
+	}
+}
+
 // DeviceSelectorToTags is a utility that converts a gRPC device selector message
 // into its corresponding tags.
 func DeviceSelectorToTags(selector *synse.V3DeviceSelector) []*Tag {
-	var tags []*Tag
+	if selector.Id != "" {
+		if len(selector.Tags) > 0 {
+			log.WithFields(log.Fields{
+				"id":   selector.Id,
+				"tags": selector.Tags,
+			}).Warn("[tags] device selector specifies id and tags; only using id (tags ignored)")
+		}
 
+		return []*Tag{newIDTag(selector.Id)}
+	}
+
+	var tags []*Tag
 	for _, t := range selector.Tags {
 		tags = append(tags, NewTagFromGRPC(t))
 	}
-
-	// TODO (etd):
-	//  1) check if id is set, if so only create a tag for ID.
-	//  2) figure out how ID tags are represented internally.
-
 	return tags
 }
