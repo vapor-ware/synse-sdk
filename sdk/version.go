@@ -22,7 +22,7 @@ import (
 	"text/template"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Version specifies the version of the Synse Plugin SDK.

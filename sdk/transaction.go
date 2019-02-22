@@ -23,7 +23,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 const (
@@ -53,7 +53,7 @@ func setupTransactionCache(ttl time.Duration) {
 //
 // If the transaction cache has not been initialized by the time this is called,
 // we will terminate the plugin, as it is indicative of an improper plugin setup.
-func newTransaction() *transaction {
+func newTransaction(timeout time.Duration) *transaction {
 	if transactionCache == nil {
 		// FIXME - need to update log so we can specify our own exiter to test this..
 		log.Fatalf("[sdk] transaction cache was not initialized; likely an issue in plugin setup")
@@ -66,6 +66,7 @@ func newTransaction() *transaction {
 		status:  statusPending,
 		created: now,
 		updated: now,
+		timeout: timeout,
 		message: "",
 	}
 	transactionCache.Set(id, &t, cache.DefaultExpiration)
@@ -98,16 +99,18 @@ type transaction struct {
 	created string
 	updated string
 	message string
+	timeout time.Duration
 }
 
 // encode translates the transaction to a corresponding gRPC V3TransactionStatus.
 func (t *transaction) encode() *synse.V3TransactionStatus {
 	return &synse.V3TransactionStatus{
 		Id:      t.id,
-		Status:  t.status,
 		Created: t.created,
 		Updated: t.updated,
 		Message: t.message,
+		Timeout: t.timeout.String(),
+		Status:  t.status,
 	}
 }
 

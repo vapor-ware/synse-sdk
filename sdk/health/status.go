@@ -16,7 +16,9 @@
 
 package health
 
-import "github.com/vapor-ware/synse-server-grpc/go"
+import (
+	synse "github.com/vapor-ware/synse-server-grpc/go"
+)
 
 // Status represents the status of a health Check at a given time.
 type Status struct {
