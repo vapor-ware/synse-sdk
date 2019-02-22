@@ -17,17 +17,17 @@
 package sdk
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk/output"
-
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
 
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/patrickmn/go-cache"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
 )
 
 // todo: for readings, check if reading is enabled on the device
@@ -76,6 +76,36 @@ func NewStateManager(conf *config.PluginSettings) *StateManager {
 // Start starts the StateManager.
 func (manager *StateManager) Start() {
 	go manager.updateReadings()
+}
+
+// registerActions registers pre-run (setup) and post-run (teardown) actions
+// for the state manager.
+func (manager *StateManager) registerActions(plugin *Plugin) {
+	// Register pre-run actions.
+	plugin.RegisterPreRunActions(
+		&PluginAction{
+			Name:   "Register default state manager health checks",
+			Action: manager.healthChecks,
+		},
+	)
+}
+
+// healthChecks defines and registers the state manager's default health checks with
+// the plugin.
+func (manager *StateManager) healthChecks(plugin *Plugin) error {
+	rqh := health.NewPeriodicHealthCheck("read queue health", 30*time.Second, func() error {
+		// Determine the percent usage of the read queue.
+		pctUsage := (float64(len(manager.readChan)) / float64(cap(manager.readChan))) * 100
+
+		// If the read queue is at 95% usage, we consider it unhealthy; the read
+		// queue should be configured to be larger.
+		if pctUsage > 95 {
+			return fmt.Errorf("read queue usage >95%%, consider increasing size in configuration")
+		}
+		return nil
+	})
+	plugin.healthManager.RegisterDefault(rqh)
+	return nil
 }
 
 func (manager *StateManager) updateReadings() {

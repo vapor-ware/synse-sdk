@@ -20,11 +20,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/policy"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/policy"
 )
 
 func TestNewYamlLoader(t *testing.T) {
