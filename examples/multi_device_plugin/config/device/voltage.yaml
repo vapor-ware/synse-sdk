@@ -1,36 +1,16 @@
 version: 3
-locations:
-  - name: r1b1
-    rack:
-      name: rack-1
-    board:
-      name: board-1
-  - name: r1b2
-    rack:
-      name: rack-1
-    board:
-      name: board-2
-  - name: r2b1
-    rack:
-      name: rack-2
-    board:
-      name: board-1
 devices:
-  - name: voltage
+  - type: voltage
+    handler: voltage
     metadata:
       model: volt1103
-    outputs:
-      - type: voltage
     instances:
       - info: Voltage Device 1
-        location: r1b1
         data:
           id: 1
       - info: Voltage Device 2
-        location: r1b2
         data:
           id: 2
       - info: Voltage Device 3
-        location: r2b1
         data:
           id: 3

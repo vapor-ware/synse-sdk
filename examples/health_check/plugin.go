@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"strconv"
 	"time"
 
-	logger "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
 var (
@@ -20,29 +20,16 @@ var (
 )
 
 var (
-	// The output for temperature devices.
-	temperatureOutput = sdk.OutputType{
-		Name:      "simple.temperature",
-		Precision: 2,
-		Unit: sdk.Unit{
-			Name:   "celsius",
-			Symbol: "C",
-		},
-	}
-
 	// temperatureHandler defines the read/write behavior for the "example.temperature" device kind.
 	temperatureHandler = sdk.DeviceHandler{
 		Name: "example.temperature",
 
-		Read: func(device *sdk.Device) ([]*sdk.Reading, error) {
-			reading, err := device.GetOutput("simple.temperature").MakeReading(strconv.Itoa(rand.Int())) // nolint: gas, gosec
-			if err != nil {
-				return nil, err
-			}
-			return []*sdk.Reading{reading}, nil
+		Read: func(device *sdk.Device) ([]*output.Reading, error) {
+			reading := output.Temperature.FromMetric(strconv.Itoa(rand.Int()))
+			return []*output.Reading{reading}, nil
 		},
 		Write: func(device *sdk.Device, data *sdk.WriteData) error {
-			fmt.Printf("[temperature handler]: WRITE (%v)\n", device.ID())
+			fmt.Printf("[temperature handler]: WRITE (%v)\n", device.GetID())
 			fmt.Printf("Data   -> %v\n", data.Data)
 			fmt.Printf("Action -> %v\n", data.Action)
 			return nil
@@ -59,16 +46,16 @@ var (
 // error file and watch the health check log change.
 func CustomHealthCheck() error {
 	if _, err := os.Stat("error"); err == nil {
-		logger.Error("[health check]: error")
+		log.Error("[health check]: error")
 		return fmt.Errorf("error file detected")
 	}
-	logger.Info("[health check]: ok")
+	log.Info("[health check]: ok")
 	return nil
 }
 
 func main() {
 	// Set the metadata for the plugin.
-	sdk.SetPluginMeta(
+	sdk.SetPluginInfo(
 		pluginName,
 		pluginMaintainer,
 		pluginDesc,
@@ -76,20 +63,18 @@ func main() {
 	)
 
 	// Create a new Plugin instance.
-	plugin := sdk.NewPlugin()
-
-	// Register our output types with the Plugin.
-	err := plugin.RegisterOutputTypes(
-		&temperatureOutput,
-	)
+	plugin, err := sdk.NewPlugin()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Register our device handlers with the Plugin.
-	plugin.RegisterDeviceHandlers(
+	err = plugin.RegisterDeviceHandlers(
 		&temperatureHandler,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register the health check with the health catalog
 	health.RegisterPeriodicCheck("example health check", 3*time.Second, CustomHealthCheck)

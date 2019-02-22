@@ -1,26 +1,16 @@
 version: 3
-locations:
-  - name: unknown
-    rack:
-      name: unknown
-    board:
-      name: unknown
 devices:
-  - name: example.temperature
+  - type: temperature
+    handler: example.temperature
     metadata:
       author: vaporio
-    outputs:
-      - type: simple.temperature
     instances:
       - info: CEC Temperature 1
-        location: unknown
         data:
           id: 1
       - info: CEC Temperature 2
-        location: unknown
         data:
           id: 2
       - info: CEC Temperature 3
-        location: unknown
         data:
           id: 3
