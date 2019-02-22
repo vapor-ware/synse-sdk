@@ -23,12 +23,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var defaultTimeout = 5 * time.Second
+
 // TestNewTransaction tests creating a new transaction and getting
 // it back out from the cache.
 func TestNewTransaction(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	transaction := newTransaction()
+	transaction := newTransaction(defaultTimeout)
 
 	assert.Equal(t, statusPending, transaction.status)
 	assert.Equal(t, transaction.created, transaction.updated)
@@ -44,8 +46,8 @@ func TestNewTransaction(t *testing.T) {
 func TestNewTransaction2(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
 
-	t1 := newTransaction()
-	t2 := newTransaction()
+	t1 := newTransaction(defaultTimeout)
+	t2 := newTransaction(defaultTimeout)
 
 	assert.NotEqual(t, t1.id, t2.id, "two transactions should not have the same id")
 
@@ -64,7 +66,7 @@ func TestNewTransaction2(t *testing.T) {
 // TestGetTransaction tests getting a transaction from the cache.
 func TestGetTransaction(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 
 	cached := getTransaction(tr.id)
 	assert.Equal(t, tr, cached)
@@ -80,7 +82,7 @@ func TestGetTransaction2(t *testing.T) {
 // TestTransaction_setStatusError tests setting the status of a transaction to Error.
 func TestTransaction_setStatusError(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 
 	tr.status = statusDone
 	assert.Equal(t, statusDone, tr.status)
@@ -93,7 +95,7 @@ func TestTransaction_setStatusError(t *testing.T) {
 // transaction to Error.
 func TestTransaction_setStatusErrorCached(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 	cached := getTransaction(tr.id)
 
 	cached.status = statusDone
@@ -108,7 +110,7 @@ func TestTransaction_setStatusErrorCached(t *testing.T) {
 // TestTransaction_setStatusPending tests setting the status of a transaction to Pending.
 func TestTransaction_setStatusPending(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 
 	tr.status = statusDone
 	assert.Equal(t, statusDone, tr.status)
@@ -121,7 +123,7 @@ func TestTransaction_setStatusPending(t *testing.T) {
 // transaction to Pending.
 func TestTransaction_setStatusPendingCached(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 	cached := getTransaction(tr.id)
 
 	cached.status = statusDone
@@ -136,7 +138,7 @@ func TestTransaction_setStatusPendingCached(t *testing.T) {
 // TestTransaction_setStatusWriting tests setting the status of a transaction to Writing.
 func TestTransaction_setStatusWriting(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 
 	tr.status = statusDone
 	assert.Equal(t, statusDone, tr.status)
@@ -148,7 +150,7 @@ func TestTransaction_setStatusWriting(t *testing.T) {
 // TestTransaction_setStatusWritingCached tests setting the status of a cached
 // transaction to Writing.
 func TestTransaction_setStatusWritingCached(t *testing.T) {
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 	cached := getTransaction(tr.id)
 
 	cached.status = statusDone
@@ -163,7 +165,7 @@ func TestTransaction_setStatusWritingCached(t *testing.T) {
 // TestTransaction_setStatusDone tests setting the status of a transaction to Done.
 func TestTransaction_setStatusDone(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 
 	tr.status = statusPending
 	assert.Equal(t, statusPending, tr.status)
@@ -176,7 +178,7 @@ func TestTransaction_setStatusDone(t *testing.T) {
 // transaction to Done.
 func TestTransaction_setStatusDoneCached(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 	cached := getTransaction(tr.id)
 
 	cached.status = statusPending
@@ -192,7 +194,7 @@ func TestTransaction_setStatusDoneCached(t *testing.T) {
 // gRPC transaction struct.
 func TestTransaction_encode(t *testing.T) {
 	setupTransactionCache(time.Duration(600) * time.Second)
-	tr := newTransaction()
+	tr := newTransaction(defaultTimeout)
 	encoded := tr.encode()
 
 	assert.Equal(t, tr.status, encoded.Status)
