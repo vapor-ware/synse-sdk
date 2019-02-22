@@ -1,6 +1,0 @@
-version: 3
-name: temperature
-precision: 2
-unit:
-  name: celsius
-  symbol: C

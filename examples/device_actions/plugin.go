@@ -23,15 +23,14 @@ func ProtocolIdentifier(data map[string]interface{}) string {
 
 // preRunAction1 defines a function we will use as a pre-run action.
 func preRunAction1(_ *sdk.Plugin) error {
-	logger.Debug("preRunAction1 -> adding to config context")
-	sdk.Config.Plugin.Context["example_ctx"] = true
+	logger.Debug("preRunAction1 -> doing some action")
 	return nil
 }
 
 // preRunAction2 defines a function we will use as a pre-run action.
-func preRunAction2(_ *sdk.Plugin) error {
-	logger.Debug("preRunAction2 -> displaying plugin config")
-	logger.Debug(sdk.Config.Plugin)
+func preRunAction2(p *sdk.Plugin) error {
+	logger.Debug("preRunAction2 -> displaying plugin")
+	logger.Debug(p)
 	return nil
 }
 
@@ -39,15 +38,15 @@ func preRunAction2(_ *sdk.Plugin) error {
 func deviceSetupAction(_ *sdk.Plugin, d *sdk.Device) error {
 	logger.Debug("deviceSetupAction1 -> print device info for the given filter")
 	logger.Debug("device")
-	logger.Debugf("  id:    %v", d.ID())
-	logger.Debugf("  kind:  %v", d.Kind)
+	logger.Debugf("  id:    %v", d.GetID())
+	logger.Debugf("  type:  %v", d.Type)
 	logger.Debugf("  meta:  %v", d.Metadata)
 	return nil
 }
 
 func main() {
-	// Set the metainfo for the plugin.
-	sdk.SetPluginMeta(
+	// Set the metadata for the plugin.
+	sdk.SetPluginInfo(
 		pluginName,
 		pluginMaintainer,
 		pluginDesc,
@@ -55,28 +54,46 @@ func main() {
 	)
 
 	// Create a new Plugin instance with a custom device identifier.
-	plugin := sdk.NewPlugin(
+	plugin, err := sdk.NewPlugin(
 		sdk.CustomDeviceIdentifier(ProtocolIdentifier),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register the device handlers
-	plugin.RegisterDeviceHandlers(
+	err = plugin.RegisterDeviceHandlers(
 		&devices.Air8884,
 		&devices.Temp2010,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register pre-run actions and device setup actions for the plugin.
 	// This can happen at any point before plugin.Run() is called.
 	plugin.RegisterPreRunActions(
-		preRunAction1,
-		preRunAction2,
+		&sdk.PluginAction{
+			Name:   "action 1",
+			Action: preRunAction1,
+		},
+		&sdk.PluginAction{
+			Name:   "action 2",
+			Action: preRunAction2,
+		},
 	)
 
 	logger.Debug("Registering action for filter 'kind=airflow'")
-	plugin.RegisterDeviceSetupActions(
-		"kind=airflow",
-		deviceSetupAction,
+	err = plugin.RegisterDeviceSetupActions(
+		&sdk.DeviceAction{
+			Name:   "example action",
+			Filter: map[string][]string{"type": {"airflow"}},
+			Action: deviceSetupAction,
+		},
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Run the plugin.
 	if err := plugin.Run(); err != nil {
