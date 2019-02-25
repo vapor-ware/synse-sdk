@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"strconv"
+	"time"
 
 	"github.com/vapor-ware/synse-sdk/sdk"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
@@ -27,13 +28,15 @@ var (
 		Name: "example.led",
 
 		Read: func(device *sdk.Device) ([]*output.Reading, error) {
-			reading := output.State.From(strconv.Itoa(rand.Int()))
+			reading := output.State.From(strconv.Itoa(rand.Intn(200)))
 
 			return []*output.Reading{
 				reading,
 			}, nil
 		},
 		Write: func(device *sdk.Device, data *sdk.WriteData) error {
+			// simulate a bit of delay in writing
+			time.Sleep(3 * time.Second)
 			fmt.Printf("[led handler]: WRITE (%v)\n", device.GetID())
 			fmt.Printf("Data   -> %v\n", data.Data)
 			fmt.Printf("Action -> %v\n", data.Action)
@@ -46,7 +49,7 @@ var (
 		Name: "example.temperature",
 
 		Read: func(device *sdk.Device) ([]*output.Reading, error) {
-			reading := output.Temperature.FromImperial(strconv.Itoa(rand.Int())) // nolint: gas, gosec
+			reading := output.Temperature.FromImperial(strconv.Itoa(rand.Intn(100))) // nolint: gas, gosec
 
 			return []*output.Reading{
 				reading,

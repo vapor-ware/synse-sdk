@@ -153,7 +153,7 @@ type DeviceInstance struct {
 	// WriteTimeout defines a custom write timeout for the device instance. This
 	// is the time within which the write transaction will remain valid. If left
 	// unspecified, it will fall back to the default value of 30s.
-	WriteTimeout time.Duration `default:"30s" yaml:"writeTimeout,omitempty"`
+	WriteTimeout time.Duration `yaml:"writeTimeout,omitempty"`
 
 	// DisableInheritance determines whether the device instance should inherit
 	// from its device prototype.

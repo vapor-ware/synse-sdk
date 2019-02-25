@@ -167,32 +167,29 @@ func (scheduler *Scheduler) Stop() error {
 
 // Write queues up a write request into the scheduler's write queue.
 // fixme: instead of taking the payload, just take the device?
-func (scheduler *Scheduler) Write(payload *synse.V3WritePayload) (map[string]*synse.V3WriteData, error) {
-	devices := scheduler.deviceManager.GetDevices(DeviceSelectorToTags(payload.Selector)...)
-
-	if len(devices) > 1 {
+func (scheduler *Scheduler) Write(device *Device, data []*synse.V3WriteData) ([]*synse.V3WriteTransaction, error) {
+	if device == nil {
 		// fixme: better err handling
-		return nil, fmt.Errorf("cannot write to more than one device at a time")
+		return nil, fmt.Errorf("cannot write to nil device")
 	}
 
-	if len(devices) == 0 {
-		// fixme: better err handling
-		return nil, fmt.Errorf("no such device")
-	}
-
-	device := devices[0]
 	if !device.IsWritable() {
 		// fixme: better err handling
 		return nil, fmt.Errorf("writing not enabled for device")
 	}
 
-	var response = make(map[string]*synse.V3WriteData)
-	for _, data := range payload.Data {
+	var response []*synse.V3WriteTransaction
+	for _, data := range data {
 		t := newTransaction(device.WriteTimeout)
 		t.setStatusPending()
 
 		// Map the transaction ID to the write context for the response.
-		response[t.id] = data
+		response = append(response, &synse.V3WriteTransaction{
+			Id:      t.id,
+			Device:  device.GetID(),
+			Context: data,
+			Timeout: device.WriteTimeout.String(),
+		})
 
 		// Queue up the write.
 		scheduler.writeChan <- &WriteContext{
@@ -201,7 +198,48 @@ func (scheduler *Scheduler) Write(payload *synse.V3WritePayload) (map[string]*sy
 			data:        data,
 		}
 	}
+	return response, nil
+}
 
+func (scheduler *Scheduler) WriteAndWait(device *Device, data []*synse.V3WriteData) ([]*synse.V3TransactionStatus, error) {
+	if device == nil {
+		// fixme: better err handling
+		return nil, fmt.Errorf("cannot write to nil device")
+	}
+
+	if !device.IsWritable() {
+		// fixme: better err handling
+		return nil, fmt.Errorf("writing not enabled for device")
+	}
+	var response []*synse.V3TransactionStatus
+	var txns []*transaction
+	var waitGroup sync.WaitGroup
+
+	for _, data := range data {
+		t := newTransaction(device.WriteTimeout)
+		t.setStatusPending()
+
+		txns = append(txns, t)
+
+		// Queue up the write.
+		scheduler.writeChan <- &WriteContext{
+			transaction: t,
+			device:      device.id,
+			data:        data,
+		}
+
+		waitGroup.Add(1)
+		go func(t *transaction, wg *sync.WaitGroup) {
+			t.wait()
+			wg.Done()
+		}(t, &waitGroup)
+	}
+
+	waitGroup.Wait()
+
+	for _, t := range txns {
+		response = append(response, t.encode())
+	}
 	return response, nil
 }
 
@@ -271,9 +309,9 @@ func (scheduler *Scheduler) scheduleReads() {
 		waitGroup.Wait()
 
 		if interval != 0 {
-			rlog.Debug("[scheduler] sleeping for read interval")
+			//rlog.Debug("[scheduler] sleeping for read interval")
 			time.Sleep(interval)
-			rlog.Debug("[scheduler] waking up for read interval")
+			//rlog.Debug("[scheduler] waking up for read interval")
 		}
 	}
 }
@@ -306,6 +344,10 @@ func (scheduler *Scheduler) scheduleWrites() {
 
 	wlog.Info("[scheduler] starting write scheduling")
 	for {
+		log.WithFields(log.Fields{
+			"queue": len(scheduler.writeChan),
+			"cap":   cap(scheduler.writeChan),
+		}).Debug("[scheduler] writing")
 		// If the stop channel is closed, stop the write loop.
 		select {
 		case <-scheduler.stop:
@@ -328,6 +370,7 @@ func (scheduler *Scheduler) scheduleWrites() {
 				// Launch the device write.
 				go func(wg *sync.WaitGroup, writeContext *WriteContext) {
 					scheduler.write(writeContext)
+					wg.Done()
 				}(&waitGroup, w)
 
 			default:
@@ -339,9 +382,9 @@ func (scheduler *Scheduler) scheduleWrites() {
 		waitGroup.Wait()
 
 		if interval != 0 {
-			wlog.Debug("[scheduler] sleeping for write interval")
+			//wlog.Debug("[scheduler] sleeping for write interval")
 			time.Sleep(interval)
-			wlog.Debug("[scheduler] waking up for write interval")
+			//wlog.Debug("[scheduler] waking up for write interval")
 		}
 	}
 }
@@ -434,9 +477,9 @@ func (scheduler *Scheduler) read(device *Device) {
 		// If a delay is configured, wait for the delay before continuing
 		// (and relinquishing the lock, if in serial mode).
 		if delay != 0 {
-			rlog.Debug("[scheduler] sleeping for read delay")
+			//rlog.Debug("[scheduler] sleeping for read delay")
 			time.Sleep(delay)
-			rlog.Debug("[scheduler] waking up for read delay")
+			//rlog.Debug("[scheduler] waking up for read delay")
 		}
 	}
 
@@ -489,9 +532,9 @@ func (scheduler *Scheduler) bulkRead(handler *DeviceHandler) {
 		// If a delay is configured, wait for the delay before continuing
 		// (and relinquishing the lock, if in serial mode).
 		if delay != 0 {
-			rlog.Debug("[scheduler] sleeping for bulk read delay")
+			//rlog.Debug("[scheduler] sleeping for bulk read delay")
 			time.Sleep(delay)
-			rlog.Debug("[scheduler] waking up for bulk read delay")
+			//rlog.Debug("[scheduler] waking up for bulk read delay")
 		}
 	}
 }
@@ -580,6 +623,13 @@ func (scheduler *Scheduler) write(writeCtx *WriteContext) {
 	//
 	//  it seems like having a cancelation context could be useful if there is some
 	//  retry logic on the write, but thats mostly it..
+
+	log.WithFields(log.Fields{
+		"device":  device.GetID(),
+		"action":  writeCtx.data.Action,
+		"data":    string(writeCtx.data.Data),
+		"timeout": device.WriteTimeout,
+	}).Debug("[scheduler] writing")
 
 	var err error
 	select {

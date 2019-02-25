@@ -113,11 +113,11 @@
 
 [[projects]]
   branch = "v3/staging"
-  digest = "1:7f85ae1c1a9cfa4713636238472d8e9c56be62f0e8874aa237b1a331615b3f6c"
+  digest = "1:971a25ce60302b89b5901ba94ca3dd8a9eadadc756db99b3285ac85940014e93"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
   pruneopts = "UT"
-  revision = "0a5d0a3f99ceeccc505a1c71c47b497f3b8b0024"
+  revision = "b8196c01d0ab7764500456daacc56352b607f450"
 
 [[projects]]
   branch = "master"
@@ -125,11 +125,11 @@
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = "UT"
-  revision = "a4c6cb3142f211c99e4bf4cd769535b29a9b616f"
+  revision = "7f87c0fbb88b590338857bcb720678c2583d4dea"
 
 [[projects]]
   branch = "master"
-  digest = "1:fc7b6b4384e1e849d99eab58eca4f8c0a76bad4699117d5077a9a5c3c83e289e"
+  digest = "1:4512c74e2c934a151fa9246cdc565d29611f53295bfb05e7a6275e80ee540a0c"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -141,11 +141,11 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "3a22650c66bd7f4fb6d1e8072ffd7b75c8a27898"
+  revision = "fe579d43d83210096a79b46dcca0e3721058393a"
 
 [[projects]]
   branch = "master"
-  digest = "1:60c2cf2d38aa981d48a2c64ee768a02145f0b2ff628fdde2e0beb5a3a4bd98df"
+  digest = "1:03e3f977d436a8d4875e4825526602ddaced717866c6f83e9ca65998c11a7993"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -153,7 +153,7 @@
     "windows/registry",
   ]
   pruneopts = "UT"
-  revision = "629670e5acc5b3e069375d323404911dc8fe1d19"
+  revision = "cc5685c2db1239775905f3911f0067c0fa74762f"
 
 [[projects]]
   digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"

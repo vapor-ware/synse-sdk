@@ -61,6 +61,11 @@ type Reading struct {
 // 4. If a reading is converted from system A to system B, it will
 //    attempt to convert, using its output unit conversion.
 func (reading *Reading) To(system SystemOfMeasure) (*Reading, error) {
+	// If no system is specified, default to using the metric system.
+	if system == "" {
+		system = METRIC
+	}
+
 	// Convert the reading value.
 	val, err := reading.output.Convert(reading.Value, reading.System, system)
 	if err != nil {

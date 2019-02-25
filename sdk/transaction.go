@@ -68,6 +68,7 @@ func newTransaction(timeout time.Duration) *transaction {
 		updated: now,
 		timeout: timeout,
 		message: "",
+		done:    make(chan struct{}),
 	}
 	transactionCache.Set(id, &t, cache.DefaultExpiration)
 	return &t
@@ -100,6 +101,12 @@ type transaction struct {
 	updated string
 	message string
 	timeout time.Duration
+	done    chan struct{}
+}
+
+// wait waits until the transaction reaches a terminal state (ok, error).
+func (t *transaction) wait() {
+	<-t.done
 }
 
 // encode translates the transaction to a corresponding gRPC V3TransactionStatus.
@@ -133,6 +140,7 @@ func (t *transaction) setStatusDone() {
 	log.WithField("id", t.id).Debug("[transaction] transaction status set to DONE")
 	t.updated = utils.GetCurrentTime()
 	t.status = statusDone
+	close(t.done)
 }
 
 // setStatusError sets the transaction status to 'error'.
@@ -140,4 +148,5 @@ func (t *transaction) setStatusError() {
 	log.WithField("id", t.id).Debug("[transaction] transaction status set to ERROR")
 	t.updated = utils.GetCurrentTime()
 	t.status = statusError
+	close(t.done)
 }

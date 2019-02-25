@@ -266,6 +266,8 @@ func (plugin *Plugin) RegisterDeviceSetupActions(actions ...*DeviceAction) error
 // initialize initializes the plugin and all plugin components.
 func (plugin *Plugin) initialize() error {
 	// Initialize all plugin components
+	plugin.stateManager.init()
+
 	if err := plugin.deviceManager.init(); err != nil {
 		return err
 	}
