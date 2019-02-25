@@ -79,11 +79,11 @@ type Plugin struct {
 	pluginHandlers *PluginHandlers
 
 	// Plugin components
-	scheduler     *Scheduler
-	stateManager  *StateManager
-	deviceManager *deviceManager
-	server        *server
-	healthManager *health.Manager
+	scheduler *scheduler
+	state     *stateManager
+	device    *deviceManager
+	server    *server
+	health    *health.Manager
 }
 
 // NewPlugin creates a new instance of a Plugin. This should be the only
@@ -93,6 +93,15 @@ type Plugin struct {
 // or invalid, this will fail. All other Plugin component initialization
 // is deferred until Run is called.
 func NewPlugin(options ...PluginOption) (*Plugin, error) {
+	// Since this is essentially the entry point for the plugin and setup actions
+	// occur as part of plugin construction, we want to set the log level as early
+	// as possible. If the debug flag is set, set the level to debug.
+	if flagDebug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	// Various things use the plugin metadata on setup, so we need to make sure
+	// it is set prior to initializing the plugin.
 	if metadata.Name == "" {
 		return nil, fmt.Errorf(
 			"plugin metadata must be set prior to calling 'NewPlugin()'; " +
@@ -100,62 +109,55 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		)
 	}
 
-	// Load the plugin configuration.
-	conf := new(config.Plugin)
-	// FIXME: we should not hardcode the policy here.. we should see whether any plugin
-	//  options specify a plugin policy first. keeping this as-is for now, but we will
-	//  need to change this. this will likely require a change to how the plugin is
-	//  constructed entirely here.
-	if err := loadPluginConfig(conf, policy.Optional); err != nil {
-		return nil, err
-	}
-
-	// Check if the plugin should run in debug mode.
-	if flagDebug || conf.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
-
-	// Log the plugin metadata, version info, and config.
-	metadata.log()
-	version.Log()
-	conf.Log()
-
-	// Initialize the plugin ID namespace.
-	id, err := newPluginID(conf.ID, &metadata)
-	if err != nil {
-		return nil, err
-	}
-
-	pluginHandlers := NewDefaultPluginHandlers()
-	pluginPolicies := policy.NewDefaultPolicies()
-
-	// Initialize plugin components.
-	dm := newDeviceManager(id, pluginHandlers, pluginPolicies, conf.DynamicRegistration)
-	sm := NewStateManager(conf.Settings)
-	sched := NewScheduler(conf.Settings, dm, sm)
-	hm := health.NewManager(conf.Health)
-	server := newServer(conf.Network, dm, sm, sched, &metadata, hm)
-
+	// Create the plugin. We create the instance first so a reference to it
+	// is available for subsequent setup actions.
 	p := Plugin{
-		outputs:        make(map[string]*output.Output),
-		quit:           make(chan os.Signal),
-		info:           &metadata,
 		version:        version,
-		config:         conf,
-		id:             id,
-		policies:       pluginPolicies,
-		pluginHandlers: pluginHandlers,
-		deviceManager:  dm,
-		stateManager:   sm,
-		scheduler:      sched,
-		server:         server,
-		healthManager:  hm,
+		info:           &metadata,
+		config:         new(config.Plugin),
+		quit:           make(chan os.Signal),
+		outputs:        make(map[string]*output.Output),
+		policies:       policy.NewDefaultPolicies(),
+		pluginHandlers: NewDefaultPluginHandlers(),
 	}
 
 	// Set custom options for the plugin.
 	for _, option := range options {
 		option(&p)
 	}
+
+	// Load the plugin configuration.
+	if err := p.loadConfig(); err != nil {
+		return nil, err
+	}
+
+	// Check if debug mode was set in the plugin config. If so, set the log level
+	// to debug here.
+	if p.config.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	// Log the plugin metadata, version info, and config.
+	metadata.log()
+	version.Log()
+	p.config.Log()
+
+	// Initialize the plugin ID namespace.
+	id, err := newPluginID(p.config.ID, &metadata)
+	if err != nil {
+		return nil, err
+	}
+	p.id = id
+
+	// Initialize the plugin components. The order in which components are initialized
+	// is important, since a dependency chain exists between some components. In particular:
+	// * the scheduler requires the device manager and state manager
+	// * the server requires the device manager, state manager, scheduler, and health manager
+	p.health = health.NewManager(p.config.Health)
+	p.state = newStateManager(p.config.Settings)
+	p.device = newDeviceManager(&p)
+	p.scheduler = newScheduler(&p)
+	p.server = newServer(&p)
 
 	// Register the built-in outputs with the plugin.
 	if err := p.RegisterOutputs(output.GetBuiltins()...); err != nil {
@@ -179,7 +181,7 @@ func (plugin *Plugin) Run() error {
 
 	// If all components initialized without error, we can register
 	// any pre/post run actions which they may have.
-	plugin.stateManager.registerActions(plugin)
+	plugin.state.registerActions(plugin)
 	plugin.scheduler.registerActions(plugin)
 	plugin.server.registerActions(plugin)
 
@@ -205,7 +207,7 @@ func (plugin *Plugin) Run() error {
 // RegisterHealthChecks registers custom health checks with the plugin.
 func (plugin *Plugin) RegisterHealthChecks(checks ...health.Check) error {
 	for _, check := range checks {
-		if err := plugin.healthManager.Register(check); err != nil {
+		if err := plugin.health.Register(check); err != nil {
 			return err
 		}
 	}
@@ -254,19 +256,19 @@ func (plugin *Plugin) RegisterPostRunActions(actions ...*PluginAction) {
 // provide the read/write functionality for Devices. If a DeviceHandler is not
 // registered for a Device, the Device will not be usable by the plugin.
 func (plugin *Plugin) RegisterDeviceHandlers(handlers ...*DeviceHandler) error {
-	return plugin.deviceManager.AddHandlers(handlers...)
+	return plugin.device.AddHandlers(handlers...)
 }
 
 // RegisterDeviceSetupActions registers actions with the device manager which will be
 // executed on start. These actions are used for device-specific setup.
 func (plugin *Plugin) RegisterDeviceSetupActions(actions ...*DeviceAction) error {
-	return plugin.deviceManager.AddDeviceSetupActions(actions...)
+	return plugin.device.AddDeviceSetupActions(actions...)
 }
 
 // initialize initializes the plugin and all plugin components.
 func (plugin *Plugin) initialize() error {
 	// Initialize all plugin components
-	if err := plugin.deviceManager.init(); err != nil {
+	if err := plugin.device.init(); err != nil {
 		return err
 	}
 	if err := plugin.server.init(); err != nil {
@@ -278,10 +280,10 @@ func (plugin *Plugin) initialize() error {
 // run runs the plugin by starting all of the configured plugin components.
 func (plugin *Plugin) run() error {
 	// Start the plugin components. Order matters here.
-	if err := plugin.deviceManager.Start(plugin); err != nil {
+	if err := plugin.device.Start(plugin); err != nil {
 		return err
 	}
-	plugin.stateManager.Start()
+	plugin.state.Start()
 	plugin.scheduler.Start()
 
 	// Run the gRPC server. This will block while running until the
@@ -367,9 +369,9 @@ func (plugin *Plugin) execPostRun() error {
 	return multiErr.Err()
 }
 
-// loadPluginConfig loads plugin configurations from file and environment
-// and marshals that data into the provided Plugin config struct.
-func loadPluginConfig(conf *config.Plugin, pol policy.Policy) error {
+// loadConfig loads plugin configurations from file and environment
+// and marshals that data into the Plugin's config struct.
+func (plugin *Plugin) loadConfig() error {
 	// Setup the config loader for the plugin.
 	loader := config.NewYamlLoader("plugin")
 	loader.EnvPrefix = "PLUGIN"
@@ -382,12 +384,12 @@ func loadPluginConfig(conf *config.Plugin, pol policy.Policy) error {
 	)
 
 	// Load the plugin configuration.
-	if err := loader.Load(pol); err != nil {
+	if err := loader.Load(plugin.policies.PluginConfig); err != nil {
 		return err
 	}
 
 	// Marshal the configuration into the plugin config struct.
-	return loader.Scan(conf)
+	return loader.Scan(plugin.config)
 }
 
 // handleRunOptions checks whether any command line options were specified for
