@@ -58,12 +58,12 @@ func NewListenerCtx(handler *DeviceHandler, device *Device) *ListenerCtx {
 	}
 }
 
-// Scheduler is the plugin component which runs the read, write, and
+// scheduler is the plugin component which runs the read, write, and
 // listen jobs to get data from devices and write data to devices.
-type Scheduler struct {
+type scheduler struct {
 	// Plugin component references.
 	deviceManager *deviceManager
-	stateManager  *StateManager
+	stateManager  *stateManager
 
 	// config is the configuration that is used by the scheduler.
 	config *config.PluginSettings
@@ -84,8 +84,11 @@ type Scheduler struct {
 	stop chan struct{}
 }
 
-// NewScheduler creates a new instance of the plugin's scheduler component.
-func NewScheduler(conf *config.PluginSettings, dm *deviceManager, sm *StateManager) *Scheduler {
+// newScheduler creates a new instance of the plugin's scheduler component.
+//func NewScheduler(conf *config.PluginSettings, dm *deviceManager, sm *StateManager) *Scheduler {
+func newScheduler(plugin *Plugin) *scheduler {
+	conf := plugin.config.Settings
+
 	var limiter *rate.Limiter
 
 	// If the limiter is configured and non-0 values (which signify unlimited),
@@ -99,9 +102,9 @@ func NewScheduler(conf *config.PluginSettings, dm *deviceManager, sm *StateManag
 		}
 	}
 
-	return &Scheduler{
-		deviceManager: dm,
-		stateManager:  sm,
+	return &scheduler{
+		deviceManager: plugin.device,
+		stateManager:  plugin.state,
 		config:        conf,
 		limiter:       limiter,
 		serialLock:    &sync.Mutex{},
@@ -112,7 +115,7 @@ func NewScheduler(conf *config.PluginSettings, dm *deviceManager, sm *StateManag
 
 // registerActions registers pre-run (setup) and post-run (teardown) actions
 // for the scheduler.
-func (scheduler *Scheduler) registerActions(plugin *Plugin) {
+func (scheduler *scheduler) registerActions(plugin *Plugin) {
 	// Register pre-run actions.
 	plugin.RegisterPreRunActions(
 		&PluginAction{
@@ -132,7 +135,7 @@ func (scheduler *Scheduler) registerActions(plugin *Plugin) {
 
 // healthChecks defines and registers the scheduler's default health checks with
 // the plugin.
-func (scheduler *Scheduler) healthChecks(plugin *Plugin) error {
+func (scheduler *scheduler) healthChecks(plugin *Plugin) error {
 	wqh := health.NewPeriodicHealthCheck("write queue health", 30*time.Second, func() error {
 		// Determine the percent usage of the write queue.
 		pctUsage := (float64(len(scheduler.writeChan)) / float64(cap(scheduler.writeChan))) * 100
@@ -144,12 +147,12 @@ func (scheduler *Scheduler) healthChecks(plugin *Plugin) error {
 		}
 		return nil
 	})
-	plugin.healthManager.RegisterDefault(wqh)
+	plugin.health.RegisterDefault(wqh)
 	return nil
 }
 
 // Start starts the scheduler.
-func (scheduler *Scheduler) Start() {
+func (scheduler *scheduler) Start() {
 	log.Info("[scheduler] starting...")
 
 	go scheduler.scheduleReads()
@@ -158,7 +161,7 @@ func (scheduler *Scheduler) Start() {
 }
 
 // Stop the scheduler.
-func (scheduler *Scheduler) Stop() error {
+func (scheduler *scheduler) Stop() error {
 	log.Info("[scheduler] stopping...")
 
 	close(scheduler.stop)
@@ -167,7 +170,7 @@ func (scheduler *Scheduler) Stop() error {
 
 // Write queues up a write request into the scheduler's write queue.
 // fixme: instead of taking the payload, just take the device?
-func (scheduler *Scheduler) Write(device *Device, data []*synse.V3WriteData) ([]*synse.V3WriteTransaction, error) {
+func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]*synse.V3WriteTransaction, error) {
 	if device == nil {
 		// fixme: better err handling
 		return nil, fmt.Errorf("cannot write to nil device")
@@ -201,7 +204,7 @@ func (scheduler *Scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 	return response, nil
 }
 
-func (scheduler *Scheduler) WriteAndWait(device *Device, data []*synse.V3WriteData) ([]*synse.V3TransactionStatus, error) {
+func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteData) ([]*synse.V3TransactionStatus, error) {
 	if device == nil {
 		// fixme: better err handling
 		return nil, fmt.Errorf("cannot write to nil device")
@@ -248,7 +251,7 @@ func (scheduler *Scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 // This will do nothing if:
 // - Reading is globally disabled for the plugin.
 // - No registered device handlers implement a read function.
-func (scheduler *Scheduler) scheduleReads() {
+func (scheduler *scheduler) scheduleReads() {
 	if scheduler.config.Read.Disable {
 		log.Info("[scheduler] reading will not be scheduled (reads globally disabled)")
 		return
@@ -321,7 +324,7 @@ func (scheduler *Scheduler) scheduleReads() {
 // This will do nothing if:
 // - Writing is globally disabled for the plugin.
 // - No registered device handlers implement a write function.
-func (scheduler *Scheduler) scheduleWrites() {
+func (scheduler *scheduler) scheduleWrites() {
 	if scheduler.config.Write.Disable {
 		log.Info("[scheduler] writing will not be scheduled (writes globally disabled)")
 		return
@@ -394,7 +397,7 @@ func (scheduler *Scheduler) scheduleWrites() {
 // This will do nothing if:
 // - Listening is globally disabled for the plugin.
 // - No registered device handlers implement a listener function.
-func (scheduler *Scheduler) scheduleListen() {
+func (scheduler *scheduler) scheduleListen() {
 	if scheduler.config.Listen.Disable {
 		log.Info("[scheduler] listeners will not be scheduled (listening globally disabled)")
 		return
@@ -430,7 +433,7 @@ func (scheduler *Scheduler) scheduleListen() {
 }
 
 // read reads from a single device using a handler's Read function.
-func (scheduler *Scheduler) read(device *Device) {
+func (scheduler *scheduler) read(device *Device) {
 	delay := scheduler.config.Read.Delay
 	mode := scheduler.config.Mode
 
@@ -486,7 +489,7 @@ func (scheduler *Scheduler) read(device *Device) {
 }
 
 // bulkRead reads from multiple devices using a handler's BulkRead function.
-func (scheduler *Scheduler) bulkRead(handler *DeviceHandler) {
+func (scheduler *scheduler) bulkRead(handler *DeviceHandler) {
 	delay := scheduler.config.Read.Delay
 	mode := scheduler.config.Mode
 
@@ -540,7 +543,7 @@ func (scheduler *Scheduler) bulkRead(handler *DeviceHandler) {
 }
 
 // write writes to devices using a handler's Write function.
-func (scheduler *Scheduler) write(writeCtx *WriteContext) {
+func (scheduler *scheduler) write(writeCtx *WriteContext) {
 	delay := scheduler.config.Write.Delay
 	mode := scheduler.config.Mode
 
@@ -651,7 +654,7 @@ func (scheduler *Scheduler) write(writeCtx *WriteContext) {
 }
 
 // listen listens to devices to collect readings using a device's Listen function.
-func (scheduler *Scheduler) listen(listenerCtx *ListenerCtx) {
+func (scheduler *scheduler) listen(listenerCtx *ListenerCtx) {
 	llog := log.WithFields(log.Fields{
 		"handler": listenerCtx.handler.Name,
 		"device":  listenerCtx.device.id,

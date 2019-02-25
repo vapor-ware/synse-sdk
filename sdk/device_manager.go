@@ -69,15 +69,13 @@ type deviceManager struct {
 }
 
 // newDeviceManager creates a new DeviceManager.
-// fixme (etd): this constructor will be cleaned up in the future. instead of passing everything in
-//  one at a time, we can pass in some sort of context which has everything it needs...
-func newDeviceManager(id *pluginID, handlers *PluginHandlers, policies *policy.Policies, dynamicCfg *config.DynamicRegistrationSettings) *deviceManager {
+func newDeviceManager(plugin *Plugin) *deviceManager {
 	return &deviceManager{
 		config:         new(config.Devices),
-		id:             id,
-		pluginHandlers: handlers,
-		dynamicConfig:  dynamicCfg,
-		policies:       policies,
+		id:             plugin.id,
+		pluginHandlers: plugin.pluginHandlers,
+		dynamicConfig:  plugin.config.DynamicRegistration,
+		policies:       plugin.policies,
 		tagCache:       NewTagCache(),
 		devices:        make(map[string]*Device),
 		handlers:       make(map[string]*DeviceHandler),
