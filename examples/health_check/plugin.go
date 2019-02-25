@@ -76,8 +76,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Register the health check with the health catalog
-	health.RegisterPeriodicCheck("example health check", 3*time.Second, CustomHealthCheck)
+	// Register the health check with the plugin
+	customCheck := health.NewPeriodicHealthCheck("example health check", 3*time.Second, CustomHealthCheck)
+	if err := plugin.RegisterHealthChecks(customCheck); err != nil {
+		log.Fatal(err)
+	}
 
 	// Run the plugin.
 	if err := plugin.Run(); err != nil {
