@@ -26,12 +26,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/vapor-ware/synse-sdk/sdk/output"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -528,7 +527,7 @@ func (server *server) Transaction(request *synse.V3TransactionSelector, stream s
 	// If there is no ID specified with the incoming request, return all of the cached
 	// transaction.
 	if request.Id == "" {
-		for _, item := range transactionCache.Items() {
+		for _, item := range server.stateManager.transactions.Items() {
 			t, ok := item.Object.(*transaction)
 			if ok {
 				if err := stream.Send(t.encode()); err != nil {
@@ -539,7 +538,7 @@ func (server *server) Transaction(request *synse.V3TransactionSelector, stream s
 	}
 
 	// Otherwise, return only the transaction with the specified ID.
-	t := getTransaction(request.Id)
+	t := server.stateManager.getTransaction(request.Id)
 	if t == nil {
 		return errors.NotFoundErr("transaction not found: %v", request.Id)
 	}
