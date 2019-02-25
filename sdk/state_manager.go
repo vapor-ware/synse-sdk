@@ -38,8 +38,8 @@ import (
 // multiple contexts at a given time, we store them as a slice.
 type cacheContexts []*ReadContext
 
-// StateManager manages the read and write (transaction) state for plugin devices.
-type StateManager struct {
+// stateManager manages the read and write (transaction) state for plugin devices.
+type stateManager struct {
 	readChan chan *ReadContext
 
 	readings      map[string][]*output.Reading
@@ -52,14 +52,15 @@ type StateManager struct {
 	config *config.PluginSettings
 }
 
-func NewStateManager(conf *config.PluginSettings) *StateManager {
+// newStateManager creates a new instance of the stateManager.
+func newStateManager(conf *config.PluginSettings) *stateManager {
 	var readingsCache *cache.Cache
 	if conf.Cache.Enabled {
 		// todo: logging
 		readingsCache = cache.New(conf.Cache.TTL, conf.Cache.TTL*2)
 	}
 
-	return &StateManager{
+	return &stateManager{
 		config:   conf,
 		readChan: make(chan *ReadContext, conf.Read.QueueSize),
 		readings: make(map[string][]*output.Reading),
@@ -73,13 +74,13 @@ func NewStateManager(conf *config.PluginSettings) *StateManager {
 }
 
 // Start starts the StateManager.
-func (manager *StateManager) Start() {
+func (manager *stateManager) Start() {
 	go manager.updateReadings()
 }
 
 // registerActions registers pre-run (setup) and post-run (teardown) actions
 // for the state manager.
-func (manager *StateManager) registerActions(plugin *Plugin) {
+func (manager *stateManager) registerActions(plugin *Plugin) {
 	// Register pre-run actions.
 	plugin.RegisterPreRunActions(
 		&PluginAction{
@@ -91,7 +92,7 @@ func (manager *StateManager) registerActions(plugin *Plugin) {
 
 // healthChecks defines and registers the state manager's default health checks with
 // the plugin.
-func (manager *StateManager) healthChecks(plugin *Plugin) error {
+func (manager *stateManager) healthChecks(plugin *Plugin) error {
 	rqh := health.NewPeriodicHealthCheck("read queue health", 30*time.Second, func() error {
 		// Determine the percent usage of the read queue.
 		pctUsage := (float64(len(manager.readChan)) / float64(cap(manager.readChan))) * 100
@@ -103,11 +104,11 @@ func (manager *StateManager) healthChecks(plugin *Plugin) error {
 		}
 		return nil
 	})
-	plugin.healthManager.RegisterDefault(rqh)
+	plugin.health.RegisterDefault(rqh)
 	return nil
 }
 
-func (manager *StateManager) updateReadings() {
+func (manager *stateManager) updateReadings() {
 	// todo: figure out how to test this...
 	for {
 		// Read from the read channel for incoming readings.
@@ -127,7 +128,7 @@ func (manager *StateManager) updateReadings() {
 
 // addReadingToCache adds the given reading to the readingsCache, if the plugin
 // is configured to enable read caching.
-func (manager *StateManager) addReadingToCache(ctx *ReadContext) {
+func (manager *stateManager) addReadingToCache(ctx *ReadContext) {
 	if manager.config.Cache.Enabled {
 		now := utils.GetCurrentTime()
 		item, exists := manager.readingsCache.Get(now)
@@ -143,7 +144,7 @@ func (manager *StateManager) addReadingToCache(ctx *ReadContext) {
 
 // GetReadingsForDevice gets the current reading(s) for the specified device from
 // the StateManager.
-func (manager *StateManager) GetReadingsForDevice(device string) []*output.Reading {
+func (manager *stateManager) GetReadingsForDevice(device string) []*output.Reading {
 	manager.readingsLock.RLock()
 	defer manager.readingsLock.RUnlock()
 
@@ -154,7 +155,7 @@ func (manager *StateManager) GetReadingsForDevice(device string) []*output.Readi
 // is not configured to maintain a readings cache, this will just return a dump of the
 // current reading state. Once the data has been passed through the given channel, this
 // function will close the channel prior to returning.
-func (manager *StateManager) GetCachedReadings(start, end string, readings chan *ReadContext) {
+func (manager *stateManager) GetCachedReadings(start, end string, readings chan *ReadContext) {
 	// Whether we exit the function normally or by error, we want to close the channel
 	// when we complete to signal to the reader that we are done here.
 	defer close(readings)
@@ -184,7 +185,7 @@ func (manager *StateManager) GetCachedReadings(start, end string, readings chan 
 }
 
 // dumpCachedReadings dumps the cached reading
-func (manager *StateManager) dumpCachedReadings(start, end time.Time, readings chan *ReadContext) {
+func (manager *stateManager) dumpCachedReadings(start, end time.Time, readings chan *ReadContext) {
 	for timestamp, item := range manager.readingsCache.Items() {
 		ts, err := utils.ParseRFC3339(timestamp)
 		if err != nil {
@@ -218,7 +219,7 @@ func (manager *StateManager) dumpCachedReadings(start, end time.Time, readings c
 }
 
 // dumpCurrentReadings dumps the current readings out to the provided channel.
-func (manager *StateManager) dumpCurrentReadings(readings chan *ReadContext) {
+func (manager *stateManager) dumpCurrentReadings(readings chan *ReadContext) {
 	for id, data := range manager.GetReadings() {
 		// TODO: make sure this is all we need.. this may change a bit with the move
 		//  to tags
@@ -230,7 +231,7 @@ func (manager *StateManager) dumpCurrentReadings(readings chan *ReadContext) {
 }
 
 // GetReadings gets a copy of the entire current readings state in the StateManager.
-func (manager *StateManager) GetReadings() map[string][]*output.Reading {
+func (manager *stateManager) GetReadings() map[string][]*output.Reading {
 	readings := make(map[string][]*output.Reading)
 	manager.readingsLock.RLock()
 	defer manager.readingsLock.RUnlock()
@@ -245,7 +246,7 @@ func (manager *StateManager) GetReadings() map[string][]*output.Reading {
 }
 
 // newTransaction creates a new transaction and adds it to the transaction cache.
-func (manager *StateManager) newTransaction(timeout time.Duration) *transaction {
+func (manager *stateManager) newTransaction(timeout time.Duration) *transaction {
 	t := newTransaction(timeout)
 	manager.transactions.Set(t.id, t, cache.DefaultExpiration)
 	return t
@@ -253,7 +254,7 @@ func (manager *StateManager) newTransaction(timeout time.Duration) *transaction 
 
 // getTransaction gets the transaction with the specified ID from the transaction cache.
 // If the specified transaction was not found, nil is returned.
-func (manager *StateManager) getTransaction(id string) *transaction {
+func (manager *stateManager) getTransaction(id string) *transaction {
 	t, found := manager.transactions.Get(id)
 	if found {
 		return t.(*transaction)
