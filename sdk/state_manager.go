@@ -72,11 +72,6 @@ func NewStateManager(conf *config.PluginSettings) *StateManager {
 	}
 }
 
-func (manager *StateManager) init() {
-	// TODO: instead of having the transaction cache be global, tie it to the state manager?
-	setupTransactionCache(manager.config.Transaction.TTL)
-}
-
 // Start starts the StateManager.
 func (manager *StateManager) Start() {
 	go manager.updateReadings()
@@ -247,4 +242,24 @@ func (manager *StateManager) GetReadings() map[string][]*output.Reading {
 		readings[k] = v
 	}
 	return readings
+}
+
+// newTransaction creates a new transaction and adds it to the transaction cache.
+func (manager *StateManager) newTransaction(timeout time.Duration) *transaction {
+	t := newTransaction(timeout)
+	manager.transactions.Set(t.id, t, cache.DefaultExpiration)
+	return t
+}
+
+// getTransaction gets the transaction with the specified ID from the transaction cache.
+// If the specified transaction was not found, nil is returned.
+func (manager *StateManager) getTransaction(id string) *transaction {
+	t, found := manager.transactions.Get(id)
+	if found {
+		return t.(*transaction)
+	}
+	log.WithFields(log.Fields{
+		"id": id,
+	}).Info("[state manager] transaction not found")
+	return nil
 }

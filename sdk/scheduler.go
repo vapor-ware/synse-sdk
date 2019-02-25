@@ -180,7 +180,7 @@ func (scheduler *Scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 
 	var response []*synse.V3WriteTransaction
 	for _, data := range data {
-		t := newTransaction(device.WriteTimeout)
+		t := scheduler.stateManager.newTransaction(device.WriteTimeout)
 		t.setStatusPending()
 
 		// Map the transaction ID to the write context for the response.
@@ -216,7 +216,7 @@ func (scheduler *Scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 	var waitGroup sync.WaitGroup
 
 	for _, data := range data {
-		t := newTransaction(device.WriteTimeout)
+		t := scheduler.stateManager.newTransaction(device.WriteTimeout)
 		t.setStatusPending()
 
 		txns = append(txns, t)
