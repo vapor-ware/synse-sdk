@@ -1,8 +1,8 @@
 version: 3
 debug: true
 network:
-  type: unix
-  address: simple-plugin.sock
+  type: tcp
+  address: localhost:5001
 settings:
   read:
     interval: 5s

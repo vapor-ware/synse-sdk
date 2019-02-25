@@ -126,6 +126,20 @@ func (manager *deviceManager) GetDevices(tags ...*Tag) []*Device {
 	return manager.tagCache.GetDevicesFromTags(tags...)
 }
 
+// GetDevicesByTagNamespace gets all the devices in the specified tag namespace(s).
+func (manager *deviceManager) GetDevicesByTagNamespace(namespace ...string) []*Device {
+	return manager.tagCache.GetDevicesFromNamespace(namespace...)
+}
+
+// GetAllDevices gets all devices that are registered with the deviceManager.
+func (manager *deviceManager) GetAllDevices() []*Device {
+	devices := make([]*Device, 0, len(manager.devices))
+	for _, device := range manager.devices {
+		devices = append(devices, device)
+	}
+	return devices
+}
+
 // IsDeviceReadable checks whether a given device is readable.
 func (manager *deviceManager) IsDeviceReadable(id string) bool {
 	device := manager.GetDevice(id)

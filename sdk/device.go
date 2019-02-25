@@ -184,6 +184,11 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	if instance.WriteTimeout != 0 {
 		writeTimeout = instance.WriteTimeout
 	}
+	// Since we are merging proto + instance, we can't easily set a default value
+	// in the config struct annotations, so make sure that the timeout is not 0 here.
+	if writeTimeout == 0 {
+		writeTimeout = 30 * time.Second // the default write timeout
+	}
 
 	// TODO: generate the device alias
 
