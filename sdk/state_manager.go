@@ -72,6 +72,11 @@ func NewStateManager(conf *config.PluginSettings) *StateManager {
 	}
 }
 
+func (manager *StateManager) init() {
+	// TODO: instead of having the transaction cache be global, tie it to the state manager?
+	setupTransactionCache(manager.config.Transaction.TTL)
+}
+
 // Start starts the StateManager.
 func (manager *StateManager) Start() {
 	go manager.updateReadings()

@@ -26,6 +26,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/vapor-ware/synse-sdk/sdk/output"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
@@ -362,8 +364,18 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 		"id":   request.Id,
 	}).Debug("[grpc] DEVICES request")
 
+	var devices []*Device
+
+	// If there is no info specified for the selector, assume all devices in the default namespace.
+	// Otherwise, get the set of devices from the specified selector.
+	if request.Id == "" && len(request.Tags) == 0 {
+		devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceDefault)
+	} else {
+		devices = server.deviceManager.GetDevices(DeviceSelectorToTags(request)...)
+	}
+
 	// Encode and stream the devices back to the client.
-	for _, device := range server.deviceManager.GetDevices(DeviceSelectorToTags(request)...) {
+	for _, device := range devices {
 		d := device.encode()
 
 		// Set the plugin info here. This is done prior to sending back rather than
@@ -401,9 +413,15 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 	for _, device := range devices {
 		readings := server.stateManager.GetReadingsForDevice(device.id)
 
-		// Encode and stream the readings back to the client.
+		// Make sure each reading is represented in the specified system of measure
 		for _, reading := range readings {
-			if err := stream.Send(reading.Encode()); err != nil {
+			r, err := reading.To(output.SystemOfMeasure(request.SystemOfMeasure))
+			if err != nil {
+				return err
+			}
+
+			// Encode and stream the reading back to the client.
+			if err := stream.Send(r.Encode()); err != nil {
 				return err
 			}
 		}
@@ -441,31 +459,30 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 // so the status of the write can be checked asynchronously.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `WriteAsync` RPC method.
-func (server *server) WriteAsync(ctx context.Context, request *synse.V3WritePayload) (*synse.V3WriteTransaction, error) {
+func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3Plugin_WriteAsyncServer) error {
 	log.WithFields(log.Fields{
 		"data": request.Data,
 		"id":   request.Selector.Id,
 	}).Debug("[grpc] WRITE ASYNC request")
 
-	writeData, err := server.scheduler.Write(request)
-	if err != nil {
-		return nil, err
+	deviceID := DeviceSelectorToID(request.Selector)
+	if deviceID == nil {
+		// fixme: better message
+		return fmt.Errorf("write device selector did not specify valid device id")
 	}
-	// fixme: still need to update the data we get back/the api expectations..
-	log.Debugf("write async data: %v", writeData)
+	device := server.deviceManager.GetDevices(deviceID)
+	// fixme: easier way to get the device...
+	transactions, err := server.scheduler.Write(device[0], request.Data)
+	if err != nil {
+		return err
+	}
 
-	// TODO (etd): update this once various other transaction updates are completed.
-
-	return &synse.V3WriteTransaction{}, nil
-
-	//log.WithField("request", request).Debug("[grpc] write rpc request")
-	//transactions, err := DataManager.Write(request)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return &synse.Transactions{
-	//	Transactions: transactions,
-	//}, nil
+	for _, txn := range transactions {
+		if err := stream.Send(txn); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // WriteSync writes data to the specified plugin device. The request blocks until the
@@ -478,8 +495,24 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 		"id":   request.Selector.Id,
 	}).Debug("[grpc] WRITE SYNC request")
 
-	// TODO (etd): update this once various other transaction updates are completed.
+	deviceID := DeviceSelectorToID(request.Selector)
+	if deviceID == nil {
+		// fixme: better message
+		return fmt.Errorf("write device selector did not specify valid device id")
+	}
+	device := server.deviceManager.GetDevices(deviceID)
+	// fixme: easier way to get the device...
 
+	transactions, err := server.scheduler.WriteAndWait(device[0], request.Data)
+	if err != nil {
+		return err
+	}
+
+	for _, txn := range transactions {
+		if err := stream.Send(txn); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

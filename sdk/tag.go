@@ -33,6 +33,9 @@ const (
 	// Tag annotation constants
 	TagAnnotationID   = "id"
 	TagAnnotationType = "type"
+
+	// Special tag components
+	TagLabelAll = "**"
 )
 
 // Tag represents a group identifier which a Synse device can belong to.
@@ -117,6 +120,16 @@ func NewTagFromGRPC(tag *synse.V3Tag) *Tag {
 	}
 }
 
+// HasNamespace checks whether the tag has a namespace defined.
+func (tag *Tag) HasNamespace() bool {
+	return tag.Namespace != ""
+}
+
+// HasAnnotation checks whether the tag has an annotation defined.
+func (tag *Tag) HasAnnotation() bool {
+	return tag.Annotation != ""
+}
+
 // String prints the Tag in its string representation.
 func (tag *Tag) String() string {
 	return tag.string
@@ -194,6 +207,14 @@ func NewTagCache() *TagCache {
 
 // Add adds a device to the tag cache for the specified tag.
 func (cache *TagCache) Add(tag *Tag, device *Device) {
+	if tag.Label == TagLabelAll {
+		log.WithFields(log.Fields{
+			"tag":    tag.String(),
+			"device": device.GetID(),
+		}).Debug("[tag] will not cache device for 'all' label")
+		return
+	}
+
 	annotations, exists := cache.cache[tag.Namespace]
 	if !exists {
 		// If the namespace doesn't exist, add it with the rest of the tag info.
@@ -259,6 +280,31 @@ func (cache *TagCache) GetDevicesFromTags(tags ...*Tag) []*Device {
 			return nil
 		}
 
+		// If the label specifies all devices, we will want to get all the devices
+		// in the namespace if no annotation is defined or all devices in the the
+		// namespace with the given annotation if the annotation is defined.
+		if tag.Label == TagLabelAll {
+			var devices []*Device
+
+			if tag.HasAnnotation() {
+				labels, exists := annotations[tag.Annotation]
+				if !exists {
+					// If a tag annotation is specified which doesn't exist in the cache,
+					// there is no way a Device can match to it, so stop searching.
+					return nil
+				}
+				for _, x := range labels {
+					devices = append(devices, x...)
+				}
+				deviceSet.Filter(devices)
+				continue
+			}
+
+			devices = cache.GetDevicesFromNamespace(tag.Namespace)
+			deviceSet.Filter(devices)
+			continue
+		}
+
 		labels, exists := annotations[tag.Annotation]
 		if !exists {
 			// If a tag annotation is specified which doesn't exist in the cache,
@@ -277,6 +323,35 @@ func (cache *TagCache) GetDevicesFromTags(tags ...*Tag) []*Device {
 	}
 
 	return deviceSet.Results()
+}
+
+// GetDevicesFromNamespace gets the devices for the specified namespaces.
+func (cache *TagCache) GetDevicesFromNamespace(namespaces ...string) []*Device {
+	// Initially, store the devices in a map. This will allow us to remove duplicates
+	// which may be present, as a device can have a tag in multiple namespaces.
+	var deviceMap = make(map[string]*Device)
+
+	for _, ns := range namespaces {
+		annotations, exists := cache.cache[ns]
+		if !exists {
+			continue
+		}
+
+		for _, a := range annotations {
+			for _, l := range a {
+				for _, device := range l {
+					deviceMap[device.GetID()] = device
+				}
+			}
+		}
+	}
+
+	// Make the final slice of devices to return.
+	var devices = make([]*Device, 0, len(deviceMap))
+	for _, d := range deviceMap {
+		devices = append(devices, d)
+	}
+	return devices
 }
 
 // newIDTag creates a new Tag for a device ID. These tags are auto-generated
@@ -304,6 +379,22 @@ func newTypeTag(deviceType string) *Tag {
 // DeviceSelectorToTags is a utility that converts a gRPC device selector message
 // into its corresponding tags.
 func DeviceSelectorToTags(selector *synse.V3DeviceSelector) []*Tag {
+	tag := DeviceSelectorToID(selector)
+	if tag != nil {
+		return []*Tag{tag}
+	}
+
+	var tags = make([]*Tag, len(selector.Tags))
+	for i, t := range selector.Tags {
+		tags[i] = NewTagFromGRPC(t)
+	}
+	return tags
+}
+
+// DeviceSelectorToID is a utility which converts a gRPC device selector message
+// into a corresponding ID tag. If the selector has no value in the Id field, this
+// will return nil.
+func DeviceSelectorToID(selector *synse.V3DeviceSelector) *Tag {
 	if selector.Id != "" {
 		if len(selector.Tags) > 0 {
 			log.WithFields(log.Fields{
@@ -311,13 +402,7 @@ func DeviceSelectorToTags(selector *synse.V3DeviceSelector) []*Tag {
 				"tags": selector.Tags,
 			}).Warn("[tags] device selector specifies id and tags; only using id (tags ignored)")
 		}
-
-		return []*Tag{newIDTag(selector.Id)}
+		return newIDTag(selector.Id)
 	}
-
-	var tags []*Tag
-	for _, t := range selector.Tags {
-		tags = append(tags, NewTagFromGRPC(t))
-	}
-	return tags
+	return nil
 }
