@@ -61,22 +61,22 @@ type server struct {
 
 	// Plugin components
 	deviceManager *deviceManager
-	stateManager  *StateManager
-	scheduler     *Scheduler
+	stateManager  *stateManager
+	scheduler     *scheduler
 	healthManager *health.Manager
 }
 
 // newServer creates a new instance of a server. This is used by the Plugin
 // constructor to create a Plugin's server instance.
 // fixme: this can be cleaned up by using a context to pass stuff around
-func newServer(conf *config.NetworkSettings, dm *deviceManager, sm *StateManager, sched *Scheduler, meta *PluginMetadata, hm *health.Manager) *server {
+func newServer(plugin *Plugin) *server {
 	return &server{
-		conf:          conf,
-		deviceManager: dm,
-		stateManager:  sm,
-		scheduler:     sched,
-		meta:          meta,
-		healthManager: hm,
+		conf:          plugin.config.Network,
+		meta:          plugin.info,
+		scheduler:     plugin.scheduler,
+		deviceManager: plugin.device,
+		stateManager:  plugin.state,
+		healthManager: plugin.health,
 	}
 }
 
