@@ -130,7 +130,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	pluginPolicies := policy.NewDefaultPolicies()
 
 	// Initialize plugin components.
-	dm := newDeviceManager(id, pluginHandlers, pluginPolicies)
+	dm := newDeviceManager(id, pluginHandlers, pluginPolicies, conf.DynamicRegistration)
 	sm := NewStateManager(conf.Settings)
 	sched := NewScheduler(conf.Settings, dm, sm)
 	hm := health.NewManager(conf.Health)

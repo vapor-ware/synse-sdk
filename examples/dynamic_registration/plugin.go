@@ -6,9 +6,8 @@ import (
 	"math/rand"
 	"strconv"
 
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-
 	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
@@ -23,7 +22,7 @@ var (
 var temperatureHandler = sdk.DeviceHandler{
 	Name: "temperature",
 	Read: func(device *sdk.Device) ([]*output.Reading, error) {
-		value := strconv.Itoa(rand.Int()) // nolint: gas, gosec
+		value := strconv.Itoa(rand.Intn(100)) // nolint: gas, gosec
 		reading := output.Temperature.FromMetric(value)
 		return []*output.Reading{reading}, nil
 	},
@@ -45,36 +44,30 @@ func ProtocolIdentifier(data map[string]interface{}) string {
 // "dynamic registration" by definition, but it is a valid usage. A more appropriate
 // example could be taking an IP from the configuration, and using that to hit some
 // endpoint which would give back all the information on the devices it manages.
-func DynamicDeviceConfig(cfg map[string]interface{}) ([]*config.Devices, error) {
-	var res []*config.Devices
-
+func DynamicDeviceConfig(cfg map[string]interface{}) ([]*config.DeviceProto, error) {
 	// create a new device - here, we are using the base address and appending
 	// index of the loop to create the id of the device. we are hardcoding in
 	// the name as temperature and temp2010, respectively, because we need the
 	// devices to match to their device handlers. in a real case, all of this info
 	// should be gathered from whatever the real source of dynamic registration is,
 	// e.g. for IPMI - the SDR records.
-	d := config.Devices{
-		Version: 3,
-		Devices: []*config.DeviceProto{
-			{
-				Type: "temperature",
-				Metadata: map[string]string{
-					"model": "temp2010",
-				},
-				Instances: []*config.DeviceInstance{
-					{
-						Info: "test device",
-						Data: map[string]interface{}{
-							"id": fmt.Sprint(cfg["base"]),
-						},
+	res := []*config.DeviceProto{
+		{
+			Type: "temperature",
+			Metadata: map[string]string{
+				"model": "temp2010",
+			},
+			Instances: []*config.DeviceInstance{
+				{
+					Handler: "temperature",
+					Info:    "test device",
+					Data: map[string]interface{}{
+						"id": fmt.Sprint(cfg["base"]),
 					},
 				},
 			},
 		},
 	}
-
-	res = append(res, &d)
 	return res, nil
 }
 

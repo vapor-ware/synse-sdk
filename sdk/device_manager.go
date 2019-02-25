@@ -61,21 +61,22 @@ type deviceManager struct {
 	id             *pluginID
 	pluginHandlers *PluginHandlers
 	policies       *policy.Policies
-
-	tagCache     *TagCache
-	setupActions []*DeviceAction
-	devices      map[string]*Device
-	handlers     map[string]*DeviceHandler
+	dynamicConfig  *config.DynamicRegistrationSettings
+	tagCache       *TagCache
+	setupActions   []*DeviceAction
+	devices        map[string]*Device
+	handlers       map[string]*DeviceHandler
 }
 
 // newDeviceManager creates a new DeviceManager.
 // fixme (etd): this constructor will be cleaned up in the future. instead of passing everything in
 //  one at a time, we can pass in some sort of context which has everything it needs...
-func newDeviceManager(id *pluginID, handlers *PluginHandlers, policies *policy.Policies) *deviceManager {
+func newDeviceManager(id *pluginID, handlers *PluginHandlers, policies *policy.Policies, dynamicCfg *config.DynamicRegistrationSettings) *deviceManager {
 	return &deviceManager{
 		config:         new(config.Devices),
 		id:             id,
 		pluginHandlers: handlers,
+		dynamicConfig:  dynamicCfg,
 		policies:       policies,
 		tagCache:       NewTagCache(),
 		devices:        make(map[string]*Device),
@@ -89,14 +90,76 @@ func newDeviceManager(id *pluginID, handlers *PluginHandlers, policies *policy.P
 func (manager *deviceManager) init() error {
 	log.Info("[device manager] initializing")
 
+	// Load device config from file.
 	if err := manager.loadConfig(); err != nil {
 		return err
 	}
 
+	// Load device configs dynamically.
+	if err := manager.loadDynamicConfig(); err != nil {
+		return err
+	}
+
+	// Create devices from config.
 	if err := manager.createDevices(); err != nil {
 		return err
 	}
 
+	// Create devices dynamically.
+	if err := manager.createDynamicDevices(); err != nil {
+
+	}
+
+	return nil
+}
+
+// loadDynamicConfig loads device configurations using the dynamic device config
+// registrar plugin handler.
+func (manager *deviceManager) loadDynamicConfig() error {
+	for _, cfg := range manager.dynamicConfig.Config {
+		devices, err := manager.pluginHandlers.DynamicConfigRegistrar(cfg)
+		if err != nil {
+			switch manager.policies.DynamicDeviceConfig {
+			case policy.Optional:
+				log.Info("[device manager] failed dynamic device config; skipping since its optional")
+				continue
+			case policy.Required:
+				log.Error("[device manager] failed dynamic device config; erroring since its required")
+				return err
+			default:
+				log.Error("[device manager] invalid policy when loading dynamic device config")
+				return err
+			}
+		}
+		manager.config.Devices = append(manager.config.Devices, devices...)
+	}
+	return nil
+}
+
+// createDynamicDevices creates devices using the dynamic device registrar plugin handler.
+func (manager *deviceManager) createDynamicDevices() error {
+	for _, cfg := range manager.dynamicConfig.Config {
+		devices, err := manager.pluginHandlers.DynamicRegistrar(cfg)
+		if err != nil {
+			switch manager.policies.DynamicDeviceConfig {
+			case policy.Optional:
+				log.Info("[device manager] failed dynamic devices; skipping since its optional")
+				continue
+			case policy.Required:
+				log.Error("[device manager] failed dynamic devices; erroring since its required")
+				return err
+			default:
+				log.Error("[device manager] invalid policy when loading dynamic devices")
+				return err
+			}
+		}
+
+		for _, device := range devices {
+			if err := manager.AddDevice(device); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
