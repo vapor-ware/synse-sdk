@@ -38,7 +38,7 @@ type DynamicDeviceRegistrar func(map[string]interface{}) ([]*Device, error)
 // DynamicDeviceConfigRegistrar is a handler function that takes a Plugin config's "dynamic
 // registration" data and generates Devices config instances from it. How this is done
 // is specific to the plugin/protocol.
-type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.Devices, error)
+type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.DeviceProto, error)
 
 // DeviceDataValidator is a handler function that takes the `Data` field of a device config
 // and performs some validation on it. This allows users to provide validation on the
@@ -118,8 +118,8 @@ func defaultDynamicDeviceRegistration(_ map[string]interface{}) ([]*Device, erro
 //
 // This implementation simply returns an empty slice. A plugin will not do any dynamic
 // registration by default.
-func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*config.Devices, error) {
-	return []*config.Devices{}, nil
+func defaultDynamicDeviceConfigRegistration(_ map[string]interface{}) ([]*config.DeviceProto, error) {
+	return []*config.DeviceProto{}, nil
 }
 
 // defaultDeviceDataValidator is the default implementation that fulfils the

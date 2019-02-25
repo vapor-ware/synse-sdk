@@ -88,6 +88,9 @@ type Loader struct {
 	// without a file extension.
 	FileName string
 
+	// The policy used for the most recent configuration Load.
+	policy policy.Policy
+
 	// The files which were found to match the loader parameters on search.
 	// This is populated by the `search()` function and used in the `read()`
 	// function.
@@ -142,6 +145,8 @@ func (loader *Loader) Load(pol policy.Policy) error {
 		"ext":    loader.Ext,
 	}).Info("[config] loading configuration")
 
+	loader.policy = pol
+
 	if err := loader.checkOverrides(); err != nil {
 		return err
 	}
@@ -173,7 +178,15 @@ func (loader *Loader) Load(pol policy.Policy) error {
 //
 func (loader *Loader) Scan(out interface{}) error {
 	if loader.merged == nil || len(loader.merged) == 0 {
-		// fixme
+		if loader.policy == policy.Optional {
+			log.WithFields(log.Fields{
+				"loader": loader.Name,
+				"policy": loader.policy,
+			}).Debug("[config] no optional config found for Scan")
+			return nil
+		}
+
+		// fixme: better err message
 		return fmt.Errorf("unable to scan, no merged content, did you Load first")
 	}
 
