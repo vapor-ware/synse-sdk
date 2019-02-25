@@ -14,4 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package health
+package test
+
+import (
+	"io/ioutil"
+	"os"
+	"testing"
+)
+
+// TempDir is a test utility which creates a temporary directory for testing.
+// It returns the directory path as well as a function to clean up the directory
+// after the test.
+func TempDir(t *testing.T) (string, func()) {
+	dir, err := ioutil.TempDir("", "synsesdktest")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return dir, func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatal(err)
+		}
+	}
+}

@@ -38,6 +38,10 @@ type Manager struct {
 
 // NewManager creates a new instance of the health Manager component.
 func NewManager(conf *config.HealthSettings, defaults ...Check) *Manager {
+	if conf == nil {
+		panic("manager cannot be initialized with nil config")
+	}
+
 	return &Manager{
 		config:   conf,
 		checks:   make(map[string]Check),
