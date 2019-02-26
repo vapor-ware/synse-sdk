@@ -124,6 +124,22 @@ func TestLoader_Scan_NoMergedData(t *testing.T) {
 	assert.Equal(t, &TestData{}, td)
 }
 
+func TestLoader_Scan_NoMergedOptional(t *testing.T) {
+	type TestData struct {
+		Value string
+	}
+	td := &TestData{}
+
+	// Create a loader, do not specify any merged data.
+	loader := Loader{}
+	loader.policy = policy.Optional
+
+	// Scan the config into the TestData struct.
+	err := loader.Scan(td)
+	assert.NoError(t, err)
+	assert.Equal(t, &TestData{}, td)
+}
+
 func TestLoader_checkOverrides_noOverride(t *testing.T) {
 	loader := Loader{
 		FileName:    "placeholder",

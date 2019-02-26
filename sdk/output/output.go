@@ -131,11 +131,13 @@ func (output *Output) GetUnit(system SystemOfMeasure) (*Unit, error) {
 // is the imperial unit for Temperature.
 func (output *Output) FromImperial(value interface{}) *Reading {
 	var unit *Unit
+	var system = NONE
 	if len(output.Units) > 0 {
 		systemless, exists := output.Units[NONE]
 		if exists {
 			unit = systemless
 		} else {
+			system = IMPERIAL
 			unit = output.Units[IMPERIAL]
 		}
 	}
@@ -145,7 +147,7 @@ func (output *Output) FromImperial(value interface{}) *Reading {
 		Type:      output.Type,
 		Unit:      unit,
 		Value:     value,
-		System:    IMPERIAL,
+		System:    system,
 		output:    output,
 	}
 }
@@ -159,11 +161,13 @@ func (output *Output) FromImperial(value interface{}) *Reading {
 // is the metric unit for Temperature.
 func (output *Output) FromMetric(value interface{}) *Reading {
 	var unit *Unit
+	var system = NONE
 	if len(output.Units) > 0 {
 		systemless, exists := output.Units[NONE]
 		if exists {
 			unit = systemless
 		} else {
+			system = METRIC
 			unit = output.Units[METRIC]
 		}
 	}
@@ -173,7 +177,7 @@ func (output *Output) FromMetric(value interface{}) *Reading {
 		Type:      output.Type,
 		Unit:      unit,
 		Value:     value,
-		System:    METRIC,
+		System:    system,
 		output:    output,
 	}
 }

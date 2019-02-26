@@ -79,21 +79,31 @@ func (reading *Reading) To(system SystemOfMeasure) (*Reading, error) {
 		return nil, err
 	}
 
+	unitSystem := NONE
+	if unit != nil {
+		unitSystem = SystemOfMeasure(unit.System)
+	}
+
 	// Update the reading for the unit conversion.
 	reading.Unit = unit
 	reading.Value = val
-	reading.System = system
+	reading.System = unitSystem
 
 	return reading, nil
 }
 
 // Encode translates the Reading to its corresponding gRPC message.
 func (reading *Reading) Encode() *synse.V3Reading {
+	var unit = &Unit{}
+	if reading.Unit != nil {
+		unit = reading.Unit
+	}
+
 	r := synse.V3Reading{
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
 		Context:   map[string]string{}, // todo: adding context to reading
-		Unit:      reading.Unit.Encode(),
+		Unit:      unit.Encode(),
 	}
 
 	if reading.Info != "" {
