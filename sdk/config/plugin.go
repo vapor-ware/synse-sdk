@@ -50,52 +50,18 @@ type Plugin struct {
 
 // Log logs out the plugin config at INFO level.
 func (conf *Plugin) Log() {
-	log.Info("Plugin Config:")
-	log.Infof("  Version: %d", conf.Version)
-	log.Infof("  Debug:   %v", conf.Debug)
-	log.Infof("  ID:")
-	log.Infof("    UsePluginTag: %v", conf.ID.UsePluginTag)
-	log.Infof("    UseMachineID: %v", conf.ID.UseMachineID)
-	log.Infof("    UseEnv:       %v", conf.ID.UseEnv)
-	log.Infof("    UseCustom:    %v", conf.ID.UseCustom)
-	log.Infof("  Settings:")
-	log.Infof("    Mode: %s", conf.Settings.Mode)
-	log.Infof("    Listen:")
-	log.Infof("      Disable: %v", conf.Settings.Listen.Disable)
-	log.Infof("    Read:")
-	log.Infof("      Disable:   %v", conf.Settings.Read.Disable)
-	log.Infof("      QueueSize: %d", conf.Settings.Read.QueueSize)
-	log.Infof("      Interval:  %v", conf.Settings.Read.Interval)
-	log.Infof("      Delay:     %v", conf.Settings.Read.Delay)
-	log.Infof("    Write:")
-	log.Infof("      Disable:   %v", conf.Settings.Write.Disable)
-	log.Infof("      QueueSize: %d", conf.Settings.Write.QueueSize)
-	log.Infof("      BatchSize: %d", conf.Settings.Write.BatchSize)
-	log.Infof("      Interval:  %v", conf.Settings.Write.Interval)
-	log.Infof("      Delay:     %v", conf.Settings.Write.Delay)
-	log.Infof("    Transaction:")
-	log.Infof("      TTL: %v", conf.Settings.Transaction.TTL)
-	log.Infof("    Limiter:")
-	log.Infof("      Rate:  %d", conf.Settings.Limiter.Rate)
-	log.Infof("      Burst: %d", conf.Settings.Limiter.Burst)
-	log.Infof("    Cache:")
-	log.Infof("      Enabled: %v", conf.Settings.Cache.Enabled)
-	log.Infof("      TTL:     %v", conf.Settings.Cache.TTL)
-	log.Infof("  Network:")
-	log.Infof("    Type:    %s", conf.Network.Type)
-	log.Infof("    Address: %s", conf.Network.Address)
-	log.Infof("    TLS:")
-	log.Infof("      Key:        %s", conf.Network.TLS.Key)
-	log.Infof("      Cert:       %s", conf.Network.TLS.Cert)
-	log.Infof("      CACerts:    %v", conf.Network.TLS.CACerts)
-	log.Infof("      SkipVerify: %v", conf.Network.TLS.SkipVerify)
-	log.Infof("  DynamicRegistration:")
-	log.Infof("    Config: %v", conf.DynamicRegistration.Config)
-	log.Infof("  Health:")
-	log.Infof("    HealthFile:     %s", conf.Health.HealthFile)
-	log.Infof("    UpdateInterval: %s", conf.Health.UpdateInterval)
-	log.Infof("    Checks:")
-	log.Infof("      DisableDefaults: %v", conf.Health.Checks.DisableDefaults)
+	if conf == nil {
+		log.Info("Plugin Config: nil")
+	} else {
+		log.Info("Plugin Config:")
+		log.Infof("  Version: %d", conf.Version)
+		log.Infof("  Debug:   %v", conf.Debug)
+		conf.ID.Log()
+		conf.Settings.Log()
+		conf.Network.Log()
+		conf.Health.Log()
+		conf.DynamicRegistration.Log()
+	}
 }
 
 // IDSettings are the settings around the plugin ID namespace.
@@ -115,6 +81,19 @@ type IDSettings struct {
 	// UseCustom allows setting custom identifiers to be used in generating the namespace
 	// for the plugin ID.
 	UseCustom []string `yaml:"useCustom,omitempty"`
+}
+
+// Log logs out the config at INFO level.
+func (conf *IDSettings) Log() {
+	if conf == nil {
+		log.Info("  ID: nil")
+	} else {
+		log.Infof("  ID:")
+		log.Infof("    UsePluginTag: %v", conf.UsePluginTag)
+		log.Infof("    UseMachineID: %v", conf.UseMachineID)
+		log.Infof("    UseEnv:       %v", conf.UseEnv)
+		log.Infof("    UseCustom:    %v", conf.UseCustom)
+	}
 }
 
 // PluginSettings are the settings around the runtime behavior of a plugin.
@@ -144,11 +123,37 @@ type PluginSettings struct {
 	Cache *CacheSettings `default:"{}" yaml:"cache,omitempty"`
 }
 
+// Log logs out the config at INFO level.
+func (conf *PluginSettings) Log() {
+	if conf == nil {
+		log.Infof("  Settings: nil")
+	} else {
+		log.Infof("  Settings:")
+		log.Infof("    Mode: %s", conf.Mode)
+		conf.Listen.Log()
+		conf.Read.Log()
+		conf.Write.Log()
+		conf.Transaction.Log()
+		conf.Limiter.Log()
+		conf.Cache.Log()
+	}
+}
+
 // ListenSettings are the settings for listener behavior.
 type ListenSettings struct {
 	// Disable can be used to globally disable listening for the plugin.
 	// By default, plugin listening is enabled.
 	Disable bool `default:"false" yaml:"disable,omitempty"`
+}
+
+// Log logs out the config at INFO level.
+func (conf *ListenSettings) Log() {
+	if conf == nil {
+		log.Infof("    Listen: nil")
+	} else {
+		log.Infof("    Listen:")
+		log.Infof("      Disable: %v", conf.Disable)
+	}
 }
 
 // ReadSettings are the settings for read behavior.
@@ -180,6 +185,19 @@ type ReadSettings struct {
 	// Generally this does not need to be set, but can be used to tune
 	// performance for read-intensive plugins.
 	QueueSize int `default:"128" yaml:"queueSize,omitempty"`
+}
+
+// Log logs out the config at INFO level.
+func (conf *ReadSettings) Log() {
+	if conf == nil {
+		log.Infof("    Read: nil")
+	} else {
+		log.Infof("    Read:")
+		log.Infof("      Disable:   %v", conf.Disable)
+		log.Infof("      QueueSize: %d", conf.QueueSize)
+		log.Infof("      Interval:  %v", conf.Interval)
+		log.Infof("      Delay:     %v", conf.Delay)
+	}
 }
 
 // WriteSettings are the settings for write behavior.
@@ -219,10 +237,57 @@ type WriteSettings struct {
 	BatchSize int `default:"128" yaml:"batchSize,omitempty"`
 }
 
+// Log logs out the config at INFO level.
+func (conf *WriteSettings) Log() {
+	if conf == nil {
+		log.Infof("    Write: nil")
+	} else {
+		log.Infof("    Write:")
+		log.Infof("      Disable:   %v", conf.Disable)
+		log.Infof("      QueueSize: %d", conf.QueueSize)
+		log.Infof("      BatchSize: %d", conf.BatchSize)
+		log.Infof("      Interval:  %v", conf.Interval)
+		log.Infof("      Delay:     %v", conf.Delay)
+	}
+}
+
 // TransactionSettings are the settings for transaction operations.
 type TransactionSettings struct {
 	// TTL is the time-to-live for a transaction in the transaction cache.
 	TTL time.Duration `default:"5m" yaml:"ttl,omitempty"`
+}
+
+// Log logs out the config at INFO level.
+func (conf *TransactionSettings) Log() {
+	if conf == nil {
+		log.Infof("    Transaction: nil")
+	} else {
+		log.Infof("    Transaction:")
+		log.Infof("      TTL: %v", conf.TTL)
+	}
+}
+
+// LimiterSettings are the settings for rate limiting on reads and writes.
+type LimiterSettings struct {
+	// Rate is the limit, or maximum frequency of events. A rate of
+	// 0 signifies 'unlimited'.
+	Rate int `default:"0" yaml:"rate,omitempty"`
+
+	// Burst defines the bucket size for the limiter, or maximum number
+	// of events that can be fulfilled at once. If this is 0, it will take
+	// the same value as the rate.
+	Burst int `default:"0" yaml:"burst,omitempty"`
+}
+
+// Log logs out the config at INFO level.
+func (conf *LimiterSettings) Log() {
+	if conf == nil {
+		log.Infof("    Limiter: nil")
+	} else {
+		log.Infof("    Limiter:")
+		log.Infof("      Rate:  %d", conf.Rate)
+		log.Infof("      Burst: %d", conf.Burst)
+	}
 }
 
 // CacheSettings are the settings for an in-memory windowed cache of plugin readings.
@@ -235,6 +300,17 @@ type CacheSettings struct {
 	// only be used if the cache is enabled. Once a reading exceeds this TTL,
 	// it is removed from the cache.
 	TTL time.Duration `default:"3m" yaml:"ttl,omitempty"`
+}
+
+// Log logs out the config at INFO level.
+func (conf *CacheSettings) Log() {
+	if conf == nil {
+		log.Infof("    Cache: nil")
+	} else {
+		log.Infof("    Cache:")
+		log.Infof("      Enabled: %v", conf.Enabled)
+		log.Infof("      TTL:     %v", conf.TTL)
+	}
 }
 
 // NetworkSettings are the settings for a plugin's networking behavior.
@@ -253,6 +329,18 @@ type NetworkSettings struct {
 	TLS *TLSNetworkSettings `default:"{}" yaml:"tls,omitempty"`
 }
 
+// Log logs out the config at INFO level.
+func (conf *NetworkSettings) Log() {
+	if conf == nil {
+		log.Infof("  Network: nil")
+	} else {
+		log.Infof("  Network:")
+		log.Infof("    Type:    %s", conf.Type)
+		log.Infof("    Address: %s", conf.Address)
+		conf.TLS.Log()
+	}
+}
+
 // TLSNetworkSettings are the settings for TLS/SSL for the gRPC server.
 type TLSNetworkSettings struct {
 	// Cert is the location of the cert file to use for the gRPC server.
@@ -269,6 +357,19 @@ type TLSNetworkSettings struct {
 	SkipVerify bool `yaml:"skipVerify,omitempty"`
 }
 
+// Log logs out the config at INFO level.
+func (conf *TLSNetworkSettings) Log() {
+	if conf == nil {
+		log.Infof("    TLS: nil")
+	} else {
+		log.Infof("    TLS:")
+		log.Infof("      Key:        %s", conf.Key)
+		log.Infof("      Cert:       %s", conf.Cert)
+		log.Infof("      CACerts:    %v", conf.CACerts)
+		log.Infof("      SkipVerify: %v", conf.SkipVerify)
+	}
+}
+
 // DynamicRegistrationSettings are the settings for dynamic device registration.
 type DynamicRegistrationSettings struct {
 	// Config holds the configuration(s) for dynamic device registration. It holds
@@ -277,16 +378,14 @@ type DynamicRegistrationSettings struct {
 	Config []map[string]interface{} `default:"[]" yaml:"config,omitempty"`
 }
 
-// LimiterSettings are the settings for rate limiting on reads and writes.
-type LimiterSettings struct {
-	// Rate is the limit, or maximum frequency of events. A rate of
-	// 0 signifies 'unlimited'.
-	Rate int `default:"0" yaml:"rate,omitempty"`
-
-	// Burst defines the bucket size for the limiter, or maximum number
-	// of events that can be fulfilled at once. If this is 0, it will take
-	// the same value as the rate.
-	Burst int `default:"0" yaml:"burst,omitempty"`
+// Log logs out the config at INFO level.
+func (conf *DynamicRegistrationSettings) Log() {
+	if conf == nil {
+		log.Infof("  DynamicRegistration: nil")
+	} else {
+		log.Infof("  DynamicRegistration:")
+		log.Infof("    Config: %v", conf.Config)
+	}
 }
 
 // HealthSettings are the settings for plugin health.
@@ -304,9 +403,31 @@ type HealthSettings struct {
 	Checks *HealthCheckSettings `default:"{}" yaml:"checks,omitempty"`
 }
 
+// Log logs out the config at INFO level.
+func (conf *HealthSettings) Log() {
+	if conf == nil {
+		log.Infof("  Health: nil")
+	} else {
+		log.Infof("  Health:")
+		log.Infof("    HealthFile:     %s", conf.HealthFile)
+		log.Infof("    UpdateInterval: %s", conf.UpdateInterval)
+
+	}
+}
+
 // HealthCheckSettings are the settings for plugin health checks.
 type HealthCheckSettings struct {
 	// DisableDefaults determines whether the default plugin health checks
 	// should be disabled.
 	DisableDefaults bool `default:"false" yaml:"disableDefaults,omitempty"`
+}
+
+// Log logs out the config at INFO level.
+func (conf *HealthCheckSettings) Log() {
+	if conf == nil {
+		log.Infof("    Checks: nil")
+	} else {
+		log.Infof("    Checks:")
+		log.Infof("      DisableDefaults: %v", conf.DisableDefaults)
+	}
 }

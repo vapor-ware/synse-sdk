@@ -38,6 +38,10 @@ type Manager struct {
 
 // NewManager creates a new instance of the health Manager component.
 func NewManager(conf *config.HealthSettings, defaults ...Check) *Manager {
+	if conf == nil {
+		panic("manager cannot be initialized with nil config")
+	}
+
 	return &Manager{
 		config:   conf,
 		checks:   make(map[string]Check),
@@ -112,6 +116,38 @@ func (manager *Manager) Start() {
 	}
 }
 
+// Status gets a current summary of plugin health based on the configured health checks.
+func (manager *Manager) Status() *Summary {
+	var checks []*Status
+	var ok = true
+
+	// Get the status of default checks, if enabled.
+	if !manager.config.Checks.DisableDefaults {
+		for _, check := range manager.defaults {
+			s := check.Status()
+			if !s.Ok {
+				ok = false
+			}
+			checks = append(checks, s)
+		}
+	}
+
+	// Get the status of any custom checks.
+	for _, check := range manager.checks {
+		s := check.Status()
+		if !s.Ok {
+			ok = false
+		}
+		checks = append(checks, s)
+	}
+
+	return &Summary{
+		Timestamp: utils.GetCurrentTime(),
+		Ok:        ok,
+		Checks:    checks,
+	}
+}
+
 // updateHealthFile updates the health file (by either adding or removing it) based
 // on the current plugin health status.
 func (manager *Manager) updateHealthFile() error {
@@ -145,36 +181,4 @@ func (manager *Manager) updateHealthFile() error {
 	}
 
 	return nil
-}
-
-// Status gets a current summary of plugin health based on the configured health checks.
-func (manager *Manager) Status() *Summary {
-	var checks []*Status
-	var ok = true
-
-	// Get the status of default checks, if enabled.
-	if !manager.config.Checks.DisableDefaults {
-		for _, check := range manager.defaults {
-			s := check.Status()
-			if !s.Ok {
-				ok = false
-			}
-			checks = append(checks, s)
-		}
-	}
-
-	// Get the status of any custom checks.
-	for _, check := range manager.checks {
-		s := check.Status()
-		if !s.Ok {
-			ok = false
-		}
-		checks = append(checks, s)
-	}
-
-	return &Summary{
-		Timestamp: utils.GetCurrentTime(),
-		Ok:        ok,
-		Checks:    checks,
-	}
 }

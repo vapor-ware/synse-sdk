@@ -15,3 +15,52 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package health
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
+)
+
+func TestSummary_Encode_statusOK(t *testing.T) {
+	s := &Summary{
+		Timestamp: "now",
+		Ok:        true,
+		Checks: []*Status{
+			{
+				Name:      "foo",
+				Ok:        true,
+				Message:   "",
+				Timestamp: "now",
+				Type:      PeriodicCheck,
+			},
+		},
+	}
+
+	encoded := s.Encode()
+	assert.Equal(t, s.Timestamp, encoded.Timestamp)
+	assert.Equal(t, synse.HealthStatus_OK, encoded.Status)
+	assert.Len(t, encoded.Checks, len(s.Checks))
+}
+
+func TestSummary_Encode_statusFailing(t *testing.T) {
+	s := &Summary{
+		Timestamp: "now",
+		Ok:        false,
+		Checks: []*Status{
+			{
+				Name:      "foo",
+				Ok:        false,
+				Message:   "",
+				Timestamp: "now",
+				Type:      PeriodicCheck,
+			},
+		},
+	}
+
+	encoded := s.Encode()
+	assert.Equal(t, s.Timestamp, encoded.Timestamp)
+	assert.Equal(t, synse.HealthStatus_FAILING, encoded.Status)
+	assert.Len(t, encoded.Checks, len(s.Checks))
+}
