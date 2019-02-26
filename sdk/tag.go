@@ -354,28 +354,6 @@ func (cache *TagCache) GetDevicesFromNamespace(namespaces ...string) []*Device {
 	return devices
 }
 
-// newIDTag creates a new Tag for a device ID. These tags are auto-generated
-// by the SDK and are considered system-wide tags.
-func newIDTag(deviceID string) *Tag {
-	return &Tag{
-		Namespace:  TagNamespaceSystem,
-		Annotation: TagAnnotationID,
-		Label:      deviceID,
-		string:     fmt.Sprintf("%s/%s:%s", TagNamespaceSystem, TagAnnotationID, deviceID),
-	}
-}
-
-// newTypeTag creates a new Tag for a device Type. These tags are auto-generated
-// by the SDK and are considered system-wide tags.
-func newTypeTag(deviceType string) *Tag {
-	return &Tag{
-		Namespace:  TagNamespaceSystem,
-		Annotation: TagAnnotationType,
-		Label:      deviceType,
-		string:     fmt.Sprintf("%s/%s:%s", TagNamespaceSystem, TagAnnotationType, deviceType),
-	}
-}
-
 // DeviceSelectorToTags is a utility that converts a gRPC device selector message
 // into its corresponding tags.
 func DeviceSelectorToTags(selector *synse.V3DeviceSelector) []*Tag {
@@ -405,4 +383,27 @@ func DeviceSelectorToID(selector *synse.V3DeviceSelector) *Tag {
 		return newIDTag(selector.Id)
 	}
 	return nil
+}
+
+
+// newIDTag creates a new Tag for a device ID. These tags are auto-generated
+// by the SDK and are considered system-wide tags.
+func newIDTag(deviceID string) *Tag {
+	return &Tag{
+		Namespace:  TagNamespaceSystem,
+		Annotation: TagAnnotationID,
+		Label:      deviceID,
+		string:     fmt.Sprintf("%s/%s:%s", TagNamespaceSystem, TagAnnotationID, deviceID),
+	}
+}
+
+// newTypeTag creates a new Tag for a device Type. These tags are auto-generated
+// by the SDK and are considered system-wide tags.
+func newTypeTag(deviceType string) *Tag {
+	return &Tag{
+		Namespace:  TagNamespaceSystem,
+		Annotation: TagAnnotationType,
+		Label:      deviceType,
+		string:     fmt.Sprintf("%s/%s:%s", TagNamespaceSystem, TagAnnotationType, deviceType),
+	}
 }

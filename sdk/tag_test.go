@@ -17,6 +17,8 @@
 package sdk
 
 import (
+	"fmt"
+	"github.com/vapor-ware/synse-server-grpc/go"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -135,6 +137,244 @@ func TestNewTag_Error(t *testing.T) {
 		assert.Error(t, err, "case: %d", i)
 		assert.Nil(t, tag, "case: %d", i)
 	}
+}
+
+func TestNewTagFromGRPC(t *testing.T) {
+	cases := []struct {
+		tag *synse.V3Tag
+		expected string
+	}{
+		{
+			tag: &synse.V3Tag{},
+			expected: "",
+		},
+		{
+			tag: &synse.V3Tag{Label: "foo"},
+			expected: "foo",
+		},
+		{
+			tag: &synse.V3Tag{Namespace: "vapor", Label: "foo"},
+			expected: "vapor/foo",
+		},
+		{
+			tag: &synse.V3Tag{Annotation: "xyz", Label:"foo"},
+			expected: "xyz:foo",
+		},
+		{
+			tag: &synse.V3Tag{Namespace: "vapor", Annotation: "xyz", Label: "foo"},
+			expected: "vapor/xyz:foo",
+		},
+	}
+
+	for _, c := range cases {
+		tag := NewTagFromGRPC(c.tag)
+		assert.Equal(t, c.expected, tag.String())
+	}
+}
+
+func TestTag_HasAnnotation(t *testing.T) {
+	tag := Tag{Annotation: "foo"}
+	assert.True(t, tag.HasAnnotation())
+
+	tag = Tag{}
+	assert.False(t, tag.HasAnnotation())
+}
+
+func TestTag_HasNamespace(t *testing.T) {
+	tag := Tag{Namespace: "foo"}
+	assert.True(t, tag.HasNamespace())
+
+	tag = Tag{}
+	assert.False(t, tag.HasNamespace())
+}
+
+func TestTag_String(t *testing.T) {
+	tag := Tag{string: "foo/bar"}
+	assert.Equal(t, "foo/bar", tag.String())
+
+	tag = Tag{}
+	assert.Equal(t, "", tag.String())
+}
+
+func TestTag_Encode(t *testing.T) {
+	cases := []struct {
+		namespace string
+		annotation string
+		label string
+	}{
+		{
+			label: "foo",
+		},
+		{
+			annotation: "xyz",
+			label: "foo",
+		},
+		{
+			namespace: "vapor",
+			label: "foo",
+		},
+		{
+			namespace: "vapor",
+			annotation: "xyz",
+			label: "foo",
+		},
+	}
+
+	for _, c := range cases {
+		tag := Tag{
+			Namespace: c.namespace,
+			Annotation: c.annotation,
+			Label: c.label,
+		}
+
+		encoded := tag.Encode()
+		assert.Equal(t, c.namespace, encoded.Namespace)
+		assert.Equal(t, c.annotation, encoded.Annotation)
+		assert.Equal(t, c.label, encoded.Label)
+	}
+}
+
+func TestFilterSet_Filter_firstFilter(t *testing.T) {
+	set := filterSet{}
+
+	assert.Empty(t, set.devices)
+	assert.False(t, set.initialized)
+
+	set.Filter([]*Device{{id: "1"}, {id: "2"}})
+
+	assert.Len(t, set.devices, 2)
+	assert.True(t, set.initialized)
+}
+
+func TestFilterSet_Filter1(t *testing.T) {
+	set := filterSet{
+		initialized: true,
+		devices: []*Device{{id: "1"}, {id: "2"}},
+	}
+
+	set.Filter([]*Device{{id: "1"}, {id: "2"}, {id: "3"}, {id: "4"}})
+
+	assert.Len(t, set.devices, 2)
+}
+
+func TestFilterSet_Filter2(t *testing.T) {
+	set := filterSet{
+		initialized: true,
+		devices: []*Device{{id: "1"}, {id: "2"}, {id: "3"}, {id: "4"}},
+	}
+
+	set.Filter([]*Device{{id: "1"}, {id: "2"}})
+
+	assert.Len(t, set.devices, 2)
+}
+
+func TestFilterSet_Filter3(t *testing.T) {
+	set := filterSet{
+		initialized: true,
+		devices: []*Device{{id: "3"}, {id: "4"}},
+	}
+
+	set.Filter([]*Device{{id: "1"}, {id: "2"}})
+
+	assert.Len(t, set.devices, 0)
+}
+
+func TestFilterSet_Results(t *testing.T) {
+	set := filterSet{
+		devices: []*Device{{id: "1"}, {id: "2"}},
+	}
+
+	results := set.Results()
+	assert.Len(t, results, 2)
+}
+
+func TestFilterSet_Results2(t *testing.T) {
+	set := filterSet{}
+
+	results := set.Results()
+	assert.Len(t, results, 0)
+}
+
+func TestNewTagCache(t *testing.T) {
+	cache := NewTagCache()
+	assert.Empty(t, cache.cache)
+}
+
+func TestDeviceSelectorToTags_withID(t *testing.T) {
+	tags := DeviceSelectorToTags(&synse.V3DeviceSelector{
+		Id: "1234",
+	})
+
+	assert.Len(t, tags, 1)
+
+	tag := tags[0]
+	assert.Equal(t, TagNamespaceSystem, tag.Namespace)
+	assert.Equal(t, TagAnnotationID, tag.Annotation)
+	assert.Equal(t, "1234", tag.Label)
+	assert.Equal(t, "system/id:1234", tag.String())
+}
+
+func TestDeviceSelectorToTags(t *testing.T) {
+	tags := DeviceSelectorToTags(&synse.V3DeviceSelector{
+		Tags: []*synse.V3Tag{
+			{Namespace: "vapor", Label: "0"},
+			{Namespace: "vapor", Label: "1"},
+			{Namespace: "vapor", Label: "2"},
+		},
+	})
+
+	assert.Len(t, tags, 3)
+	for i, tag := range tags {
+		assert.Equal(t, "vapor", tag.Namespace)
+		assert.Equal(t, "", tag.Annotation)
+		assert.Equal(t, fmt.Sprintf("%d", i), tag.Label)
+	}
+}
+
+func TestDeviceSelectorToID_noID(t *testing.T) {
+	tag := DeviceSelectorToID(&synse.V3DeviceSelector{})
+	assert.Nil(t, tag)
+}
+
+func TestDeviceSelectorToID(t *testing.T) {
+	tag := DeviceSelectorToID(&synse.V3DeviceSelector{
+		Id: "1234",
+	})
+
+	assert.Equal(t, TagNamespaceSystem, tag.Namespace)
+	assert.Equal(t, TagAnnotationID, tag.Annotation)
+	assert.Equal(t, "1234", tag.Label)
+	assert.Equal(t, "system/id:1234", tag.String())
+}
+
+func TestDeviceSelectorToID_withTags(t *testing.T) {
+	tag := DeviceSelectorToID(&synse.V3DeviceSelector{
+		Id: "1234",
+		Tags: []*synse.V3Tag{
+			{Namespace: "foo", Annotation:"bar", Label:"baz"},
+		},
+	})
+
+	assert.Equal(t, TagNamespaceSystem, tag.Namespace)
+	assert.Equal(t, TagAnnotationID, tag.Annotation)
+	assert.Equal(t, "1234", tag.Label)
+	assert.Equal(t, "system/id:1234", tag.String())
+}
+
+func TestNewIDTag(t *testing.T) {
+	tag := newIDTag("1234")
+	assert.Equal(t, TagNamespaceSystem, tag.Namespace)
+	assert.Equal(t, TagAnnotationID, tag.Annotation)
+	assert.Equal(t, "1234", tag.Label)
+	assert.Equal(t, "system/id:1234", tag.String())
+}
+
+func TestNewTypeTag(t *testing.T) {
+	tag := newTypeTag("foo")
+	assert.Equal(t, TagNamespaceSystem, tag.Namespace)
+	assert.Equal(t, TagAnnotationType, tag.Annotation)
+	assert.Equal(t, "foo", tag.Label)
+	assert.Equal(t, "system/type:foo", tag.String())
 }
 
 //
