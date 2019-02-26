@@ -14,25 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package errors
+package test
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
-func TestPolicyViolationError(t *testing.T) {
-	err := NewPolicyViolationError("DeviceConfigOptional", "message")
+// TempDir is a test utility which creates a temporary directory for testing.
+// It returns the directory path as well as a function to clean up the directory
+// after the test.
+func TempDir(t *testing.T) (string, func()) {
+	dir, err := ioutil.TempDir("", "synsesdktest")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	assert.IsType(t, &PolicyViolationError{}, err)
-	assert.Equal(t, "DeviceConfigOptional", err.policy)
-	assert.Equal(t, "message", err.msg)
-}
-
-func TestPolicyViolationError_Error(t *testing.T) {
-	err := NewPolicyViolationError("PluginConfigRequired", "message")
-	out := err.Error()
-
-	assert.Equal(t, "policy violation (PluginConfigRequired): message", out)
+	return dir, func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
