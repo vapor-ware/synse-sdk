@@ -25,7 +25,7 @@ import (
 
 const (
 	// PeriodicCheck is the type for Checks which run periodically.
-	PeriodicCheck = "periodic"
+	PeriodicCheck CheckType = "periodic"
 )
 
 // PeriodicHealthCheck defines a point of health whose status can be checked periodically.
@@ -66,10 +66,15 @@ func (check *PeriodicHealthCheck) Status() *Status {
 	check.lock.RLock()
 	defer check.lock.RUnlock()
 
+	var message string
+	if check.err != nil {
+		message = check.err.Error()
+	}
+
 	return &Status{
 		Name:      check.Name,
 		Ok:        check.err == nil,
-		Message:   check.err.Error(),
+		Message:   message,
 		Timestamp: check.lastUpdate,
 		Type:      check.Type,
 	}

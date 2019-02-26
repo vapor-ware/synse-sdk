@@ -17,6 +17,7 @@
 package health
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -57,7 +58,7 @@ func (check *testCheck) Status() *Status {
 func (check *testCheck) Update() {}
 func (check *testCheck) Run()    {}
 
-// --- tests ---
+// --- test cases ---
 
 func TestNewManager(t *testing.T) {
 	conf := &config.HealthSettings{
@@ -168,4 +169,321 @@ func TestManager_Init2(t *testing.T) {
 
 	_, err = os.Stat(healthDir)
 	assert.NoError(t, err)
+}
+
+func TestManager_Status(t *testing.T) {
+	// Set up the manager with defaults enabled, but no defaults set
+	// and no other checks set.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+	}
+
+	status := m.Status()
+	assert.NotEmpty(t, status.Timestamp)
+	assert.True(t, status.Ok)
+	assert.Len(t, status.Checks, 0)
+}
+
+func TestManager_Status2(t *testing.T) {
+	// Set up the manager with defaults enabled, and defaults set
+	// and no other checks set.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		defaults: []Check{
+			&testCheck{ok: true, name: "check1"},
+		},
+	}
+
+	status := m.Status()
+	assert.NotEmpty(t, status.Timestamp)
+	assert.True(t, status.Ok)
+	assert.Len(t, status.Checks, 1)
+}
+
+func TestManager_Status3(t *testing.T) {
+	// Set up the manager with defaults disabled, defaults set,
+	// and no other checks set.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: true,
+			},
+		},
+		defaults: []Check{
+			&testCheck{ok: true, name: "check1"},
+		},
+	}
+
+	status := m.Status()
+	assert.NotEmpty(t, status.Timestamp)
+	assert.True(t, status.Ok)
+	assert.Len(t, status.Checks, 0)
+}
+
+func TestManager_Status4(t *testing.T) {
+	// Set up the manager with defaults disabled, but no defaults set
+	// and no other checks set.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: true,
+			},
+		},
+	}
+
+	status := m.Status()
+	assert.NotEmpty(t, status.Timestamp)
+	assert.True(t, status.Ok)
+	assert.Len(t, status.Checks, 0)
+}
+
+func TestManager_Status5(t *testing.T) {
+	// Set up the manager with no defaults, only custom checks.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		checks: map[string]Check{
+			"check1": &testCheck{ok: true, name: "check1"},
+		},
+	}
+
+	status := m.Status()
+	assert.NotEmpty(t, status.Timestamp)
+	assert.True(t, status.Ok)
+	assert.Len(t, status.Checks, 1)
+}
+
+func TestManager_Status6(t *testing.T) {
+	// Get the status when all checks fail.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		defaults: []Check{
+			&testCheck{ok: false, name: "check1"},
+			&testCheck{ok: false, name: "check2"},
+		},
+		checks: map[string]Check{
+			"check3": &testCheck{ok: false, name: "check3"},
+			"check4": &testCheck{ok: false, name: "check4"},
+		},
+	}
+
+	status := m.Status()
+	assert.NotEmpty(t, status.Timestamp)
+	assert.False(t, status.Ok)
+	assert.Len(t, status.Checks, 4)
+}
+
+func TestManager_Status7(t *testing.T) {
+	// Get the status when only one default check is failing.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		defaults: []Check{
+			&testCheck{ok: true, name: "check1"},
+			&testCheck{ok: false, name: "check2"},
+		},
+		checks: map[string]Check{
+			"check3": &testCheck{ok: true, name: "check3"},
+			"check4": &testCheck{ok: true, name: "check4"},
+		},
+	}
+
+	status := m.Status()
+	assert.NotEmpty(t, status.Timestamp)
+	assert.False(t, status.Ok)
+	assert.Len(t, status.Checks, 4)
+}
+
+func TestManager_Status8(t *testing.T) {
+	// Get the status when only one custom check is failing.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		defaults: []Check{
+			&testCheck{ok: true, name: "check1"},
+			&testCheck{ok: true, name: "check2"},
+		},
+		checks: map[string]Check{
+			"check3": &testCheck{ok: false, name: "check3"},
+			"check4": &testCheck{ok: true, name: "check4"},
+		},
+	}
+
+	status := m.Status()
+	assert.NotEmpty(t, status.Timestamp)
+	assert.False(t, status.Ok)
+	assert.Len(t, status.Checks, 4)
+}
+
+func TestManager_updateHealthFile(t *testing.T) {
+	// No health file configured.
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: "",
+		},
+	}
+
+	err := m.updateHealthFile()
+	assert.Error(t, err)
+}
+
+func TestManager_updateHealthFile2(t *testing.T) {
+	// Health file configured, status is healthy, file does not already exist.
+	d, closer := test.TempDir(t)
+	defer closer()
+
+	healthFile := filepath.Join(d, "health")
+
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: healthFile,
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		checks: map[string]Check{
+			"check1": &testCheck{ok: true, name: "check1"},
+		},
+	}
+
+	// health file does not exist
+	_, err := os.Stat(healthFile)
+	assert.Error(t, err)
+	assert.IsType(t, &os.PathError{}, err)
+
+	err = m.updateHealthFile()
+	assert.NoError(t, err)
+
+	// health file exists
+	_, err = os.Stat(healthFile)
+	assert.NoError(t, err)
+}
+
+func TestManager_updateHealthFile3(t *testing.T) {
+	// Health file configured, status is healthy, file already exists.
+	d, closer := test.TempDir(t)
+	defer closer()
+
+	healthFile := filepath.Join(d, "health")
+	err := ioutil.WriteFile(healthFile, []byte("ok"), os.ModePerm)
+	assert.NoError(t, err)
+
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: healthFile,
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		checks: map[string]Check{
+			"check1": &testCheck{ok: true, name: "check1"},
+		},
+	}
+
+	// health file exists
+	_, err = os.Stat(healthFile)
+	assert.NoError(t, err)
+
+	err = m.updateHealthFile()
+	assert.NoError(t, err)
+
+	// health file exists
+	_, err = os.Stat(healthFile)
+	assert.NoError(t, err)
+}
+
+func TestManager_updateHealthFile4(t *testing.T) {
+	// Health file configured, status is unhealthy, file does not exist.
+	d, closer := test.TempDir(t)
+	defer closer()
+
+	healthFile := filepath.Join(d, "health")
+
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: healthFile,
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		checks: map[string]Check{
+			"check1": &testCheck{ok: false, name: "check1"},
+		},
+	}
+
+	// health file does not exist
+	_, err := os.Stat(healthFile)
+	assert.Error(t, err)
+	assert.IsType(t, &os.PathError{}, err)
+
+	err = m.updateHealthFile()
+	assert.NoError(t, err)
+
+	// health file does not exist
+	_, err = os.Stat(healthFile)
+	assert.Error(t, err)
+	assert.IsType(t, &os.PathError{}, err)
+}
+
+func TestManager_updateHealthFile5(t *testing.T) {
+	// Health file configured, status is unhealthy, file does exist.
+	d, closer := test.TempDir(t)
+	defer closer()
+
+	healthFile := filepath.Join(d, "health")
+	err := ioutil.WriteFile(healthFile, []byte("ok"), os.ModePerm)
+	assert.NoError(t, err)
+
+	m := Manager{
+		config: &config.HealthSettings{
+			HealthFile: healthFile,
+			Checks: &config.HealthCheckSettings{
+				DisableDefaults: false,
+			},
+		},
+		checks: map[string]Check{
+			"check1": &testCheck{ok: false, name: "check1"},
+		},
+	}
+
+	// health file exists
+	_, err = os.Stat(healthFile)
+	assert.NoError(t, err)
+
+	err = m.updateHealthFile()
+	assert.NoError(t, err)
+
+	// health file does not exist
+	_, err = os.Stat(healthFile)
+	assert.Error(t, err)
+	assert.IsType(t, &os.PathError{}, err)
 }
