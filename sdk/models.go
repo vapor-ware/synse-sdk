@@ -39,7 +39,7 @@ type ReadContext struct {
 // device and corresponding readings.
 func NewReadContext(device *Device, readings []*output.Reading) *ReadContext {
 	return &ReadContext{
-		Device:  device.id,
+		Device:  device.id, // fixme: should we just store the pointer to the device instead??
 		Reading: readings,
 	}
 }

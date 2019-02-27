@@ -28,6 +28,14 @@ var testData = map[string]interface{}{
 	"bool": true,
 }
 
+func TestNewDefaultPluginHandlers(t *testing.T) {
+	handlers := NewDefaultPluginHandlers()
+	assert.NotNil(t, handlers.DeviceIdentifier)
+	assert.NotNil(t, handlers.DynamicRegistrar)
+	assert.NotNil(t, handlers.DynamicConfigRegistrar)
+	assert.NotNil(t, handlers.DeviceDataValidator)
+}
+
 // Test_defaultDynamicDeviceRegistration tests the default dynamic device registration
 // functionality.
 func Test_defaultDynamicDeviceRegistration(t *testing.T) {

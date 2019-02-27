@@ -90,3 +90,33 @@ func TestPluginMetadata_Tag(t *testing.T) {
 		assert.Equal(t, c.expected, meta.Tag(), "case: %d", i)
 	}
 }
+
+func TestPluginMetadata_encode(t *testing.T) {
+	m := PluginMetadata{
+		Name:        "test",
+		Maintainer:  "vaporio",
+		Description: "test metadata",
+	}
+
+	encoded := m.encode()
+	assert.Equal(t, "test", encoded.Name)
+	assert.Equal(t, "vaporio", encoded.Maintainer)
+	assert.Equal(t, "test metadata", encoded.Description)
+	assert.Equal(t, "vaporio/test", encoded.Tag)
+	assert.Equal(t, "", encoded.Vcs)
+}
+
+func TestPluginMetadata_format(t *testing.T) {
+	m := PluginMetadata{
+		Name:        "test",
+		Maintainer:  "vaporio",
+		Description: "test metadata",
+	}
+
+	out := m.format()
+	assert.Equal(t, `Plugin Info:
+  Name:        test
+  Maintainer:  vaporio
+  VCS:         
+  Description: test metadata`, out)
+}
