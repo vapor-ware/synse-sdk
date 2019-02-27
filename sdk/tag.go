@@ -50,6 +50,10 @@ type Tag struct {
 // NewTag creates a new Tag from a tag string.
 func NewTag(tag string) (*Tag, error) {
 	tag = strings.TrimSpace(tag)
+	if strings.Contains(tag, " ") {
+		return nil, fmt.Errorf("tag may not contain spaces")
+	}
+
 	validTag := regexp.MustCompile(`(([^:/]+)/)?(([^:/]+):)?([^:/\s]+$)`)
 
 	// The regular expression we match to has 5 groups:
@@ -250,7 +254,7 @@ func (cache *TagCache) Add(tag *Tag, device *Device) {
 		}
 	}
 	if !duplicate {
-		devices = append(devices, device)
+		labels[tag.Label] = append(devices, device)
 	}
 }
 
@@ -384,7 +388,6 @@ func DeviceSelectorToID(selector *synse.V3DeviceSelector) *Tag {
 	}
 	return nil
 }
-
 
 // newIDTag creates a new Tag for a device ID. These tags are auto-generated
 // by the SDK and are considered system-wide tags.

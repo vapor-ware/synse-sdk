@@ -18,10 +18,10 @@ package sdk
 
 import (
 	"fmt"
-	"github.com/vapor-ware/synse-server-grpc/go"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 func TestNewTag(t *testing.T) {
@@ -129,6 +129,7 @@ func TestNewTag_Error(t *testing.T) {
 		{tag: "//"},
 		{tag: ":"},
 		{tag: "::"},
+		{tag: "vaporio/contains spaces:foo"},
 	}
 
 	for i, c := range cases {
@@ -141,27 +142,27 @@ func TestNewTag_Error(t *testing.T) {
 
 func TestNewTagFromGRPC(t *testing.T) {
 	cases := []struct {
-		tag *synse.V3Tag
+		tag      *synse.V3Tag
 		expected string
 	}{
 		{
-			tag: &synse.V3Tag{},
+			tag:      &synse.V3Tag{},
 			expected: "",
 		},
 		{
-			tag: &synse.V3Tag{Label: "foo"},
+			tag:      &synse.V3Tag{Label: "foo"},
 			expected: "foo",
 		},
 		{
-			tag: &synse.V3Tag{Namespace: "vapor", Label: "foo"},
+			tag:      &synse.V3Tag{Namespace: "vapor", Label: "foo"},
 			expected: "vapor/foo",
 		},
 		{
-			tag: &synse.V3Tag{Annotation: "xyz", Label:"foo"},
+			tag:      &synse.V3Tag{Annotation: "xyz", Label: "foo"},
 			expected: "xyz:foo",
 		},
 		{
-			tag: &synse.V3Tag{Namespace: "vapor", Annotation: "xyz", Label: "foo"},
+			tag:      &synse.V3Tag{Namespace: "vapor", Annotation: "xyz", Label: "foo"},
 			expected: "vapor/xyz:foo",
 		},
 	}
@@ -198,33 +199,33 @@ func TestTag_String(t *testing.T) {
 
 func TestTag_Encode(t *testing.T) {
 	cases := []struct {
-		namespace string
+		namespace  string
 		annotation string
-		label string
+		label      string
 	}{
 		{
 			label: "foo",
 		},
 		{
 			annotation: "xyz",
-			label: "foo",
+			label:      "foo",
 		},
 		{
 			namespace: "vapor",
-			label: "foo",
+			label:     "foo",
 		},
 		{
-			namespace: "vapor",
+			namespace:  "vapor",
 			annotation: "xyz",
-			label: "foo",
+			label:      "foo",
 		},
 	}
 
 	for _, c := range cases {
 		tag := Tag{
-			Namespace: c.namespace,
+			Namespace:  c.namespace,
 			Annotation: c.annotation,
-			Label: c.label,
+			Label:      c.label,
 		}
 
 		encoded := tag.Encode()
@@ -249,7 +250,7 @@ func TestFilterSet_Filter_firstFilter(t *testing.T) {
 func TestFilterSet_Filter1(t *testing.T) {
 	set := filterSet{
 		initialized: true,
-		devices: []*Device{{id: "1"}, {id: "2"}},
+		devices:     []*Device{{id: "1"}, {id: "2"}},
 	}
 
 	set.Filter([]*Device{{id: "1"}, {id: "2"}, {id: "3"}, {id: "4"}})
@@ -260,7 +261,7 @@ func TestFilterSet_Filter1(t *testing.T) {
 func TestFilterSet_Filter2(t *testing.T) {
 	set := filterSet{
 		initialized: true,
-		devices: []*Device{{id: "1"}, {id: "2"}, {id: "3"}, {id: "4"}},
+		devices:     []*Device{{id: "1"}, {id: "2"}, {id: "3"}, {id: "4"}},
 	}
 
 	set.Filter([]*Device{{id: "1"}, {id: "2"}})
@@ -271,7 +272,7 @@ func TestFilterSet_Filter2(t *testing.T) {
 func TestFilterSet_Filter3(t *testing.T) {
 	set := filterSet{
 		initialized: true,
-		devices: []*Device{{id: "3"}, {id: "4"}},
+		devices:     []*Device{{id: "3"}, {id: "4"}},
 	}
 
 	set.Filter([]*Device{{id: "1"}, {id: "2"}})
@@ -298,6 +299,560 @@ func TestFilterSet_Results2(t *testing.T) {
 func TestNewTagCache(t *testing.T) {
 	cache := NewTagCache()
 	assert.Empty(t, cache.cache)
+}
+
+func TestTagCache_Add_labelAll(t *testing.T) {
+	// Test that nothing is added to a cache if the tag uses the special "all" label
+	cache := &TagCache{}
+
+	device := Device{id: "1234"}
+	tag := Tag{Namespace: "foo", Annotation: "bar", Label: TagLabelAll}
+
+	assert.Empty(t, cache.cache)
+	cache.Add(&tag, &device)
+	assert.Empty(t, cache.cache)
+}
+
+func TestTagCache_Add_newNamespace(t *testing.T) {
+	// Test adding a device with a namespace that is not yet in the cache.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{},
+	}
+
+	device := Device{id: "1234"}
+	tag := Tag{Namespace: "foo", Annotation: "bar", Label: "baz"}
+
+	assert.Empty(t, cache.cache)
+	cache.Add(&tag, &device)
+
+	assert.Len(t, cache.cache, 1)
+	assert.Contains(t, cache.cache, "foo")
+	assert.Contains(t, cache.cache["foo"], "bar")
+	assert.Contains(t, cache.cache["foo"]["bar"], "baz")
+	assert.Len(t, cache.cache["foo"]["bar"]["baz"], 1)
+}
+
+func TestTagCache_Add_newAnnotation(t *testing.T) {
+	// Test adding a device with an annotation that is not yet in the cache.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {},
+		},
+	}
+
+	device := Device{id: "1234"}
+	tag := Tag{Namespace: "foo", Annotation: "bar", Label: "baz"}
+
+	cache.Add(&tag, &device)
+
+	assert.Len(t, cache.cache, 1)
+	assert.Contains(t, cache.cache, "foo")
+	assert.Contains(t, cache.cache["foo"], "bar")
+	assert.Contains(t, cache.cache["foo"]["bar"], "baz")
+	assert.Len(t, cache.cache["foo"]["bar"]["baz"], 1)
+}
+
+func TestTagCache_Add_newLabel(t *testing.T) {
+	// Test adding a new device when the label is not yet in the cache.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {},
+			},
+		},
+	}
+
+	device := Device{id: "1234"}
+	tag := Tag{Namespace: "foo", Annotation: "bar", Label: "baz"}
+
+	cache.Add(&tag, &device)
+
+	assert.Len(t, cache.cache, 1)
+	assert.Contains(t, cache.cache, "foo")
+	assert.Contains(t, cache.cache["foo"], "bar")
+	assert.Contains(t, cache.cache["foo"]["bar"], "baz")
+	assert.Len(t, cache.cache["foo"]["bar"]["baz"], 1)
+}
+
+func TestTagCache_Add_newTag2(t *testing.T) {
+	// Test adding a new device when the label already exists in the cache.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+					},
+				},
+			},
+		},
+	}
+
+	device := Device{id: "1234"}
+	tag := Tag{Namespace: "foo", Annotation: "bar", Label: "baz"}
+
+	cache.Add(&tag, &device)
+
+	assert.Len(t, cache.cache, 1)
+	assert.Contains(t, cache.cache, "foo")
+	assert.Contains(t, cache.cache["foo"], "bar")
+	assert.Contains(t, cache.cache["foo"]["bar"], "baz")
+	assert.Len(t, cache.cache["foo"]["bar"]["baz"], 2)
+}
+
+func TestTagCache_Add_duplicate(t *testing.T) {
+	// Test adding a device when that device is already added for the tag.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+					},
+				},
+			},
+		},
+	}
+
+	device := Device{id: "xyz"}
+	tag := Tag{Namespace: "foo", Annotation: "bar", Label: "baz"}
+
+	cache.Add(&tag, &device)
+
+	assert.Len(t, cache.cache, 1)
+	assert.Contains(t, cache.cache, "foo")
+	assert.Contains(t, cache.cache["foo"], "bar")
+	assert.Contains(t, cache.cache["foo"]["bar"], "baz")
+	assert.Len(t, cache.cache["foo"]["bar"]["baz"], 1)
+}
+
+func TestTagCache_GetDevicesFromTags_noTags(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+					},
+				},
+			},
+		},
+	}
+
+	devices := cache.GetDevicesFromTags()
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromTags_noNsMatch(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+					},
+				},
+			},
+		},
+	}
+
+	tag := Tag{Namespace: "a", Annotation: "bar", Label: "baz"}
+	devices := cache.GetDevicesFromTags(&tag)
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromTags_noAnnotationMatch(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+					},
+				},
+			},
+		},
+	}
+
+	tag := Tag{Namespace: "foo", Annotation: "b", Label: "baz"}
+	devices := cache.GetDevicesFromTags(&tag)
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromTags_noLabelMatch(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+					},
+				},
+			},
+		},
+	}
+
+	tag := Tag{Namespace: "foo", Annotation: "bar", Label: "c"}
+	devices := cache.GetDevicesFromTags(&tag)
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromTags_labelAll_noNsMatch(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+						&Device{id: "abc"},
+					},
+				},
+			},
+		},
+	}
+
+	tag := Tag{Namespace: "a", Annotation: "bar", Label: "**"}
+	devices := cache.GetDevicesFromTags(&tag)
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromTags_labelAll_noAnnotationMatch(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+						&Device{id: "abc"},
+					},
+				},
+			},
+		},
+	}
+
+	tag := Tag{Namespace: "foo", Annotation: "b", Label: "**"}
+	devices := cache.GetDevicesFromTags(&tag)
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromTags(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+						&Device{id: "abc"},
+					},
+				},
+				"baz": {
+					"bat": {
+						&Device{id: "456"},
+						&Device{id: "abc"},
+					},
+					"b0t": {
+						&Device{id: "456"},
+						&Device{id: "xyz"},
+					},
+				},
+			},
+			"default": {
+				"": {
+					"vapor": {
+						&Device{id: "xyz"},
+						&Device{id: "123"},
+					},
+				},
+				"type": {
+					"led": {
+						&Device{id: "xyz"},
+						&Device{id: "123"},
+					},
+				},
+			},
+		},
+	}
+
+	tag1 := Tag{Namespace: "foo", Annotation: "bar", Label: "baz"}
+	tag2 := Tag{Namespace: "default", Annotation: "", Label: "vapor"}
+	devices := cache.GetDevicesFromTags(&tag1, &tag2)
+	assert.Len(t, devices, 1)
+	assert.Equal(t, "xyz", devices[0].id)
+}
+
+func TestTagCache_GetDevicesFromTags_all(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+						&Device{id: "abc"},
+					},
+				},
+				"baz": {
+					"bat": {
+						&Device{id: "456"},
+						&Device{id: "abc"},
+					},
+					"b0t": {
+						&Device{id: "456"},
+						&Device{id: "xyz"},
+					},
+				},
+			},
+			"default": {
+				"": {
+					"vapor": {
+						&Device{id: "xyz"},
+					},
+				},
+				"type": {
+					"led": {
+						&Device{id: "xyz"},
+						&Device{id: "123"},
+					},
+				},
+			},
+		},
+	}
+
+	tag := Tag{Namespace: "foo", Annotation: "bar", Label: "**"}
+	devices := cache.GetDevicesFromTags(&tag)
+	assert.Len(t, devices, 2)
+
+	tag = Tag{Namespace: "foo", Label: "**"}
+	devices = cache.GetDevicesFromTags(&tag)
+	assert.Len(t, devices, 3)
+
+	tag1 := Tag{Namespace: "foo", Label: "**"}
+	tag2 := Tag{Namespace: "default", Annotation: "type", Label: "**"}
+	devices = cache.GetDevicesFromTags(&tag1, &tag2)
+	assert.Len(t, devices, 1)
+}
+
+func TestTagCache_GetDevicesFromStrings_noTags(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+						&Device{id: "abc"},
+					},
+				},
+			},
+		},
+	}
+
+	devices, err := cache.GetDevicesFromStrings()
+	assert.NoError(t, err)
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromStrings_invalidTag(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+						&Device{id: "abc"},
+					},
+				},
+			},
+		},
+	}
+
+	devices, err := cache.GetDevicesFromStrings("not a tag string")
+	assert.Error(t, err)
+	assert.Nil(t, devices)
+}
+
+func TestTagCache_GetDevicesFromStrings_validTag(t *testing.T) {
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+						&Device{id: "abc"},
+					},
+				},
+			},
+		},
+	}
+
+	devices, err := cache.GetDevicesFromStrings("foo/bar:baz")
+	assert.NoError(t, err)
+	assert.Len(t, devices, 2)
+}
+
+func TestTagCache_GetDevicesFromNamespace_empty(t *testing.T) {
+	// No namespaces defined in the cache.
+	cache := &TagCache{}
+
+	devices := cache.GetDevicesFromNamespace("foo", "bar")
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromNamespace_noNsSpecified(t *testing.T) {
+	// No namespaces defined in the cache.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+					},
+				},
+			},
+		},
+	}
+
+	devices := cache.GetDevicesFromNamespace()
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromNamespace_nsNotExist(t *testing.T) {
+	// The specified namespace does not exist in the cache.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"baz": {
+						&Device{id: "xyz"},
+					},
+				},
+			},
+		},
+	}
+
+	devices := cache.GetDevicesFromNamespace("abc")
+	assert.Empty(t, devices)
+}
+
+func TestTagCache_GetDevicesFromNamespace_multipleDevices(t *testing.T) {
+	// The namespace contains multiple devices.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"a": {
+						&Device{id: "xyz"},
+					},
+					"b": {
+						&Device{id: "123"},
+					},
+				},
+				"baz": {
+					"c": {
+						&Device{id: "abc"},
+					},
+				},
+			},
+		},
+	}
+
+	devices := cache.GetDevicesFromNamespace("foo")
+	assert.Len(t, devices, 3)
+}
+
+func TestTagCache_GetDevicesFromNamespace_multipleNamespaces(t *testing.T) {
+	// Multiple namespaces are specified, each with their own devices.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"a": {
+						&Device{id: "xyz"},
+					},
+					"b": {
+						&Device{id: "123"},
+					},
+				},
+				"baz": {
+					"c": {
+						&Device{id: "abc"},
+					},
+				},
+			},
+			"default": {
+				"": {
+					"x": {
+						&Device{id: "456"},
+					},
+					"y": {
+						&Device{id: "789"},
+					},
+				},
+				"vapor": {
+					"z": {
+						&Device{id: "vapor1"},
+					},
+				},
+			},
+		},
+	}
+
+	devices := cache.GetDevicesFromNamespace("foo")
+	assert.Len(t, devices, 3)
+
+	devices = cache.GetDevicesFromNamespace("default")
+	assert.Len(t, devices, 3)
+
+	devices = cache.GetDevicesFromNamespace("foo", "default")
+	assert.Len(t, devices, 6)
+}
+
+func TestTagCache_GetDevicesFromNamespace_multipleNamespacesDuplicate(t *testing.T) {
+	// Multiple namespaces are specified, with some device overlap.
+	cache := &TagCache{
+		cache: map[string]map[string]map[string][]*Device{
+			"foo": {
+				"bar": {
+					"a": {
+						&Device{id: "xyz"},
+					},
+					"b": {
+						&Device{id: "123"},
+						&Device{id: "456"},
+						&Device{id: "789"},
+					},
+				},
+				"baz": {
+					"c": {
+						&Device{id: "abc"},
+					},
+				},
+			},
+			"default": {
+				"": {
+					"x": {
+						&Device{id: "456"},
+					},
+					"y": {
+						&Device{id: "789"},
+					},
+				},
+				"vapor": {
+					"z": {
+						&Device{id: "vapor1"},
+						&Device{id: "abc"},
+					},
+				},
+			},
+		},
+	}
+
+	devices := cache.GetDevicesFromNamespace("foo")
+	assert.Len(t, devices, 5)
+
+	devices = cache.GetDevicesFromNamespace("default")
+	assert.Len(t, devices, 4)
+
+	devices = cache.GetDevicesFromNamespace("foo", "default")
+	assert.Len(t, devices, 6)
 }
 
 func TestDeviceSelectorToTags_withID(t *testing.T) {
@@ -351,7 +906,7 @@ func TestDeviceSelectorToID_withTags(t *testing.T) {
 	tag := DeviceSelectorToID(&synse.V3DeviceSelector{
 		Id: "1234",
 		Tags: []*synse.V3Tag{
-			{Namespace: "foo", Annotation:"bar", Label:"baz"},
+			{Namespace: "foo", Annotation: "bar", Label: "baz"},
 		},
 	})
 

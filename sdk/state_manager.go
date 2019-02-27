@@ -54,6 +54,10 @@ type stateManager struct {
 
 // newStateManager creates a new instance of the stateManager.
 func newStateManager(conf *config.PluginSettings) *stateManager {
+	if conf == nil {
+		panic("state manager requires a non-nil config")
+	}
+
 	var readingsCache *cache.Cache
 	if conf.Cache.Enabled {
 		// todo: logging
