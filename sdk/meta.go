@@ -83,14 +83,13 @@ func (info *PluginMetadata) format() string {
 	var writer bytes.Buffer
 
 	out := `Plugin Info:
-  Tag:         {{.Tag}}
   Name:        {{.Name}}
   Maintainer:  {{.Maintainer}}
   VCS:         {{.VCS}}
   Description: {{.Description}}`
 
 	t := template.Must(template.New("metadata").Parse(out))
-	_ = t.Execute(&writer, version) // nolint
+	_ = t.Execute(&writer, info) // nolint
 
 	return writer.String()
 }
