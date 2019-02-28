@@ -104,7 +104,8 @@ func (server *server) init() error {
 		}
 		// If the socket path does exist, try removing the socket if it is
 		// there (left over from a previous run).
-		if err = os.Remove(server.address()); !os.IsNotExist(err) {
+		err = os.Remove(server.address())
+		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
 		break
@@ -408,7 +409,16 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 		"system": request.SystemOfMeasure,
 	}).Debug("[grpc] READ request")
 
-	devices := server.deviceManager.GetDevices(DeviceSelectorToTags(request.Selector)...)
+	var devices []*Device
+
+	// If there is no info specified for the selector, assume all devices in the default namespace.
+	// Otherwise, get the set of devices from the specified selector.
+	if request.Selector.Id == "" && len(request.Selector.Tags) == 0 {
+		devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceDefault)
+	} else {
+		devices = server.deviceManager.GetDevices(DeviceSelectorToTags(request.Selector)...)
+	}
+
 	for _, device := range devices {
 		readings := server.stateManager.GetReadingsForDevice(device.id)
 
@@ -470,6 +480,10 @@ func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3P
 		return fmt.Errorf("write device selector did not specify valid device id")
 	}
 	device := server.deviceManager.GetDevices(deviceID)
+	if len(device) != 1 {
+		// fixme
+		return fmt.Errorf("did not find device with id")
+	}
 	// fixme: easier way to get the device...
 	transactions, err := server.scheduler.Write(device[0], request.Data)
 	if err != nil {
@@ -500,6 +514,10 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 		return fmt.Errorf("write device selector did not specify valid device id")
 	}
 	device := server.deviceManager.GetDevices(deviceID)
+	if len(device) != 1 {
+		// fixme
+		return fmt.Errorf("did not find device with id")
+	}
 	// fixme: easier way to get the device...
 
 	transactions, err := server.scheduler.WriteAndWait(device[0], request.Data)
@@ -535,6 +553,7 @@ func (server *server) Transaction(request *synse.V3TransactionSelector, stream s
 				}
 			}
 		}
+		return nil
 	}
 
 	// Otherwise, return only the transaction with the specified ID.
