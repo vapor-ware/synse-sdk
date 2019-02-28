@@ -32,7 +32,10 @@ const (
 	DeviceEnvOverride = "PLUGIN_DEVICE_CONFIG"
 )
 
-// todo: figure out where dynamic device registration fits in here.
+var (
+	localDeviceConfig   = "./config/device"
+	defaultDeviceConfig = "/etc/synse/plugin/config/device"
+)
 
 // DeviceAction defines an action that can be run before the main Plugin run
 // logic. This is generally used for doing device-specific setup actions.
@@ -70,6 +73,10 @@ type deviceManager struct {
 
 // newDeviceManager creates a new DeviceManager.
 func newDeviceManager(plugin *Plugin) *deviceManager {
+	if plugin == nil {
+		panic("device manager cannot be initialized with nil plugin")
+	}
+
 	return &deviceManager{
 		config:         new(config.Devices),
 		id:             plugin.id,
@@ -217,7 +224,7 @@ func (manager *deviceManager) IsDeviceWritable(id string) bool {
 // the deviceManager implement a read function.
 func (manager *deviceManager) HasReadHandlers() bool {
 	for _, h := range manager.handlers {
-		if h.Read != nil || h.BulkRead != nil {
+		if h.CanRead() || h.CanBulkRead() {
 			return true
 		}
 	}
@@ -228,7 +235,7 @@ func (manager *deviceManager) HasReadHandlers() bool {
 // the deviceManager implement a write function.
 func (manager *deviceManager) HasWriteHandlers() bool {
 	for _, h := range manager.handlers {
-		if h.Write != nil {
+		if h.CanWrite() {
 			return true
 		}
 	}
@@ -239,7 +246,7 @@ func (manager *deviceManager) HasWriteHandlers() bool {
 // the deviceManager implement a listener function.
 func (manager *deviceManager) HasListenerHandlers() bool {
 	for _, h := range manager.handlers {
-		if h.Listen != nil {
+		if h.CanListen() {
 			return true
 		}
 	}
@@ -363,6 +370,7 @@ func (manager *deviceManager) AddDeviceSetupActions(actions ...*DeviceAction) er
 			log.WithFields(log.Fields{
 				"action": action.Name,
 			}).Error("[device manager] no filter set for device setup action")
+			return fmt.Errorf("no filter set for device setup action")
 		}
 		manager.setupActions = append(manager.setupActions, action)
 	}
@@ -458,8 +466,8 @@ func (manager *deviceManager) loadConfig() error {
 	loader := config.NewYamlLoader("device")
 	loader.EnvOverride = DeviceEnvOverride
 	loader.AddSearchPaths(
-		"./config/device",                 // Local device config directory
-		"/etc/synse/plugin/config/device", // Default device config directory
+		localDeviceConfig,   // Local device config directory (search first)
+		defaultDeviceConfig, // Default device config directory (search second)
 	)
 
 	// Load the device configurations.
