@@ -16,20 +16,24 @@
 
 package sdk
 
-//
-//import (
-//	"context"
-//	"fmt"
-//	"testing"
-//	"time"
-//
-//	"github.com/stretchr/testify/assert"
-//	"github.com/vapor-ware/synse-sdk/internal/test"
-//	"github.com/vapor-ware/synse-sdk/sdk/health"
-//	"github.com/vapor-ware/synse-server-grpc/go"
-//	"google.golang.org/grpc"
-//)
-//
+import (
+	"context"
+	"fmt"
+	"path/filepath"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/patrickmn/go-cache"
+	"github.com/stretchr/testify/assert"
+	"github.com/vapor-ware/synse-sdk/internal/test"
+	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
+	"google.golang.org/grpc"
+)
+
 //// TestNewServer tests that a server is returned when the constructor
 //// is called.
 //func TestNewServer(t *testing.T) {
@@ -126,1199 +130,1271 @@ package sdk
 //	err := s.Serve()
 //	assert.Error(t, err)
 //}
-//
-//// TestServer_Test tests the Test method of the gRPC plugin service.
-//func TestServer_Test(t *testing.T) {
-//	s := server{}
-//	req := &synse.Empty{}
-//	resp, err := s.Test(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, true, resp.Ok)
-//}
-//
-//// TestServer_Version tests the Version method of the gRPC plugin service.
-//func TestServer_Version(t *testing.T) {
-//	s := server{}
-//	req := &synse.Empty{}
-//	resp, err := s.Version(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, version.Arch, resp.Arch)
-//	assert.Equal(t, version.OS, resp.Os)
-//	assert.Equal(t, version.SDKVersion, resp.SdkVersion)
-//	assert.Equal(t, version.BuildDate, resp.BuildDate)
-//	assert.Equal(t, version.GitCommit, resp.GitCommit)
-//	assert.Equal(t, version.GitTag, resp.GitTag)
-//	assert.Equal(t, version.PluginVersion, resp.PluginVersion)
-//}
-//
-//// TestServer_Health tests the Health method of the gRPC plugin service when
-//// there are no health checks defined.
-//func TestServer_Health(t *testing.T) {
-//	s := server{}
-//	req := &synse.Empty{}
-//	resp, err := s.Health(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.NotEmpty(t, resp.Timestamp)
-//	assert.Equal(t, synse.PluginHealth_OK, resp.Status)
-//	assert.Equal(t, 0, len(resp.Checks))
-//}
-//
-//// TestServer_Health2 tests the Health method of the gRPC plugin service when
-//// there is a passing health check.
-//func TestServer_Health2(t *testing.T) {
-//	defer func() {
-//		health.DefaultCatalog = health.NewCatalog()
-//	}()
-//
-//	health.Register("foo", health.NewChecker("foo"))
-//
-//	s := server{}
-//	req := &synse.Empty{}
-//	resp, err := s.Health(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.NotEmpty(t, resp.Timestamp)
-//	assert.Equal(t, synse.PluginHealth_OK, resp.Status)
-//	assert.Equal(t, 1, len(resp.Checks))
-//}
-//
-//// TestServer_Health3 tests the Health method of the gRPC plugin service when
-//// there is a failing health check.
-//func TestServer_Health3(t *testing.T) {
-//	defer func() {
-//		health.DefaultCatalog = health.NewCatalog()
-//	}()
-//
-//	checker := health.NewChecker("foo")
-//	checker.Update(fmt.Errorf("err"))
-//	health.Register("foo", checker)
-//
-//	s := server{}
-//	req := &synse.Empty{}
-//	resp, err := s.Health(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.NotEmpty(t, resp.Timestamp)
-//	assert.Equal(t, synse.PluginHealth_FAILING, resp.Status)
-//	assert.Equal(t, 1, len(resp.Checks))
-//}
-//
-//// TestServer_Health4 tests the Health method of the gRPC plugin service when
-//// there is a failing health check and a passing health check.
-//func TestServer_Health4(t *testing.T) {
-//	defer func() {
-//		health.DefaultCatalog = health.NewCatalog()
-//	}()
-//
-//	health.Register("foo", health.NewChecker("foo"))
-//
-//	checker := health.NewChecker("foo")
-//	checker.Update(fmt.Errorf("err"))
-//	health.Register("bar", checker)
-//
-//	s := server{}
-//	req := &synse.Empty{}
-//	resp, err := s.Health(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.NotEmpty(t, resp.Timestamp)
-//	assert.Equal(t, synse.PluginHealth_PARTIALLY_DEGRADED, resp.Status)
-//	assert.Equal(t, 2, len(resp.Checks))
-//}
-//
-//// TestServer_Capabilities tests the Capabilities method of the gRPC plugin service.
-//func TestServer_Capabilities(t *testing.T) {
-//	s := server{}
-//	req := &synse.Empty{}
-//	mock := test.NewMockCapabilitiesStream()
-//	err := s.Capabilities(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 0, len(mock.Results))
-//}
-//
-//// TestServer_Capabilities2 tests the Capabilities method of the gRPC plugin service
-//// when there are actual devices to get capabilities from.
-//func TestServer_Capabilities2(t *testing.T) {
-//	defer resetContext()
-//
-//	ctx.devices["foo"] = &Device{
-//		Kind: "foo",
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//	}
-//	ctx.devices["bar"] = &Device{
-//		Kind: "bar",
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output3"}},
-//		},
-//	}
-//
-//	s := server{}
-//	req := &synse.Empty{}
-//	mock := test.NewMockCapabilitiesStream()
-//	err := s.Capabilities(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 2, len(mock.Results))
-//	assert.Equal(t, 2, len(mock.Results["foo"].GetOutputs()))
-//	assert.Equal(t, 1, len(mock.Results["bar"].GetOutputs()))
-//}
-//
-//// TestServer_Capabilities3 tests the Capabilities method of the gRPC plugin service
-//// when there is an error returned.
-//func TestServer_Capabilities3(t *testing.T) {
-//	defer resetContext()
-//
-//	ctx.devices["foo"] = &Device{
-//		Kind: "foo",
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//	}
-//	ctx.devices["bar"] = &Device{
-//		Kind: "bar",
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output3"}},
-//		},
-//	}
-//
-//	s := server{}
-//	req := &synse.Empty{}
-//	mock := &test.MockCapabilitiesStreamErr{}
-//	err := s.Capabilities(req, mock)
-//
-//	assert.Error(t, err)
-//}
-//
-//// TestServer_Devices tests the Devices method of the gRPC plugin service.
-//func TestServer_Devices(t *testing.T) {
-//	s := server{}
-//	req := &synse.DeviceFilter{}
-//	mock := test.NewMockDevicesStream()
-//	err := s.Devices(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 0, len(mock.Results))
-//}
-//
-//// TestServer_Devices_NoFilter tests the Devices method of the gRPC plugin service when
-//// there are devices to get.
-//func TestServer_Devices_NoFilter(t *testing.T) {
-//	defer resetContext()
-//
-//	foo := &Device{
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//	}
-//	bar := &Device{
-//		Kind: "bar",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-2",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output3"}},
-//		},
-//	}
-//	baz := &Device{
-//		Kind: "baz",
-//		Location: &Location{
-//			Rack:  "rack-2",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output4"}},
-//		},
-//	}
-//
-//	ctx.devices["foo"] = foo
-//	ctx.devices["bar"] = bar
-//	ctx.devices["baz"] = baz
-//
-//	s := server{}
-//	req := &synse.DeviceFilter{}
-//	mock := test.NewMockDevicesStream()
-//	err := s.Devices(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 3, len(mock.Results))
-//	assert.NotNil(t, mock.Results[foo.ID()])
-//	assert.NotNil(t, mock.Results[bar.ID()])
-//	assert.NotNil(t, mock.Results[baz.ID()])
-//}
-//
-//// TestServer_Devices_FilterRack tests the Devices method of the gRPC plugin service when
-//// there are devices to get, and we filter on rack.
-//func TestServer_Devices_FilterRack(t *testing.T) {
-//	defer resetContext()
-//
-//	foo := &Device{
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//	}
-//	bar := &Device{
-//		Kind: "bar",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-2",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output3"}},
-//		},
-//	}
-//	baz := &Device{
-//		Kind: "baz",
-//		Location: &Location{
-//			Rack:  "rack-2",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output4"}},
-//		},
-//	}
-//
-//	ctx.devices["foo"] = foo
-//	ctx.devices["bar"] = bar
-//	ctx.devices["baz"] = baz
-//
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Rack: "rack-1",
-//	}
-//	mock := test.NewMockDevicesStream()
-//	err := s.Devices(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 2, len(mock.Results))
-//	assert.NotNil(t, mock.Results[foo.ID()])
-//	assert.NotNil(t, mock.Results[bar.ID()])
-//	assert.Nil(t, mock.Results[baz.ID()])
-//}
-//
-//// TestServer_Devices_FilterBoard tests the Devices method of the gRPC plugin service when
-//// there are devices to get, and we filter on board.
-//func TestServer_Devices_FilterBoard(t *testing.T) {
-//	defer resetContext()
-//
-//	foo := &Device{
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//	}
-//	bar := &Device{
-//		Kind: "bar",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-2",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output3"}},
-//		},
-//	}
-//	baz := &Device{
-//		Kind: "baz",
-//		Location: &Location{
-//			Rack:  "rack-2",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output4"}},
-//		},
-//	}
-//
-//	ctx.devices["foo"] = foo
-//	ctx.devices["bar"] = bar
-//	ctx.devices["baz"] = baz
-//
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Rack:  "rack-1",
-//		Board: "board-1",
-//	}
-//	mock := test.NewMockDevicesStream()
-//	err := s.Devices(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 1, len(mock.Results))
-//	assert.NotNil(t, mock.Results[foo.ID()])
-//	assert.Nil(t, mock.Results[bar.ID()])
-//	assert.Nil(t, mock.Results[baz.ID()])
-//}
-//
-//// TestServer_Devices_FilterNoMatch tests the Devices method of the gRPC plugin service when
-//// there are devices to get, but the filter does not match any of them.
-//func TestServer_Devices_FilterNoMatch(t *testing.T) {
-//	defer resetContext()
-//
-//	foo := &Device{
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//	}
-//	bar := &Device{
-//		Kind: "bar",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-2",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output3"}},
-//		},
-//	}
-//	baz := &Device{
-//		Kind: "baz",
-//		Location: &Location{
-//			Rack:  "rack-2",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output4"}},
-//		},
-//	}
-//
-//	ctx.devices["foo"] = foo
-//	ctx.devices["bar"] = bar
-//	ctx.devices["baz"] = baz
-//
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Rack: "rack-3",
-//	}
-//	mock := test.NewMockDevicesStream()
-//	err := s.Devices(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 0, len(mock.Results))
-//	assert.Nil(t, mock.Results[foo.ID()])
-//	assert.Nil(t, mock.Results[bar.ID()])
-//	assert.Nil(t, mock.Results[baz.ID()])
-//}
-//
-//// TestServer_Devices_FilterDevice tests the Devices method of the gRPC plugin service when
-//// there are devices to get, and we filter on device. We disallow filtering on device.
-//func TestServer_Devices_FilterDevice(t *testing.T) {
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Rack:   "rack-1",
-//		Board:  "board-1",
-//		Device: "device-1",
-//	}
-//	mock := test.NewMockDevicesStream()
-//	err := s.Devices(req, mock)
-//
-//	assert.Error(t, err)
-//	assert.Equal(t, 0, len(mock.Results))
-//}
-//
-//// TestServer_Devices_Error tests the Devices method of the gRPC plugin service when
-//// an error is returned because a device is specified.
-//func TestServer_Devices_Error(t *testing.T) {
-//	defer resetContext()
-//
-//	foo := &Device{
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//	}
-//	bar := &Device{
-//		Kind: "bar",
-//		Location: &Location{
-//			Rack:  "rack-1",
-//			Board: "board-2",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output3"}},
-//		},
-//	}
-//	baz := &Device{
-//		Kind: "baz",
-//		Location: &Location{
-//			Rack:  "rack-2",
-//			Board: "board-1",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output4"}},
-//		},
-//	}
-//
-//	ctx.devices["foo"] = foo
-//	ctx.devices["bar"] = bar
-//	ctx.devices["baz"] = baz
-//
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Rack:  "rack-1",
-//		Board: "board-1",
-//	}
-//	mock := &test.MockDevicesStreamErr{}
-//	err := s.Devices(req, mock)
-//
-//	assert.Error(t, err)
-//}
-//
-//// TestServer_Devices_Error2 tests the Devices method of the gRPC plugin service when
-//// an error is returned because a board is specified with no rack.
-//func TestServer_Devices_Error2(t *testing.T) {
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Board: "board",
-//	}
-//	mock := &test.MockDevicesStreamErr{}
-//	err := s.Devices(req, mock)
-//
-//	assert.Error(t, err)
-//}
-//
-//// TestServer_Metainfo tests the Metainfo method of the gRPC plugin service.
-//func TestServer_Metainfo(t *testing.T) {
-//	s := server{}
-//	req := &synse.Empty{}
-//	resp, err := s.Metainfo(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, metainfo.Name, resp.GetName())
-//	assert.Equal(t, metainfo.Maintainer, resp.GetMaintainer())
-//	assert.Equal(t, metainfo.Description, resp.GetDescription())
-//	assert.Equal(t, metainfo.VCS, resp.GetVcs())
-//
-//	v := resp.GetVersion()
-//	assert.Equal(t, version.Arch, v.Arch)
-//	assert.Equal(t, version.OS, v.Os)
-//	assert.Equal(t, version.SDKVersion, v.SdkVersion)
-//	assert.Equal(t, version.BuildDate, v.BuildDate)
-//	assert.Equal(t, version.GitCommit, v.GitCommit)
-//	assert.Equal(t, version.GitTag, v.GitTag)
-//	assert.Equal(t, version.PluginVersion, v.PluginVersion)
-//}
-//
-//// TestServer_Read tests the Read method of the gRPC plugin service.
-//func TestServer_Read(t *testing.T) {
-//	defer func() {
-//		DataManager = newDataManager()
-//		resetContext()
-//		Config.reset()
-//	}()
-//
-//	Config.Plugin = &PluginConfig{
-//		Settings: &PluginSettings{
-//			Read: &ReadSettings{
-//				Enabled: true,
-//			},
-//		},
-//	}
-//	ctx.devices["rack-board-device"] = &Device{
-//		id:   "device",
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack",
-//			Board: "board",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//		Handler: &DeviceHandler{
-//			Read: func(device *Device) ([]*Reading, error) {
-//				return nil, nil
-//			},
-//		},
-//	}
-//	DataManager.readings["rack-board-device"] = []*Reading{
-//		{
-//			Timestamp: "now",
-//			Type:      "temperature",
-//			Value:     3,
-//		},
-//		{
-//			Timestamp: "now",
-//			Type:      "humidity",
-//			Value:     5,
-//		},
-//	}
-//
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Rack:   "rack",
-//		Board:  "board",
-//		Device: "device",
-//	}
-//	mock := test.NewMockReadStream()
-//	err := s.Read(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 2, len(mock.Results))
-//}
-//
-//// TestServer_Read2 tests the Read method of the gRPC plugin service when
-//// the filter does not match anything.
-//func TestServer_Read2(t *testing.T) {
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Rack:   "rack",
-//		Board:  "board",
-//		Device: "device",
-//	}
-//	mock := test.NewMockReadStream()
-//	err := s.Read(req, mock)
-//
-//	assert.Error(t, err)
-//	assert.Equal(t, 0, len(mock.Results))
-//}
-//
-//// TestServer_Read3 tests the Read method of the gRPC plugin service when
-//// sending to the stream results in error.
-//func TestServer_Read3(t *testing.T) {
-//	defer func() {
-//		DataManager = newDataManager()
-//		resetContext()
-//		Config.reset()
-//	}()
-//
-//	Config.Plugin = &PluginConfig{
-//		Settings: &PluginSettings{
-//			Read: &ReadSettings{
-//				Enabled: true,
-//			},
-//		},
-//	}
-//	ctx.devices["rack-board-device"] = &Device{
-//		id:   "device",
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack",
-//			Board: "board",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//		Handler: &DeviceHandler{
-//			Read: func(device *Device) ([]*Reading, error) {
-//				return nil, nil
-//			},
-//		},
-//	}
-//	DataManager.readings["rack-board-device"] = []*Reading{
-//		{
-//			Timestamp: "now",
-//			Type:      "temperature",
-//			Value:     3,
-//		},
-//		{
-//			Timestamp: "now",
-//			Type:      "humidity",
-//			Value:     5,
-//		},
-//	}
-//
-//	s := server{}
-//	req := &synse.DeviceFilter{
-//		Rack:   "rack",
-//		Board:  "board",
-//		Device: "device",
-//	}
-//	mock := &test.MockReadStreamErr{}
-//	err := s.Read(req, mock)
-//
-//	assert.Error(t, err)
-//}
-//
-//// TestServer_Read4 tests the Read method of the gRPC plugin service when
-//// a bad device filter is specified.
-//func TestServer_Read4(t *testing.T) {
-//	s := server{}
-//	req := &synse.DeviceFilter{ // missing device to read
-//		Rack:  "rack",
-//		Board: "board",
-//	}
-//	mock := test.NewMockReadStream()
-//	err := s.Read(req, mock)
-//
-//	assert.Error(t, err)
-//}
-//
-//// Test the ReadCached method of the gRPC plugin service.
-//func TestServer_ReadCached1(t *testing.T) {
-//	defer func() {
-//		DataManager = newDataManager()
-//		resetContext()
-//		Config.reset()
-//	}()
-//
-//	// Disable the listener -- this will mean we get readings from
-//	// the DataManager, which we will manually add readings to next.
-//	Config.Plugin = &PluginConfig{
-//		Settings: &PluginSettings{
-//			Cache: &CacheSettings{
-//				Enabled: false,
-//			},
-//		},
-//	}
-//	ctx.devices["rack-board-device"] = &Device{
-//		id:   "device",
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack",
-//			Board: "board",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//		Handler: &DeviceHandler{
-//			Read: func(device *Device) ([]*Reading, error) {
-//				return nil, nil
-//			},
-//		},
-//	}
-//	DataManager.readings["rack-board-device"] = []*Reading{
-//		{
-//			Timestamp: "2018-10-17T13:19:44.326431979Z",
-//			Type:      "temperature",
-//			Value:     3,
-//		},
-//		{
-//			Timestamp: "2018-10-17T13:19:44.338671923Z",
-//			Type:      "humidity",
-//			Value:     5,
-//		},
-//	}
-//
-//	s := server{}
-//	bounds := &synse.Bounds{}
-//	mock := test.NewMockReadCachedStream()
-//	err := s.ReadCached(bounds, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 2, len(mock.Results))
-//}
-//
-//// Test the ReadCached method of the gRPC plugin service. In this test
-//// case, we have the cache disabled (pulling current readings) and specify
-//// bounds. When the cache is disabled, the bounds should be ignored, so
-//// we expect to get readings back, even though they are out of bounds here.
-//func TestServer_ReadCached2(t *testing.T) {
-//	defer func() {
-//		DataManager = newDataManager()
-//		resetContext()
-//		Config.reset()
-//	}()
-//
-//	// Disable the listener -- this will mean we get readings from
-//	// the DataManager, which we will manually add readings to next.
-//	Config.Plugin = &PluginConfig{
-//		Settings: &PluginSettings{
-//			Cache: &CacheSettings{
-//				Enabled: false,
-//			},
-//		},
-//	}
-//	ctx.devices["rack-board-device"] = &Device{
-//		id:   "device",
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack",
-//			Board: "board",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//		Handler: &DeviceHandler{
-//			Read: func(device *Device) ([]*Reading, error) {
-//				return nil, nil
-//			},
-//		},
-//	}
-//	DataManager.readings["rack-board-device"] = []*Reading{
-//		{
-//			Timestamp: "2018-10-17T13:19:44.326431979Z",
-//			Type:      "temperature",
-//			Value:     3,
-//		},
-//		{
-//			Timestamp: "2018-10-17T13:19:44.338671923Z",
-//			Type:      "humidity",
-//			Value:     5,
-//		},
-//	}
-//
-//	s := server{}
-//	bounds := &synse.Bounds{
-//		End: "2018-10-17T13:19:40.000000000Z",
-//	}
-//	mock := test.NewMockReadCachedStream()
-//	err := s.ReadCached(bounds, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 2, len(mock.Results))
-//}
-//
-//// Test the ReadCached method of the gRPC plugin service when the stream
-//// returns an error.
-//func TestServer_ReadCached3(t *testing.T) {
-//	defer func() {
-//		DataManager = newDataManager()
-//		resetContext()
-//		Config.reset()
-//	}()
-//
-//	// Disable the listener -- this will mean we get readings from
-//	// the DataManager, which we will manually add readings to next.
-//	Config.Plugin = &PluginConfig{
-//		Settings: &PluginSettings{
-//			Cache: &CacheSettings{
-//				Enabled: false,
-//			},
-//		},
-//	}
-//	ctx.devices["rack-board-device"] = &Device{
-//		id:   "device",
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack",
-//			Board: "board",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//		Handler: &DeviceHandler{
-//			Read: func(device *Device) ([]*Reading, error) {
-//				return nil, nil
-//			},
-//		},
-//	}
-//	DataManager.readings["rack-board-device"] = []*Reading{
-//		{
-//			Timestamp: "2018-10-17T13:19:44.326431979Z",
-//			Type:      "temperature",
-//			Value:     3,
-//		},
-//		{
-//			Timestamp: "2018-10-17T13:19:44.338671923Z",
-//			Type:      "humidity",
-//			Value:     5,
-//		},
-//	}
-//
-//	s := server{}
-//	bounds := &synse.Bounds{}
-//	mock := &test.MockReadCachedStreamErr{}
-//	err := s.ReadCached(bounds, mock)
-//
-//	assert.Error(t, err)
-//}
-//
-//// TestServer_Write tests the Write method of the gRPC plugin service when
-//// the specified device isn't found.
-//func TestServer_Write(t *testing.T) {
-//	s := server{}
-//	req := &synse.WriteInfo{
-//		DeviceFilter: &synse.DeviceFilter{
-//			Rack:   "rack",
-//			Board:  "board",
-//			Device: "device",
-//		},
-//		Data: []*synse.WriteData{
-//			{Action: "test"},
-//		},
-//	}
-//	resp, err := s.Write(context.Background(), req)
-//
-//	assert.Error(t, err)
-//	assert.Nil(t, resp)
-//}
-//
-//// TestServer_Write2 tests the Write method of the gRPC plugin service
-//// when a bad device filter is specified.
-//func TestServer_Write2(t *testing.T) {
-//	s := server{}
-//	req := &synse.WriteInfo{
-//		DeviceFilter: &synse.DeviceFilter{ // missing device
-//			Rack:  "rack",
-//			Board: "board",
-//		},
-//		Data: []*synse.WriteData{
-//			{Action: "test"},
-//		},
-//	}
-//	resp, err := s.Write(context.Background(), req)
-//
-//	assert.Error(t, err)
-//	assert.Nil(t, resp)
-//}
-//
-//// TestServer_Write3 tests the Write method of the gRPC plugin service when
-//// there is only one WriteData specified.
-//func TestServer_Write3(t *testing.T) {
-//	setupTransactionCache(time.Duration(600) * time.Second)
-//	defer func() {
-//		resetContext()
-//		Config.reset()
-//		DataManager = newDataManager()
-//	}()
-//
-//	DataManager.writeChannel = make(chan *WriteContext, 20)
-//	Config.Plugin = &PluginConfig{
-//		Settings: &PluginSettings{
-//			Write: &WriteSettings{
-//				Enabled: true,
-//			},
-//		},
-//	}
-//	ctx.devices["rack-board-device"] = &Device{
-//		id:   "device",
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack",
-//			Board: "board",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//		Handler: &DeviceHandler{
-//			Write: func(device *Device, data *WriteData) error {
-//				return nil
-//			},
-//		},
-//	}
-//
-//	s := server{}
-//	req := &synse.WriteInfo{
-//		DeviceFilter: &synse.DeviceFilter{
-//			Rack:   "rack",
-//			Board:  "board",
-//			Device: "device",
-//		},
-//		Data: []*synse.WriteData{
-//			{Action: "test"},
-//		},
-//	}
-//	resp, err := s.Write(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 1, len(resp.Transactions))
-//}
-//
-//// TestServer_Write4 tests the Write method of the gRPC plugin service when
-//// there are multiple write data specified.
-//func TestServer_Write4(t *testing.T) {
-//	setupTransactionCache(time.Duration(600) * time.Second)
-//	defer func() {
-//		resetContext()
-//		Config.reset()
-//		DataManager = newDataManager()
-//	}()
-//
-//	DataManager.writeChannel = make(chan *WriteContext, 20)
-//	Config.Plugin = &PluginConfig{
-//		Settings: &PluginSettings{
-//			Write: &WriteSettings{
-//				Enabled: true,
-//			},
-//		},
-//	}
-//	ctx.devices["rack-board-device"] = &Device{
-//		id:   "device",
-//		Kind: "foo",
-//		Location: &Location{
-//			Rack:  "rack",
-//			Board: "board",
-//		},
-//		Outputs: []*Output{
-//			{OutputType: OutputType{Name: "output1"}},
-//			{OutputType: OutputType{Name: "output2"}},
-//		},
-//		Handler: &DeviceHandler{
-//			Write: func(device *Device, data *WriteData) error {
-//				return nil
-//			},
-//		},
-//	}
-//
-//	s := server{}
-//	req := &synse.WriteInfo{
-//		DeviceFilter: &synse.DeviceFilter{
-//			Rack:   "rack",
-//			Board:  "board",
-//			Device: "device",
-//		},
-//		Data: []*synse.WriteData{
-//			{Action: "foo"},
-//			{Action: "bar"},
-//		},
-//	}
-//	resp, err := s.Write(context.Background(), req)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 2, len(resp.Transactions))
-//}
-//
-//// TestServer_Transaction tests the Transaction method of the gRPC plugin service.
-//func TestServer_Transaction(t *testing.T) {
-//	setupTransactionCache(time.Duration(600) * time.Second)
-//
-//	s := server{}
-//	req := &synse.TransactionFilter{}
-//	mock := test.NewMockTransactionStream()
-//	err := s.Transaction(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 0, len(mock.Results))
-//}
-//
-//// TestServer_Transaction2 tests the Transaction method of the gRPC plugin service
-//// when there are transactions in the cache and no filter.
-//func TestServer_Transaction2(t *testing.T) {
-//	setupTransactionCache(time.Duration(600) * time.Second)
-//
-//	t1 := newTransaction()
-//	t2 := newTransaction()
-//
-//	s := server{}
-//	req := &synse.TransactionFilter{}
-//	mock := test.NewMockTransactionStream()
-//	err := s.Transaction(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 2, len(mock.Results))
-//	assert.NotNil(t, mock.Results[t1.id])
-//	assert.NotNil(t, mock.Results[t2.id])
-//}
-//
-//// TestServer_Transaction3 tests the Transaction method of the gRPC plugin service
-//// when there are transactions in the cache with a filter.
-//func TestServer_Transaction3(t *testing.T) {
-//	setupTransactionCache(time.Duration(600) * time.Second)
-//
-//	t1 := newTransaction()
-//	t2 := newTransaction()
-//
-//	s := server{}
-//	req := &synse.TransactionFilter{Id: t1.id}
-//	mock := test.NewMockTransactionStream()
-//	err := s.Transaction(req, mock)
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, 1, len(mock.Results))
-//	assert.NotNil(t, mock.Results[t1.id])
-//	assert.Nil(t, mock.Results[t2.id])
-//}
-//
-//// TestServer_Transaction4 tests the Transaction method of the gRPC plugin service
-//// when the filter does not match any transactions.
-//func TestServer_Transaction4(t *testing.T) {
-//	setupTransactionCache(time.Duration(600) * time.Second)
-//
-//	t1 := newTransaction()
-//	t2 := newTransaction()
-//
-//	s := server{}
-//	req := &synse.TransactionFilter{Id: "abc"}
-//	mock := test.NewMockTransactionStream()
-//	err := s.Transaction(req, mock)
-//
-//	assert.Error(t, err)
-//	assert.Equal(t, 0, len(mock.Results))
-//	assert.Nil(t, mock.Results[t1.id])
-//	assert.Nil(t, mock.Results[t2.id])
-//}
-//
-//// TestServer_Transaction5 tests the Transaction method of the gRPC plugin service
-//// when sending the response results in error.
-//func TestServer_Transaction5(t *testing.T) {
-//	setupTransactionCache(time.Duration(600) * time.Second)
-//
-//	_ = newTransaction()
-//	_ = newTransaction()
-//
-//	s := server{}
-//	req := &synse.TransactionFilter{}
-//	mock := &test.MockTransactionStreamErr{}
-//	err := s.Transaction(req, mock)
-//
-//	assert.Error(t, err)
-//}
-//
-//// Test_loadCACerts_1 tests loading CA certs when none are given.
-//func Test_loadCACerts_1(t *testing.T) {
-//	certPool, err := loadCACerts([]string{})
-//	assert.NoError(t, err)
-//	assert.Equal(t, 0, len(certPool.Subjects()))
-//}
-//
-//// Test_loadCACerts_2 tests loading CA certs when invalid cert files are given
-//// (does not exist).
-//func Test_loadCACerts_2(t *testing.T) {
-//	certPool, err := loadCACerts([]string{"foobar"})
-//	assert.Error(t, err)
-//	assert.Nil(t, certPool)
-//}
-//
-//// Test_loadCACerts_3 tests loading CA certs when invalid cert files are given
-//// (bad contents).
-//func Test_loadCACerts_3(t *testing.T) {
-//	certPool, err := loadCACerts([]string{"testdata/certs/badcert.crt"})
-//	assert.Error(t, err)
-//	assert.Nil(t, certPool)
-//}
-//
-//// Test_loadCACerts_4 tests loading CA certs when a valid CA cert file is given.
-//func Test_loadCACerts_4(t *testing.T) {
-//	certPool, err := loadCACerts([]string{"testdata/certs/rootCA.crt"})
-//	assert.NoError(t, err)
-//	assert.Equal(t, 1, len(certPool.Subjects()))
-//}
-//
-//// Test_setCredsOptions_1 tests setting credential options when the plugin is not configured
-//// for TLS/SSL.
-//func Test_setCredsOptions_1(t *testing.T) {
-//	defer Config.reset()
-//	Config.Plugin = &PluginConfig{
-//		Network: &NetworkSettings{},
-//	}
-//
-//	var options []grpc.ServerOption
-//	err := setCredsOption(&options)
-//	assert.NoError(t, err)
-//	assert.Empty(t, options)
-//}
-//
-//// Test_setCredsOptions_2 tests setting credential options when the plugin is configured
-//// for TLS/SSL, but the cert is invalid.
-//func Test_setCredsOptions_2(t *testing.T) {
-//	defer Config.reset()
-//	Config.Plugin = &PluginConfig{
-//		Network: &NetworkSettings{
-//			TLS: &TLSNetworkSettings{
-//				Cert: "foobar",
-//				Key:  "testdata/certs/plugin.key",
-//			},
-//		},
-//	}
-//
-//	var options []grpc.ServerOption
-//	err := setCredsOption(&options)
-//	assert.Error(t, err)
-//	assert.Empty(t, options)
-//}
-//
-//// Test_setCredsOptions_3 tests setting credential options when the plugin is configured
-//// for TLS/SSL, but the key is invalid.
-//func Test_setCredsOptions_3(t *testing.T) {
-//	defer Config.reset()
-//	Config.Plugin = &PluginConfig{
-//		Network: &NetworkSettings{
-//			TLS: &TLSNetworkSettings{
-//				Cert: "testdata/certs/plugin.crt",
-//				Key:  "foobar",
-//			},
-//		},
-//	}
-//
-//	var options []grpc.ServerOption
-//	err := setCredsOption(&options)
-//	assert.Error(t, err)
-//	assert.Empty(t, options)
-//}
-//
-//// Test_setCredsOptions_4 tests setting credential options when the plugin is configured
-//// for TLS/SSL, but the specified cacert is invalid.
-//func Test_setCredsOptions_4(t *testing.T) {
-//	defer Config.reset()
-//	Config.Plugin = &PluginConfig{
-//		Network: &NetworkSettings{
-//			TLS: &TLSNetworkSettings{
-//				Cert:    "testdata/certs/plugin.crt",
-//				Key:     "testdata/certs/plugin.key",
-//				CACerts: []string{"foobar"},
-//			},
-//		},
-//	}
-//
-//	var options []grpc.ServerOption
-//	err := setCredsOption(&options)
-//	assert.Error(t, err)
-//	assert.Empty(t, options)
-//}
-//
-//// Test_setCredsOptions_5 tests setting credential options when the plugin is configured
-//// for TLS/SSL, there is no cacert specified, and skip verify is enabled.
-//func Test_setCredsOptions_5(t *testing.T) {
-//	defer Config.reset()
-//	Config.Plugin = &PluginConfig{
-//		Network: &NetworkSettings{
-//			TLS: &TLSNetworkSettings{
-//				Cert:       "testdata/certs/plugin.crt",
-//				Key:        "testdata/certs/plugin.key",
-//				SkipVerify: true,
-//			},
-//		},
-//	}
-//
-//	var options []grpc.ServerOption
-//	err := setCredsOption(&options)
-//	assert.NoError(t, err)
-//	assert.Equal(t, 1, len(options))
-//}
-//
-//// Test_setCredsOptions_6 tests setting credential options when the plugin is configured
-//// for TLS/SSL, there is no cacert specified, and skip verify is disabled.
-//func Test_setCredsOptions_6(t *testing.T) {
-//	defer Config.reset()
-//	Config.Plugin = &PluginConfig{
-//		Network: &NetworkSettings{
-//			TLS: &TLSNetworkSettings{
-//				Cert:       "testdata/certs/plugin.crt",
-//				Key:        "testdata/certs/plugin.key",
-//				SkipVerify: false,
-//			},
-//		},
-//	}
-//
-//	var options []grpc.ServerOption
-//	err := setCredsOption(&options)
-//	assert.NoError(t, err)
-//	assert.Equal(t, 1, len(options))
-//}
+
+func Test_newServer(t *testing.T) {
+	plugin := Plugin{
+		config: &config.Plugin{
+			Network: &config.NetworkSettings{},
+		},
+	}
+
+	s := newServer(&plugin)
+
+	// Since we initialized the plugin without setting a bunch of the
+	// other components, they should all come in as nil here
+	assert.Nil(t, s.meta)
+	assert.Nil(t, s.scheduler)
+	assert.Nil(t, s.deviceManager)
+	assert.Nil(t, s.stateManager)
+	assert.Nil(t, s.healthManager)
+}
+
+func TestServer_init_nilConfig(t *testing.T) {
+	s := server{}
+
+	err := s.init()
+	assert.Error(t, err)
+	assert.False(t, s.initialized)
+}
+
+func TestServer_init_modeTCP(t *testing.T) {
+	plugin := Plugin{
+		config: &config.Plugin{
+			Network: &config.NetworkSettings{
+				Type: networkTypeTCP,
+				TLS:  &config.TLSNetworkSettings{},
+			},
+		},
+	}
+
+	s := newServer(&plugin)
+
+	err := s.init()
+	assert.NoError(t, err)
+	assert.True(t, s.initialized)
+}
+
+func TestServer_init_modeUnix1(t *testing.T) {
+	d, closer := test.TempDir(t)
+	orig := socketDir
+	socketDir = d
+	defer func() {
+		socketDir = orig
+		closer()
+	}()
+
+	plugin := Plugin{
+		config: &config.Plugin{
+			Network: &config.NetworkSettings{
+				Type: networkTypeUnix,
+				TLS:  &config.TLSNetworkSettings{},
+			},
+		},
+	}
+
+	s := newServer(&plugin)
+
+	err := s.init()
+	assert.NoError(t, err)
+	assert.True(t, s.initialized)
+}
+
+func TestServer_init_modeUnix2(t *testing.T) {
+	d, closer := test.TempDir(t)
+	orig := socketDir
+	defer func() {
+		socketDir = orig
+		closer()
+	}()
+	socketDir = filepath.Join(d, "nested")
+
+	plugin := Plugin{
+		config: &config.Plugin{
+			Network: &config.NetworkSettings{
+				Type: networkTypeUnix,
+				TLS:  &config.TLSNetworkSettings{},
+			},
+		},
+	}
+
+	s := newServer(&plugin)
+
+	err := s.init()
+	assert.NoError(t, err)
+	assert.True(t, s.initialized)
+}
+
+func TestServer_init_modeUnknown(t *testing.T) {
+	plugin := Plugin{
+		config: &config.Plugin{
+			Network: &config.NetworkSettings{
+				Type: "unknown",
+			},
+		},
+	}
+
+	s := newServer(&plugin)
+
+	err := s.init()
+	assert.Error(t, err)
+	assert.False(t, s.initialized)
+}
+
+func TestServer_start_notInitialized(t *testing.T) {
+	s := server{initialized: false}
+
+	err := s.start()
+	assert.Error(t, err)
+}
+
+func TestServer_start_noGrpc(t *testing.T) {
+	s := server{initialized: true}
+
+	err := s.start()
+	assert.Error(t, err)
+}
+
+func TestServer_start_listenErr(t *testing.T) {
+	s := server{
+		conf: &config.NetworkSettings{
+			Type:    "xyz",
+			Address: "",
+		},
+		initialized: true,
+		grpc:        grpc.NewServer(),
+	}
+
+	err := s.start()
+	assert.Error(t, err)
+}
+
+func TestServer_teardown(t *testing.T) {
+	s := server{
+		conf: &config.NetworkSettings{
+			Type:    networkTypeTCP,
+			Address: "localhost:5000",
+		},
+		grpc: grpc.NewServer(),
+	}
+
+	err := s.teardown()
+	assert.NoError(t, err)
+}
+
+func TestServer_teardown2(t *testing.T) {
+	s := server{
+		conf: &config.NetworkSettings{
+			Type:    networkTypeUnix,
+			Address: "localhost:5000",
+		},
+		grpc: grpc.NewServer(),
+	}
+
+	err := s.teardown()
+	assert.NoError(t, err)
+}
+
+func TestServer_teardown3(t *testing.T) {
+	s := server{
+		conf: &config.NetworkSettings{
+			Type:    "unknown",
+			Address: "localhost:5000",
+		},
+		grpc: grpc.NewServer(),
+	}
+
+	err := s.teardown()
+	assert.Error(t, err)
+}
+
+func TestServer_address_tcp(t *testing.T) {
+	s := server{
+		conf: &config.NetworkSettings{
+			Type:    networkTypeTCP,
+			Address: "localhost:5000",
+		},
+	}
+
+	addr := s.address()
+	assert.Equal(t, "localhost:5000", addr)
+}
+
+func TestServer_address_unix1(t *testing.T) {
+	s := server{
+		conf: &config.NetworkSettings{
+			Type:    networkTypeUnix,
+			Address: "/tmp/synse/plugin",
+		},
+	}
+
+	addr := s.address()
+	assert.Equal(t, "/tmp/synse/plugin", addr)
+}
+
+func TestServer_address_unix2(t *testing.T) {
+	s := server{
+		conf: &config.NetworkSettings{
+			Type:    networkTypeUnix,
+			Address: "plugin.sock",
+		},
+	}
+
+	addr := s.address()
+	assert.Equal(t, "/tmp/synse/plugin.sock", addr)
+}
+
+func TestServer_address_unknown(t *testing.T) {
+	s := server{
+		conf: &config.NetworkSettings{
+			Type:    "unknown",
+			Address: "localhost:5000",
+		},
+	}
+
+	addr := s.address()
+	assert.Equal(t, "", addr)
+}
+
+func TestServer_registerActions(t *testing.T) {
+	plugin := Plugin{}
+	s := server{}
+
+	assert.Empty(t, plugin.postRun)
+
+	s.registerActions(&plugin)
+	assert.Len(t, plugin.postRun, 1)
+}
+
+// TestServer_Test tests the Test method of the gRPC plugin service.
+func TestServer_Test(t *testing.T) {
+	s := server{}
+	req := &synse.Empty{}
+	resp, err := s.Test(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, true, resp.Ok)
+}
+
+// TestServer_Version tests the Version method of the gRPC plugin service.
+func TestServer_Version(t *testing.T) {
+	s := server{}
+	req := &synse.Empty{}
+	resp, err := s.Version(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, version.Arch, resp.Arch)
+	assert.Equal(t, version.OS, resp.Os)
+	assert.Equal(t, version.SDKVersion, resp.SdkVersion)
+	assert.Equal(t, version.BuildDate, resp.BuildDate)
+	assert.Equal(t, version.GitCommit, resp.GitCommit)
+	assert.Equal(t, version.GitTag, resp.GitTag)
+	assert.Equal(t, version.PluginVersion, resp.PluginVersion)
+}
+
+func TestServer_Health(t *testing.T) {
+	// Get the health status from the health manager.
+	s := server{
+		healthManager: health.NewManager(&config.HealthSettings{
+			Checks: &config.HealthCheckSettings{},
+		}),
+	}
+	req := &synse.Empty{}
+	resp, err := s.Health(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Timestamp)
+	assert.Equal(t, synse.HealthStatus_OK, resp.Status)
+	assert.Len(t, resp.Checks, 0)
+}
+
+func TestServer_Devices(t *testing.T) {
+	// Get devices when there is no selector set. In this case, it should
+	// return the devices in the default namespace.
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890"}}}},
+				},
+			},
+		},
+	}
+	req := &synse.V3DeviceSelector{}
+	mock := test.NewMockDevicesStream()
+	err := s.Devices(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	assert.Contains(t, mock.Results, "12345")
+}
+
+func TestServer_Devices2(t *testing.T) {
+	// Get devices when there is a tag selector set.
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890"}}}},
+				},
+			},
+		},
+	}
+	req := &synse.V3DeviceSelector{Tags: []*synse.V3Tag{
+		{Namespace: "other", Label: "bar"},
+	}}
+	mock := test.NewMockDevicesStream()
+	err := s.Devices(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	assert.Contains(t, mock.Results, "67890")
+}
+
+func TestServer_Devices3(t *testing.T) {
+	// Get devices when there is a tag selector set, but no match
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890"}}}},
+				},
+			},
+		},
+	}
+	req := &synse.V3DeviceSelector{Id: "abcdef"}
+	mock := test.NewMockDevicesStream()
+	err := s.Devices(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_Devices_error(t *testing.T) {
+	// Get devices when there is no selector set. In this case, it should
+	// return the devices in the default namespace.
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890"}}}},
+				},
+			},
+		},
+	}
+	req := &synse.V3DeviceSelector{}
+	mock := &test.MockDevicesStreamErr{}
+	err := s.Devices(req, mock)
+
+	assert.Error(t, err)
+}
+
+func TestServer_Metadata(t *testing.T) {
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio", Description: "desc"},
+	}
+
+	req := &synse.Empty{}
+	resp, err := s.Metadata(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "vaporio/test", resp.Tag)
+	assert.Equal(t, "test", resp.Name)
+	assert.Equal(t, "vaporio", resp.Maintainer)
+	assert.Equal(t, "desc", resp.Description)
+	assert.Equal(t, "", resp.Vcs)
+}
+
+func TestServer_Read(t *testing.T) {
+	// Test reading without specifying a selector. This should
+	// default to reading from default devices.
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+	}
+
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			readings: map[string][]*output.Reading{
+				"12345": {o.From(1)},
+				"67890": {o.From(2)},
+			},
+		},
+	}
+	req := &synse.V3ReadRequest{
+		Selector: &synse.V3DeviceSelector{},
+	}
+	mock := test.NewMockReadStream()
+	err := s.Read(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	assert.Equal(t, &synse.V3Reading_Int64Value{Int64Value: 1}, mock.Results[0].Value)
+}
+
+func TestServer_Read2(t *testing.T) {
+	// Test reading specifying a tag selector.
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+	}
+
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			readings: map[string][]*output.Reading{
+				"12345": {o.From(1)},
+				"67890": {o.From(2)},
+			},
+		},
+	}
+	req := &synse.V3ReadRequest{
+		Selector: &synse.V3DeviceSelector{
+			Tags: []*synse.V3Tag{
+				{Namespace: "other", Label: "bar"},
+			},
+		},
+	}
+	mock := test.NewMockReadStream()
+	err := s.Read(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	assert.Equal(t, &synse.V3Reading_Int64Value{Int64Value: 2}, mock.Results[0].Value)
+}
+
+func TestServer_Read_convertOk(t *testing.T) {
+	// Test reading and converting units
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+		Units: map[output.SystemOfMeasure]*output.Unit{
+			output.METRIC:   {Name: "metric"},
+			output.IMPERIAL: {Name: "imperial"},
+		},
+		Converters: map[output.SystemOfMeasure]func(value interface{}, to output.SystemOfMeasure) (interface{}, error){
+			output.METRIC: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
+				if to != output.IMPERIAL {
+					return nil, fmt.Errorf("test error")
+				}
+				return value.(int) / 2, nil
+			},
+			output.IMPERIAL: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
+				if to != output.METRIC {
+					return nil, fmt.Errorf("test error")
+				}
+				return value.(int) * 2, nil
+			},
+		},
+	}
+
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			readings: map[string][]*output.Reading{
+				"12345": {o.FromImperial(1)},
+				"67890": {o.FromImperial(2)},
+			},
+		},
+	}
+	req := &synse.V3ReadRequest{
+		Selector: &synse.V3DeviceSelector{
+			Tags: []*synse.V3Tag{
+				{Namespace: "other", Label: "bar"},
+			},
+		},
+		SystemOfMeasure: "metric",
+	}
+	mock := test.NewMockReadStream()
+	err := s.Read(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	// the value should be 4 since we read it as 2 in imperial and it is converted to metric
+	// which the converter function transforms via *2.
+	assert.Equal(t, &synse.V3Reading_Int64Value{Int64Value: 4}, mock.Results[0].Value)
+	assert.Equal(t, "metric", mock.Results[0].Unit.Name)
+}
+
+func TestServer_Read_convertErr(t *testing.T) {
+	// Test reading and converting units
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+		Units: map[output.SystemOfMeasure]*output.Unit{
+			output.METRIC:   {Name: "metric"},
+			output.IMPERIAL: {Name: "imperial"},
+		},
+		Converters: map[output.SystemOfMeasure]func(value interface{}, to output.SystemOfMeasure) (interface{}, error){
+			output.METRIC: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
+				if to != output.IMPERIAL {
+					return nil, fmt.Errorf("test error")
+				}
+				return value.(int) / 2, nil
+			},
+			output.IMPERIAL: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
+				if to != output.METRIC {
+					return nil, fmt.Errorf("test error")
+				}
+				return value.(int) * 2, nil
+			},
+		},
+	}
+
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			readings: map[string][]*output.Reading{
+				"12345": {o.FromImperial(1)},
+				"67890": {o.FromImperial(2)},
+			},
+		},
+	}
+	req := &synse.V3ReadRequest{
+		Selector: &synse.V3DeviceSelector{
+			Tags: []*synse.V3Tag{
+				{Namespace: "other", Label: "bar"},
+			},
+		},
+		SystemOfMeasure: "not-a-system",
+	}
+	mock := test.NewMockReadStream()
+	err := s.Read(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_Read_error(t *testing.T) {
+	// Test when sending results in error
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+	}
+
+	s := server{
+		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			readings: map[string][]*output.Reading{
+				"12345": {o.From(1)},
+				"67890": {o.From(2)},
+			},
+		},
+	}
+	req := &synse.V3ReadRequest{
+		Selector: &synse.V3DeviceSelector{
+			Tags: []*synse.V3Tag{
+				{Namespace: "other", Label: "bar"},
+			},
+		},
+	}
+
+	mock := test.MockReadCachedStreamErr{}
+	err := s.Read(req, &mock)
+
+	assert.Error(t, err)
+}
+
+func TestServer_ReadCache(t *testing.T) {
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+	}
+
+	s := server{
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			config: &config.PluginSettings{
+				Cache: &config.CacheSettings{
+					Enabled: false,
+				},
+			},
+			readings: map[string][]*output.Reading{
+				"12345": {o.From(1)},
+				"67890": {o.From(2)},
+				"abcde": {o.From(3)},
+			},
+		},
+	}
+	bounds := &synse.V3Bounds{}
+	mock := test.NewMockReadCachedStream()
+	err := s.ReadCache(bounds, mock)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(mock.Results))
+}
+
+func TestServer_ReadCache_error(t *testing.T) {
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+	}
+
+	s := server{
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			config: &config.PluginSettings{
+				Cache: &config.CacheSettings{
+					Enabled: false,
+				},
+			},
+			readings: map[string][]*output.Reading{
+				"12345": {o.From(1)},
+				"67890": {o.From(2)},
+				"abcde": {o.From(3)},
+			},
+		},
+	}
+	bounds := &synse.V3Bounds{}
+	mock := &test.MockReadCachedStreamErr{}
+	err := s.ReadCache(bounds, mock)
+
+	assert.Error(t, err)
+}
+
+func TestServer_WriteAsync(t *testing.T) {
+	handler := DeviceHandler{
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{
+			Id: "1234",
+		},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := test.NewMockWriteAsyncStream()
+	err := s.WriteAsync(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+}
+
+func TestServer_WriteAsync_noSelector(t *testing.T) {
+	handler := DeviceHandler{
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := test.NewMockWriteAsyncStream()
+	err := s.WriteAsync(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_WriteAsync_noDevice(t *testing.T) {
+	handler := DeviceHandler{
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{
+			Id: "5678",
+		},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := test.NewMockWriteAsyncStream()
+	err := s.WriteAsync(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_WriteAsync_failedWrite(t *testing.T) {
+	handler := DeviceHandler{}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{
+			Id: "1234",
+		},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := test.NewMockWriteAsyncStream()
+	err := s.WriteAsync(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_WriteAsync_error(t *testing.T) {
+	handler := DeviceHandler{
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{
+			Id: "1234",
+		},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := &test.MockWriteAsyncStreamErr{}
+	err := s.WriteAsync(req, mock)
+
+	assert.Error(t, err)
+}
+
+func TestServer_WriteSync(t *testing.T) {
+	handler := DeviceHandler{
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	defer close(s.scheduler.writeChan)
+	go func() {
+		for {
+			ctx, open := <-s.scheduler.writeChan
+			if !open {
+				return
+			}
+			ctx.transaction.setStatusDone()
+		}
+	}()
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{
+			Id: "1234",
+		},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := test.NewMockWriteSyncStream()
+	err := s.WriteSync(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+}
+
+func TestServer_WriteSync_noSelector(t *testing.T) {
+	handler := DeviceHandler{
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	defer close(s.scheduler.writeChan)
+	go func() {
+		for {
+			ctx, open := <-s.scheduler.writeChan
+			if !open {
+				return
+			}
+			ctx.transaction.setStatusDone()
+		}
+	}()
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := test.NewMockWriteSyncStream()
+	err := s.WriteSync(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_WriteSync_noDevice(t *testing.T) {
+	handler := DeviceHandler{
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	defer close(s.scheduler.writeChan)
+	go func() {
+		for {
+			ctx, open := <-s.scheduler.writeChan
+			if !open {
+				return
+			}
+			ctx.transaction.setStatusDone()
+		}
+	}()
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{
+			Id: "5678",
+		},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := test.NewMockWriteSyncStream()
+	err := s.WriteSync(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_WriteSync_failedWrite(t *testing.T) {
+	handler := DeviceHandler{}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	defer close(s.scheduler.writeChan)
+	go func() {
+		for {
+			ctx, open := <-s.scheduler.writeChan
+			if !open {
+				return
+			}
+			ctx.transaction.setStatusDone()
+		}
+	}()
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{
+			Id: "1234",
+		},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := test.NewMockWriteSyncStream()
+	err := s.WriteSync(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_WriteSync_error(t *testing.T) {
+	handler := DeviceHandler{
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+				},
+			},
+		},
+		scheduler: &scheduler{
+			writeChan: make(chan *WriteContext, 2),
+			stateManager: &stateManager{
+				transactions: cache.New(1*time.Minute, 2*time.Minute),
+			},
+		},
+	}
+
+	defer close(s.scheduler.writeChan)
+	go func() {
+		for {
+			ctx, open := <-s.scheduler.writeChan
+			if !open {
+				return
+			}
+			ctx.transaction.setStatusDone()
+		}
+	}()
+
+	req := &synse.V3WritePayload{
+		Selector: &synse.V3DeviceSelector{
+			Id: "1234",
+		},
+		Data: []*synse.V3WriteData{
+			{Action: "foo"},
+		},
+	}
+	mock := &test.MockWriteSyncStreamErr{}
+	err := s.WriteSync(req, mock)
+
+	assert.Error(t, err)
+}
+
+func TestServer_Transaction_oneIDExists(t *testing.T) {
+	s := server{
+		stateManager: &stateManager{
+			transactions: cache.New(1*time.Minute, 2*time.Minute),
+		},
+	}
+
+	txn := s.stateManager.newTransaction(1 * time.Minute)
+
+	req := &synse.V3TransactionSelector{Id: txn.id}
+	mock := test.NewMockTransactionStream()
+	err := s.Transaction(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	assert.Contains(t, mock.Results, txn.id)
+}
+
+func TestServer_Transaction_oneIDNotExists(t *testing.T) {
+	s := server{
+		stateManager: &stateManager{
+			transactions: cache.New(1*time.Minute, 2*time.Minute),
+		},
+	}
+
+	req := &synse.V3TransactionSelector{Id: "foo"}
+	mock := test.NewMockTransactionStream()
+	err := s.Transaction(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_Transaction_noIDOK(t *testing.T) {
+	s := server{
+		stateManager: &stateManager{
+			transactions: cache.New(1*time.Minute, 2*time.Minute),
+		},
+	}
+
+	txn1 := s.stateManager.newTransaction(1 * time.Minute)
+	txn2 := s.stateManager.newTransaction(1 * time.Minute)
+	txn3 := s.stateManager.newTransaction(1 * time.Minute)
+
+	req := &synse.V3TransactionSelector{}
+	mock := test.NewMockTransactionStream()
+	err := s.Transaction(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 3)
+	assert.Contains(t, mock.Results, txn1.id)
+	assert.Contains(t, mock.Results, txn2.id)
+	assert.Contains(t, mock.Results, txn3.id)
+}
+
+func TestServer_Transaction_noIDError(t *testing.T) {
+	s := server{
+		stateManager: &stateManager{
+			transactions: cache.New(1*time.Minute, 2*time.Minute),
+		},
+	}
+
+	_ = s.stateManager.newTransaction(1 * time.Minute)
+	_ = s.stateManager.newTransaction(1 * time.Minute)
+	_ = s.stateManager.newTransaction(1 * time.Minute)
+
+	req := &synse.V3TransactionSelector{}
+	mock := &test.MockTransactionStreamErr{}
+	err := s.Transaction(req, mock)
+
+	assert.Error(t, err)
+}
+
+// Test_loadCACerts_1 tests loading CA certs when none are given.
+func Test_loadCACerts_1(t *testing.T) {
+	certPool, err := loadCACerts([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(certPool.Subjects()))
+}
+
+// Test_loadCACerts_2 tests loading CA certs when invalid cert files are given
+// (does not exist).
+func Test_loadCACerts_2(t *testing.T) {
+	certPool, err := loadCACerts([]string{"foobar"})
+	assert.Error(t, err)
+	assert.Nil(t, certPool)
+}
+
+// Test_loadCACerts_3 tests loading CA certs when invalid cert files are given
+// (bad contents).
+func Test_loadCACerts_3(t *testing.T) {
+	certPool, err := loadCACerts([]string{"testdata/certs/badcert.crt"})
+	assert.Error(t, err)
+	assert.Nil(t, certPool)
+}
+
+// Test_loadCACerts_4 tests loading CA certs when a valid CA cert file is given.
+func Test_loadCACerts_4(t *testing.T) {
+	certPool, err := loadCACerts([]string{"testdata/certs/rootCA.crt"})
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(certPool.Subjects()))
+}
+
+// Test_addTLSOptions_nil tests setting credential options when the TLS config is nil
+func Test_addTLSOptions_nil(t *testing.T) {
+	var options []grpc.ServerOption
+	err := addTLSOptions(&options, nil)
+	assert.NoError(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_addTLSOptions_1 tests setting credential options when the plugin is not configured
+// for TLS/SSL.
+func Test_addTLSOptions_1(t *testing.T) {
+	var options []grpc.ServerOption
+	err := addTLSOptions(&options, &config.TLSNetworkSettings{})
+	assert.NoError(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_addTLSOptions_2 tests setting credential options when the plugin is configured
+// for TLS/SSL, but the cert is invalid.
+func Test_addTLSOptions_2(t *testing.T) {
+	var options []grpc.ServerOption
+	err := addTLSOptions(&options, &config.TLSNetworkSettings{
+		Cert: "foobar",
+		Key:  "testdata/certs/plugin.key",
+	})
+	assert.Error(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_addTLSOptions_3 tests setting credential options when the plugin is configured
+// for TLS/SSL, but the key is invalid.
+func Test_addTLSOptions_3(t *testing.T) {
+	var options []grpc.ServerOption
+	err := addTLSOptions(&options, &config.TLSNetworkSettings{
+		Cert: "testdata/certs/plugin.crt",
+		Key:  "foobar",
+	})
+	assert.Error(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_addTLSOptions_4 tests setting credential options when the plugin is configured
+// for TLS/SSL, but the specified cacert is invalid.
+func Test_addTLSOptions_4(t *testing.T) {
+	var options []grpc.ServerOption
+	err := addTLSOptions(&options, &config.TLSNetworkSettings{
+		Cert:    "testdata/certs/plugin.crt",
+		Key:     "testdata/certs/plugin.key",
+		CACerts: []string{"foobar"},
+	})
+	assert.Error(t, err)
+	assert.Empty(t, options)
+}
+
+// Test_addTLSOptions_5 tests setting credential options when the plugin is configured
+// for TLS/SSL, there is no cacert specified, and skip verify is enabled.
+func Test_addTLSOptions_5(t *testing.T) {
+	var options []grpc.ServerOption
+	err := addTLSOptions(&options, &config.TLSNetworkSettings{
+		Cert:       "testdata/certs/plugin.crt",
+		Key:        "testdata/certs/plugin.key",
+		SkipVerify: true,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(options))
+}
+
+// Test_addTLSOptions_6 tests setting credential options when the plugin is configured
+// for TLS/SSL, there is no cacert specified, and skip verify is disabled.
+func Test_addTLSOptions_6(t *testing.T) {
+	var options []grpc.ServerOption
+	err := addTLSOptions(&options, &config.TLSNetworkSettings{
+		Cert:       "testdata/certs/plugin.crt",
+		Key:        "testdata/certs/plugin.key",
+		SkipVerify: false,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(options))
+}
