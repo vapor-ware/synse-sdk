@@ -17,8 +17,10 @@
 package sdk
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
+	"os"
+	"text/template"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -114,6 +116,10 @@ type Device struct {
 //
 // These configuration components are loaded from config file.
 func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInstance) (*Device, error) {
+	if proto == nil || instance == nil {
+		return nil, fmt.Errorf("cannot create new device from nil config")
+	}
+
 	// Define variable for the Device fields that can be inherited from the
 	// device prototype configuration.
 	var (
@@ -190,9 +196,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		writeTimeout = 30 * time.Second // the default write timeout
 	}
 
-	// TODO: generate the device alias
-
-	return &Device{
+	d := &Device{
 		Type:          deviceType,
 		Tags:          deviceTags,
 		Data:          data,
@@ -204,16 +208,64 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		ScalingFactor: instance.ScalingFactor,
 		WriteTimeout:  writeTimeout,
 		Output:        instance.Output,
-	}, nil
+	}
+
+	if err := d.setAlias(instance.Alias); err != nil {
+		return nil, err
+	}
+
+	return d, nil
 }
 
-// JSON encodes the device as JSON. This can be useful for logging and debugging.
-func (device *Device) JSON() (string, error) {
-	bytes, err := json.Marshal(device)
-	if err != nil {
-		return "", err
+// AliasContext is the context that is used to render alias templates.
+type AliasContext struct {
+	Meta   *PluginMetadata
+	Device *Device
+}
+
+// setAlias sets the device alias for a given device.
+func (device *Device) setAlias(conf *config.DeviceAlias) error {
+	// If there is no DeviceAlias config, there is no alias set for the device.
+	if conf == nil {
+		return nil
 	}
-	return string(bytes), nil
+
+	// If the alias configuration specifies a name value, return that value.
+	if conf.Name != "" {
+		device.Alias = conf.Name
+		return nil
+	}
+
+	// If the alias configuration specifies a template string, try and render the
+	// template.
+	if conf.Template != "" {
+		ctx := &AliasContext{
+			Meta:   &metadata,
+			Device: device,
+		}
+
+		var buf bytes.Buffer
+
+		t, err := template.New("alias").Funcs(template.FuncMap{
+			"env":  os.Getenv,
+			"meta": device.GetMetadata,
+		}).Parse(conf.Template)
+		if err != nil {
+			return err
+		}
+		if err := t.Execute(&buf, ctx); err != nil {
+			return err
+		}
+
+		device.Alias = buf.String()
+		return nil
+	}
+	return nil
+}
+
+// GetMetadata gets a value out of the device's metadata map.
+func (device *Device) GetMetadata(key string) string {
+	return device.Metadata[key]
 }
 
 // GetHandler gets the DeviceHandler of the device.
@@ -232,23 +284,15 @@ func (device *Device) GetID() string {
 // returned.
 // FIXME: should we update the unsupported command error to be more descriptive?
 func (device *Device) Read() (*ReadContext, error) {
-	// Bulk read is handled elsewhere.
-	// Device may only support bulk read.
-	if device == nil {
-		return nil, fmt.Errorf("device is nil")
+	if !device.IsReadable() {
+		return nil, &errors.UnsupportedCommandError{}
 	}
-	if device.handler == nil {
-		return nil, fmt.Errorf("device.handler is nil")
-	}
-	if device.handler.Read != nil {
-		readings, err := device.handler.Read(device)
-		if err != nil {
-			return nil, err
-		}
 
-		return NewReadContext(device, readings), nil
+	readings, err := device.handler.Read(device)
+	if err != nil {
+		return nil, err
 	}
-	return nil, &errors.UnsupportedCommandError{}
+	return NewReadContext(device, readings), nil
 }
 
 // Write performs the write action for the device, as set by its DeviceHandler.
@@ -257,10 +301,10 @@ func (device *Device) Read() (*ReadContext, error) {
 // returned.
 // FIXME: should we update the unsupported command error to be more descriptive?
 func (device *Device) Write(data *WriteData) error {
-	if device.IsWritable() {
-		return device.handler.Write(device, data)
+	if !device.IsWritable() {
+		return &errors.UnsupportedCommandError{}
 	}
-	return &errors.UnsupportedCommandError{}
+	return device.handler.Write(device, data)
 }
 
 // IsReadable checks if the Device is readable based on the presence/absence
@@ -269,7 +313,7 @@ func (device *Device) IsReadable() bool {
 	if device == nil {
 		return false
 	}
-	return device.handler.Read != nil || device.handler.BulkRead != nil || device.handler.Listen != nil
+	return device.handler.CanRead() || device.handler.CanListen() || device.handler.CanBulkRead()
 }
 
 // IsWritable checks if the Device is writable based on the presence/absence
@@ -278,14 +322,14 @@ func (device *Device) IsWritable() bool {
 	if device == nil {
 		return false
 	}
-	return device.handler.Write != nil
+	return device.handler.CanWrite()
 }
 
 // encode translates the Device to the corresponding gRPC Device message.
 func (device *Device) encode() *synse.V3Device {
-	var tags []*synse.V3Tag
-	for _, t := range device.Tags {
-		tags = append(tags, t.Encode())
+	var tags = make([]*synse.V3Tag, len(device.Tags))
+	for i, t := range device.Tags {
+		tags[i] = t.Encode()
 	}
 
 	return &synse.V3Device{

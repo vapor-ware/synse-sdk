@@ -455,7 +455,7 @@ func (scheduler *scheduler) read(device *Device) {
 	// If the device does not get its readings from a bulk read operation, then
 	// it is read individually. If a device is read in bulk, it will not be read
 	// here; it will be read later via the bulkRead function.
-	if !device.handler.supportsBulkRead() {
+	if !device.handler.CanBulkRead() {
 
 		// If we are running in serial mode, acquire the serial lock.
 		if mode == modeSerial {
@@ -510,7 +510,7 @@ func (scheduler *scheduler) bulkRead(handler *DeviceHandler) {
 
 	// If the handler supports bulk reading, execute bulk reads. Devices using the
 	// handler will not have been read individually yet.
-	if handler.supportsBulkRead() {
+	if handler.CanBulkRead() {
 		devices := scheduler.deviceManager.GetDevicesForHandler(handler.Name)
 		if len(devices) == 0 {
 			rlog.Debug("[scheduler] handler has no devices to read")
