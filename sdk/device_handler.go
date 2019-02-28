@@ -49,12 +49,36 @@ type DeviceHandler struct {
 	Listen func(*Device, chan *ReadContext) error
 }
 
-// supportsBulkRead checks if the handler supports bulk reading for its Devices.
-//
-// If BulkRead is set for the device handler and Read is not, then the handler
-// supports bulk reading. If both BulkRead and Read are defined, bulk reading
-// will not be considered supported and the handler will default to individual
-// reads.
-func (handler *DeviceHandler) supportsBulkRead() bool {
+// CanRead returns true if the handler has a read function defined; false otherwise.
+func (handler *DeviceHandler) CanRead() bool {
+	if handler == nil {
+		return false
+	}
+	return handler.Read != nil
+}
+
+// CanBulkRead returns true if the handler has a bulk read function defined and no
+// regular read function defined (both cannot coexist); false otherwise.
+func (handler *DeviceHandler) CanBulkRead() bool {
+	if handler == nil {
+		return false
+	}
+	// Can only bulk read if no read handler is defined.
 	return handler.Read == nil && handler.BulkRead != nil
+}
+
+// CanWrite returns true if the handler has a write function defined; false otherwise.
+func (handler *DeviceHandler) CanWrite() bool {
+	if handler == nil {
+		return false
+	}
+	return handler.Write != nil
+}
+
+// CanListen returns true if the handler has a listen function defined; false otherwise.
+func (handler *DeviceHandler) CanListen() bool {
+	if handler == nil {
+		return false
+	}
+	return handler.Listen != nil
 }
