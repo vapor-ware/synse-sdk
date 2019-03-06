@@ -3,7 +3,7 @@ package sdk
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Reading describes a single device reading with a timestamp. The timestamp

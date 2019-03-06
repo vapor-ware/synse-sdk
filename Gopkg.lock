@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  digest = "1:69b1cc331fca23d702bd72f860c6a647afd0aa9fcbc1d0659b1365e26546dd70"
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
-  version = "v1.2.0"
-
-[[projects]]
   digest = "1:7f769a7ea697a8e50c8a79a829f53a469e3ca7b8e314434ea9d9a25ca8401cb7"
   name = "github.com/creasty/defaults"
   packages = ["."]
@@ -70,6 +62,14 @@
   pruneopts = "UT"
   revision = "15d26544def341f036c5f8dca987a4cbe575032c"
   version = "v1.2.1"
+
+[[projects]]
+  digest = "1:87c2e02fb01c27060ccc5ba7c5a407cc91147726f8f40b70cceeedbc52b1f3a8"
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:18752d0b95816a1b777505a97f71c7467a8445b8ffb55631a7bf779f6ba4fa83"
@@ -208,10 +208,10 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/Sirupsen/logrus",
     "github.com/creasty/defaults",
     "github.com/patrickmn/go-cache",
     "github.com/rs/xid",
+    "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/vapor-ware/synse-server-grpc/go",
     "golang.org/x/net/context",

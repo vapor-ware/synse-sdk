@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // TestNewDataManager tests creating a new dataManager instance successfully.

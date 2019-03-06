@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // TestReadContext_ID tests successfully generating the ID of the ReadContext.

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // TestHealthInit tests that the init function initialized things correctly.

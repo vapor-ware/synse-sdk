@@ -3,8 +3,8 @@ package sdk
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
+	log "github.com/sirupsen/logrus"
 )
 
 // readingsCache is the cache that will store the readings collected by the

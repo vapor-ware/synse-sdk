@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"sort"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // defaultDeviceIdentifier is the default implementation that fulfils the DeviceIdentifier

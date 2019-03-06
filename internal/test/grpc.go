@@ -3,7 +3,7 @@ package test
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"google.golang.org/grpc"
 )
 

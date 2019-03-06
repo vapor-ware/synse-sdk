@@ -5,12 +5,12 @@ import (
 	"runtime"
 	"text/template"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	log "github.com/sirupsen/logrus"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // Version specifies the version of the Synse Plugin SDK.
-const Version = "1.2.0"
+const Version = "1.2.1"
 
 // version is a reference to a binVersion that is used by the SDK to get
 // the version info for a plugin.

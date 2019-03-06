@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	log "github.com/sirupsen/logrus"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 const (

@@ -1,7 +1,7 @@
 package policies
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // ConfigPolicy is a type that defines a behavior profile for the plugin

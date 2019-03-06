@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // The current (latest) version of the device config scheme.

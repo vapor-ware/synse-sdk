@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 // TestOutputType_Type tests getting the type of the reading

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-server-grpc/go"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"google.golang.org/grpc"
 )
 
