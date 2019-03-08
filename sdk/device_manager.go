@@ -33,6 +33,7 @@ const (
 )
 
 var (
+	// Config file locations
 	localDeviceConfig   = "./config/device"
 	defaultDeviceConfig = "/etc/synse/plugin/config/device"
 )

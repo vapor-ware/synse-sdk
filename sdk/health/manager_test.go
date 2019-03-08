@@ -78,6 +78,54 @@ func TestNewManager_nilConfig(t *testing.T) {
 	})
 }
 
+func TestManager_Count(t *testing.T) {
+	// no checks
+	m := Manager{
+		checks:   map[string]Check{},
+		defaults: []Check{},
+	}
+
+	assert.Equal(t, 0, m.Count())
+}
+
+func TestManager_Count2(t *testing.T) {
+	// only default checks
+	m := Manager{
+		checks: map[string]Check{},
+		defaults: []Check{
+			&testCheck{name: "foo"},
+		},
+	}
+
+	assert.Equal(t, 1, m.Count())
+}
+
+func TestManager_Count3(t *testing.T) {
+	// only custom checks
+	m := Manager{
+		checks: map[string]Check{
+			"foo": &testCheck{name: "foo"},
+		},
+		defaults: []Check{},
+	}
+
+	assert.Equal(t, 1, m.Count())
+}
+
+func TestManager_Count4(t *testing.T) {
+	// custom and default checks
+	m := Manager{
+		checks: map[string]Check{
+			"foo": &testCheck{name: "foo"},
+		},
+		defaults: []Check{
+			&testCheck{name: "bar"},
+		},
+	}
+
+	assert.Equal(t, 2, m.Count())
+}
+
 func TestManager_Register(t *testing.T) {
 	check := testCheck{
 		name: "foo",
