@@ -122,47 +122,51 @@ func (manager *deviceManager) init() error {
 // loadDynamicConfig loads device configurations using the dynamic device config
 // registrar plugin handler.
 func (manager *deviceManager) loadDynamicConfig() error {
-	for _, cfg := range manager.dynamicConfig.Config {
-		devices, err := manager.pluginHandlers.DynamicConfigRegistrar(cfg)
-		if err != nil {
-			switch manager.policies.DynamicDeviceConfig {
-			case policy.Optional:
-				log.Info("[device manager] failed dynamic device config; skipping since its optional")
-				continue
-			case policy.Required:
-				log.Error("[device manager] failed dynamic device config; erroring since its required")
-				return err
-			default:
-				log.Error("[device manager] invalid policy when loading dynamic device config")
-				return err
+	if manager.dynamicConfig != nil {
+		for _, cfg := range manager.dynamicConfig.Config {
+			devices, err := manager.pluginHandlers.DynamicConfigRegistrar(cfg)
+			if err != nil {
+				switch manager.policies.DynamicDeviceConfig {
+				case policy.Optional:
+					log.Info("[device manager] failed dynamic device config; skipping since its optional")
+					continue
+				case policy.Required:
+					log.Error("[device manager] failed dynamic device config; erroring since its required")
+					return err
+				default:
+					log.Error("[device manager] invalid policy when loading dynamic device config")
+					return err
+				}
 			}
+			manager.config.Devices = append(manager.config.Devices, devices...)
 		}
-		manager.config.Devices = append(manager.config.Devices, devices...)
 	}
 	return nil
 }
 
 // createDynamicDevices creates devices using the dynamic device registrar plugin handler.
 func (manager *deviceManager) createDynamicDevices() error {
-	for _, cfg := range manager.dynamicConfig.Config {
-		devices, err := manager.pluginHandlers.DynamicRegistrar(cfg)
-		if err != nil {
-			switch manager.policies.DynamicDeviceConfig {
-			case policy.Optional:
-				log.Info("[device manager] failed dynamic devices; skipping since its optional")
-				continue
-			case policy.Required:
-				log.Error("[device manager] failed dynamic devices; erroring since its required")
-				return err
-			default:
-				log.Error("[device manager] invalid policy when loading dynamic devices")
-				return err
+	if manager.dynamicConfig != nil {
+		for _, cfg := range manager.dynamicConfig.Config {
+			devices, err := manager.pluginHandlers.DynamicRegistrar(cfg)
+			if err != nil {
+				switch manager.policies.DynamicDeviceConfig {
+				case policy.Optional:
+					log.Info("[device manager] failed dynamic devices; skipping since its optional")
+					continue
+				case policy.Required:
+					log.Error("[device manager] failed dynamic devices; erroring since its required")
+					return err
+				default:
+					log.Error("[device manager] invalid policy when loading dynamic devices")
+					return err
+				}
 			}
-		}
 
-		for _, device := range devices {
-			if err := manager.AddDevice(device); err != nil {
-				return err
+			for _, device := range devices {
+				if err := manager.AddDevice(device); err != nil {
+					return err
+				}
 			}
 		}
 	}

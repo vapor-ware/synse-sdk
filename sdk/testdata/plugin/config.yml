@@ -1,5 +1,5 @@
 version: 3
-debug: false
+debug: true
 network:
   type: tcp
   address: localhost:5432
