@@ -38,9 +38,15 @@ const (
 )
 
 var (
+	// Command line arguments
 	flagDebug   bool
 	flagVersion bool
 	flagDryRun  bool
+
+	// Config file locations
+	currentDirConfig    = "."
+	localPluginConfig   = "./config"
+	defaultPluginConfig = "/etc/synse/plugin/config"
 )
 
 func init() {
@@ -378,9 +384,9 @@ func (plugin *Plugin) loadConfig() error {
 	loader.EnvOverride = PluginEnvOverride
 	loader.FileName = "config"
 	loader.AddSearchPaths(
-		".",                        // Current working directory
-		"./config",                 // Local config override directory
-		"/etc/synse/plugin/config", // Default plugin config directory
+		currentDirConfig,
+		localPluginConfig,
+		defaultPluginConfig,
 	)
 
 	// Load the plugin configuration.
