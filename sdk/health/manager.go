@@ -49,6 +49,12 @@ func NewManager(conf *config.HealthSettings, defaults ...Check) *Manager {
 	}
 }
 
+// Count returns the total number of checks configured with the manager.
+// This is the sum of both the custom and default checks.
+func (manager *Manager) Count() int {
+	return len(manager.checks) + len(manager.defaults)
+}
+
 // Register registers a health check with the manager. If the name of the Check
 // being registered conflicts with an existing Check's name, an error is returned.
 func (manager *Manager) Register(check Check) error {

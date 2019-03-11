@@ -1,4 +1,0 @@
-version: 3
-network:
-  type: tcp
-  address: localhost:5432
