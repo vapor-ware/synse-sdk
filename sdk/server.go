@@ -30,7 +30,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -404,9 +403,8 @@ func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*syns
 // It is the handler for the Synse gRPC V3Plugin service's `Read` RPC method.
 func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_ReadServer) error {
 	log.WithFields(log.Fields{
-		"tags":   request.Selector.Tags,
-		"id":     request.Selector.Id,
-		"system": request.SystemOfMeasure,
+		"tags": request.Selector.Tags,
+		"id":   request.Selector.Id,
 	}).Debug("[grpc] READ request")
 
 	var devices []*Device
@@ -422,15 +420,9 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 	for _, device := range devices {
 		readings := server.stateManager.GetReadingsForDevice(device.id)
 
-		// Make sure each reading is represented in the specified system of measure
+		// Encode and stream the readings back to the client.
 		for _, reading := range readings {
-			r, err := reading.To(output.SystemOfMeasure(request.SystemOfMeasure))
-			if err != nil {
-				return err
-			}
-
-			// Encode and stream the reading back to the client.
-			if err := stream.Send(r.Encode()); err != nil {
+			if err := stream.Send(reading.Encode()); err != nil {
 				return err
 			}
 		}

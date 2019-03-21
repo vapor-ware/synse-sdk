@@ -80,13 +80,6 @@ type Device struct {
 	// representation of the value, e.g. "1e-2".
 	ScalingFactor string
 
-	// System defines the System of Measure for the device. It is the default
-	// system of measure (imperial, metric) for the device's reading data. This
-	// is not required in all cases, as the DeviceHandler may specify the system
-	// as well. Generally, this should only be set for devices using generalized
-	// device handlers which do not define a system.
-	System string
-
 	// WriteTimeout defines the time within which a write action (transaction)
 	// will remain valid for this device.
 	WriteTimeout time.Duration
@@ -126,7 +119,6 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		data         map[string]interface{}
 		tags         []string
 		handler      string
-		system       string
 		deviceType   string
 		writeTimeout time.Duration
 	)
@@ -136,7 +128,6 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		data = proto.Data
 		tags = proto.Tags
 		handler = proto.Handler
-		system = proto.System
 		deviceType = proto.Type
 		writeTimeout = proto.WriteTimeout
 	}
@@ -171,11 +162,6 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		handler = instance.Handler
 	}
 
-	// Override system, if set.
-	if instance.System != "" {
-		system = instance.System
-	}
-
 	// Override type, if set.
 	if instance.Type != "" {
 		deviceType = instance.Type
@@ -201,7 +187,6 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		Tags:          deviceTags,
 		Data:          data,
 		Handler:       handler,
-		System:        system,
 		Metadata:      proto.Metadata,
 		Info:          instance.Info,
 		SortIndex:     instance.SortIndex,
