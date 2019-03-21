@@ -17,130 +17,10 @@
 package output
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-//
-// For test output definitions, see output_test.go
-//
-
-func TestReading_To_noUnit(t *testing.T) {
-	r := Reading{
-		output: &testOutput1,
-		System: NONE,
-		Value:  "abc",
-	}
-
-	reading, err := r.To(METRIC)
-	assert.NoError(t, err)
-	assert.Equal(t, "abc", reading.Value)
-	assert.Equal(t, NONE, reading.System)
-	assert.Nil(t, reading.Unit)
-}
-
-func TestReading_To_systemAgnostic(t *testing.T) {
-	r := Reading{
-		output: &testOutput2,
-		System: NONE,
-		Value:  "abc",
-	}
-
-	reading, err := r.To(METRIC)
-	assert.NoError(t, err)
-	assert.Equal(t, "abc", reading.Value)
-	assert.Equal(t, NONE, reading.System)
-	assert.Equal(t, "foo", reading.Unit.Name)
-	assert.Equal(t, "FOO", reading.Unit.Symbol)
-}
-
-func TestReading_To_badConversion(t *testing.T) {
-	output := Output{
-		Name: "invalid",
-		Units: map[SystemOfMeasure]*Unit{
-			METRIC:   {Name: "foo"},
-			IMPERIAL: {Name: "bar"},
-		},
-		Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
-			METRIC: func(value interface{}, to SystemOfMeasure) (i interface{}, e error) {
-				return nil, fmt.Errorf("test error")
-			},
-			IMPERIAL: func(value interface{}, to SystemOfMeasure) (i interface{}, e error) {
-				return nil, fmt.Errorf("test error")
-			},
-		},
-	}
-
-	r := Reading{
-		output: &output,
-		System: METRIC,
-		Value:  "abc",
-	}
-
-	reading, err := r.To(IMPERIAL)
-	assert.Error(t, err)
-	assert.Nil(t, reading)
-}
-
-func TestReading_To_badUnit(t *testing.T) {
-	output := Output{
-		Name: "invalid",
-		Units: map[SystemOfMeasure]*Unit{
-			METRIC: {Name: "foo"},
-		},
-		Converters: map[SystemOfMeasure]func(value interface{}, to SystemOfMeasure) (interface{}, error){
-			METRIC: func(value interface{}, to SystemOfMeasure) (i interface{}, e error) {
-				return value, nil
-			},
-			IMPERIAL: func(value interface{}, to SystemOfMeasure) (i interface{}, e error) {
-				return value, nil
-			},
-		},
-	}
-
-	r := Reading{
-		output: &output,
-		System: METRIC,
-		Value:  "abc",
-	}
-
-	reading, err := r.To(IMPERIAL)
-	assert.Error(t, err)
-	assert.Nil(t, reading)
-}
-
-func TestReading_To(t *testing.T) {
-	r := Reading{
-		output: &testOutput3,
-		System: METRIC,
-		Value:  4,
-	}
-
-	reading, err := r.To(IMPERIAL)
-	assert.NoError(t, err)
-	assert.Equal(t, 8, reading.Value)
-	assert.Equal(t, IMPERIAL, reading.System)
-	assert.Equal(t, "imp", reading.Unit.Name)
-	assert.Equal(t, "IMP", reading.Unit.Symbol)
-}
-
-func TestReading_To_noSystemSpecified(t *testing.T) {
-	// Do not specify a system, defaults to METRIC
-	r := Reading{
-		output: &testOutput3,
-		System: METRIC,
-		Value:  4,
-	}
-
-	reading, err := r.To("")
-	assert.NoError(t, err)
-	assert.Equal(t, 4, reading.Value)
-	assert.Equal(t, METRIC, reading.System)
-	assert.Equal(t, "met", reading.Unit.Name)
-	assert.Equal(t, "MET", reading.Unit.Symbol)
-}
 
 func TestReading_Encode(t *testing.T) {
 	cases := []struct {
@@ -177,7 +57,6 @@ func TestReading_Encode(t *testing.T) {
 		//  to get at the actual value..
 		assert.Equal(t, "now", encoded.Timestamp)
 		assert.Equal(t, "testtype", encoded.Type)
-		assert.Equal(t, "", encoded.Unit.System)
 		assert.Equal(t, "", encoded.Unit.Name)
 		assert.Equal(t, "", encoded.Unit.Symbol)
 	}
@@ -193,7 +72,6 @@ func TestReading_Encode2(t *testing.T) {
 		Unit: &Unit{
 			Name:   "unit",
 			Symbol: "u",
-			System: string(NONE),
 		},
 	}
 
@@ -202,7 +80,6 @@ func TestReading_Encode2(t *testing.T) {
 	//  to get at the actual value..
 	assert.Equal(t, "now", encoded.Timestamp)
 	assert.Equal(t, "testtype", encoded.Type)
-	assert.Equal(t, "none", encoded.Unit.System)
 	assert.Equal(t, "unit", encoded.Unit.Name)
 	assert.Equal(t, "u", encoded.Unit.Symbol)
 }

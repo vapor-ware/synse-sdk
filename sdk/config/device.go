@@ -65,14 +65,6 @@ type DeviceProto struct {
 	// this handler, but can override.
 	Handler string `yaml:"handler,omitempty"`
 
-	// System defines the System of Measure for the instances of the device
-	// prototype. All instances will inherit this unless they specify their
-	// own system value. This value defines the default system of measure
-	// (imperial, metric) which the device returns reading data. This is not
-	// required in all cases, since the DeviceHandler may specify the system
-	// as well.
-	System string `yaml:"system,omitempty"`
-
 	// WriteTimeout defines a custom write timeout for all instances of
 	// the device prototype. This is the time within which the write
 	// transaction will remain valid. If left unspecified, it will fall
@@ -143,12 +135,6 @@ type DeviceInstance struct {
 	// value itself, e.g. "0.01", or a mathematical representation of the value,
 	// e.g. "1e-2".
 	ScalingFactor string `yaml:"scalingFactor,omitempty"`
-
-	// System defines the System of Measure (imperial, metric) for the device
-	// instance. This is not required in all cases, since the DeviceHandler
-	// may specify a system natively. Generally, this is used for general-purpose
-	// plugins, such as Modbus-IP.
-	System string `yaml:"system,omitempty"`
 
 	// WriteTimeout defines a custom write timeout for the device instance. This
 	// is the time within which the write transaction will remain valid. If left

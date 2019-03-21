@@ -10,12 +10,9 @@ var (
 		Name:      "airflow",
 		Type:      "airflow",
 		Precision: 2,
-		Units: map[output.SystemOfMeasure]*output.Unit{
-			output.NONE: {
-				Name:   "cubic feet per meter",
-				Symbol: "CFM",
-				System: string(output.NONE),
-			},
+		Unit: &output.Unit{
+			Name:   "cubic feet per meter",
+			Symbol: "CFM",
 		},
 	}
 )
