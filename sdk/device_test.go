@@ -58,7 +58,6 @@ func TestNewDeviceFromConfig(t *testing.T) {
 		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
-		System:       "imperial",
 		WriteTimeout: 3 * time.Second,
 	}
 	instance := &config.DeviceInstance{
@@ -75,7 +74,6 @@ func TestNewDeviceFromConfig(t *testing.T) {
 			Name: "foo",
 		},
 		ScalingFactor:      "2",
-		System:             "metric",
 		WriteTimeout:       5 * time.Second,
 		DisableInheritance: false,
 	}
@@ -91,7 +89,6 @@ func TestNewDeviceFromConfig(t *testing.T) {
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, "2", device.ScalingFactor)
-	assert.Equal(t, "metric", device.System)
 	assert.Equal(t, 5*time.Second, device.WriteTimeout)
 	assert.Equal(t, "bar", device.Output)
 }
@@ -109,7 +106,6 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
-		System:       "imperial",
 		WriteTimeout: 3 * time.Second,
 	}
 	instance := &config.DeviceInstance{
@@ -138,7 +134,6 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, "2", device.ScalingFactor)
-	assert.Equal(t, "imperial", device.System)
 	assert.Equal(t, 3*time.Second, device.WriteTimeout)
 	assert.Equal(t, "bar", device.Output)
 }
@@ -154,7 +149,6 @@ func TestNewDeviceFromConfig3(t *testing.T) {
 		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
-		System:       "imperial",
 		WriteTimeout: 3 * time.Second,
 	}
 	instance := &config.DeviceInstance{
@@ -170,7 +164,6 @@ func TestNewDeviceFromConfig3(t *testing.T) {
 			Name: "foo",
 		},
 		ScalingFactor:      "2",
-		System:             "metric",
 		WriteTimeout:       5 * time.Second,
 		DisableInheritance: false,
 	}
@@ -218,7 +211,6 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, "2", device.ScalingFactor)
-	assert.Equal(t, "", device.System)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
 	assert.Equal(t, "bar", device.Output)
 }
@@ -235,7 +227,6 @@ func TestNewDeviceFromConfig5(t *testing.T) {
 		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
-		System:       "imperial",
 		WriteTimeout: 3 * time.Second,
 	}
 	instance := &config.DeviceInstance{
@@ -250,7 +241,6 @@ func TestNewDeviceFromConfig5(t *testing.T) {
 		Alias: &config.DeviceAlias{
 			Name: "foo",
 		},
-		System:             "metric",
 		ScalingFactor:      "2",
 		DisableInheritance: true,
 	}
@@ -266,7 +256,6 @@ func TestNewDeviceFromConfig5(t *testing.T) {
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, "2", device.ScalingFactor)
-	assert.Equal(t, "metric", device.System)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
 	assert.Equal(t, "bar", device.Output)
 }
@@ -283,7 +272,6 @@ func TestNewDeviceFromConfig6(t *testing.T) {
 		},
 		Tags:         []string{"default/foo:"},
 		Handler:      "testhandler",
-		System:       "imperial",
 		WriteTimeout: 3 * time.Second,
 	}
 	instance := &config.DeviceInstance{
@@ -300,7 +288,6 @@ func TestNewDeviceFromConfig6(t *testing.T) {
 			Name: "foo",
 		},
 		ScalingFactor:      "2",
-		System:             "metric",
 		WriteTimeout:       5 * time.Second,
 		DisableInheritance: false,
 	}
@@ -322,7 +309,6 @@ func TestNewDeviceFromConfig7(t *testing.T) {
 		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
-		System:       "imperial",
 		WriteTimeout: 3 * time.Second,
 	}
 	instance := &config.DeviceInstance{
@@ -339,7 +325,6 @@ func TestNewDeviceFromConfig7(t *testing.T) {
 			Template: "foo.{{.NotAField}}",
 		},
 		ScalingFactor:      "2",
-		System:             "metric",
 		WriteTimeout:       5 * time.Second,
 		DisableInheritance: false,
 	}
@@ -362,7 +347,6 @@ func TestNewDeviceFromConfig8(t *testing.T) {
 		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
-		System:       "imperial",
 		WriteTimeout: 3 * time.Second,
 	}
 	instance := &config.DeviceInstance{
@@ -380,7 +364,6 @@ func TestNewDeviceFromConfig8(t *testing.T) {
 			Name: "foo",
 		},
 		ScalingFactor:      "2",
-		System:             "metric",
 		WriteTimeout:       5 * time.Second,
 		DisableInheritance: false,
 	}

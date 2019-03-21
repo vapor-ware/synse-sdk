@@ -11,7 +11,7 @@ var Air8884 = sdk.DeviceHandler{
 	Name: "airflow",
 
 	Read: func(device *sdk.Device) ([]*output.Reading, error) {
-		reading := outputs.AirflowOutput.From(100)
+		reading := outputs.AirflowOutput.MakeReading(100)
 		return []*output.Reading{reading}, nil
 	},
 }

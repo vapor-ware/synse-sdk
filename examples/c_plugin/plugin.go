@@ -24,7 +24,7 @@ var temperatureHandler = sdk.DeviceHandler{
 		}
 		value := cRead(id, device.Type)
 
-		reading := output.Temperature.FromMetric(value)
+		reading := output.Temperature.MakeReading(value)
 		return []*output.Reading{reading}, nil
 	},
 }

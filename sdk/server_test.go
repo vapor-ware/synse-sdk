@@ -18,7 +18,6 @@ package sdk
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -533,8 +532,8 @@ func TestServer_Read(t *testing.T) {
 		stateManager: &stateManager{
 			readingsLock: &sync.RWMutex{},
 			readings: map[string][]*output.Reading{
-				"12345": {o.From(1)},
-				"67890": {o.From(2)},
+				"12345": {o.MakeReading(1)},
+				"67890": {o.MakeReading(2)},
 			},
 		},
 	}
@@ -569,8 +568,8 @@ func TestServer_Read2(t *testing.T) {
 		stateManager: &stateManager{
 			readingsLock: &sync.RWMutex{},
 			readings: map[string][]*output.Reading{
-				"12345": {o.From(1)},
-				"67890": {o.From(2)},
+				"12345": {o.MakeReading(1)},
+				"67890": {o.MakeReading(2)},
 			},
 		},
 	}
@@ -587,126 +586,6 @@ func TestServer_Read2(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 1)
 	assert.Equal(t, &synse.V3Reading_Int64Value{Int64Value: 2}, mock.Results[0].Value)
-}
-
-func TestServer_Read_convertOk(t *testing.T) {
-	// Test reading and converting units
-	o := output.Output{
-		Name: "test",
-		Type: "foo",
-		Units: map[output.SystemOfMeasure]*output.Unit{
-			output.METRIC:   {Name: "metric"},
-			output.IMPERIAL: {Name: "imperial"},
-		},
-		Converters: map[output.SystemOfMeasure]func(value interface{}, to output.SystemOfMeasure) (interface{}, error){
-			output.METRIC: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
-				if to != output.IMPERIAL {
-					return nil, fmt.Errorf("test error")
-				}
-				return value.(int) / 2, nil
-			},
-			output.IMPERIAL: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
-				if to != output.METRIC {
-					return nil, fmt.Errorf("test error")
-				}
-				return value.(int) * 2, nil
-			},
-		},
-	}
-
-	s := server{
-		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
-		deviceManager: &deviceManager{
-			tagCache: &TagCache{
-				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
-					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
-				},
-			},
-		},
-		stateManager: &stateManager{
-			readingsLock: &sync.RWMutex{},
-			readings: map[string][]*output.Reading{
-				"12345": {o.FromImperial(1)},
-				"67890": {o.FromImperial(2)},
-			},
-		},
-	}
-	req := &synse.V3ReadRequest{
-		Selector: &synse.V3DeviceSelector{
-			Tags: []*synse.V3Tag{
-				{Namespace: "other", Label: "bar"},
-			},
-		},
-		SystemOfMeasure: "metric",
-	}
-	mock := test.NewMockReadStream()
-	err := s.Read(req, mock)
-
-	assert.NoError(t, err)
-	assert.Len(t, mock.Results, 1)
-	// the value should be 4 since we read it as 2 in imperial and it is converted to metric
-	// which the converter function transforms via *2.
-	assert.Equal(t, &synse.V3Reading_Int64Value{Int64Value: 4}, mock.Results[0].Value)
-	assert.Equal(t, "metric", mock.Results[0].Unit.Name)
-}
-
-func TestServer_Read_convertErr(t *testing.T) {
-	// Test reading and converting units
-	o := output.Output{
-		Name: "test",
-		Type: "foo",
-		Units: map[output.SystemOfMeasure]*output.Unit{
-			output.METRIC:   {Name: "metric"},
-			output.IMPERIAL: {Name: "imperial"},
-		},
-		Converters: map[output.SystemOfMeasure]func(value interface{}, to output.SystemOfMeasure) (interface{}, error){
-			output.METRIC: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
-				if to != output.IMPERIAL {
-					return nil, fmt.Errorf("test error")
-				}
-				return value.(int) / 2, nil
-			},
-			output.IMPERIAL: func(value interface{}, to output.SystemOfMeasure) (i interface{}, e error) {
-				if to != output.METRIC {
-					return nil, fmt.Errorf("test error")
-				}
-				return value.(int) * 2, nil
-			},
-		},
-	}
-
-	s := server{
-		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
-		deviceManager: &deviceManager{
-			tagCache: &TagCache{
-				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
-					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
-				},
-			},
-		},
-		stateManager: &stateManager{
-			readingsLock: &sync.RWMutex{},
-			readings: map[string][]*output.Reading{
-				"12345": {o.FromImperial(1)},
-				"67890": {o.FromImperial(2)},
-			},
-		},
-	}
-	req := &synse.V3ReadRequest{
-		Selector: &synse.V3DeviceSelector{
-			Tags: []*synse.V3Tag{
-				{Namespace: "other", Label: "bar"},
-			},
-		},
-		SystemOfMeasure: "not-a-system",
-	}
-	mock := test.NewMockReadStream()
-	err := s.Read(req, mock)
-
-	assert.Error(t, err)
-	assert.Len(t, mock.Results, 0)
 }
 
 func TestServer_Read_error(t *testing.T) {
@@ -729,8 +608,8 @@ func TestServer_Read_error(t *testing.T) {
 		stateManager: &stateManager{
 			readingsLock: &sync.RWMutex{},
 			readings: map[string][]*output.Reading{
-				"12345": {o.From(1)},
-				"67890": {o.From(2)},
+				"12345": {o.MakeReading(1)},
+				"67890": {o.MakeReading(2)},
 			},
 		},
 	}
@@ -763,9 +642,9 @@ func TestServer_ReadCache(t *testing.T) {
 				},
 			},
 			readings: map[string][]*output.Reading{
-				"12345": {o.From(1)},
-				"67890": {o.From(2)},
-				"abcde": {o.From(3)},
+				"12345": {o.MakeReading(1)},
+				"67890": {o.MakeReading(2)},
+				"abcde": {o.MakeReading(3)},
 			},
 		},
 	}
@@ -792,9 +671,9 @@ func TestServer_ReadCache_error(t *testing.T) {
 				},
 			},
 			readings: map[string][]*output.Reading{
-				"12345": {o.From(1)},
-				"67890": {o.From(2)},
-				"abcde": {o.From(3)},
+				"12345": {o.MakeReading(1)},
+				"67890": {o.MakeReading(2)},
+				"abcde": {o.MakeReading(3)},
 			},
 		},
 	}

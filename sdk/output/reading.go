@@ -40,56 +40,8 @@ type Reading struct {
 	// Value is the reading value itself.
 	Value interface{}
 
-	// System describes the system of measure that the reading is represented as.
-	System SystemOfMeasure
-
 	// output is the Output used to render and format the reading.
 	output *Output
-}
-
-// To converts the reading from its current Unit to the unit for the
-// specified SystemOfMeasure.
-//
-// There are a few rules for unit conversion:
-//
-// 1. If a reading uses a unit-less output, no conversion will happen
-//    (e.g. this function will do nothing).
-// 2. If a reading uses a system-agnostic output, no conversion will
-//    happen (e.g. this function will do nothing).
-// 3. If a reading is converted from system A to system A, it is
-//    already the desired unit, so no conversion will happen.
-// 4. If a reading is converted from system A to system B, it will
-//    attempt to convert, using its output unit conversion.
-func (reading *Reading) To(system SystemOfMeasure) (*Reading, error) {
-	// If no system is specified, default to using the metric system.
-	if system == "" {
-		system = METRIC
-	}
-
-	// Convert the reading value.
-	val, err := reading.output.Convert(reading.Value, reading.System, system)
-	if err != nil {
-		return nil, err
-	}
-
-	// If the reading conversion was successful, get the unit for the
-	// new system.
-	unit, err := reading.output.GetUnit(system)
-	if err != nil {
-		return nil, err
-	}
-
-	unitSystem := NONE
-	if unit != nil {
-		unitSystem = SystemOfMeasure(unit.System)
-	}
-
-	// Update the reading for the unit conversion.
-	reading.Unit = unit
-	reading.Value = val
-	reading.System = unitSystem
-
-	return reading, nil
 }
 
 // Encode translates the Reading to its corresponding gRPC message.

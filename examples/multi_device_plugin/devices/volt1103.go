@@ -10,7 +10,7 @@ var Volt1103 = sdk.DeviceHandler{
 	Name: "voltage",
 
 	Read: func(device *sdk.Device) ([]*output.Reading, error) {
-		reading := output.Voltage.From(1)
+		reading := output.Voltage.MakeReading(1)
 		return []*output.Reading{reading}, nil
 	},
 }
