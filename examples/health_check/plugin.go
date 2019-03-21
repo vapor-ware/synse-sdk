@@ -25,7 +25,7 @@ var (
 		Name: "example.temperature",
 
 		Read: func(device *sdk.Device) ([]*output.Reading, error) {
-			reading := output.Temperature.FromMetric(strconv.Itoa(rand.Int()))
+			reading := output.Temperature.MakeReading(strconv.Itoa(rand.Int()))
 			return []*output.Reading{reading}, nil
 		},
 		Write: func(device *sdk.Device, data *sdk.WriteData) error {

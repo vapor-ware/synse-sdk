@@ -60,7 +60,7 @@ var (
 				value := binary.LittleEndian.Uint32(buffer)
 				fmt.Printf("[listener] got data: %v\n", value)
 
-				reading := pusherOutput.From(value)
+				reading := pusherOutput.MakeReading(value)
 				data <- sdk.NewReadContext(device, []*output.Reading{reading})
 			}
 		},

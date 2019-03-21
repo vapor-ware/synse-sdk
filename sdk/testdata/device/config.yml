@@ -15,7 +15,6 @@ devices:
       - x:y
     instances:
       - info: Mixed Fluid Temp
-        system: metric
         output: temperature
         scalingFactor: "1000"
         handler: input_register
@@ -24,7 +23,6 @@ devices:
           width: 1
           type: s16
       - info: Loop Temp
-        system: metric
         output: temperature
         handler: coil
         data:
@@ -32,7 +30,6 @@ devices:
           width: 1
           type: s16
       - info: Vaccuum Temp
-        system: metric
         output: temperature
         data:
           address: 0x02
