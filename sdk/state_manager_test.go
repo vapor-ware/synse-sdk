@@ -196,7 +196,7 @@ func TestStateManager_GetCachedReadings_invalidStart(t *testing.T) {
 	assert.Empty(t, readings)
 
 	// Verify the channel was closed
-	_, isOpen := <- readings
+	_, isOpen := <-readings
 	assert.False(t, isOpen)
 }
 
@@ -215,7 +215,7 @@ func TestStateManager_GetCachedReadings_invalidEnd(t *testing.T) {
 	assert.Empty(t, readings)
 
 	// Verify the channel was closed
-	_, isOpen := <- readings
+	_, isOpen := <-readings
 	assert.False(t, isOpen)
 }
 
@@ -226,24 +226,23 @@ func TestStateManager_GetCachedReadings_cacheEnabled(t *testing.T) {
 				Enabled: true,
 			},
 		},
-		readingsCache: cache.New(1 * time.Minute, 2*time.Minute),
+		readingsCache: cache.New(1*time.Minute, 2*time.Minute),
 	}
 
 	newCtxs := cacheContexts([]*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}})
 	err := sm.readingsCache.Add("2019-03-22T09:48:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
-
 	readings := make(chan *ReadContext, 5)
 
 	sm.GetCachedReadings("2019-03-22T09:45:00Z", "2019-03-22T09:50:00Z", readings)
 	assert.Len(t, readings, 1)
 
-	rctx := <- readings
+	rctx := <-readings
 	assert.Equal(t, "123", rctx.Device)
 
 	// Verify the channel was closed
-	_, isOpen := <- readings
+	_, isOpen := <-readings
 	assert.False(t, isOpen)
 }
 
@@ -265,11 +264,11 @@ func TestStateManager_GetCachedReadings_cacheDisabled(t *testing.T) {
 	sm.GetCachedReadings("2019-03-22T09:45:00Z", "2019-03-22T09:50:00Z", readings)
 	assert.Len(t, readings, 1)
 
-	rctx := <- readings
+	rctx := <-readings
 	assert.Equal(t, "1", rctx.Device)
 
 	// Verify the channel was closed
-	_, isOpen := <- readings
+	_, isOpen := <-readings
 	assert.False(t, isOpen)
 }
 
@@ -280,7 +279,7 @@ func TestStateManager_dumpCachedReadings_noReadings(t *testing.T) {
 				Enabled: true,
 			},
 		},
-		readingsCache: cache.New(1 * time.Minute, 2*time.Minute),
+		readingsCache: cache.New(1*time.Minute, 2*time.Minute),
 	}
 
 	readings := make(chan *ReadContext, 5)
@@ -303,7 +302,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingBeforeStart(t *testing.T) 
 				Enabled: true,
 			},
 		},
-		readingsCache: cache.New(1 * time.Minute, 2*time.Minute),
+		readingsCache: cache.New(1*time.Minute, 2*time.Minute),
 	}
 
 	// Test data setup
@@ -331,7 +330,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingAfterEnd(t *testing.T) {
 				Enabled: true,
 			},
 		},
-		readingsCache: cache.New(1 * time.Minute, 2*time.Minute),
+		readingsCache: cache.New(1*time.Minute, 2*time.Minute),
 	}
 
 	// Test data setup
@@ -359,7 +358,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingOk(t *testing.T) {
 				Enabled: true,
 			},
 		},
-		readingsCache: cache.New(1 * time.Minute, 2*time.Minute),
+		readingsCache: cache.New(1*time.Minute, 2*time.Minute),
 	}
 
 	// Test data setup
@@ -379,7 +378,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingOk(t *testing.T) {
 	sm.dumpCachedReadings(start, end, readings)
 	assert.Len(t, readings, 1)
 
-	rctx := <- readings
+	rctx := <-readings
 	assert.Equal(t, "123", rctx.Device)
 }
 
@@ -390,7 +389,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingBadTS(t *testing.T) {
 				Enabled: true,
 			},
 		},
-		readingsCache: cache.New(1 * time.Minute, 2*time.Minute),
+		readingsCache: cache.New(1*time.Minute, 2*time.Minute),
 	}
 
 	// Test data setup
@@ -414,7 +413,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingBadTS(t *testing.T) {
 func TestStateManager_dumpCurrentReadings_noReadings(t *testing.T) {
 	sm := stateManager{
 		readingsLock: &sync.RWMutex{},
-		readings: map[string][]*output.Reading{},
+		readings:     map[string][]*output.Reading{},
 	}
 
 	readings := make(chan *ReadContext, 5)
@@ -438,14 +437,14 @@ func TestStateManager_dumpCurrentReadings_hasReadings(t *testing.T) {
 	sm.dumpCurrentReadings(readings)
 	assert.Len(t, readings, 1)
 
-	rctx := <- readings
+	rctx := <-readings
 	assert.Equal(t, "1", rctx.Device)
 }
 
 func TestStateManager_GetReadings_noReadings(t *testing.T) {
 	sm := stateManager{
 		readingsLock: &sync.RWMutex{},
-		readings: map[string][]*output.Reading{},
+		readings:     map[string][]*output.Reading{},
 	}
 
 	readings := sm.GetReadings()
