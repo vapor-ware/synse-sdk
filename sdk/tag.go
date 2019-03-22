@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 

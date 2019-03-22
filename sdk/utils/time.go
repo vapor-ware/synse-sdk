@@ -19,7 +19,7 @@ package utils
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // GetCurrentTime return the current time (time.Now()), with location set to UTC,

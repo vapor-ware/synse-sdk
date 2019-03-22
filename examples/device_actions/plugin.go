@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	logger "github.com/Sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/examples/device_actions/devices"
 	"github.com/vapor-ware/synse-sdk/sdk"
 )

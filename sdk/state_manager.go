@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
