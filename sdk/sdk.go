@@ -12,7 +12,7 @@ todo: overview of the SDK arch/flow.
 package sdk
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {

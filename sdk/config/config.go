@@ -24,10 +24,10 @@ import (
 	"reflect"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/creasty/defaults"
 	"github.com/imdario/mergo"
 	"github.com/mitchellh/mapstructure"
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
 	"gopkg.in/yaml.v2"

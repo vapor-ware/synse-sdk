@@ -19,8 +19,8 @@ package sdk
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rs/xid"
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
