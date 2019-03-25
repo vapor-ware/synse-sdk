@@ -321,6 +321,27 @@ func (device *Device) encode() *synse.V3Device {
 		Metadata:  device.Metadata,
 		SortIndex: device.SortIndex,
 		Tags:      tags,
-		// todo:  capabilities, outputs
+		Capabilities: &synse.V3DeviceCapability{
+			Mode: device.handler.GetCapabilitiesMode(),
+			Write: &synse.V3WriteCapability{
+				Actions: device.handler.Actions,
+			},
+		},
+		// todo:  outputs
+		//  need to figure out how to get the outputs here. the easiest way (implementation-wise)
+		//  would be to just add `Outputs` to the config and just take them from there, if they
+		//  are defined. this works, but isn't really ideal, since it shouldn't live there.... its
+		//  not something that the user can actually configure one way or another. the output is
+		//  ultimately determined by the device handler.**
+		//  the ideal way to do this would be to modify the DeviceHandler so that we can get the
+		//  outputs from it. see: #395
+		//
+		//  **This is not entirely true. For generic handlers (e.g. modbus), we may need to specify
+		//  the output in the config so we know which output to use for the generic handling.
+		//
+		//  For generic handlers, this also begs the question of what we do in cases where the device
+		//  we are interfacing with does not conform to our assumptions, e.g. what if a modbus register
+		//  had data as degrees Fahrenheit, but in the SDK we assume everything should be metric...
+		//  see: #396
 	}
 }
