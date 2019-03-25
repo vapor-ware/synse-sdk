@@ -31,10 +31,6 @@ import (
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
-// TODO (etd): consider not exporting the Device fields. The reason being that
-//  while a plugin may need to interact with a device, it should never really
-//  be modifying device data once it has been loaded (I don't think..)
-
 // Device is a single physical or virtual device which the Plugin manages.
 //
 // It defines all of the information known about the device, which typically
