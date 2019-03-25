@@ -20,14 +20,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/vapor-ware/synse-sdk/internal/test"
-	"github.com/vapor-ware/synse-sdk/sdk/policy"
-
 	"github.com/google/uuid"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/vapor-ware/synse-sdk/internal/test"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/sdk/policy"
 )
 
 func Test_newDeviceManager_nil(t *testing.T) {

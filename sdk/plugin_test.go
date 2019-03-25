@@ -22,13 +22,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
-
-	"github.com/vapor-ware/synse-sdk/sdk/health"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/health"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
 )
 
