@@ -29,27 +29,14 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 )
 
-// todo: for readings, check if reading is enabled on the device
-
-// fixme: better way of defining this?
-// cacheContexts is how ReadContexts are stored in the readings cache. Since
-// we may want to filter readings based on the timestamp they were added, we
-// want to store the ReadContexts against a timestamp key. In order to support
-// multiple contexts at a given time, we store them as a slice.
-type cacheContexts []*ReadContext
-
 // stateManager manages the read and write (transaction) state for plugin devices.
 type stateManager struct {
-	readChan chan *ReadContext
-
+	config        *config.PluginSettings
+	readChan      chan *ReadContext
 	readings      map[string][]*output.Reading
-	transactions  *cache.Cache
 	readingsCache *cache.Cache
-
-	readingsLock *sync.RWMutex
-
-	// TODO; figure out which bits of config this needs
-	config *config.PluginSettings
+	readingsLock  *sync.RWMutex
+	transactions  *cache.Cache
 }
 
 // newStateManager creates a new instance of the stateManager.
@@ -137,10 +124,10 @@ func (manager *stateManager) addReadingToCache(ctx *ReadContext) {
 		now := utils.GetCurrentTime()
 		item, exists := manager.readingsCache.Get(now)
 		if !exists {
-			newCtxs := cacheContexts([]*ReadContext{ctx})
+			newCtxs := []*ReadContext{ctx}
 			manager.readingsCache.Set(now, &newCtxs, cache.DefaultExpiration)
 		} else {
-			cached := item.(*cacheContexts)
+			cached := item.(*[]*ReadContext)
 			*cached = append(*cached, ctx)
 		}
 	}
@@ -215,7 +202,7 @@ func (manager *stateManager) dumpCachedReadings(start, end time.Time, readings c
 		}
 
 		// Pass the read contexts to the channel
-		ctxs := item.Object.(*cacheContexts)
+		ctxs := item.Object.(*[]*ReadContext)
 		for _, ctx := range *ctxs {
 			readings <- ctx
 		}

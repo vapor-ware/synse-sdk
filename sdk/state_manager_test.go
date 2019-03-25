@@ -229,7 +229,7 @@ func TestStateManager_GetCachedReadings_cacheEnabled(t *testing.T) {
 		readingsCache: cache.New(1*time.Minute, 2*time.Minute),
 	}
 
-	newCtxs := cacheContexts([]*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}})
+	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("2019-03-22T09:48:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -306,7 +306,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingBeforeStart(t *testing.T) 
 	}
 
 	// Test data setup
-	newCtxs := cacheContexts([]*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}})
+	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("2019-03-22T09:40:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -334,7 +334,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingAfterEnd(t *testing.T) {
 	}
 
 	// Test data setup
-	newCtxs := cacheContexts([]*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}})
+	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("2019-03-22T09:55:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -362,7 +362,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingOk(t *testing.T) {
 	}
 
 	// Test data setup
-	newCtxs := cacheContexts([]*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}})
+	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("2019-03-22T09:48:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -393,7 +393,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingBadTS(t *testing.T) {
 	}
 
 	// Test data setup
-	newCtxs := cacheContexts([]*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}})
+	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("foobar", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 

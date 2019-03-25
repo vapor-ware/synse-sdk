@@ -638,6 +638,12 @@ func TestDevice_encode(t *testing.T) {
 		Alias:     "vaportest",
 		SortIndex: 1,
 		id:        "1234",
+		handler: &DeviceHandler{
+			Name: "vapor",
+			Read: func(device *Device) (readings []*output.Reading, e error) {
+				return nil, nil
+			},
+		},
 	}
 
 	encoded := device.encode()
@@ -647,7 +653,8 @@ func TestDevice_encode(t *testing.T) {
 	assert.Equal(t, "", encoded.Plugin)
 	assert.Equal(t, "test", encoded.Info)
 	assert.Equal(t, map[string]string{"abc": "123"}, encoded.Metadata)
-	//assert.Equal(t, "foo", encoded.Capabilities)
+	assert.Equal(t, "r", encoded.Capabilities.Mode)
+	assert.Nil(t, encoded.Capabilities.Write.Actions)
 	assert.Equal(t, 1, len(encoded.Tags))
 	assert.Equal(t, 0, len(encoded.Outputs))
 	assert.Equal(t, int32(1), encoded.SortIndex)
