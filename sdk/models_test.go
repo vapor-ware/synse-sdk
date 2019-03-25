@@ -19,10 +19,9 @@ package sdk
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewReadContext(t *testing.T) {

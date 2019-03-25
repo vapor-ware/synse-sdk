@@ -67,7 +67,6 @@ type server struct {
 
 // newServer creates a new instance of a server. This is used by the Plugin
 // constructor to create a Plugin's server instance.
-// fixme: this can be cleaned up by using a context to pass stuff around
 func newServer(plugin *Plugin) *server {
 	return &server{
 		conf:          plugin.config.Network,
