@@ -82,6 +82,12 @@ type scheduler struct {
 	// stop is a channel used to signal that the scheduler should stop.
 	// This is generally used for graceful shutdown.
 	stop chan struct{}
+
+	// Flag to check what state the scheduler is in. This is generally
+	// used for debug/testing.
+	isReading   bool
+	isWriting   bool
+	isListening bool
 }
 
 // newScheduler creates a new instance of the plugin's scheduler component.
@@ -169,11 +175,14 @@ func (scheduler *scheduler) Stop() error {
 }
 
 // Write queues up a write request into the scheduler's write queue.
-// fixme: instead of taking the payload, just take the device?
 func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]*synse.V3WriteTransaction, error) {
 	if device == nil {
 		// fixme: better err handling
 		return nil, fmt.Errorf("cannot write to nil device")
+	}
+
+	if data == nil {
+		return nil, fmt.Errorf("cannot write nil data")
 	}
 
 	if !device.IsWritable() {
@@ -208,6 +217,10 @@ func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 	if device == nil {
 		// fixme: better err handling
 		return nil, fmt.Errorf("cannot write to nil device")
+	}
+
+	if data == nil {
+		return nil, fmt.Errorf("cannot write nil data")
 	}
 
 	if !device.IsWritable() {
@@ -273,10 +286,12 @@ func (scheduler *scheduler) scheduleReads() {
 	})
 
 	rlog.Info("[scheduler] starting read scheduling")
+	scheduler.isReading = true
 	for {
 		// If the stop channel is closed, stop the read loop.
 		select {
 		case <-scheduler.stop:
+			scheduler.isReading = false
 			break
 		default:
 			// no stop signal
@@ -312,9 +327,7 @@ func (scheduler *scheduler) scheduleReads() {
 		waitGroup.Wait()
 
 		if interval != 0 {
-			//rlog.Debug("[scheduler] sleeping for read interval")
 			time.Sleep(interval)
-			//rlog.Debug("[scheduler] waking up for read interval")
 		}
 	}
 }
@@ -346,6 +359,7 @@ func (scheduler *scheduler) scheduleWrites() {
 	})
 
 	wlog.Info("[scheduler] starting write scheduling")
+	scheduler.isWriting = true
 	for {
 		log.WithFields(log.Fields{
 			"queue": len(scheduler.writeChan),
@@ -354,6 +368,7 @@ func (scheduler *scheduler) scheduleWrites() {
 		// If the stop channel is closed, stop the write loop.
 		select {
 		case <-scheduler.stop:
+			scheduler.isWriting = false
 			break
 		default:
 			// no stop signal
@@ -385,9 +400,7 @@ func (scheduler *scheduler) scheduleWrites() {
 		waitGroup.Wait()
 
 		if interval != 0 {
-			//wlog.Debug("[scheduler] sleeping for write interval")
 			time.Sleep(interval)
-			//wlog.Debug("[scheduler] waking up for write interval")
 		}
 	}
 }
@@ -408,6 +421,7 @@ func (scheduler *scheduler) scheduleListen() {
 		return
 	}
 
+	scheduler.isListening = true
 	// For each handler which has a listener function defined, get the devices for
 	// the handler and start the listener for those devices.
 	for _, handler := range scheduler.deviceManager.handlers {
@@ -480,9 +494,7 @@ func (scheduler *scheduler) read(device *Device) {
 		// If a delay is configured, wait for the delay before continuing
 		// (and relinquishing the lock, if in serial mode).
 		if delay != 0 {
-			//rlog.Debug("[scheduler] sleeping for read delay")
 			time.Sleep(delay)
-			//rlog.Debug("[scheduler] waking up for read delay")
 		}
 	}
 
