@@ -169,11 +169,14 @@ func (scheduler *scheduler) Stop() error {
 }
 
 // Write queues up a write request into the scheduler's write queue.
-// fixme: instead of taking the payload, just take the device?
 func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]*synse.V3WriteTransaction, error) {
 	if device == nil {
 		// fixme: better err handling
 		return nil, fmt.Errorf("cannot write to nil device")
+	}
+
+	if data == nil {
+		return nil, fmt.Errorf("cannot write nil data")
 	}
 
 	if !device.IsWritable() {
@@ -208,6 +211,10 @@ func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 	if device == nil {
 		// fixme: better err handling
 		return nil, fmt.Errorf("cannot write to nil device")
+	}
+
+	if data == nil {
+		return nil, fmt.Errorf("cannot write nil data")
 	}
 
 	if !device.IsWritable() {
@@ -312,9 +319,7 @@ func (scheduler *scheduler) scheduleReads() {
 		waitGroup.Wait()
 
 		if interval != 0 {
-			//rlog.Debug("[scheduler] sleeping for read interval")
 			time.Sleep(interval)
-			//rlog.Debug("[scheduler] waking up for read interval")
 		}
 	}
 }
