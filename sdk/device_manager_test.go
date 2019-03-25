@@ -17,6 +17,7 @@
 package sdk
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -175,6 +176,7 @@ func TestDeviceManager_createDynamicDevices_ok(t *testing.T) {
 					},
 				}, nil
 			},
+			DeviceDataValidator: defaultDeviceDataValidator,
 		},
 		devices: map[string]*Device{},
 	}
@@ -269,6 +271,7 @@ func TestDeviceManager_createDynamicDevices_errAddDevice(t *testing.T) {
 					},
 				}, nil
 			},
+			DeviceDataValidator: defaultDeviceDataValidator,
 		},
 		devices: map[string]*Device{
 			"12345": {id: "12345"},
@@ -572,6 +575,29 @@ func TestDeviceManager_AddDevice_noSuchHandler(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDeviceManager_AddDevice_invalidData(t *testing.T) {
+	m := deviceManager{
+		handlers: map[string]*DeviceHandler{
+			"foo": {Name: "foo"},
+		},
+		devices: map[string]*Device{
+			"1234": {id: "1234"},
+		},
+		pluginHandlers: &PluginHandlers{
+			DeviceDataValidator: func(i map[string]interface{}) error {
+				return errors.New("test error")
+			},
+		},
+	}
+	device := Device{
+		Handler: "foo",
+		id:      "1234",
+	}
+
+	err := m.AddDevice(&device)
+	assert.Error(t, err)
+}
+
 func TestDeviceManager_AddDevice_idExists(t *testing.T) {
 	m := deviceManager{
 		handlers: map[string]*DeviceHandler{
@@ -580,6 +606,7 @@ func TestDeviceManager_AddDevice_idExists(t *testing.T) {
 		devices: map[string]*Device{
 			"1234": {id: "1234"},
 		},
+		pluginHandlers: NewDefaultPluginHandlers(),
 	}
 	device := Device{
 		Handler: "foo",

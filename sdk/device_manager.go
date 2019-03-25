@@ -283,7 +283,12 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 		device.handler = handler
 	}
 
-	// TODO: verify device Data with the custom verification fn
+	// Validate the device data. The default validator does nothing and returns
+	// no error. A plugin can specify its own custom data validator.
+	err := manager.pluginHandlers.DeviceDataValidator(device.Data)
+	if err != nil {
+		return err
+	}
 
 	// If the device ID has not already been set, generate it and set
 	// it before adding it to the deviceManager.

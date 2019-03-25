@@ -47,6 +47,11 @@ type DeviceHandler struct {
 	// will run in a separate goroutine for each device. The goroutines are started
 	// before the read/write loops.
 	Listen func(*Device, chan *ReadContext) error
+
+	// Actions specifies a list of the supported write actions for the handler.
+	// This is optional and is just used as metadata surfaced by the SDK to the
+	// client via the gRPC API.
+	Actions []string
 }
 
 // CanRead returns true if the handler has a read function defined; false otherwise.
@@ -81,4 +86,22 @@ func (handler *DeviceHandler) CanListen() bool {
 		return false
 	}
 	return handler.Listen != nil
+}
+
+// GetCapabilitiesMode gets the capabilities mode string representation for a device
+// based on its device handler. This will be one of: "r" (read-only), "w" (write-only),
+// or "rw" (read-write).
+//
+// Note that a device is considered readable here if it can supply reading data.
+// Currently, Read, BulkRead, and Listen can all supply reading data, so if any one
+// of those are defined for the handler, the capabilities string will reflect that.
+func (handler *DeviceHandler) GetCapabilitiesMode() string {
+	var capabilities = ""
+	if handler.CanRead() || handler.CanBulkRead() || handler.CanListen() {
+		capabilities += "r"
+	}
+	if handler.CanWrite() {
+		capabilities += "w"
+	}
+	return capabilities
 }

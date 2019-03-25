@@ -110,3 +110,82 @@ func TestDeviceHandler_CanBulkRead_false2(t *testing.T) {
 	}
 	assert.False(t, handler.CanBulkRead())
 }
+
+func TestDeviceHandler_GetCapabilitiesMode(t *testing.T) {
+	cases := []struct {
+		handler  DeviceHandler
+		expected string
+	}{
+		{
+			handler:  DeviceHandler{},
+			expected: "",
+		},
+		{
+			handler: DeviceHandler{
+				Read: func(device *Device) (readings []*output.Reading, e error) { return nil, nil },
+			},
+			expected: "r",
+		},
+		{
+			handler: DeviceHandler{
+				BulkRead: func(devices []*Device) (contexts []*ReadContext, e error) { return nil, nil },
+			},
+			expected: "r",
+		},
+		{
+			handler: DeviceHandler{
+				Listen: func(device *Device, contexts chan *ReadContext) error { return nil },
+			},
+			expected: "r",
+		},
+		{
+			handler: DeviceHandler{
+				Read:     func(device *Device) (readings []*output.Reading, e error) { return nil, nil },
+				BulkRead: func(devices []*Device) (contexts []*ReadContext, e error) { return nil, nil },
+				Listen:   func(device *Device, contexts chan *ReadContext) error { return nil },
+			},
+			expected: "r",
+		},
+		{
+			handler: DeviceHandler{
+				Write: func(device *Device, data *WriteData) error { return nil },
+			},
+			expected: "w",
+		},
+		{
+			handler: DeviceHandler{
+				Read:  func(device *Device) (readings []*output.Reading, e error) { return nil, nil },
+				Write: func(device *Device, data *WriteData) error { return nil },
+			},
+			expected: "rw",
+		},
+		{
+			handler: DeviceHandler{
+				BulkRead: func(devices []*Device) (contexts []*ReadContext, e error) { return nil, nil },
+				Write:    func(device *Device, data *WriteData) error { return nil },
+			},
+			expected: "rw",
+		},
+		{
+			handler: DeviceHandler{
+				Listen: func(device *Device, contexts chan *ReadContext) error { return nil },
+				Write:  func(device *Device, data *WriteData) error { return nil },
+			},
+			expected: "rw",
+		},
+		{
+			handler: DeviceHandler{
+				Read:     func(device *Device) (readings []*output.Reading, e error) { return nil, nil },
+				BulkRead: func(devices []*Device) (contexts []*ReadContext, e error) { return nil, nil },
+				Listen:   func(device *Device, contexts chan *ReadContext) error { return nil },
+				Write:    func(device *Device, data *WriteData) error { return nil },
+			},
+			expected: "rw",
+		},
+	}
+
+	for i, c := range cases {
+		actual := c.handler.GetCapabilitiesMode()
+		assert.Equal(t, c.expected, actual, "case: %d", i)
+	}
+}
