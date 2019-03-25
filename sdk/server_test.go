@@ -312,13 +312,14 @@ func TestServer_Health(t *testing.T) {
 func TestServer_Devices(t *testing.T) {
 	// Get devices when there is no selector set. In this case, it should
 	// return the devices in the default namespace.
+	handler := &DeviceHandler{Name: "foo"}
 	s := server{
 		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345"}}}},
-					"other":   {"": {"bar": {&Device{id: "67890"}}}},
+					"default": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
 		},
@@ -334,13 +335,14 @@ func TestServer_Devices(t *testing.T) {
 
 func TestServer_Devices2(t *testing.T) {
 	// Get devices when there is a tag selector set.
+	handler := &DeviceHandler{Name: "foo"}
 	s := server{
 		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345"}}}},
-					"other":   {"": {"bar": {&Device{id: "67890"}}}},
+					"default": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
 		},
@@ -358,13 +360,14 @@ func TestServer_Devices2(t *testing.T) {
 
 func TestServer_Devices3(t *testing.T) {
 	// Get devices when there is a tag selector set, but no match
+	handler := &DeviceHandler{Name: "foo"}
 	s := server{
 		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345"}}}},
-					"other":   {"": {"bar": {&Device{id: "67890"}}}},
+					"default": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
 		},
@@ -380,13 +383,14 @@ func TestServer_Devices3(t *testing.T) {
 func TestServer_Devices_error(t *testing.T) {
 	// Get devices when there is no selector set. In this case, it should
 	// return the devices in the default namespace.
+	handler := &DeviceHandler{Name: "foo"}
 	s := server{
 		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345"}}}},
-					"other":   {"": {"bar": {&Device{id: "67890"}}}},
+					"default": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
 		},
