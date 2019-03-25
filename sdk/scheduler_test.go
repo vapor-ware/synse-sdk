@@ -20,12 +20,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk/output"
-
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 

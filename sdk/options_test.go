@@ -19,10 +19,9 @@ package sdk
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // TestCustomDeviceIdentifier tests creating a PluginOption for a custom
