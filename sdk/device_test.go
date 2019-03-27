@@ -91,6 +91,7 @@ func TestNewDeviceFromConfig(t *testing.T) {
 	assert.Equal(t, "2", device.ScalingFactor)
 	assert.Equal(t, 5*time.Second, device.WriteTimeout)
 	assert.Equal(t, "temperature", device.Output)
+	assert.Equal(t, 0, len(device.fns))
 }
 
 func TestNewDeviceFromConfig2(t *testing.T) {
@@ -115,6 +116,7 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 			"address": "localhost",
 		},
 		Output:    "temperature",
+		Apply:     []string{"FtoC"},
 		SortIndex: 1,
 		Alias: &config.DeviceAlias{
 			Name: "foo",
@@ -136,6 +138,7 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 	assert.Equal(t, "2", device.ScalingFactor)
 	assert.Equal(t, 3*time.Second, device.WriteTimeout)
 	assert.Equal(t, "temperature", device.Output)
+	assert.Equal(t, 1, len(device.fns))
 }
 
 func TestNewDeviceFromConfig3(t *testing.T) {
@@ -211,6 +214,7 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 	assert.Equal(t, "2", device.ScalingFactor)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
 	assert.Equal(t, "", device.Output)
+	assert.Equal(t, 0, len(device.fns))
 }
 
 func TestNewDeviceFromConfig5(t *testing.T) {
@@ -255,6 +259,7 @@ func TestNewDeviceFromConfig5(t *testing.T) {
 	assert.Equal(t, "2", device.ScalingFactor)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
 	assert.Equal(t, "", device.Output)
+	assert.Equal(t, 0, len(device.fns))
 }
 
 func TestNewDeviceFromConfig6(t *testing.T) {
@@ -391,6 +396,40 @@ func TestNewDeviceFromConfig9(t *testing.T) {
 		SortIndex:          1,
 		Handler:            "testhandler2",
 		Output:             "unknown-output-name",
+		ScalingFactor:      "2",
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+
+	device, err := NewDeviceFromConfig(proto, instance)
+	assert.Error(t, err)
+	assert.Nil(t, device)
+}
+
+func TestNewDeviceFromConfig10(t *testing.T) {
+	// Unknown transformation function specified
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Metadata: map[string]string{
+			"a": "b",
+		},
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Tags:         []string{"default/foo"},
+		Handler:      "testhandler",
+		WriteTimeout: 3 * time.Second,
+	}
+	instance := &config.DeviceInstance{
+		Type: "type2",
+		Info: "testdata",
+		Tags: []string{"vapor/io"},
+		Data: map[string]interface{}{
+			"address": "localhost",
+		},
+		SortIndex:          1,
+		Handler:            "testhandler2",
+		Apply:              []string{"unknown-fn"},
 		ScalingFactor:      "2",
 		WriteTimeout:       5 * time.Second,
 		DisableInheritance: false,

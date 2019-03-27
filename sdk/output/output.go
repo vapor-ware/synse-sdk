@@ -39,7 +39,7 @@ func Get(name string) *Output {
 	return registeredOutputs[name]
 }
 
-// Register registers outputs to the tracked slice of outputs.
+// Register registers new outputs to the tracked outputs.
 func Register(output ...*Output) error {
 	multiErr := errors.NewMultiError("output registration")
 

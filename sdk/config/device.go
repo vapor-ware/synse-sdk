@@ -136,6 +136,13 @@ type DeviceInstance struct {
 	// e.g. "1e-2".
 	ScalingFactor string `yaml:"scalingFactor,omitempty"`
 
+	// Apply defines a list of functions which are to be applied to the device
+	// reading values, in the order in which they are defined.
+	//
+	// There are some built-in functions that the SDK provides. A plugin can also
+	// register their own functions.
+	Apply []string `yaml:"apply,omitempty"`
+
 	// WriteTimeout defines a custom write timeout for the device instance. This
 	// is the time within which the write transaction will remain valid. If left
 	// unspecified, it will fall back to the default value of 30s.
