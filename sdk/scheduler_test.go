@@ -17,12 +17,14 @@
 package sdk
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/sdk/funcs"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
@@ -494,4 +496,131 @@ func TestScheduler_scheduleListen(t *testing.T) {
 	reading, isOpen := <-s.stateManager.readChan
 	assert.True(t, isOpen)
 	assert.Equal(t, "123", reading.Device)
+}
+
+func TestScheduler_applyTransformations_noFns(t *testing.T) {
+	device := &Device{
+		fns: []*funcs.Func{},
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	err := applyTransformations(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value did not change.
+	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
+}
+
+func TestScheduler_applyTransformations_oneFnOk(t *testing.T) {
+	device := &Device{
+		fns: []*funcs.Func{
+			{
+				Name: "test-fn-1",
+				Fn: func(value interface{}) (interface{}, error) {
+					return (value.(int)) * 2, nil
+				},
+			},
+		},
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	err := applyTransformations(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value changed.
+	assert.Equal(t, 4, rctx.Reading[0].Value.(int))
+}
+
+func TestScheduler_applyTransformations_multipleFnsOk(t *testing.T) {
+	device := &Device{
+		fns: []*funcs.Func{
+			{
+				Name: "test-fn-1",
+				Fn: func(value interface{}) (interface{}, error) {
+					return (value.(int)) * 2, nil
+				},
+			},
+			{
+				Name: "test-fn-2",
+				Fn: func(value interface{}) (interface{}, error) {
+					return (value.(int)) + 3, nil
+				},
+			},
+		},
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	err := applyTransformations(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value changed.
+	assert.Equal(t, 7, rctx.Reading[0].Value.(int))
+}
+
+func TestScheduler_applyTransformations_oneFnErr(t *testing.T) {
+	device := &Device{
+		fns: []*funcs.Func{
+			{
+				Name: "test-fn-1",
+				Fn: func(value interface{}) (interface{}, error) {
+					return nil, fmt.Errorf("test error")
+				},
+			},
+		},
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	err := applyTransformations(device, rctx)
+	assert.Error(t, err)
+
+	// Verify that the reading value did not change.
+	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
+}
+
+func TestScheduler_applyTransformations_multipleFnsErr(t *testing.T) {
+	device := &Device{
+		fns: []*funcs.Func{
+			{
+				Name: "test-fn-1",
+				Fn: func(value interface{}) (interface{}, error) {
+					return (value.(int)) * 2, nil
+				},
+			},
+			{
+				Name: "test-fn-2",
+				Fn: func(value interface{}) (interface{}, error) {
+					return nil, fmt.Errorf("test err")
+				},
+			},
+		},
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	err := applyTransformations(device, rctx)
+	assert.Error(t, err)
+
+	// Verify that the reading value changed. It should change because the first
+	// fn was applied successfully. It is up to the upstream caller to check the
+	// error and make sure all transforms succeed before using the value.
+	assert.Equal(t, 4, rctx.Reading[0].Value.(int))
 }

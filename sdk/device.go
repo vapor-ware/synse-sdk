@@ -27,6 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/funcs"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
@@ -99,6 +100,10 @@ type Device struct {
 	// populated via the SDK on device loading and parsing and uses the Handler
 	// field to match the name of the handler to the actual instance.
 	handler *DeviceHandler
+
+	// fns defines a list of functions which should be applied to the reading value(s)
+	// for the device. This is called internally, if any fns are defined.
+	fns []*funcs.Func
 }
 
 // NewDeviceFromConfig creates a new instance of a Device from its device prototype
@@ -179,6 +184,16 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		}
 	}
 
+	var fns []*funcs.Func
+	for _, fn := range instance.Apply {
+		f := funcs.Get(fn)
+		if f == nil {
+			// fixme: err message
+			return nil, fmt.Errorf("device specified unknown transform function")
+		}
+		fns = append(fns, f)
+	}
+
 	// Override write timeout, if set.
 	if instance.WriteTimeout != 0 {
 		writeTimeout = instance.WriteTimeout
@@ -200,6 +215,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		ScalingFactor: instance.ScalingFactor,
 		WriteTimeout:  writeTimeout,
 		Output:        instance.Output,
+		fns:           fns,
 	}
 
 	if err := d.setAlias(instance.Alias); err != nil {
