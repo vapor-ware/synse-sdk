@@ -22,6 +22,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestReading_GetOutput(t *testing.T) {
+	o := &Output{
+		Name: "test",
+	}
+	r := Reading{
+		output: o,
+	}
+
+	assert.Equal(t, o, r.GetOutput())
+}
+
+func TestReading_GetOutput_noOutput(t *testing.T) {
+	r := Reading{}
+	assert.Nil(t, r.GetOutput())
+}
+
 func TestReading_Encode(t *testing.T) {
 	cases := []struct {
 		value interface{}
