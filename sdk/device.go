@@ -27,6 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
@@ -162,10 +163,20 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	if instance.Type != "" {
 		deviceType = instance.Type
 	}
+
 	// We require devices to have a type; error if there is none set.
 	if deviceType == "" {
 		// fixme: err message
 		return nil, fmt.Errorf("device requires type")
+	}
+
+	// If an output is specified for the device, make sure that an output
+	// with that name exists. If not, the device config is incorrect.
+	if instance.Output != "" {
+		if output.Get(instance.Output) == nil {
+			// fixme: err message
+			return nil, fmt.Errorf("device specifies unknown output")
+		}
 	}
 
 	// Override write timeout, if set.
@@ -313,6 +324,8 @@ func (device *Device) encode() *synse.V3Device {
 		tags[i] = t.Encode()
 	}
 
+	// outputs are augmented into this in server.go, prior to it being returned
+	// as a gRPC response.
 	return &synse.V3Device{
 		Timestamp: utils.GetCurrentTime(),
 		Id:        device.id,
@@ -327,21 +340,5 @@ func (device *Device) encode() *synse.V3Device {
 				Actions: device.handler.Actions,
 			},
 		},
-		// todo:  outputs
-		//  need to figure out how to get the outputs here. the easiest way (implementation-wise)
-		//  would be to just add `Outputs` to the config and just take them from there, if they
-		//  are defined. this works, but isn't really ideal, since it shouldn't live there.... its
-		//  not something that the user can actually configure one way or another. the output is
-		//  ultimately determined by the device handler.**
-		//  the ideal way to do this would be to modify the DeviceHandler so that we can get the
-		//  outputs from it. see: #395
-		//
-		//  **This is not entirely true. For generic handlers (e.g. modbus), we may need to specify
-		//  the output in the config so we know which output to use for the generic handling.
-		//
-		//  For generic handlers, this also begs the question of what we do in cases where the device
-		//  we are interfacing with does not conform to our assumptions, e.g. what if a modbus register
-		//  had data as degrees Fahrenheit, but in the SDK we assume everything should be metric...
-		//  see: #396
 	}
 }

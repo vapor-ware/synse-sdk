@@ -44,6 +44,11 @@ type Reading struct {
 	output *Output
 }
 
+// GetOutput gets the associated output for a Reading.
+func (reading *Reading) GetOutput() *Output {
+	return reading.output
+}
+
 // Encode translates the Reading to its corresponding gRPC message.
 func (reading *Reading) Encode() *synse.V3Reading {
 	var unit = &Unit{}
