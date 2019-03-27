@@ -381,6 +381,13 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 		// plugin metadata.
 		d.Plugin = server.meta.Tag()
 
+		// Set the device outputs here. This is determined by the device readings.
+		var outputs []*synse.V3DeviceOutput
+		for _, o := range server.stateManager.GetOutputsForDevice(d.Id) {
+			outputs = append(outputs, o.Encode())
+		}
+		d.Outputs = outputs
+
 		if err := stream.Send(d); err != nil {
 			return err
 		}

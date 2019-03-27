@@ -142,6 +142,21 @@ func (manager *stateManager) GetReadingsForDevice(device string) []*output.Readi
 	return manager.readings[device]
 }
 
+// GetOutputsForDevice gets the outputs for a device, based on the outputs associated
+// with any readings collected for the device.
+func (manager *stateManager) GetOutputsForDevice(device string) []*output.Output {
+	readings := manager.GetReadingsForDevice(device)
+
+	var outputs []*output.Output
+	for _, r := range readings {
+		o := r.GetOutput()
+		if o != nil {
+			outputs = append(outputs, o)
+		}
+	}
+	return outputs
+}
+
 // GetCachedReadings gets the readings in the StateManager's readingsCache. If the plugin
 // is not configured to maintain a readings cache, this will just return a dump of the
 // current reading state. Once the data has been passed through the given channel, this

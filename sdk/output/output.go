@@ -17,10 +17,43 @@
 package output
 
 import (
+	"fmt"
+
+	"github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
+var registeredOutputs map[string]*Output
+
+func init() {
+	registeredOutputs = make(map[string]*Output)
+	for _, o := range GetBuiltins() {
+		registeredOutputs[o.Name] = o
+	}
+}
+
+// Get gets an Output by name. If an output with the specified name
+// is not found, nil is returned.
+func Get(name string) *Output {
+	return registeredOutputs[name]
+}
+
+// Register registers outputs to the tracked slice of outputs.
+func Register(output ...*Output) error {
+	multiErr := errors.NewMultiError("output registration")
+
+	for _, o := range output {
+		if _, exists := registeredOutputs[o.Name]; exists {
+			multiErr.Add(fmt.Errorf("conflict: output with name '%s' already exists", o.Name))
+			continue
+		}
+		registeredOutputs[o.Name] = o
+	}
+	return multiErr.Err()
+}
+
+// Output defines the output information associated with a device reading.
 type Output struct {
 	// Name is the name of the output. Output names should be unique, as
 	// outputs can be referenced by name.
@@ -48,6 +81,21 @@ func (output *Output) MakeReading(value interface{}) *Reading {
 		Unit:      output.Unit,
 		Value:     value,
 		output:    output,
+	}
+}
+
+// Encode translates the Output to its corresponding gRPC message.
+func (output *Output) Encode() *synse.V3DeviceOutput {
+	var unit *synse.V3OutputUnit
+	if output.Unit != nil {
+		unit = output.Unit.Encode()
+	}
+
+	return &synse.V3DeviceOutput{
+		Name:      output.Name,
+		Type:      output.Type,
+		Precision: int32(output.Precision),
+		Unit:      unit,
 	}
 }
 

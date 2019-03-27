@@ -67,7 +67,7 @@ func TestNewDeviceFromConfig(t *testing.T) {
 		Data: map[string]interface{}{
 			"address": "localhost",
 		},
-		Output:    "bar",
+		Output:    "temperature",
 		SortIndex: 1,
 		Handler:   "testhandler2",
 		Alias: &config.DeviceAlias{
@@ -90,7 +90,7 @@ func TestNewDeviceFromConfig(t *testing.T) {
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, "2", device.ScalingFactor)
 	assert.Equal(t, 5*time.Second, device.WriteTimeout)
-	assert.Equal(t, "bar", device.Output)
+	assert.Equal(t, "temperature", device.Output)
 }
 
 func TestNewDeviceFromConfig2(t *testing.T) {
@@ -114,7 +114,7 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 		Data: map[string]interface{}{
 			"address": "localhost",
 		},
-		Output:    "bar",
+		Output:    "temperature",
 		SortIndex: 1,
 		Alias: &config.DeviceAlias{
 			Name: "foo",
@@ -135,7 +135,7 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, "2", device.ScalingFactor)
 	assert.Equal(t, 3*time.Second, device.WriteTimeout)
-	assert.Equal(t, "bar", device.Output)
+	assert.Equal(t, "temperature", device.Output)
 }
 
 func TestNewDeviceFromConfig3(t *testing.T) {
@@ -157,7 +157,6 @@ func TestNewDeviceFromConfig3(t *testing.T) {
 		Data: map[string]interface{}{
 			"address": "localhost",
 		},
-		Output:    "bar",
 		SortIndex: 1,
 		Handler:   "testhandler2",
 		Alias: &config.DeviceAlias{
@@ -191,7 +190,6 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 		Data: map[string]interface{}{
 			"address": "localhost",
 		},
-		Output:    "bar",
 		SortIndex: 1,
 		Alias: &config.DeviceAlias{
 			Name: "foo",
@@ -212,7 +210,7 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, "2", device.ScalingFactor)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
-	assert.Equal(t, "bar", device.Output)
+	assert.Equal(t, "", device.Output)
 }
 
 func TestNewDeviceFromConfig5(t *testing.T) {
@@ -236,7 +234,6 @@ func TestNewDeviceFromConfig5(t *testing.T) {
 		Data: map[string]interface{}{
 			"address": "localhost",
 		},
-		Output:    "bar",
 		SortIndex: 1,
 		Alias: &config.DeviceAlias{
 			Name: "foo",
@@ -257,7 +254,7 @@ func TestNewDeviceFromConfig5(t *testing.T) {
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, "2", device.ScalingFactor)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
-	assert.Equal(t, "bar", device.Output)
+	assert.Equal(t, "", device.Output)
 }
 
 func TestNewDeviceFromConfig6(t *testing.T) {
@@ -281,7 +278,6 @@ func TestNewDeviceFromConfig6(t *testing.T) {
 		Data: map[string]interface{}{
 			"address": "localhost",
 		},
-		Output:    "bar",
 		SortIndex: 1,
 		Handler:   "testhandler2",
 		Alias: &config.DeviceAlias{
@@ -318,7 +314,6 @@ func TestNewDeviceFromConfig7(t *testing.T) {
 		Data: map[string]interface{}{
 			"address": "localhost",
 		},
-		Output:    "bar",
 		SortIndex: 1,
 		Handler:   "testhandler2",
 		Alias: &config.DeviceAlias{
@@ -357,12 +352,45 @@ func TestNewDeviceFromConfig8(t *testing.T) {
 			"address": "localhost",
 			"port":    []int{5000},
 		},
-		Output:    "bar",
 		SortIndex: 1,
 		Handler:   "testhandler2",
 		Alias: &config.DeviceAlias{
 			Name: "foo",
 		},
+		ScalingFactor:      "2",
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+
+	device, err := NewDeviceFromConfig(proto, instance)
+	assert.Error(t, err)
+	assert.Nil(t, device)
+}
+
+func TestNewDeviceFromConfig9(t *testing.T) {
+	// Unknown output type specified
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Metadata: map[string]string{
+			"a": "b",
+		},
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Tags:         []string{"default/foo"},
+		Handler:      "testhandler",
+		WriteTimeout: 3 * time.Second,
+	}
+	instance := &config.DeviceInstance{
+		Type: "type2",
+		Info: "testdata",
+		Tags: []string{"vapor/io"},
+		Data: map[string]interface{}{
+			"address": "localhost",
+		},
+		SortIndex:          1,
+		Handler:            "testhandler2",
+		Output:             "unknown-output-name",
 		ScalingFactor:      "2",
 		WriteTimeout:       5 * time.Second,
 		DisableInheritance: false,

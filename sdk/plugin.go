@@ -78,9 +78,6 @@ type Plugin struct {
 	preRun  []*PluginAction
 	postRun []*PluginAction
 
-	// Plugin outputs
-	outputs map[string]*output.Output
-
 	// Options and handlers
 	pluginHandlers *PluginHandlers
 
@@ -122,7 +119,6 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		info:           &metadata,
 		config:         new(config.Plugin),
 		quit:           make(chan os.Signal),
-		outputs:        make(map[string]*output.Output),
 		policies:       policy.NewDefaultPolicies(),
 		pluginHandlers: NewDefaultPluginHandlers(),
 	}
@@ -164,11 +160,6 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	p.device = newDeviceManager(&p)
 	p.scheduler = newScheduler(&p)
 	p.server = newServer(&p)
-
-	// Register the built-in outputs with the plugin.
-	if err := p.RegisterOutputs(output.GetBuiltins()...); err != nil {
-		return nil, err
-	}
 
 	return &p, nil
 }
@@ -220,23 +211,14 @@ func (plugin *Plugin) RegisterHealthChecks(checks ...health.Check) error {
 	return nil
 }
 
-// RegisterOutputs registers new Outputs with the Plugin. A plugin will automatically
+// RegisterOutputs registers new Outputs with the plugin. A plugin will automatically
 // register the built-in SDK outputs. This function allows a plugin do augment that
 // set of outputs with its own custom outputs.
 //
 // If any registered output names conflict with those of built-in or other custom
 // outputs, an error is returned.
 func (plugin *Plugin) RegisterOutputs(outputs ...*output.Output) error {
-	multiErr := errors.NewMultiError("output registration")
-
-	for _, o := range outputs {
-		if _, exists := plugin.outputs[o.Name]; exists {
-			multiErr.Add(fmt.Errorf("conflict: output with name '%s' already exists", o.Name))
-			continue
-		}
-		plugin.outputs[o.Name] = o
-	}
-	return multiErr.Err()
+	return output.Register(outputs...)
 }
 
 // RegisterPreRunActions registers actions with the Plugin which will be called prior

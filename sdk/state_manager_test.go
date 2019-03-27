@@ -181,6 +181,70 @@ func TestStateManager_GetReadingsForDevice_deviceExists(t *testing.T) {
 	assert.Len(t, res, 1)
 }
 
+func TestStateManager_GetOutputsForDevice_noReadings(t *testing.T) {
+	sm := stateManager{
+		readingsLock: &sync.RWMutex{},
+		readings:     map[string][]*output.Reading{},
+	}
+
+	res := sm.GetOutputsForDevice("foo")
+	assert.Empty(t, res)
+}
+
+func TestStateManager_GetOutputsForDevice_oneReading_noOutput(t *testing.T) {
+	sm := stateManager{
+		readingsLock: &sync.RWMutex{},
+		readings: map[string][]*output.Reading{
+			"foo": {{Value: 1}},
+		},
+	}
+
+	res := sm.GetOutputsForDevice("foo")
+	assert.Empty(t, res)
+}
+
+func TestStateManager_GetOutputsForDevice_oneReading(t *testing.T) {
+	o := output.Output{
+		Name: "test-output-1",
+		Type: "test",
+	}
+	sm := stateManager{
+		readingsLock: &sync.RWMutex{},
+		readings: map[string][]*output.Reading{
+			"foo": {o.MakeReading(1)},
+		},
+	}
+
+	res := sm.GetOutputsForDevice("foo")
+	assert.Len(t, res, 1)
+	assert.Equal(t, "test-output-1", res[0].Name)
+}
+
+func TestStateManager_GetOutputsForDevice_multipleReadings(t *testing.T) {
+	o1 := output.Output{
+		Name: "test-output-1",
+		Type: "test",
+	}
+	o2 := output.Output{
+		Name: "test-output-2",
+		Type: "test",
+	}
+	sm := stateManager{
+		readingsLock: &sync.RWMutex{},
+		readings: map[string][]*output.Reading{
+			"foo": {
+				o1.MakeReading(1),
+				o2.MakeReading(2),
+			},
+		},
+	}
+
+	res := sm.GetOutputsForDevice("foo")
+	assert.Len(t, res, 2)
+	assert.Equal(t, "test-output-1", res[0].Name)
+	assert.Equal(t, "test-output-2", res[1].Name)
+}
+
 func TestStateManager_GetCachedReadings_invalidStart(t *testing.T) {
 	sm := stateManager{
 		config: &config.PluginSettings{
