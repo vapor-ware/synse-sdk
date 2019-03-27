@@ -323,6 +323,10 @@ func TestServer_Devices(t *testing.T) {
 				},
 			},
 		},
+		stateManager: &stateManager{
+			readings:     map[string][]*output.Reading{},
+			readingsLock: &sync.RWMutex{},
+		},
 	}
 	req := &synse.V3DeviceSelector{}
 	mock := test.NewMockDevicesStream()
@@ -336,6 +340,10 @@ func TestServer_Devices(t *testing.T) {
 func TestServer_Devices2(t *testing.T) {
 	// Get devices when there is a tag selector set.
 	handler := &DeviceHandler{Name: "foo"}
+	o := output.Output{
+		Name: "test-output-1",
+		Type: "test",
+	}
 	s := server{
 		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
@@ -345,6 +353,12 @@ func TestServer_Devices2(t *testing.T) {
 					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
+		},
+		stateManager: &stateManager{
+			readings: map[string][]*output.Reading{
+				"67890": {o.MakeReading(1)},
+			},
+			readingsLock: &sync.RWMutex{},
 		},
 	}
 	req := &synse.V3DeviceSelector{Tags: []*synse.V3Tag{
@@ -371,6 +385,10 @@ func TestServer_Devices3(t *testing.T) {
 				},
 			},
 		},
+		stateManager: &stateManager{
+			readings:     map[string][]*output.Reading{},
+			readingsLock: &sync.RWMutex{},
+		},
 	}
 	req := &synse.V3DeviceSelector{Id: "abcdef"}
 	mock := test.NewMockDevicesStream()
@@ -393,6 +411,10 @@ func TestServer_Devices_error(t *testing.T) {
 					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
+		},
+		stateManager: &stateManager{
+			readings:     map[string][]*output.Reading{},
+			readingsLock: &sync.RWMutex{},
 		},
 	}
 	req := &synse.V3DeviceSelector{}

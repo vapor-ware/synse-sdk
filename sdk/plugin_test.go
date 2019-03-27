@@ -26,7 +26,6 @@ import (
 	"github.com/vapor-ware/synse-sdk/internal/test"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
 )
 
@@ -50,7 +49,6 @@ func TestNewPlugin(t *testing.T) {
 	assert.Equal(t, metadata.Name, p.info.Name)
 	assert.NotEmpty(t, p.config)
 	assert.NotNil(t, p.quit)
-	assert.NotEmpty(t, p.outputs)
 	assert.Equal(t, policy.Optional, p.policies.PluginConfig)
 	assert.Equal(t, policy.Optional, p.policies.DynamicDeviceConfig)
 	assert.Equal(t, policy.Required, p.policies.DeviceConfig)
@@ -86,7 +84,6 @@ func TestNewPlugin_withOptions(t *testing.T) {
 	assert.Equal(t, metadata.Name, p.info.Name)
 	assert.NotEmpty(t, p.config)
 	assert.NotNil(t, p.quit)
-	assert.NotEmpty(t, p.outputs)
 	assert.Equal(t, policy.Required, p.policies.PluginConfig)
 	assert.Equal(t, policy.Optional, p.policies.DynamicDeviceConfig)
 	assert.Equal(t, policy.Optional, p.policies.DeviceConfig)
@@ -170,57 +167,10 @@ func TestPlugin_RegisterHealthChecks_badCheck(t *testing.T) {
 }
 
 func TestPlugin_RegisterOutputs_noOutputs(t *testing.T) {
-	p := Plugin{
-		outputs: map[string]*output.Output{},
-	}
+	p := Plugin{}
 
 	err := p.RegisterOutputs()
 	assert.NoError(t, err)
-	assert.Empty(t, p.outputs)
-}
-
-func TestPlugin_RegisterOutputs_oneOutput(t *testing.T) {
-	p := Plugin{
-		outputs: map[string]*output.Output{
-			"foo": {Name: "foo"},
-		},
-	}
-
-	err := p.RegisterOutputs(
-		&output.Output{Name: "bar"},
-	)
-	assert.NoError(t, err)
-	assert.Len(t, p.outputs, 2)
-}
-
-func TestPlugin_RegisterOutputs_multipleOutputs(t *testing.T) {
-	p := Plugin{
-		outputs: map[string]*output.Output{
-			"foo": {Name: "foo"},
-		},
-	}
-
-	err := p.RegisterOutputs(
-		&output.Output{Name: "test-1"},
-		&output.Output{Name: "test-2"},
-		&output.Output{Name: "test-3"},
-	)
-	assert.NoError(t, err)
-	assert.Len(t, p.outputs, 4)
-}
-
-func TestPlugin_RegisterOutputs_conflictingOutput(t *testing.T) {
-	p := Plugin{
-		outputs: map[string]*output.Output{
-			"test": {Name: "test"},
-		},
-	}
-
-	err := p.RegisterOutputs(
-		&output.Output{Name: "test"},
-	)
-	assert.Error(t, err)
-	assert.Len(t, p.outputs, 1)
 }
 
 func TestPlugin_RegisterPreRunActions_noneRegistered(t *testing.T) {
