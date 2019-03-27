@@ -446,6 +446,43 @@ func (scheduler *scheduler) scheduleListen() {
 	}
 }
 
+// applyTransformations is a helper function to apply any transformation functions
+// which a device specifies to its readings.
+func applyTransformations(device *Device, rctx *ReadContext) error {
+	if len(device.fns) > 0 {
+		log.WithFields(log.Fields{
+			"device": device.id,
+		}).Info("[scheduler] applying reading transform fns")
+
+		for _, reading := range rctx.Reading {
+			for _, fn := range device.fns {
+				log.WithFields(log.Fields{
+					"device": device.id,
+					"fn":     fn.Name,
+					"value":  reading.Value,
+				}).Debug("[scheduler] reading value pre-transform")
+				newVal, err := fn.Call(reading.Value)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"device": device.id,
+						"fn":     fn.Name,
+						"value":  reading.Value,
+						"error":  err,
+					}).Error("[scheduler] failed to apply transform function")
+					return err
+				}
+				log.WithFields(log.Fields{
+					"device": device.id,
+					"fn":     fn.Name,
+					"value":  newVal,
+				}).Debug("[scheduler] reading value post-transform")
+				reading.Value = newVal
+			}
+		}
+	}
+	return nil
+}
+
 // read reads from a single device using a handler's Read function.
 func (scheduler *scheduler) read(device *Device) {
 	delay := scheduler.config.Read.Delay
@@ -488,7 +525,12 @@ func (scheduler *scheduler) read(device *Device) {
 				rlog.Error("[scheduler] failed device read")
 			}
 		} else {
-			scheduler.stateManager.readChan <- response
+			err := applyTransformations(device, response)
+			if err != nil {
+				log.Error("[scheduler] discarding readings")
+			} else {
+				scheduler.stateManager.readChan <- response
+			}
 		}
 
 		// If a delay is configured, wait for the delay before continuing
@@ -540,16 +582,20 @@ func (scheduler *scheduler) bulkRead(handler *DeviceHandler) {
 			rlog.WithField("error", err).Error("[scheduler] handler failed bulk read")
 		} else {
 			for _, readCtx := range response {
-				scheduler.stateManager.readChan <- readCtx
+				device := scheduler.deviceManager.GetDevice(readCtx.Device)
+				err := applyTransformations(device, readCtx)
+				if err != nil {
+					log.Error("[scheduler] discarding readings")
+				} else {
+					scheduler.stateManager.readChan <- readCtx
+				}
 			}
 		}
 
 		// If a delay is configured, wait for the delay before continuing
 		// (and relinquishing the lock, if in serial mode).
 		if delay != 0 {
-			//rlog.Debug("[scheduler] sleeping for bulk read delay")
 			time.Sleep(delay)
-			//rlog.Debug("[scheduler] waking up for bulk read delay")
 		}
 	}
 }
