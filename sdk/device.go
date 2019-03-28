@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -76,7 +77,7 @@ type Device struct {
 	// This value should resolve to a numeric. Negative values and fractional values
 	// are supported. This can be the value itself, e.g. "0.01", or a mathematical
 	// representation of the value, e.g. "1e-2".
-	ScalingFactor string
+	ScalingFactor float64
 
 	// WriteTimeout defines the time within which a write action (transaction)
 	// will remain valid for this device.
@@ -194,6 +195,20 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		fns = append(fns, f)
 	}
 
+	var scalingFactor float64
+	var err error
+	if instance.ScalingFactor == "" {
+		scalingFactor = 1
+	} else {
+		scalingFactor, err = strconv.ParseFloat(instance.ScalingFactor, 64)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"scalingFactor": instance.ScalingFactor,
+			}).Error("[device] failed to load device: bad scaling factor")
+			return nil, err
+		}
+	}
+
 	// Override write timeout, if set.
 	if instance.WriteTimeout != 0 {
 		writeTimeout = instance.WriteTimeout
@@ -212,7 +227,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		Metadata:      proto.Metadata,
 		Info:          instance.Info,
 		SortIndex:     instance.SortIndex,
-		ScalingFactor: instance.ScalingFactor,
+		ScalingFactor: scalingFactor,
 		WriteTimeout:  writeTimeout,
 		Output:        instance.Output,
 		fns:           fns,

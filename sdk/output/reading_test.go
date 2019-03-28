@@ -38,6 +38,80 @@ func TestReading_GetOutput_noOutput(t *testing.T) {
 	assert.Nil(t, r.GetOutput())
 }
 
+func TestReading_Scale(t *testing.T) {
+	cases := []struct {
+		value    interface{}
+		scale    float64
+		expected interface{}
+	}{
+		{
+			value:    2,
+			scale:    1,
+			expected: int(2),
+		},
+		{
+			value:    10,
+			scale:    2,
+			expected: float64(20),
+		},
+		{
+			value:    10,
+			scale:    0.5,
+			expected: float64(5),
+		},
+		{
+			value:    100000,
+			scale:    0.0001,
+			expected: float64(10),
+		},
+	}
+
+	for i, c := range cases {
+		r := Reading{
+			Value: c.value,
+		}
+		err := r.Scale(c.scale)
+		assert.NoError(t, err, "test case: %d", i)
+		assert.Equal(t, c.expected, r.Value, "test case: %d", i)
+	}
+}
+
+func TestReading_Scale_err(t *testing.T) {
+	cases := []struct {
+		value interface{}
+		scale float64
+	}{
+		{
+			value: 2,
+			scale: 0,
+		},
+		{
+			value: "foobar",
+			scale: 2,
+		},
+		{
+			value: []int{1, 2},
+			scale: 3,
+		},
+		{
+			value: Reading{},
+			scale: 3,
+		},
+		{
+			value: &Reading{},
+			scale: 3,
+		},
+	}
+
+	for i, c := range cases {
+		r := Reading{
+			Value: c.value,
+		}
+		err := r.Scale(c.scale)
+		assert.Error(t, err, "test case: %d", i)
+	}
+}
+
 func TestReading_Encode(t *testing.T) {
 	cases := []struct {
 		value interface{}
