@@ -19,6 +19,8 @@ package output
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
@@ -47,6 +49,41 @@ type Reading struct {
 // GetOutput gets the associated output for a Reading.
 func (reading *Reading) GetOutput() *Output {
 	return reading.output
+}
+
+// Scale multiplies the given scaling factor to the Reading value and updates
+// the Value with the new scaled value.
+//
+// The scaling factor is defined in the device config, so this is applied by
+// the SDK by the scheduler upon receiving the reading. The scaling factor is
+// applied after any other transformation functions (see the sdk/funcs package)
+// have been applied.
+func (reading *Reading) Scale(factor float64) error {
+	// If the scaling factor is 0, log a warning, but do nothing. The SDK explicitly
+	// prohibits scaling factors of 0 to prevent all values from being zeroed out.
+
+	// The SDK explicitly prohibits scaling factors of 0 to prevent all values from
+	// being zeroed out.
+	if factor == 0 {
+		log.Error("[reading] invalid scaling factor - will not apply value 0")
+		return fmt.Errorf("cannot have scaling factor of 0")
+	}
+
+	// If the scaling factor is 1, there is nothing for us to do.
+	if factor == 1 {
+		return nil
+	}
+
+	// Otherwise, calculate the new scaled value by multiplying the scaling factor.
+	v, err := utils.ConvertToFloat64(reading.Value)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"value": reading.Value,
+		}).Error("[reading] error converting reading value to float64")
+		return err
+	}
+	reading.Value = v * factor
+	return nil
 }
 
 // Encode translates the Reading to its corresponding gRPC message.
