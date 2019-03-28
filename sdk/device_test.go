@@ -208,7 +208,7 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
-	assert.Equal(t, "", device.Handler)
+	assert.Equal(t, "type2", device.Handler)
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, 0.01, device.ScalingFactor)
@@ -217,7 +217,7 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 	assert.Equal(t, 0, len(device.fns))
 }
 
-func TestNewDeviceFromConfig5(t *testing.T) {
+func TestNewDeviceFromConfig5a(t *testing.T) {
 	// Test disabling inheritance when there are inheritable values.
 	proto := &config.DeviceProto{
 		Type: "type1",
@@ -253,11 +253,57 @@ func TestNewDeviceFromConfig5(t *testing.T) {
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 1, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost"}, device.Data)
-	assert.Equal(t, "", device.Handler)
+	assert.Equal(t, "type2", device.Handler) // inheritance disabled, does not get proto handler
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
 	assert.Equal(t, float64(2), device.ScalingFactor)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
+	assert.Equal(t, "", device.Output)
+	assert.Equal(t, 0, len(device.fns))
+}
+
+func TestNewDeviceFromConfig5b(t *testing.T) {
+	// Test enabled inheritance when there are inheritable values and the prototype
+	// defines a handler, but the instance does not.
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Metadata: map[string]string{
+			"a": "b",
+		},
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Tags:         []string{"default/foo"},
+		Handler:      "testhandler",
+		WriteTimeout: 3 * time.Second,
+	}
+	instance := &config.DeviceInstance{
+		Type: "type2",
+		Info: "testdata",
+		Tags: []string{"vapor/io"},
+		Data: map[string]interface{}{
+			"address": "localhost",
+		},
+		SortIndex: 1,
+		Alias: &config.DeviceAlias{
+			Name: "foo",
+		},
+		ScalingFactor:      "2",
+		DisableInheritance: false,
+	}
+
+	device, err := NewDeviceFromConfig(proto, instance)
+	assert.NoError(t, err)
+	assert.Equal(t, "type2", device.Type)
+	assert.Equal(t, map[string]string{"a": "b"}, device.Metadata)
+	assert.Equal(t, "testdata", device.Info)
+	assert.Equal(t, 2, len(device.Tags))
+	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
+	assert.Equal(t, "testhandler", device.Handler) // inheritance enabled, gets proto handler
+	assert.Equal(t, int32(1), device.SortIndex)
+	assert.Equal(t, "foo", device.Alias)
+	assert.Equal(t, float64(2), device.ScalingFactor)
+	assert.Equal(t, 3*time.Second, device.WriteTimeout) // takes the proto value
 	assert.Equal(t, "", device.Output)
 	assert.Equal(t, 0, len(device.fns))
 }
