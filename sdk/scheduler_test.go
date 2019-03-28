@@ -424,7 +424,7 @@ func TestScheduler_scheduleWrites(t *testing.T) {
 	s.writeChan <- wctx
 
 	txn.wait()
-	assert.Equal(t, synse.WriteStatus_DONE, txn.status)
+	assert.Equal(t, synse.WriteStatus_DONE, txn.status, txn.message)
 }
 
 func TestScheduler_scheduleListen_listenDisabled(t *testing.T) {
