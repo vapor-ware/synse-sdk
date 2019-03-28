@@ -400,6 +400,7 @@ func TestScheduler_scheduleWrites(t *testing.T) {
 				"123": {
 					id:            "123",
 					handler:       handler,
+					WriteTimeout:  1 * time.Second,
 					ScalingFactor: 1,
 				},
 			},
