@@ -112,6 +112,8 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 		)
 	}
 
+	log.Debug("[plugin] creating new plugin")
+
 	// Create the plugin. We create the instance first so a reference to it
 	// is available for subsequent setup actions.
 	p := Plugin{
@@ -130,6 +132,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 
 	// Load the plugin configuration.
 	if err := p.loadConfig(); err != nil {
+		log.Errorf("[plugin] failed to load plugin config")
 		return nil, err
 	}
 
@@ -147,6 +150,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	// Initialize the plugin ID namespace.
 	id, err := newPluginID(p.config.ID, &metadata)
 	if err != nil {
+		log.Error("[plugin] failed to initialize plugin ID namespace")
 		return nil, err
 	}
 	p.id = id
@@ -255,6 +259,8 @@ func (plugin *Plugin) RegisterDeviceSetupActions(actions ...*DeviceAction) error
 
 // initialize initializes the plugin and all plugin components.
 func (plugin *Plugin) initialize() error {
+	log.Info("[plugin] initializing")
+
 	// Initialize all plugin components
 	if err := plugin.device.init(); err != nil {
 		return err
@@ -267,6 +273,8 @@ func (plugin *Plugin) initialize() error {
 
 // run runs the plugin by starting all of the configured plugin components.
 func (plugin *Plugin) run() error {
+	log.Info("[plugin] running")
+
 	// Start the plugin components. Order matters here.
 	if err := plugin.device.Start(plugin); err != nil {
 		return err
@@ -298,7 +306,7 @@ func (plugin *Plugin) onQuitSignal() {
 	// If we get here, a signal was received, so we can run termination actions.
 	log.WithFields(log.Fields{
 		"signal": sig.String(),
-	}).Info("[plugin] terminating plugin...")
+	}).Info("[plugin] terminating plugin")
 
 	if err := plugin.execPostRun(); err != nil {
 		log.WithFields(log.Fields{

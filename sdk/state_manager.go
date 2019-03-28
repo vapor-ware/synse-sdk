@@ -47,7 +47,7 @@ func newStateManager(conf *config.PluginSettings) *stateManager {
 
 	var readingsCache *cache.Cache
 	if conf.Cache.Enabled {
-		// todo: logging
+		log.WithField("ttl", conf.Cache.TTL).Debug("[state manager] readings cache enabled")
 		readingsCache = cache.New(conf.Cache.TTL, conf.Cache.TTL*2)
 	}
 
@@ -66,6 +66,7 @@ func newStateManager(conf *config.PluginSettings) *stateManager {
 
 // Start starts the StateManager.
 func (manager *stateManager) Start() {
+	log.Info("[state manager] starting")
 	go manager.updateReadings()
 }
 
@@ -169,14 +170,18 @@ func (manager *stateManager) GetCachedReadings(start, end string, readings chan 
 	// Parse the timestamps for the start/end bounds of the data window.
 	startTime, err := utils.ParseRFC3339(start)
 	if err != nil {
-		// todo: logging
-
-		// if we can't parse the time... we don't really have any business returning data..
+		// If we can't parse the time, we don't have any business returning data.
+		log.WithFields(log.Fields{
+			"timestamp": start,
+		}).Warn("[state manager] unable to get data: failed to parse timestamp")
 		return
 	}
 	endTime, err := utils.ParseRFC3339(end)
 	if err != nil {
-		// todo: logging
+		// If we can't parse the time, we don't have any business returning data.
+		log.WithFields(log.Fields{
+			"timestamp": end,
+		}).Warn("[state manager] unable to get data: failed to parse timestamp")
 		return
 	}
 
@@ -227,8 +232,6 @@ func (manager *stateManager) dumpCachedReadings(start, end time.Time, readings c
 // dumpCurrentReadings dumps the current readings out to the provided channel.
 func (manager *stateManager) dumpCurrentReadings(readings chan *ReadContext) {
 	for id, data := range manager.GetReadings() {
-		// TODO: make sure this is all we need.. this may change a bit with the move
-		//  to tags
 		readings <- &ReadContext{
 			Device:  id,
 			Reading: data,
@@ -267,6 +270,6 @@ func (manager *stateManager) getTransaction(id string) *transaction {
 	}
 	log.WithFields(log.Fields{
 		"id": id,
-	}).Info("[state manager] transaction not found")
+	}).Warn("[state manager] transaction not found")
 	return nil
 }
