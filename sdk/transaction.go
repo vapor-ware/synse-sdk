@@ -60,7 +60,9 @@ func newTransaction(timeout time.Duration) *transaction {
 
 // wait waits until the transaction reaches a terminal state (ok, error).
 func (t *transaction) wait() {
+	log.WithField("id", t.id).Debug("[transaction] waiting for transaction to complete")
 	<-t.done
+	log.WithField("id", t.id).Debug("[transaction] transaction completed")
 }
 
 // encode translates the transaction to a corresponding gRPC V3TransactionStatus.

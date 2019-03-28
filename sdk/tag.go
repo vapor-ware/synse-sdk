@@ -51,16 +51,17 @@ type Tag struct {
 func NewTag(tag string) (*Tag, error) {
 	tag = strings.TrimSpace(tag)
 	if strings.Contains(tag, " ") {
-		return nil, fmt.Errorf("tag may not contain spaces")
+		log.WithField("tag", tag).Error("[tag] invalid: tag must not contain spaces")
+		return nil, fmt.Errorf("tag must not contain spaces")
 	}
 
 	validTag := regexp.MustCompile(`(([^:/]+)/)?(([^:/]+):)?([^:/\s]+$)`)
 
 	// The regular expression we match to has 5 groups:
 	//   group 1: ((.+)/)?    -> namespace component with trailing slash
-	//   group 2: (.+)        -> namespace without trailing slash
+	//   group 2:  (.+)       -> namespace without trailing slash
 	//   group 3: ((.+):)?    -> annotation component with trailing colon
-	//   group 4: (.+)        -> annotation without trailing colon
+	//   group 4:  (.+)       -> annotation without trailing colon
 	//   group 5: ([^:/\s]+?) -> label
 	//
 	// We only care about group 2 (namespace), group 4 (annotation), and
@@ -71,6 +72,7 @@ func NewTag(tag string) (*Tag, error) {
 	// If we don't get the expected number of groups, the string does not
 	// represent a tag we can do anything with.
 	if len(matches) != 6 {
+		log.WithField("tag", tag).Error("[tag] invalid: failed regex match")
 		return nil, fmt.Errorf("invalid tag string (match check): %s", tag)
 	}
 
@@ -82,6 +84,7 @@ func NewTag(tag string) (*Tag, error) {
 	// if no namespace was matched. This is indicative of a malformed tag which
 	// the regex may not have choked on.
 	if strings.Contains(tag, "/") && namespace == "" {
+		log.WithField("tag", tag).Error("[tag] invalid: failed namespace check")
 		return nil, fmt.Errorf("invalid tag string (namespace check): %s", tag)
 	}
 
@@ -89,11 +92,13 @@ func NewTag(tag string) (*Tag, error) {
 	// if no annotation was matched. This is indicative of a malformed tag which
 	// the regex may not have choked on.
 	if strings.Contains(tag, ":") && annotation == "" {
+		log.WithField("tag", tag).Error("[tag] invalid: failed annotation check")
 		return nil, fmt.Errorf("invalid tag string (annotation check): %s", tag)
 	}
 
 	// If no namespace is specified, use the default namespace.
 	if namespace == "" {
+		log.WithField("tag", tag).Debug("[tag] using default namespace for tag")
 		namespace = TagNamespaceDefault
 	}
 
@@ -116,6 +121,7 @@ func NewTagFromGRPC(tag *synse.V3Tag) *Tag {
 	}
 	tagString += tag.Label
 
+	log.WithField("tag", tagString).Debug("[tag] created new tag from gRPC")
 	return &Tag{
 		Namespace:  tag.Namespace,
 		Annotation: tag.Annotation,
@@ -219,12 +225,20 @@ func (cache *TagCache) Add(tag *Tag, device *Device) {
 		return
 	}
 
+	cacheLog := log.WithFields(log.Fields{
+		"namespace":  tag.Namespace,
+		"annotation": tag.Annotation,
+		"label":      tag.Label,
+		"device":     device.id,
+	})
+
 	annotations, exists := cache.cache[tag.Namespace]
 	if !exists {
 		// If the namespace doesn't exist, add it with the rest of the tag info.
 		cache.cache[tag.Namespace] = map[string]map[string][]*Device{
 			tag.Annotation: {tag.Label: {device}},
 		}
+		cacheLog.Debug("[tag] added new namespace to tag cache")
 		return
 	}
 
@@ -234,6 +248,7 @@ func (cache *TagCache) Add(tag *Tag, device *Device) {
 		annotations[tag.Annotation] = map[string][]*Device{
 			tag.Label: {device},
 		}
+		cacheLog.Debug("[tag] added new annotation to tag cache")
 		return
 	}
 
@@ -241,6 +256,7 @@ func (cache *TagCache) Add(tag *Tag, device *Device) {
 	if !exists {
 		// If the label doesn't exist, add it with the device.
 		labels[tag.Label] = []*Device{device}
+		cacheLog.Debug("[tag] added new label to tag cache")
 		return
 	}
 
@@ -250,11 +266,13 @@ func (cache *TagCache) Add(tag *Tag, device *Device) {
 	for _, d := range devices {
 		if d.id == device.id {
 			duplicate = true
+			cacheLog.Debug("[tag] device already exists in cache, skipping")
 			break
 		}
 	}
 	if !duplicate {
 		labels[tag.Label] = append(devices, device)
+		cacheLog.Debug("[tag] added device existing label in tag cache")
 	}
 }
 

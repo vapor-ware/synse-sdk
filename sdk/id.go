@@ -23,6 +23,7 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 )
 
@@ -50,6 +51,9 @@ func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, erro
 
 	// Add the plugin metadata tag as a component.
 	if conf.UsePluginTag {
+		log.WithFields(log.Fields{
+			"tag": meta.Tag(),
+		}).Debug("[id] using plugin tag as uuid component")
 		components = append(components, meta.Tag())
 	}
 
@@ -59,6 +63,9 @@ func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, erro
 		if err != nil {
 			return nil, err
 		}
+		log.WithFields(log.Fields{
+			"machineID": id,
+		}).Debug("[id] using machine id as uuid component")
 		components = append(components, id)
 	}
 
@@ -70,12 +77,16 @@ func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, erro
 				// fixme: better handling
 				return nil, fmt.Errorf("env specified but not set")
 			}
+			log.WithFields(log.Fields{
+				"envVar": k,
+			}).Debug("[id] using env variable tag as uuid component")
 			components = append(components, val)
 		}
 	}
 
 	// Add custom identifiers as a component.
 	if len(conf.UseCustom) > 0 {
+		log.Debug("[id] using custom component in uuid")
 		components = append(components, conf.UseCustom...)
 	}
 
@@ -90,6 +101,9 @@ func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, erro
 	name := strings.Join(components, ".")
 	pluginUUID := uuid.NewSHA1(uuid.NameSpaceDNS, []byte(name))
 
+	log.WithFields(log.Fields{
+		"id": pluginUUID,
+	}).Info("[id] generated plugin id namespace")
 	return &pluginID{
 		config:     conf,
 		components: components,
