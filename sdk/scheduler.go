@@ -91,7 +91,6 @@ type scheduler struct {
 }
 
 // newScheduler creates a new instance of the plugin's scheduler component.
-//func NewScheduler(conf *config.PluginSettings, dm *deviceManager, sm *StateManager) *Scheduler {
 func newScheduler(plugin *Plugin) *scheduler {
 	conf := plugin.config.Settings
 
@@ -101,6 +100,11 @@ func newScheduler(plugin *Plugin) *scheduler {
 	// set up the limiter.
 	if conf.Limiter != nil {
 		if conf.Limiter.Rate != 0 || conf.Limiter.Burst != 0 {
+			log.WithFields(log.Fields{
+				"rate":  conf.Limiter.Rate,
+				"burst": conf.Limiter.Burst,
+			}).Info("[scheduler] configuring rate limiter")
+
 			limiter = rate.NewLimiter(
 				rate.Limit(conf.Limiter.Rate),
 				conf.Limiter.Burst,
@@ -159,7 +163,7 @@ func (scheduler *scheduler) healthChecks(plugin *Plugin) error {
 
 // Start starts the scheduler.
 func (scheduler *scheduler) Start() {
-	log.Info("[scheduler] starting...")
+	log.Info("[scheduler] starting")
 
 	go scheduler.scheduleReads()
 	go scheduler.scheduleWrites()
@@ -168,7 +172,7 @@ func (scheduler *scheduler) Start() {
 
 // Stop the scheduler.
 func (scheduler *scheduler) Stop() error {
-	log.Info("[scheduler] stopping...")
+	log.Info("[scheduler] stopping")
 
 	close(scheduler.stop)
 	return nil
@@ -194,6 +198,11 @@ func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 	for _, data := range data {
 		t := scheduler.stateManager.newTransaction(device.WriteTimeout)
 		t.setStatusPending()
+
+		log.WithFields(log.Fields{
+			"device":      device.id,
+			"transaction": t.id,
+		}).Debug("[scheduler] queuing device write")
 
 		// Map the transaction ID to the write context for the response.
 		response = append(response, &synse.V3WriteTransaction{
@@ -234,6 +243,11 @@ func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 	for _, data := range data {
 		t := scheduler.stateManager.newTransaction(device.WriteTimeout)
 		t.setStatusPending()
+
+		log.WithFields(log.Fields{
+			"device":      device.id,
+			"transaction": t.id,
+		}).Debug("[scheduler] queuing device write")
 
 		txns = append(txns, t)
 
@@ -279,13 +293,12 @@ func (scheduler *scheduler) scheduleReads() {
 	delay := scheduler.config.Read.Delay
 	mode := scheduler.config.Mode
 
-	rlog := log.WithFields(log.Fields{
+	log.WithFields(log.Fields{
 		"interval": interval,
 		"delay":    delay,
 		"mode":     mode,
-	})
+	}).Info("[scheduler] starting read scheduling")
 
-	rlog.Info("[scheduler] starting read scheduling")
 	scheduler.isReading = true
 	for {
 		// If the stop channel is closed, stop the read loop.
@@ -361,10 +374,6 @@ func (scheduler *scheduler) scheduleWrites() {
 	wlog.Info("[scheduler] starting write scheduling")
 	scheduler.isWriting = true
 	for {
-		log.WithFields(log.Fields{
-			"queue": len(scheduler.writeChan),
-			"cap":   cap(scheduler.writeChan),
-		}).Debug("[scheduler] writing")
 		// If the stop channel is closed, stop the write loop.
 		select {
 		case <-scheduler.stop:
@@ -378,6 +387,14 @@ func (scheduler *scheduler) scheduleWrites() {
 
 		// Check for any pending writes. If any exist, attempt to fulfill
 		// the writes and update their transaction state accordingly.
+		// fixme: update this so we are not logging unless we are actually writing
+		//  data from the queue. currently this will get logged on every pass which
+		//  will generate a bunch of noise
+		wlog.WithFields(log.Fields{
+			"queue": len(scheduler.writeChan),
+			"cap":   cap(scheduler.writeChan),
+		}).Debug("[scheduler] processing write queue")
+
 		for i := 0; i < scheduler.config.Write.BatchSize; i++ {
 			select {
 			case w := <-scheduler.writeChan:
@@ -428,7 +445,7 @@ func (scheduler *scheduler) scheduleListen() {
 		hlog := log.WithField("handler", handler.Name)
 
 		if handler.Listen != nil {
-			hlog.Info("[scheduler] starting listener scheduling")
+			hlog.Info("[scheduler] starting listener")
 
 			// Get the devices for the handler.
 			devices := scheduler.deviceManager.GetDevicesForHandler(handler.Name)
@@ -486,19 +503,21 @@ func applyTransformations(device *Device, rctx *ReadContext) error {
 		// Apply any scaling factor transformations which are defined for the
 		// device to the device's readings. This must be done after all
 		// other transformations are completed.
-		log.WithFields(log.Fields{
-			"reading": reading.Value,
-			"factor":  device.ScalingFactor,
-			"device":  device.id,
-		}).Info("[scheduler] applying scaling factor to reading")
-
-		err := reading.Scale(device.ScalingFactor)
-		if err != nil {
+		if device.ScalingFactor != 1 {
 			log.WithFields(log.Fields{
-				"device": device.id,
-				"factor": device.ScalingFactor,
-			}).Error("[scheduler] failed to apply scaling factor")
-			return err
+				"reading": reading.Value,
+				"factor":  device.ScalingFactor,
+				"device":  device.id,
+			}).Info("[scheduler] applying scaling factor to reading")
+
+			err := reading.Scale(device.ScalingFactor)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"device": device.id,
+					"factor": device.ScalingFactor,
+				}).Error("[scheduler] failed to apply scaling factor")
+				return err
+			}
 		}
 	}
 
@@ -549,7 +568,7 @@ func (scheduler *scheduler) read(device *Device) {
 		} else {
 			err := applyTransformations(device, response)
 			if err != nil {
-				log.Error("[scheduler] discarding readings")
+				rlog.Error("[scheduler] discarding readings")
 			} else {
 				scheduler.stateManager.readChan <- response
 			}
@@ -607,7 +626,7 @@ func (scheduler *scheduler) bulkRead(handler *DeviceHandler) {
 				device := scheduler.deviceManager.GetDevice(readCtx.Device)
 				err := applyTransformations(device, readCtx)
 				if err != nil {
-					log.Error("[scheduler] discarding readings")
+					rlog.Error("[scheduler] discarding readings")
 				} else {
 					scheduler.stateManager.readChan <- readCtx
 				}

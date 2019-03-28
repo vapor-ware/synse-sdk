@@ -183,13 +183,14 @@ func (manager *deviceManager) Start(plugin *Plugin) error {
 	return manager.execDeviceSetupActions(plugin)
 }
 
-// GetDevice gets a device from the manager by ID.
+// GetDevice gets a device from the manager by ID. If the device does not
+// exists, nil is returned.
 func (manager *deviceManager) GetDevice(id string) *Device {
 	device, exists := manager.devices[id]
 	if !exists {
 		log.WithFields(log.Fields{
 			"id": id,
-		}).Debug("[device manager] device does not exist")
+		}).Warn("[device manager] device does not exist")
 	}
 	return device
 }
@@ -397,6 +398,8 @@ func (manager *deviceManager) FilterDevices(filter map[string][]string) ([]*Devi
 	var filteredSet []*Device
 	var checks []func(d *Device) bool
 
+	log.WithField("filter", filter).Debug("[device manager] filtering devices")
+
 	for k, v := range filter {
 		var check func(d *Device) bool
 
@@ -445,14 +448,12 @@ func (manager *deviceManager) createDevices() error {
 			// Create the device.
 			device, err := NewDeviceFromConfig(proto, instance)
 			if err != nil {
-				// todo: log
 				log.WithField("error", err).Error("[device manager] failed to create device from config")
 				failedLoad = true
 				continue
 			}
 			// Add it to the manager.
 			if err := manager.AddDevice(device); err != nil {
-				// todo: log
 				log.WithField("error", err).Error("[device manager] failed to add device to manager")
 				failedLoad = true
 			}
