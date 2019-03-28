@@ -51,12 +51,10 @@ var (
 // server implements the Synse Plugin gRPC server. It is used by the
 // plugin to communicate via gRPC over tcp or unix socket to Synse server.
 type server struct {
-	conf *config.NetworkSettings
-	grpc *grpc.Server
-
+	conf        *config.NetworkSettings
+	grpc        *grpc.Server
+	meta        *PluginMetadata
 	initialized bool
-
-	meta *PluginMetadata
 
 	// Plugin components
 	deviceManager *deviceManager
@@ -84,7 +82,7 @@ func (server *server) init() error {
 		return fmt.Errorf("no config")
 	}
 
-	log.Debug("[server] setting up server")
+	log.Debug("[server] initializing")
 
 	// Depending on the communication protocol, there may be some setup work.
 	switch t := server.conf.Type; t {
@@ -131,6 +129,8 @@ func (server *server) init() error {
 
 // start runs the gRPC server.
 func (server *server) start() error {
+	log.Info("[server] starting")
+
 	if !server.initialized {
 		return fmt.Errorf("server is not initialized, can not run")
 	}
@@ -150,14 +150,14 @@ func (server *server) start() error {
 	log.WithFields(log.Fields{
 		"mode": server.conf.Type,
 		"addr": server.conf.Address,
-	}).Info("[server] serving...")
+	}).Info("[server] serving")
 	return server.grpc.Serve(listener)
 }
 
 // stop stops the gRPC server from serving and immediately terminates all open
 // connections and listeners.
 func (server *server) stop() {
-	log.Info("[server] stopping server")
+	log.Info("[server] stopping")
 	if server.grpc != nil {
 		server.grpc.Stop()
 	}
@@ -329,7 +329,7 @@ func loadCACerts(certs []string) (*x509.CertPool, error) {
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Test` RPC method.
 func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3TestStatus, error) {
-	log.Debug("[grpc] TEST request")
+	log.Info("[grpc] processing TEST request")
 
 	return &synse.V3TestStatus{Ok: true}, nil
 }
@@ -338,7 +338,7 @@ func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Version` RPC method.
 func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.V3Version, error) {
-	log.Debug("[grpc] VERSION request")
+	log.Info("[grpc] processing VERSION request")
 
 	return version.encode(), nil
 }
@@ -347,7 +347,7 @@ func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Health` RPC method.
 func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.V3Health, error) {
-	log.Debug("[grpc] HEALTH request")
+	log.Info("[grpc] processing HEALTH request")
 
 	status := server.healthManager.Status()
 	return status.Encode(), nil
@@ -360,7 +360,7 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 	log.WithFields(log.Fields{
 		"tags": request.Tags,
 		"id":   request.Id,
-	}).Debug("[grpc] DEVICES request")
+	}).Info("[grpc] processing DEVICES request")
 
 	var devices []*Device
 
@@ -399,7 +399,7 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Metadata` RPC method.
 func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
-	log.Debug("[grpc] METADATA request")
+	log.Info("[grpc] processing METADATA request")
 
 	return server.meta.encode(), nil
 }
@@ -411,7 +411,7 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 	log.WithFields(log.Fields{
 		"tags": request.Selector.Tags,
 		"id":   request.Selector.Id,
-	}).Debug("[grpc] READ request")
+	}).Info("[grpc] processing READ request")
 
 	var devices []*Device
 
@@ -444,7 +444,7 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 	log.WithFields(log.Fields{
 		"start": request.Start,
 		"end":   request.End,
-	}).Debug("[grpc] READCACHE request")
+	}).Info("[grpc] processing READCACHE request")
 
 	// Create a channel that will be used to collect the cached readings.
 	readings := make(chan *ReadContext, 128)
@@ -470,7 +470,7 @@ func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3P
 	log.WithFields(log.Fields{
 		"data": request.Data,
 		"id":   request.Selector.Id,
-	}).Debug("[grpc] WRITE ASYNC request")
+	}).Info("[grpc] processing WRITE ASYNC request")
 
 	deviceID := DeviceSelectorToID(request.Selector)
 	if deviceID == nil {
@@ -504,7 +504,7 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 	log.WithFields(log.Fields{
 		"data": request.Data,
 		"id":   request.Selector.Id,
-	}).Debug("[grpc] WRITE SYNC request")
+	}).Info("[grpc] processing WRITE SYNC request")
 
 	deviceID := DeviceSelectorToID(request.Selector)
 	if deviceID == nil {
@@ -538,11 +538,12 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 func (server *server) Transaction(request *synse.V3TransactionSelector, stream synse.V3Plugin_TransactionServer) error {
 	log.WithFields(log.Fields{
 		"id": request.Id,
-	}).Debug("[grpc] TRANSACTION request")
+	}).Info("[grpc] processing TRANSACTION request")
 
 	// If there is no ID specified with the incoming request, return all of the cached
 	// transaction.
 	if request.Id == "" {
+		log.Info("[grpc] no transaction ID specified, returning all cached transactions")
 		for _, item := range server.stateManager.transactions.Items() {
 			t, ok := item.Object.(*transaction)
 			if ok {
