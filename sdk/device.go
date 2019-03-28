@@ -160,11 +160,6 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		}
 	}
 
-	// Override handler, if set.
-	if instance.Handler != "" {
-		handler = instance.Handler
-	}
-
 	// Override type, if set.
 	if instance.Type != "" {
 		deviceType = instance.Type
@@ -174,6 +169,17 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	if deviceType == "" {
 		// fixme: err message
 		return nil, fmt.Errorf("device requires type")
+	}
+
+	// Override handler, if set.
+	if instance.Handler != "" {
+		handler = instance.Handler
+	}
+
+	// If no handler is set, fall back to using the type as the name
+	// of the handler.
+	if handler == "" {
+		handler = deviceType
 	}
 
 	// If an output is specified for the device, make sure that an output
