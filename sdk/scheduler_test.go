@@ -400,6 +400,7 @@ func TestScheduler_scheduleWrites(t *testing.T) {
 				"123": {
 					id:            "123",
 					handler:       handler,
+					WriteTimeout:  1 * time.Second,
 					ScalingFactor: 1,
 				},
 			},
@@ -424,7 +425,7 @@ func TestScheduler_scheduleWrites(t *testing.T) {
 	s.writeChan <- wctx
 
 	txn.wait()
-	assert.Equal(t, synse.WriteStatus_DONE, txn.status)
+	assert.Equal(t, synse.WriteStatus_DONE, txn.status, txn.message)
 }
 
 func TestScheduler_scheduleListen_listenDisabled(t *testing.T) {
