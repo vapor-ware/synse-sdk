@@ -88,7 +88,7 @@ func TestNewDeviceFromConfig(t *testing.T) {
 	assert.Equal(t, "testhandler2", device.Handler)
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
-	assert.Equal(t, "2", device.ScalingFactor)
+	assert.Equal(t, float64(2), device.ScalingFactor)
 	assert.Equal(t, 5*time.Second, device.WriteTimeout)
 	assert.Equal(t, "temperature", device.Output)
 	assert.Equal(t, 0, len(device.fns))
@@ -121,7 +121,7 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 		Alias: &config.DeviceAlias{
 			Name: "foo",
 		},
-		ScalingFactor:      "2",
+		ScalingFactor:      "2e3",
 		DisableInheritance: false,
 	}
 
@@ -135,7 +135,7 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 	assert.Equal(t, "testhandler", device.Handler)
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
-	assert.Equal(t, "2", device.ScalingFactor)
+	assert.Equal(t, float64(2000), device.ScalingFactor)
 	assert.Equal(t, 3*time.Second, device.WriteTimeout)
 	assert.Equal(t, "temperature", device.Output)
 	assert.Equal(t, 1, len(device.fns))
@@ -197,7 +197,7 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 		Alias: &config.DeviceAlias{
 			Name: "foo",
 		},
-		ScalingFactor:      "2",
+		ScalingFactor:      "1e-2",
 		DisableInheritance: false,
 	}
 
@@ -211,7 +211,7 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 	assert.Equal(t, "", device.Handler)
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
-	assert.Equal(t, "2", device.ScalingFactor)
+	assert.Equal(t, 0.01, device.ScalingFactor)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
 	assert.Equal(t, "", device.Output)
 	assert.Equal(t, 0, len(device.fns))
@@ -256,7 +256,7 @@ func TestNewDeviceFromConfig5(t *testing.T) {
 	assert.Equal(t, "", device.Handler)
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
-	assert.Equal(t, "2", device.ScalingFactor)
+	assert.Equal(t, float64(2), device.ScalingFactor)
 	assert.Equal(t, 30*time.Second, device.WriteTimeout) // takes the default value
 	assert.Equal(t, "", device.Output)
 	assert.Equal(t, 0, len(device.fns))
@@ -431,6 +431,39 @@ func TestNewDeviceFromConfig10(t *testing.T) {
 		Handler:            "testhandler2",
 		Apply:              []string{"unknown-fn"},
 		ScalingFactor:      "2",
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+
+	device, err := NewDeviceFromConfig(proto, instance)
+	assert.Error(t, err)
+	assert.Nil(t, device)
+}
+
+func TestNewDeviceFromConfig11(t *testing.T) {
+	// Invalid scaling factor defined
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Metadata: map[string]string{
+			"a": "b",
+		},
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Tags:         []string{"default/foo"},
+		Handler:      "testhandler",
+		WriteTimeout: 3 * time.Second,
+	}
+	instance := &config.DeviceInstance{
+		Type: "type2",
+		Info: "testdata",
+		Tags: []string{"vapor/io"},
+		Data: map[string]interface{}{
+			"address": "localhost",
+		},
+		SortIndex:          1,
+		Handler:            "testhandler2",
+		ScalingFactor:      "bad scaling factor",
 		WriteTimeout:       5 * time.Second,
 		DisableInheritance: false,
 	}

@@ -449,12 +449,15 @@ func (scheduler *scheduler) scheduleListen() {
 // applyTransformations is a helper function to apply any transformation functions
 // which a device specifies to its readings.
 func applyTransformations(device *Device, rctx *ReadContext) error {
-	if len(device.fns) > 0 {
-		log.WithFields(log.Fields{
-			"device": device.id,
-		}).Info("[scheduler] applying reading transform fns")
+	for _, reading := range rctx.Reading {
+		// Apply any transformation functions which are defined for the device
+		// to the device's readings.
+		if len(device.fns) > 0 {
+			log.WithFields(log.Fields{
+				"fns":    len(device.fns),
+				"device": device.id,
+			}).Info("[scheduler] applying reading transform fns")
 
-		for _, reading := range rctx.Reading {
 			for _, fn := range device.fns {
 				log.WithFields(log.Fields{
 					"device": device.id,
@@ -479,7 +482,26 @@ func applyTransformations(device *Device, rctx *ReadContext) error {
 				reading.Value = newVal
 			}
 		}
+
+		// Apply any scaling factor transformations which are defined for the
+		// device to the device's readings. This must be done after all
+		// other transformations are completed.
+		log.WithFields(log.Fields{
+			"reading": reading.Value,
+			"factor":  device.ScalingFactor,
+			"device":  device.id,
+		}).Info("[scheduler] applying scaling factor to reading")
+
+		err := reading.Scale(device.ScalingFactor)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"device": device.id,
+				"factor": device.ScalingFactor,
+			}).Error("[scheduler] failed to apply scaling factor")
+			return err
+		}
 	}
+
 	return nil
 }
 
