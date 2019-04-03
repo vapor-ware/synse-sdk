@@ -18,13 +18,14 @@ package sdk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/time/rate"
@@ -33,6 +34,13 @@ import (
 const (
 	modeSerial   = "serial"
 	modeParallel = "parallel"
+)
+
+var (
+	DeviceNotWritable  = errors.New("writing is not enabled for the device")
+	DeviceWriteTimeout = errors.New("device write timed out")
+	NilDeviceError     = errors.New("cannot perform action on nil device")
+	NilDataError       = errors.New("cannot write nil data to device")
 )
 
 // ListenerCtx is the context needed for a listener function to be called
@@ -181,17 +189,13 @@ func (scheduler *scheduler) Stop() error {
 // Write queues up a write request into the scheduler's write queue.
 func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]*synse.V3WriteTransaction, error) {
 	if device == nil {
-		// fixme: better err handling
-		return nil, fmt.Errorf("cannot write to nil device")
+		return nil, NilDeviceError
 	}
-
 	if data == nil {
-		return nil, fmt.Errorf("cannot write nil data")
+		return nil, NilDataError
 	}
-
 	if !device.IsWritable() {
-		// fixme: better err handling
-		return nil, fmt.Errorf("writing not enabled for device")
+		return nil, DeviceNotWritable
 	}
 
 	var response []*synse.V3WriteTransaction
@@ -224,18 +228,15 @@ func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 
 func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteData) ([]*synse.V3TransactionStatus, error) {
 	if device == nil {
-		// fixme: better err handling
-		return nil, fmt.Errorf("cannot write to nil device")
+		return nil, NilDeviceError
 	}
-
 	if data == nil {
-		return nil, fmt.Errorf("cannot write nil data")
+		return nil, NilDataError
+	}
+	if !device.IsWritable() {
+		return nil, DeviceNotWritable
 	}
 
-	if !device.IsWritable() {
-		// fixme: better err handling
-		return nil, fmt.Errorf("writing not enabled for device")
-	}
 	var response []*synse.V3TransactionStatus
 	var txns []*transaction
 	var waitGroup sync.WaitGroup
@@ -387,20 +388,14 @@ func (scheduler *scheduler) scheduleWrites() {
 
 		// Check for any pending writes. If any exist, attempt to fulfill
 		// the writes and update their transaction state accordingly.
-		// fixme: update this so we are not logging unless we are actually writing
-		//  data from the queue. currently this will get logged on every pass which
-		//  will generate a bunch of noise
-		wlog.WithFields(log.Fields{
-			"queue": len(scheduler.writeChan),
-			"cap":   cap(scheduler.writeChan),
-		}).Debug("[scheduler] processing write queue")
-
+		var totalWrites = 0
 		for i := 0; i < scheduler.config.Write.BatchSize; i++ {
 			select {
 			case w := <-scheduler.writeChan:
 				// Increment the WaitGroup counter for all writes being executed
 				// in this batch.
 				waitGroup.Add(1)
+				totalWrites += 1
 
 				// Launch the device write.
 				go func(wg *sync.WaitGroup, writeContext *WriteContext) {
@@ -411,6 +406,13 @@ func (scheduler *scheduler) scheduleWrites() {
 			default:
 				// If there is nothing to write, do nothing.
 			}
+		}
+
+		if totalWrites > 0 {
+			wlog.WithFields(log.Fields{
+				"batchSize": scheduler.config.Write.BatchSize,
+				"processed": totalWrites,
+			}).Info("[scheduler] processed write requests")
 		}
 
 		// Wait for all device writes to complete.
@@ -561,7 +563,7 @@ func (scheduler *scheduler) read(device *Device) {
 			// Check to see if the error is that of unsupported error. If it is, we
 			// do not want to log out here (low-interval read polling would cause this
 			// to pollute the logs for something that we should already know).
-			_, unsupported := err.(*errors.UnsupportedCommandError)
+			_, unsupported := err.(*sdkError.UnsupportedCommandError)
 			if !unsupported {
 				rlog.Error("[scheduler] failed device read")
 			}
@@ -738,8 +740,7 @@ func (scheduler *scheduler) write(writeCtx *WriteContext) {
 	case writeErr := <-writer:
 		err = writeErr
 	case <-time.After(device.WriteTimeout):
-		// fixme: improve err message
-		err = fmt.Errorf("device write timeout")
+		err = DeviceWriteTimeout
 	}
 
 	if err != nil {

@@ -17,12 +17,13 @@
 package sdk
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
 )
 
@@ -36,6 +37,10 @@ var (
 	// Config file locations
 	localDeviceConfig   = "./config/device"
 	defaultDeviceConfig = "/etc/synse/plugin/config/device"
+)
+
+var (
+	DeviceIdExistsError = errors.New("conflict: device id already exists")
 )
 
 // DeviceAction defines an action that can be run before the main Plugin run
@@ -309,8 +314,7 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 
 	// Check if the Device ID collides with an existing device.
 	if _, exists := manager.devices[device.id]; exists {
-		// fixme
-		return fmt.Errorf("device id exists")
+		return DeviceIdExistsError
 	}
 
 	// Update the device with the SDK auto-generated tags.
@@ -415,8 +419,7 @@ func (manager *deviceManager) FilterDevices(filter map[string][]string) ([]*Devi
 				return false
 			}
 		default:
-			// fixme: better errors
-			return nil, fmt.Errorf("unsupported filter key")
+			return nil, fmt.Errorf("unsupported device filter key: %s", k)
 		}
 
 		checks = append(checks, check)
@@ -436,8 +439,7 @@ func (manager *deviceManager) FilterDevices(filter map[string][]string) ([]*Devi
 // Device instances from it.
 func (manager *deviceManager) createDevices() error {
 	if manager.config == nil {
-		// fixme: custom error?
-		return fmt.Errorf("device manager has no config")
+		return errors.New("unable to create devices: config is nil")
 	}
 
 	var failedLoad bool
@@ -461,7 +463,6 @@ func (manager *deviceManager) createDevices() error {
 	}
 
 	if failedLoad {
-		// fixme
 		log.Errorf("[device manager] failed to create devices from config")
 		return fmt.Errorf("failed to load devices from config")
 	}
@@ -497,7 +498,7 @@ func (manager *deviceManager) execDeviceSetupActions(plugin *Plugin) error {
 		return nil
 	}
 
-	var multiErr = errors.NewMultiError("Device Setup Actions")
+	var multiErr = sdkError.NewMultiError("Device Setup Actions")
 
 	log.WithFields(log.Fields{
 		"actions": len(manager.setupActions),
