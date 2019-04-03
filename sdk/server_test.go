@@ -56,6 +56,7 @@ func TestServer_init_nilConfig(t *testing.T) {
 
 	err := s.init()
 	assert.Error(t, err)
+	assert.Equal(t, ServerNeedsConfigError, err)
 	assert.False(t, s.initialized)
 }
 
@@ -147,6 +148,7 @@ func TestServer_start_notInitialized(t *testing.T) {
 
 	err := s.start()
 	assert.Error(t, err)
+	assert.Equal(t, ServerNotInitializedError, err)
 }
 
 func TestServer_start_noGrpc(t *testing.T) {
@@ -154,6 +156,7 @@ func TestServer_start_noGrpc(t *testing.T) {
 
 	err := s.start()
 	assert.Error(t, err)
+	assert.Equal(t, ServerNotInitializedError, err)
 }
 
 func TestServer_start_listenErr(t *testing.T) {
@@ -682,6 +685,7 @@ func TestServer_WriteAsync_noSelector(t *testing.T) {
 	err := s.WriteAsync(req, mock)
 
 	assert.Error(t, err)
+	assert.Equal(t, SelectorRequiresIDError, err)
 	assert.Len(t, mock.Results, 0)
 }
 
@@ -719,6 +723,7 @@ func TestServer_WriteAsync_noDevice(t *testing.T) {
 	err := s.WriteAsync(req, mock)
 
 	assert.Error(t, err)
+	assert.Equal(t, NoDeviceForSelectorError, err)
 	assert.Len(t, mock.Results, 0)
 }
 
@@ -882,6 +887,7 @@ func TestServer_WriteSync_noSelector(t *testing.T) {
 	err := s.WriteSync(req, mock)
 
 	assert.Error(t, err)
+	assert.Equal(t, SelectorRequiresIDError, err)
 	assert.Len(t, mock.Results, 0)
 }
 
@@ -930,6 +936,7 @@ func TestServer_WriteSync_noDevice(t *testing.T) {
 	err := s.WriteSync(req, mock)
 
 	assert.Error(t, err)
+	assert.Equal(t, NoDeviceForSelectorError, err)
 	assert.Len(t, mock.Results, 0)
 }
 
@@ -1054,6 +1061,7 @@ func TestServer_Transaction_oneIDNotExists(t *testing.T) {
 	err := s.Transaction(req, mock)
 
 	assert.Error(t, err)
+	assert.Equal(t, TransactionNotFoundError, err)
 	assert.Len(t, mock.Results, 0)
 }
 

@@ -19,6 +19,7 @@ package sdk
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -28,7 +29,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/health"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 	"golang.org/x/net/context"
@@ -46,6 +47,15 @@ var (
 	// gRPC communication. This is a var instead of const so that
 	// it can be modified for testing.
 	socketDir = "/tmp/synse"
+)
+
+var (
+	ServerNeedsConfigError    = errors.New("server requires configuration to initialize")
+	ServerNotInitializedError = errors.New("unable to run: server not initialized")
+
+	SelectorRequiresIDError  = sdkError.InvalidArgumentErr("selector must specify device id")
+	NoDeviceForSelectorError = sdkError.NotFoundErr("no device found for specified selector")
+	TransactionNotFoundError = sdkError.NotFoundErr("transaction not found")
 )
 
 // server implements the Synse Plugin gRPC server. It is used by the
@@ -78,8 +88,7 @@ func newServer(plugin *Plugin) *server {
 
 func (server *server) init() error {
 	if server.conf == nil {
-		// fixme
-		return fmt.Errorf("no config")
+		return ServerNeedsConfigError
 	}
 
 	log.Debug("[server] initializing")
@@ -131,11 +140,8 @@ func (server *server) init() error {
 func (server *server) start() error {
 	log.Info("[server] starting")
 
-	if !server.initialized {
-		return fmt.Errorf("server is not initialized, can not run")
-	}
-	if server.grpc == nil {
-		return fmt.Errorf("gRPC server not initialized, can not run")
+	if !server.initialized || server.grpc == nil {
+		return ServerNotInitializedError
 	}
 
 	// Create the listener over the configured protocol and address.
@@ -474,15 +480,13 @@ func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3P
 
 	deviceID := DeviceSelectorToID(request.Selector)
 	if deviceID == nil {
-		// fixme: better message
-		return fmt.Errorf("write device selector did not specify valid device id")
+		return SelectorRequiresIDError
 	}
 	device := server.deviceManager.GetDevices(deviceID)
 	if len(device) != 1 {
-		// fixme
-		return fmt.Errorf("did not find device with id")
+		return NoDeviceForSelectorError
 	}
-	// fixme: easier way to get the device...
+
 	transactions, err := server.scheduler.Write(device[0], request.Data)
 	if err != nil {
 		return err
@@ -508,15 +512,12 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 
 	deviceID := DeviceSelectorToID(request.Selector)
 	if deviceID == nil {
-		// fixme: better message
-		return fmt.Errorf("write device selector did not specify valid device id")
+		return SelectorRequiresIDError
 	}
 	device := server.deviceManager.GetDevices(deviceID)
 	if len(device) != 1 {
-		// fixme
-		return fmt.Errorf("did not find device with id")
+		return NoDeviceForSelectorError
 	}
-	// fixme: easier way to get the device...
 
 	transactions, err := server.scheduler.WriteAndWait(device[0], request.Data)
 	if err != nil {
@@ -558,7 +559,10 @@ func (server *server) Transaction(request *synse.V3TransactionSelector, stream s
 	// Otherwise, return only the transaction with the specified ID.
 	t := server.stateManager.getTransaction(request.Id)
 	if t == nil {
-		return errors.NotFoundErr("transaction not found: %v", request.Id)
+		log.WithFields(log.Fields{
+			"id": request.Id,
+		}).Error("transaction not found")
+		return TransactionNotFoundError
 	}
 	return stream.Send(t.encode())
 }

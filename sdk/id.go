@@ -17,7 +17,7 @@
 package sdk
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"strings"
 
@@ -40,11 +40,10 @@ type pluginID struct {
 // newPluginID creates a new instance of a pluginID.
 func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, error) {
 	if conf == nil {
-		// fixme: better error handling
-		return nil, fmt.Errorf("nil config")
+		return nil, errors.New("unable to create plugin id: nil config")
 	}
 	if meta == nil {
-		return nil, fmt.Errorf("nil meta")
+		return nil, errors.New("unable to create plugin id: nil metadata")
 	}
 
 	var components []string
@@ -74,8 +73,7 @@ func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, erro
 		for _, k := range conf.UseEnv {
 			val, found := os.LookupEnv(k)
 			if !found {
-				// fixme: better handling
-				return nil, fmt.Errorf("env specified but not set")
+				return nil, errors.New("unable to create plugin id: env enabled but not set")
 			}
 			log.WithFields(log.Fields{
 				"envVar": k,
@@ -92,8 +90,7 @@ func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, erro
 
 	// If there are no namespace components, we are not able to generate an ID.
 	if len(components) == 0 {
-		// fixme; better error handling
-		return nil, fmt.Errorf("no components")
+		return nil, errors.New("unable to create plugin id: no namespace components")
 	}
 
 	// Generate the V5 UUID for the plugin. The various ID components are joined
