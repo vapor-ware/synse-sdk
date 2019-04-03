@@ -59,26 +59,27 @@ func (manager *Manager) Count() int {
 // being registered conflicts with an existing Check's name, an error is returned.
 func (manager *Manager) Register(check Check) error {
 	if check.GetName() == "" {
-		// fixme: better err
-		return fmt.Errorf("check must have name")
+		return fmt.Errorf("health manager: registered check must have name")
 	}
 	if _, exists := manager.checks[check.GetName()]; exists {
-		// fixme: better err
-		return fmt.Errorf("check with name already exists")
+		return fmt.Errorf("health manager: check with name already exists")
 	}
 
-	// todo: log
 	manager.checks[check.GetName()] = check
+	log.WithFields(log.Fields{
+		"name": check.GetName(),
+		"type": check.GetType(),
+	}).Debug("[health] registered health check")
 	return nil
 }
 
 // RegisterDefault registers default health checks with the health manager.
 func (manager *Manager) RegisterDefault(check Check) {
+	manager.defaults = append(manager.defaults, check)
 	log.WithFields(log.Fields{
 		"name": check.GetName(),
 		"type": check.GetType(),
-	}).Info("[health] adding default health check")
-	manager.defaults = append(manager.defaults, check)
+	}).Info("[health] registered default health check")
 }
 
 // Init initializes the health Manager, making sure its necessary state is set.

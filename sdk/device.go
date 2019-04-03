@@ -167,8 +167,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 
 	// We require devices to have a type; error if there is none set.
 	if deviceType == "" {
-		// fixme: err message
-		return nil, fmt.Errorf("device requires type")
+		return nil, fmt.Errorf("new device: required field 'type' is missing")
 	}
 
 	// Override handler, if set.
@@ -186,8 +185,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	// with that name exists. If not, the device config is incorrect.
 	if instance.Output != "" {
 		if output.Get(instance.Output) == nil {
-			// fixme: err message
-			return nil, fmt.Errorf("device specifies unknown output")
+			return nil, fmt.Errorf("new device: unknown output specified '%s'", instance.Output)
 		}
 	}
 
@@ -195,8 +193,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	for _, fn := range instance.Apply {
 		f := funcs.Get(fn)
 		if f == nil {
-			// fixme: err message
-			return nil, fmt.Errorf("device specified unknown transform function")
+			return nil, fmt.Errorf("new device: unknown transform function specified '%s'", fn)
 		}
 		fns = append(fns, f)
 	}
@@ -311,7 +308,6 @@ func (device *Device) GetID() string {
 //
 // If reading is not supported on the device, an UnsupportedCommandError is
 // returned.
-// FIXME: should we update the unsupported command error to be more descriptive?
 func (device *Device) Read() (*ReadContext, error) {
 	if !device.IsReadable() {
 		return nil, &errors.UnsupportedCommandError{}
@@ -328,7 +324,6 @@ func (device *Device) Read() (*ReadContext, error) {
 //
 // If writing is not supported on the device, an UnsupportedCommandError is
 // returned.
-// FIXME: should we update the unsupported command error to be more descriptive?
 func (device *Device) Write(data *WriteData) error {
 	if !device.IsWritable() {
 		return &errors.UnsupportedCommandError{}
