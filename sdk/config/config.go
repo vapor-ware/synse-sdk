@@ -17,6 +17,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,7 +29,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
 	"gopkg.in/yaml.v2"
 )
@@ -182,12 +183,15 @@ func (loader *Loader) Scan(out interface{}) error {
 			log.WithFields(log.Fields{
 				"loader": loader.Name,
 				"policy": loader.policy,
-			}).Debug("[config] no optional config found for Scan")
+			}).Debug("[config] no config found for Scan")
 			return nil
 		}
 
-		// fixme: better err message
-		return fmt.Errorf("unable to scan, no merged content, did you Load first")
+		log.WithFields(log.Fields{
+			"loader": loader.Name,
+			"policy": loader.policy,
+		}).Error("[config] unable to scan config: no merged configs found, but are required")
+		return errors.New("config: no merged config to scan")
 	}
 
 	log.WithFields(log.Fields{
@@ -248,8 +252,10 @@ func (loader *Loader) checkOverrides() error {
 		dir, file := filepath.Split(value)
 
 		if !loader.isValidExt(file) {
-			// fixme: error handling
-			return fmt.Errorf("env override specified invalid file extension")
+			log.WithFields(log.Fields{
+				"value": value,
+			}).Error("[config] invalid file extension from ENV")
+			return errors.New("config: invalid file extension")
 		}
 
 		// The specified file matches the expected extension, so we can use it
@@ -352,7 +358,7 @@ func (loader *Loader) search(pol policy.Policy) error {
 	// If the config is required, make sure that we found something. If no
 	// config was found on any of the search paths, return an error.
 	if required && len(loader.files) == 0 {
-		return errors.NewConfigsNotFoundError(loader.SearchPaths)
+		return sdkError.NewConfigsNotFoundError(loader.SearchPaths)
 	}
 
 	return nil
@@ -362,7 +368,7 @@ func (loader *Loader) search(pol policy.Policy) error {
 // These data mappings are collected by the Loader to be merged later.
 func (loader *Loader) read(pol policy.Policy) error {
 	if pol == policy.Required && len(loader.files) == 0 {
-		return errors.NewConfigsNotFoundError(loader.SearchPaths)
+		return sdkError.NewConfigsNotFoundError(loader.SearchPaths)
 	}
 
 	for _, path := range loader.files {
@@ -381,8 +387,7 @@ func (loader *Loader) read(pol policy.Policy) error {
 			}
 			loader.data = append(loader.data, res)
 		default:
-			// fixme
-			return fmt.Errorf("unsupported file format: %v", loader.Ext)
+			return fmt.Errorf("config: unsupported file format '%v'", loader.Ext)
 		}
 	}
 	return nil
@@ -441,7 +446,7 @@ func (loader *Loader) isValidFile(info os.FileInfo) bool {
 func (loader *Loader) isValidExt(path string) bool {
 	exts, ok := validExts[loader.Ext]
 	if !ok {
-		// fixme: log error
+		log.WithField("ext", loader.Ext).Debug("[config] file extension not supported")
 		return false
 	}
 
@@ -451,5 +456,7 @@ func (loader *Loader) isValidExt(path string) bool {
 			return true
 		}
 	}
+
+	log.WithField("path", path).Debug("[config] path contains unsupported extension")
 	return false
 }
