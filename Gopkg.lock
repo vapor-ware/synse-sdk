@@ -96,12 +96,12 @@
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:e4c72127d910a96daf869a44f3dd563b86dbe6931a172863a0e99c5ff04b59e4"
+  digest = "1:fd61cf4ae1953d55df708acb6b91492d538f49c305b364a014049914495db426"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "UT"
-  revision = "dae0fa8d5b0c810a8ab733fbd5510c7cae84eca4"
-  version = "v1.4.0"
+  revision = "8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f"
+  version = "v1.4.1"
 
 [[projects]]
   digest = "1:972c2427413d41a1e06ca4897e8528e5a1622894050e2f527b38ddf0f343f759"
@@ -113,23 +113,15 @@
 
 [[projects]]
   branch = "v3/staging"
-  digest = "1:afd016f7632697cb3455c9e50cbb5331bcc07a1e2f041c71f7ede7f01a0dc584"
+  digest = "1:a2f2b268785d6354cf3c501dcde39275dad3a9b4f37c5ff1b0c8d73a9d61dcdb"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
   pruneopts = "UT"
-  revision = "bbdc0f9329fe619843159f0c8001cd0cb8b4959f"
+  revision = "667a84247b384bc508fd826c8ab928d7b7dbb0e9"
 
 [[projects]]
   branch = "master"
-  digest = "1:058e9504b9a79bfe86092974d05bb3298d2aa0c312d266d43148de289a5065d9"
-  name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
-  pruneopts = "UT"
-  revision = "b7391e95e576cacdcdd422573063bc057239113d"
-
-[[projects]]
-  branch = "master"
-  digest = "1:4512c74e2c934a151fa9246cdc565d29611f53295bfb05e7a6275e80ee540a0c"
+  digest = "1:a7550c619a7f9701bc2f0b2c866668a207cfb693a2834796f723d2c78b514372"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -141,11 +133,11 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "addf6b3196f61cd44ce5a76657913698c73479d0"
+  revision = "b630fd6fe46bcfc98f989005d8b8ec1400e60a6e"
 
 [[projects]]
   branch = "master"
-  digest = "1:48c1fcb1095744e8ec994c0bb07de536c80004d1388c205e72777ac260582d7a"
+  digest = "1:015369e20c1faa5f24c10104e1330afcb517455ceb58d835a8136f34c5ad3746"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -153,7 +145,7 @@
     "windows/registry",
   ]
   pruneopts = "UT"
-  revision = "f49334f85ddcf0f08d7fb6dd7363e9e6d6b777eb"
+  revision = "81d4e9dc473e5e8c933f2aaeba2a3d81efb9aed2"
 
 [[projects]]
   digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
@@ -192,7 +184,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "e79c0c59cdb5e117ef82a6f885294df3d74065d5"
+  revision = "64821d5d210748c883cd2b809589555ae4654203"
 
 [[projects]]
   digest = "1:c00eb80d7b152379c3e94c38d82b29deca98b1d0f53e4e20362589b7fcbffa07"
