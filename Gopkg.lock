@@ -113,11 +113,11 @@
 
 [[projects]]
   branch = "v3/staging"
-  digest = "1:a2f2b268785d6354cf3c501dcde39275dad3a9b4f37c5ff1b0c8d73a9d61dcdb"
+  digest = "1:6d9ca8b731aa3670630134b156c462d0708e1e4ea6e503c7416ff140b22e57ac"
   name = "github.com/vapor-ware/synse-server-grpc"
   packages = ["go"]
   pruneopts = "UT"
-  revision = "667a84247b384bc508fd826c8ab928d7b7dbb0e9"
+  revision = "90934b70a0d7e957ade7d72ed52832c5ffbfd73d"
 
 [[projects]]
   branch = "master"
