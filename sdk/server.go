@@ -64,6 +64,7 @@ type server struct {
 	conf        *config.NetworkSettings
 	grpc        *grpc.Server
 	meta        *PluginMetadata
+	id          *pluginID
 	initialized bool
 
 	// Plugin components
@@ -77,6 +78,7 @@ type server struct {
 // constructor to create a Plugin's server instance.
 func newServer(plugin *Plugin) *server {
 	return &server{
+		id:            plugin.id,
 		conf:          plugin.config.Network,
 		meta:          plugin.info,
 		scheduler:     plugin.scheduler,
@@ -396,10 +398,9 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 	for _, device := range devices {
 		d := device.encode()
 
-		// Set the plugin info here. This is done prior to sending back rather than
-		// keeping the plugin info in the device model due to the scoping of the
-		// plugin metadata.
-		d.Plugin = server.meta.Tag()
+		// Set the plugin id here. This is done prior to sending back rather than
+		// keeping the plugin id in the device model due to the scoping of the plugin.
+		d.Plugin = server.id.uuid.String()
 
 		// Set the device outputs here. This is determined by the device readings.
 		var outputs []*synse.V3DeviceOutput
@@ -422,8 +423,11 @@ func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*syns
 	log.WithFields(log.Fields{
 		"route": "METADATA",
 	}).Info("[grpc] processing request")
+	m := server.meta.encode()
+	m.Id = server.id.uuid.String()
 
-	return server.meta.encode(), nil
+	log.WithField("m", m).Info(">>> METADATA")
+	return m, nil
 }
 
 // Read gets readings for the specified plugin device(s).
