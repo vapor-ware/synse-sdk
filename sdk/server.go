@@ -335,7 +335,9 @@ func loadCACerts(certs []string) (*x509.CertPool, error) {
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Test` RPC method.
 func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3TestStatus, error) {
-	log.Info("[grpc] processing TEST request")
+	log.WithFields(log.Fields{
+		"route": "TEST",
+	}).Info("[grpc] processing request")
 
 	return &synse.V3TestStatus{Ok: true}, nil
 }
@@ -344,7 +346,9 @@ func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Version` RPC method.
 func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.V3Version, error) {
-	log.Info("[grpc] processing VERSION request")
+	log.WithFields(log.Fields{
+		"route": "VERSION",
+	}).Info("[grpc] processing request")
 
 	return version.encode(), nil
 }
@@ -353,7 +357,9 @@ func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Health` RPC method.
 func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.V3Health, error) {
-	log.Info("[grpc] processing HEALTH request")
+	log.WithFields(log.Fields{
+		"route": "HEALTH",
+	}).Info("[grpc] processing request")
 
 	status := server.healthManager.Status()
 	return status.Encode(), nil
@@ -363,20 +369,28 @@ func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Devices` RPC method.
 func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Plugin_DevicesServer) error {
-	log.WithFields(log.Fields{
-		"tags": request.Tags,
-		"id":   request.Id,
-	}).Info("[grpc] processing DEVICES request")
+	rlog := log.WithFields(log.Fields{
+		"tags":  request.Tags,
+		"id":    request.Id,
+		"route": "DEVICES",
+	})
+	rlog.Info("[grpc] processing request")
 
 	var devices []*Device
 
-	// If there is no info specified for the selector, assume all devices in the default namespace.
+	// If there is no info specified for the selector, assume all devices in the system namespace.
 	// Otherwise, get the set of devices from the specified selector.
+	// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
+	//   we use the namespaces to limit access to devices, this will need to change, as we do not want
+	//   to expose all devices to everyone. We are not doing that currently, so it is not an issue
+	//   for the initial v3 release.
 	if request.Id == "" && len(request.Tags) == 0 {
-		devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceDefault)
+		//devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceDefault)
+		devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceSystem)
 	} else {
 		devices = server.deviceManager.GetDevices(DeviceSelectorToTags(request)...)
 	}
+	rlog.WithField("devices", len(devices)).Debug("[grpc] got devices")
 
 	// Encode and stream the devices back to the client.
 	for _, device := range devices {
@@ -405,7 +419,9 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Metadata` RPC method.
 func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
-	log.Info("[grpc] processing METADATA request")
+	log.WithFields(log.Fields{
+		"route": "METADATA",
+	}).Info("[grpc] processing request")
 
 	return server.meta.encode(), nil
 }
@@ -414,22 +430,30 @@ func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*syns
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Read` RPC method.
 func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_ReadServer) error {
-	log.WithFields(log.Fields{
-		"tags": request.Selector.Tags,
-		"id":   request.Selector.Id,
-	}).Info("[grpc] processing READ request")
+	rlog := log.WithFields(log.Fields{
+		//"tags": request.Selector.Tags,
+		//"id":   request.Selector.Id,
+		"selector": request.Selector,
+		"route":    "READ",
+	})
+	rlog.Info("[grpc] processing request")
 
 	var devices []*Device
 
-	// If there is no info specified for the selector, assume all devices in the default namespace.
+	// If there is no info specified for the selector, assume all devices in the system namespace.
 	// Otherwise, get the set of devices from the specified selector.
-	if request.Selector.Id == "" && len(request.Selector.Tags) == 0 {
-		devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceDefault)
+	// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
+	//   we use the namespaces to limit access to devices, this will need to change, as we do not want
+	//   to expose all devices to everyone. We are not doing that currently, so it is not an issue
+	//   for the initial v3 release.
+	if request.Selector == nil || (request.Selector.Id == "" && len(request.Selector.Tags) == 0) {
+		devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceSystem)
 	} else {
 		devices = server.deviceManager.GetDevices(DeviceSelectorToTags(request.Selector)...)
 	}
 
 	for _, device := range devices {
+		rlog.WithField("device", device.id).Debug("[grpc] getting reading(s) for device")
 		readings := server.stateManager.GetReadingsForDevice(device.id)
 
 		// Encode and stream the readings back to the client.
@@ -450,7 +474,8 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 	log.WithFields(log.Fields{
 		"start": request.Start,
 		"end":   request.End,
-	}).Info("[grpc] processing READCACHE request")
+		"route": "READCACHE",
+	}).Info("[grpc] processing request")
 
 	// Create a channel that will be used to collect the cached readings.
 	readings := make(chan *ReadContext, 128)
@@ -474,9 +499,10 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 // It is the handler for the Synse gRPC V3Plugin service's `WriteAsync` RPC method.
 func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3Plugin_WriteAsyncServer) error {
 	log.WithFields(log.Fields{
-		"data": request.Data,
-		"id":   request.Selector.Id,
-	}).Info("[grpc] processing WRITE ASYNC request")
+		"data":  request.Data,
+		"id":    request.Selector.Id,
+		"route": "WRITE ASYNC",
+	}).Info("[grpc] processing request")
 
 	deviceID := DeviceSelectorToID(request.Selector)
 	if deviceID == nil {
@@ -506,9 +532,10 @@ func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3P
 // It is the handler for the Synse gRPC V3Plugin service's `WriteSync` RPC method.
 func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Plugin_WriteSyncServer) error {
 	log.WithFields(log.Fields{
-		"data": request.Data,
-		"id":   request.Selector.Id,
-	}).Info("[grpc] processing WRITE SYNC request")
+		"data":  request.Data,
+		"id":    request.Selector.Id,
+		"route": "WRITE SYNC",
+	}).Info("[grpc] processing request")
 
 	deviceID := DeviceSelectorToID(request.Selector)
 	if deviceID == nil {
@@ -536,33 +563,38 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 // associated with that action on write.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Transaction` RPC method.
-func (server *server) Transaction(request *synse.V3TransactionSelector, stream synse.V3Plugin_TransactionServer) error {
-	log.WithFields(log.Fields{
-		"id": request.Id,
-	}).Info("[grpc] processing TRANSACTION request")
+//ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
+func (server *server) Transaction(ctx context.Context, request *synse.V3TransactionSelector) (*synse.V3TransactionStatus, error) {
+	rlog := log.WithFields(log.Fields{
+		"id":    request.Id,
+		"route": "TRANSACTION",
+	})
+	rlog.Info("[grpc] processing request")
 
-	// If there is no ID specified with the incoming request, return all of the cached
-	// transaction.
-	if request.Id == "" {
-		log.Info("[grpc] no transaction ID specified, returning all cached transactions")
-		for _, item := range server.stateManager.transactions.Items() {
-			t, ok := item.Object.(*transaction)
-			if ok {
-				if err := stream.Send(t.encode()); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	}
-
-	// Otherwise, return only the transaction with the specified ID.
 	t := server.stateManager.getTransaction(request.Id)
 	if t == nil {
-		log.WithFields(log.Fields{
-			"id": request.Id,
-		}).Error("transaction not found")
-		return TransactionNotFoundError
+		rlog.Error("transaction not found")
+		return nil, TransactionNotFoundError
 	}
-	return stream.Send(t.encode())
+	return t.encode(), nil
+}
+
+// Transactions gets the status of all transactions currently being tracked in the
+// plugin's transaction cache.
+//
+// It is the handler for the Synse gRPC V3Plugin service's `Transactions` RPC method.
+func (server *server) Transactions(request *synse.Empty, stream synse.V3Plugin_TransactionsServer) error {
+	log.WithFields(log.Fields{
+		"route": "TRANSACTIONS",
+	}).Info("[grpc] processing request")
+
+	for _, item := range server.stateManager.transactions.Items() {
+		t, ok := item.Object.(*transaction)
+		if ok {
+			if err := stream.Send(t.encode()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

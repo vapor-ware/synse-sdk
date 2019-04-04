@@ -314,15 +314,15 @@ func TestServer_Health(t *testing.T) {
 
 func TestServer_Devices(t *testing.T) {
 	// Get devices when there is no selector set. In this case, it should
-	// return the devices in the default namespace.
+	// return the devices in the system namespace.
 	handler := &DeviceHandler{Name: "foo"}
 	s := server{
 		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
-					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
+					"system": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
+					"other":  {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
 		},
@@ -403,15 +403,15 @@ func TestServer_Devices3(t *testing.T) {
 
 func TestServer_Devices_error(t *testing.T) {
 	// Get devices when there is no selector set. In this case, it should
-	// return the devices in the default namespace.
+	// return the devices in the system namespace.
 	handler := &DeviceHandler{Name: "foo"}
 	s := server{
 		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
-					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
+					"system": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
+					"other":  {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
 		},
@@ -445,7 +445,7 @@ func TestServer_Metadata(t *testing.T) {
 
 func TestServer_Read(t *testing.T) {
 	// Test reading without specifying a selector. This should
-	// default to reading from default devices.
+	// default to reading from system devices.
 	o := output.Output{
 		Name: "test",
 		Type: "foo",
@@ -456,8 +456,8 @@ func TestServer_Read(t *testing.T) {
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
-					"default": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
-					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
+					"system": {"": {"foo": {&Device{id: "12345", Type: "foo"}}}},
+					"other":  {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
 				},
 			},
 		},
@@ -1041,12 +1041,11 @@ func TestServer_Transaction_oneIDExists(t *testing.T) {
 	txn := s.stateManager.newTransaction(1 * time.Minute)
 
 	req := &synse.V3TransactionSelector{Id: txn.id}
-	mock := test.NewMockTransactionStream()
-	err := s.Transaction(req, mock)
+	resp, err := s.Transaction(context.Background(), req)
 
 	assert.NoError(t, err)
-	assert.Len(t, mock.Results, 1)
-	assert.Contains(t, mock.Results, txn.id)
+	assert.NotNil(t, resp)
+	assert.Equal(t, txn.id, resp.Id)
 }
 
 func TestServer_Transaction_oneIDNotExists(t *testing.T) {
@@ -1057,15 +1056,14 @@ func TestServer_Transaction_oneIDNotExists(t *testing.T) {
 	}
 
 	req := &synse.V3TransactionSelector{Id: "foo"}
-	mock := test.NewMockTransactionStream()
-	err := s.Transaction(req, mock)
+	resp, err := s.Transaction(context.Background(), req)
 
 	assert.Error(t, err)
 	assert.Equal(t, TransactionNotFoundError, err)
-	assert.Len(t, mock.Results, 0)
+	assert.Nil(t, resp)
 }
 
-func TestServer_Transaction_noIDOK(t *testing.T) {
+func TestServer_Transactions(t *testing.T) {
 	s := server{
 		stateManager: &stateManager{
 			transactions: cache.New(1*time.Minute, 2*time.Minute),
@@ -1076,9 +1074,9 @@ func TestServer_Transaction_noIDOK(t *testing.T) {
 	txn2 := s.stateManager.newTransaction(1 * time.Minute)
 	txn3 := s.stateManager.newTransaction(1 * time.Minute)
 
-	req := &synse.V3TransactionSelector{}
-	mock := test.NewMockTransactionStream()
-	err := s.Transaction(req, mock)
+	req := &synse.Empty{}
+	mock := test.NewMockTransactionsStream()
+	err := s.Transactions(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 3)
@@ -1087,7 +1085,7 @@ func TestServer_Transaction_noIDOK(t *testing.T) {
 	assert.Contains(t, mock.Results, txn3.id)
 }
 
-func TestServer_Transaction_noIDError(t *testing.T) {
+func TestServer_Transactions_error(t *testing.T) {
 	s := server{
 		stateManager: &stateManager{
 			transactions: cache.New(1*time.Minute, 2*time.Minute),
@@ -1098,9 +1096,9 @@ func TestServer_Transaction_noIDError(t *testing.T) {
 	_ = s.stateManager.newTransaction(1 * time.Minute)
 	_ = s.stateManager.newTransaction(1 * time.Minute)
 
-	req := &synse.V3TransactionSelector{}
+	req := &synse.Empty{}
 	mock := &test.MockTransactionStreamErr{}
-	err := s.Transaction(req, mock)
+	err := s.Transactions(req, mock)
 
 	assert.Error(t, err)
 }
