@@ -425,8 +425,6 @@ func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*syns
 	}).Info("[grpc] processing request")
 	m := server.meta.encode()
 	m.Id = server.id.uuid.String()
-
-	log.WithField("m", m).Info(">>> METADATA")
 	return m, nil
 }
 
