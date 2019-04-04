@@ -193,20 +193,20 @@ func (mock *MockWriteSyncStreamErr) Send(write *synse.V3TransactionStatus) error
 //
 
 // MockTransactionStream mocks the stream for the Transaction request, with no error.
-type MockTransactionStream struct {
+type MockTransactionsStream struct {
 	grpc.ServerStream
 	Results map[string]*synse.V3TransactionStatus
 }
 
 // NewMockTransactionStream creates a new mock transaction stream.
-func NewMockTransactionStream() *MockTransactionStream {
-	return &MockTransactionStream{
+func NewMockTransactionsStream() *MockTransactionsStream {
+	return &MockTransactionsStream{
 		Results: map[string]*synse.V3TransactionStatus{},
 	}
 }
 
 // Send fulfils the stream interface for the mock grpc stream.
-func (mock *MockTransactionStream) Send(write *synse.V3TransactionStatus) error {
+func (mock *MockTransactionsStream) Send(write *synse.V3TransactionStatus) error {
 	mock.Results[write.Id] = write
 	return nil
 }
