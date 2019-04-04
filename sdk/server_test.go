@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
@@ -317,7 +318,6 @@ func TestServer_Devices(t *testing.T) {
 	// return the devices in the system namespace.
 	handler := &DeviceHandler{Name: "foo"}
 	s := server{
-		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
@@ -329,6 +329,9 @@ func TestServer_Devices(t *testing.T) {
 		stateManager: &stateManager{
 			readings:     map[string][]*output.Reading{},
 			readingsLock: &sync.RWMutex{},
+		},
+		id: &pluginID{
+			uuid: uuid.New(),
 		},
 	}
 	req := &synse.V3DeviceSelector{}
@@ -348,7 +351,6 @@ func TestServer_Devices2(t *testing.T) {
 		Type: "test",
 	}
 	s := server{
-		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
@@ -362,6 +364,9 @@ func TestServer_Devices2(t *testing.T) {
 				"67890": {o.MakeReading(1)},
 			},
 			readingsLock: &sync.RWMutex{},
+		},
+		id: &pluginID{
+			uuid: uuid.New(),
 		},
 	}
 	req := &synse.V3DeviceSelector{Tags: []*synse.V3Tag{
@@ -379,7 +384,6 @@ func TestServer_Devices3(t *testing.T) {
 	// Get devices when there is a tag selector set, but no match
 	handler := &DeviceHandler{Name: "foo"}
 	s := server{
-		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
@@ -391,6 +395,9 @@ func TestServer_Devices3(t *testing.T) {
 		stateManager: &stateManager{
 			readings:     map[string][]*output.Reading{},
 			readingsLock: &sync.RWMutex{},
+		},
+		id: &pluginID{
+			uuid: uuid.New(),
 		},
 	}
 	req := &synse.V3DeviceSelector{Id: "abcdef"}
@@ -406,7 +413,6 @@ func TestServer_Devices_error(t *testing.T) {
 	// return the devices in the system namespace.
 	handler := &DeviceHandler{Name: "foo"}
 	s := server{
-		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: &deviceManager{
 			tagCache: &TagCache{
 				cache: map[string]map[string]map[string][]*Device{
@@ -419,6 +425,9 @@ func TestServer_Devices_error(t *testing.T) {
 			readings:     map[string][]*output.Reading{},
 			readingsLock: &sync.RWMutex{},
 		},
+		id: &pluginID{
+			uuid: uuid.New(),
+		},
 	}
 	req := &synse.V3DeviceSelector{}
 	mock := &test.MockDevicesStreamErr{}
@@ -428,8 +437,12 @@ func TestServer_Devices_error(t *testing.T) {
 }
 
 func TestServer_Metadata(t *testing.T) {
+	pid := uuid.New()
 	s := server{
 		meta: &PluginMetadata{Name: "test", Maintainer: "vaporio", Description: "desc"},
+		id: &pluginID{
+			uuid: pid,
+		},
 	}
 
 	req := &synse.Empty{}
@@ -441,6 +454,7 @@ func TestServer_Metadata(t *testing.T) {
 	assert.Equal(t, "vaporio", resp.Maintainer)
 	assert.Equal(t, "desc", resp.Description)
 	assert.Equal(t, "", resp.Vcs)
+	assert.Equal(t, pid.String(), resp.Id)
 }
 
 func TestServer_Read(t *testing.T) {
