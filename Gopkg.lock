@@ -88,14 +88,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:2e76a73cb51f42d63a2a1a85b3dc5731fd4faf6821b434bd0ef2c099186031d6"
-  name = "github.com/rs/xid"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "15d26544def341f036c5f8dca987a4cbe575032c"
-  version = "v1.2.1"
-
-[[projects]]
   digest = "1:fd61cf4ae1953d55df708acb6b91492d538f49c305b364a014049914495db426"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
@@ -244,7 +236,6 @@
     "github.com/imdario/mergo",
     "github.com/mitchellh/mapstructure",
     "github.com/patrickmn/go-cache",
-    "github.com/rs/xid",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/vapor-ware/synse-server-grpc/go",

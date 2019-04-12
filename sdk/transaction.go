@@ -19,7 +19,7 @@ package sdk
 import (
 	"time"
 
-	"github.com/rs/xid"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
@@ -45,10 +45,16 @@ type transaction struct {
 }
 
 // newTransaction creates a new transaction instance.
-func newTransaction(timeout time.Duration) *transaction {
+func newTransaction(timeout time.Duration, customID string) *transaction {
 	now := utils.GetCurrentTime()
+
+	var transactionID = customID
+	if transactionID == "" {
+		transactionID = uuid.New().String()
+	}
+
 	return &transaction{
-		id:      xid.New().String(),
+		id:      transactionID,
 		status:  statusPending,
 		created: now,
 		updated: now,
