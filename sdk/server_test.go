@@ -593,6 +593,9 @@ func TestServer_ReadCache(t *testing.T) {
 				"abcde": {o.MakeReading(3)},
 			},
 		},
+		deviceManager: &deviceManager{
+			devices: map[string]*Device{},
+		},
 	}
 	bounds := &synse.V3Bounds{}
 	mock := test.NewMockReadCachedStream()
@@ -621,6 +624,9 @@ func TestServer_ReadCache_error(t *testing.T) {
 				"67890": {o.MakeReading(2)},
 				"abcde": {o.MakeReading(3)},
 			},
+		},
+		deviceManager: &deviceManager{
+			devices: map[string]*Device{},
 		},
 	}
 	bounds := &synse.V3Bounds{}
