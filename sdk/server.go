@@ -460,7 +460,11 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 
 		// Encode and stream the readings back to the client.
 		for _, reading := range readings {
-			if err := stream.Send(reading.Encode()); err != nil {
+			r := reading.Encode()
+			r.Id = device.id
+			r.DeviceType = device.Type
+
+			if err := stream.Send(r); err != nil {
 				return err
 			}
 		}
@@ -486,8 +490,14 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 
 	// Encode and stream the readings back to the client.
 	for r := range readings {
+		device := server.deviceManager.GetDevice(r.Device)
 		for _, data := range r.Reading {
-			if err := stream.Send(data.Encode()); err != nil {
+			reading := data.Encode()
+			if device != nil {
+				reading.Id = device.id
+				reading.DeviceType = device.Type
+			}
+			if err := stream.Send(reading); err != nil {
 				return err
 			}
 		}
