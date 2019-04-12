@@ -1052,7 +1052,8 @@ func TestServer_Transaction_oneIDExists(t *testing.T) {
 		},
 	}
 
-	txn := s.stateManager.newTransaction(1 * time.Minute)
+	txn, err := s.stateManager.newTransaction(1*time.Minute, "")
+	assert.NoError(t, err)
 
 	req := &synse.V3TransactionSelector{Id: txn.id}
 	resp, err := s.Transaction(context.Background(), req)
@@ -1084,13 +1085,16 @@ func TestServer_Transactions(t *testing.T) {
 		},
 	}
 
-	txn1 := s.stateManager.newTransaction(1 * time.Minute)
-	txn2 := s.stateManager.newTransaction(1 * time.Minute)
-	txn3 := s.stateManager.newTransaction(1 * time.Minute)
+	txn1, err := s.stateManager.newTransaction(1*time.Minute, "")
+	assert.NoError(t, err)
+	txn2, err := s.stateManager.newTransaction(1*time.Minute, "")
+	assert.NoError(t, err)
+	txn3, err := s.stateManager.newTransaction(1*time.Minute, "")
+	assert.NoError(t, err)
 
 	req := &synse.Empty{}
 	mock := test.NewMockTransactionsStream()
-	err := s.Transactions(req, mock)
+	err = s.Transactions(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 3)
@@ -1106,13 +1110,16 @@ func TestServer_Transactions_error(t *testing.T) {
 		},
 	}
 
-	_ = s.stateManager.newTransaction(1 * time.Minute)
-	_ = s.stateManager.newTransaction(1 * time.Minute)
-	_ = s.stateManager.newTransaction(1 * time.Minute)
+	_, err := s.stateManager.newTransaction(1*time.Minute, "")
+	assert.NoError(t, err)
+	_, err = s.stateManager.newTransaction(1*time.Minute, "")
+	assert.NoError(t, err)
+	_, err = s.stateManager.newTransaction(1*time.Minute, "")
+	assert.NoError(t, err)
 
 	req := &synse.Empty{}
 	mock := &test.MockTransactionStreamErr{}
-	err := s.Transactions(req, mock)
+	err = s.Transactions(req, mock)
 
 	assert.Error(t, err)
 }

@@ -544,3 +544,51 @@ func TestStateManager_GetReadings_multipleReadings(t *testing.T) {
 	assert.Contains(t, readings, "2")
 	assert.Contains(t, readings, "3")
 }
+
+func TestStateManager_newTransaction(t *testing.T) {
+	// Create a new transaction with auto-generated ID.
+	sm := stateManager{
+		transactions: cache.New(1*time.Minute, 2*time.Minute),
+	}
+
+	txn, err := sm.newTransaction(1*time.Minute, "")
+	assert.NoError(t, err)
+	assert.Equal(t, "", txn.message)
+	assert.Equal(t, 1*time.Minute, txn.timeout)
+	assert.Equal(t, 1, sm.transactions.ItemCount())
+}
+
+func TestStateManager_newTransaction2(t *testing.T) {
+	// Create a new transaction with custom ID.
+	sm := stateManager{
+		transactions: cache.New(1*time.Minute, 2*time.Minute),
+	}
+
+	txn, err := sm.newTransaction(1*time.Minute, "abc123")
+	assert.NoError(t, err)
+	assert.Equal(t, "abc123", txn.id)
+	assert.Equal(t, "", txn.message)
+	assert.Equal(t, 1*time.Minute, txn.timeout)
+	assert.Equal(t, 1, sm.transactions.ItemCount())
+}
+
+func TestStateManager_newTransaction3(t *testing.T) {
+	// Create a new transaction with conflicting IDs
+	sm := stateManager{
+		transactions: cache.New(1*time.Minute, 2*time.Minute),
+	}
+
+	// Add the first transaction
+	txn, err := sm.newTransaction(1*time.Minute, "abc123")
+	assert.NoError(t, err)
+	assert.Equal(t, "abc123", txn.id)
+	assert.Equal(t, "", txn.message)
+	assert.Equal(t, 1*time.Minute, txn.timeout)
+	assert.Equal(t, 1, sm.transactions.ItemCount())
+
+	// Add the conflicting transaction.
+	txn, err = sm.newTransaction(1*time.Minute, "abc123")
+	assert.Error(t, err)
+	assert.Nil(t, txn)
+	assert.Equal(t, 1, sm.transactions.ItemCount())
+}
