@@ -422,7 +422,9 @@ func TestScheduler_scheduleWrites(t *testing.T) {
 	go s.scheduleWrites()
 	defer close(s.stop)
 
-	txn := s.stateManager.newTransaction(10 * time.Minute)
+	txn, err := s.stateManager.newTransaction(10*time.Minute, "")
+	assert.NoError(t, err)
+
 	wctx := &WriteContext{
 		txn,
 		"123",

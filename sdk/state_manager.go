@@ -255,10 +255,14 @@ func (manager *stateManager) GetReadings() map[string][]*output.Reading {
 }
 
 // newTransaction creates a new transaction and adds it to the transaction cache.
-func (manager *stateManager) newTransaction(timeout time.Duration) *transaction {
-	t := newTransaction(timeout)
+func (manager *stateManager) newTransaction(timeout time.Duration, customID string) (*transaction, error) {
+	t := newTransaction(timeout, customID)
+	_, exists := manager.transactions.Get(t.id)
+	if exists {
+		return nil, fmt.Errorf("transaction with ID %s already exists", t.id)
+	}
 	manager.transactions.Set(t.id, t, cache.DefaultExpiration)
-	return t
+	return t, nil
 }
 
 // getTransaction gets the transaction with the specified ID from the transaction cache.
