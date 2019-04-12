@@ -199,8 +199,11 @@ func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 	}
 
 	var response []*synse.V3WriteTransaction
-	for _, data := range data {
-		t := scheduler.stateManager.newTransaction(device.WriteTimeout)
+	for _, writeData := range data {
+		t, err := scheduler.stateManager.newTransaction(device.WriteTimeout, writeData.Transaction)
+		if err != nil {
+			return nil, err
+		}
 		t.setStatusPending()
 
 		log.WithFields(log.Fields{
@@ -212,7 +215,7 @@ func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 		response = append(response, &synse.V3WriteTransaction{
 			Id:      t.id,
 			Device:  device.GetID(),
-			Context: data,
+			Context: writeData,
 			Timeout: device.WriteTimeout.String(),
 		})
 
@@ -220,7 +223,7 @@ func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 		scheduler.writeChan <- &WriteContext{
 			transaction: t,
 			device:      device.id,
-			data:        data,
+			data:        writeData,
 		}
 	}
 	return response, nil
@@ -241,8 +244,11 @@ func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 	var txns []*transaction
 	var waitGroup sync.WaitGroup
 
-	for _, data := range data {
-		t := scheduler.stateManager.newTransaction(device.WriteTimeout)
+	for _, writeData := range data {
+		t, err := scheduler.stateManager.newTransaction(device.WriteTimeout, writeData.Transaction)
+		if err != nil {
+			return nil, err
+		}
 		t.setStatusPending()
 
 		log.WithFields(log.Fields{
@@ -256,7 +262,7 @@ func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 		scheduler.writeChan <- &WriteContext{
 			transaction: t,
 			device:      device.id,
-			data:        data,
+			data:        writeData,
 		}
 
 		waitGroup.Add(1)
