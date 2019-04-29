@@ -584,7 +584,6 @@ func (server *server) Transaction(ctx context.Context, request *synse.V3Transact
 	rlog.Info("[grpc] processing request")
 
 	t := server.stateManager.getTransaction(request.Id)
-	log.WithFields(log.Fields{"data": t.context}).Info("[TRANSACTION]: CONTEXT")
 	if t == nil {
 		rlog.Error("transaction not found")
 		return nil, TransactionNotFoundError
