@@ -41,6 +41,7 @@ type transaction struct {
 	updated string
 	message string
 	timeout time.Duration
+	context *synse.V3WriteData
 	done    chan struct{}
 }
 
@@ -80,6 +81,7 @@ func (t *transaction) encode() *synse.V3TransactionStatus {
 		Message: t.message,
 		Timeout: t.timeout.String(),
 		Status:  t.status,
+		Context: t.context,
 	}
 }
 
