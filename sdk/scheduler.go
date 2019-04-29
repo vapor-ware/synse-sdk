@@ -204,6 +204,7 @@ func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 		if err != nil {
 			return nil, err
 		}
+		t.context = writeData
 		t.setStatusPending()
 
 		log.WithFields(log.Fields{
@@ -249,6 +250,7 @@ func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 		if err != nil {
 			return nil, err
 		}
+		t.context = writeData
 		t.setStatusPending()
 
 		log.WithFields(log.Fields{
