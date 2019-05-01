@@ -27,6 +27,7 @@ pipeline {
             sh 'cd ${PROJ_PATH} && dep ensure'
             sh 'cd ${PROJ_PATH} && CGO_ENABLED=0 go test -coverprofile=coverage.txt -covermode=atomic ./sdk/...'
             sh 'cd ${PROJ_PATH} && curl -s https://codecov.io/bash | bash -s - -t ${CODECOV_TOKEN}'
+          }
         }
       }
     }
@@ -38,6 +39,7 @@ pipeline {
             // All the deps to build this project are provided by the runtime container
             // Skip the configuration management and let the pipeline assets do that for you.
             sh 'cd ${PROJ_PATH} && make build examples check-examples'
+          }
         }
       }
     }
