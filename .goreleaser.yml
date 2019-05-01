@@ -1,0 +1,25 @@
+# For details, see the GoReleaser documentation at http://goreleaser.com
+project_name: synse-sdk
+before:
+  hooks:
+    - go clean -v
+    - rm -rf dist
+archive:
+  format: tar.gz
+checksum:
+  name_template: 'checksums-{{ .Tag }}.txt'
+release:
+  github:
+    owner: vapor-ware
+    name: synse-sdk
+  draft: false
+  prerelease: auto
+  name_template: "{{ .Version }}"
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
