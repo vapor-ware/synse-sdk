@@ -68,7 +68,10 @@ func (conf *Plugin) Log() {
 type IDSettings struct {
 	// UseMachineID determines whether the machine ID should be used as a
 	// part of the namespace for the plugin ID.
-	UseMachineID bool `default:"true" yaml:"useMachineID,omitempty"`
+	//
+	// This is disabled by default as it does not work well in containers,
+	// the primary environment for plugins.
+	UseMachineID bool `default:"false" yaml:"useMachineID,omitempty"`
 
 	// UsePluginTag determines whether the plugin metadata tag should be used
 	// as a part of the namespace for the plugin ID.
