@@ -378,20 +378,25 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 	})
 	rlog.Info("[grpc] processing request")
 
-	var devices []*Device
-
-	// If there is no info specified for the selector, assume all devices in the system namespace.
-	// Otherwise, get the set of devices from the specified selector.
-	// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
-	//   we use the namespaces to limit access to devices, this will need to change, as we do not want
-	//   to expose all devices to everyone. We are not doing that currently, so it is not an issue
-	//   for the initial v3 release.
-	if request.Id == "" && len(request.Tags) == 0 {
-		//devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceDefault)
-		devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceSystem)
-	} else {
-		devices = server.deviceManager.GetDevices(DeviceSelectorToTags(request)...)
+	devices, err := server.deviceManager.GetDevices(request)
+	if err != nil {
+		return err
 	}
+
+	//var devices []*Device
+	//
+	//// If there is no info specified for the selector, assume all devices in the system namespace.
+	//// Otherwise, get the set of devices from the specified selector.
+	//// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
+	////   we use the namespaces to limit access to devices, this will need to change, as we do not want
+	////   to expose all devices to everyone. We are not doing that currently, so it is not an issue
+	////   for the initial v3 release.
+	//if request.Id == "" && len(request.Tags) == 0 {
+	//	//devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceDefault)
+	//	devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceSystem)
+	//} else {
+	//	devices = server.deviceManager.GetDevicesForTags(DeviceSelectorToTags(request)...)
+	//}
 	rlog.WithField("devices", len(devices)).Debug("[grpc] got devices")
 
 	// Encode and stream the devices back to the client.
@@ -433,26 +438,29 @@ func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*syns
 // It is the handler for the Synse gRPC V3Plugin service's `Read` RPC method.
 func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_ReadServer) error {
 	rlog := log.WithFields(log.Fields{
-		//"tags": request.Selector.Tags,
-		//"id":   request.Selector.Id,
 		"selector": request.Selector,
 		"route":    "READ",
 	})
 	rlog.Info("[grpc] processing request")
 
-	var devices []*Device
-
-	// If there is no info specified for the selector, assume all devices in the system namespace.
-	// Otherwise, get the set of devices from the specified selector.
-	// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
-	//   we use the namespaces to limit access to devices, this will need to change, as we do not want
-	//   to expose all devices to everyone. We are not doing that currently, so it is not an issue
-	//   for the initial v3 release.
-	if request.Selector == nil || (request.Selector.Id == "" && len(request.Selector.Tags) == 0) {
-		devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceSystem)
-	} else {
-		devices = server.deviceManager.GetDevices(DeviceSelectorToTags(request.Selector)...)
+	devices, err := server.deviceManager.GetDevices(request.Selector)
+	if err != nil {
+		return err
 	}
+
+	//var devices []*Device
+	//
+	//// If there is no info specified for the selector, assume all devices in the system namespace.
+	//// Otherwise, get the set of devices from the specified selector.
+	//// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
+	////   we use the namespaces to limit access to devices, this will need to change, as we do not want
+	////   to expose all devices to everyone. We are not doing that currently, so it is not an issue
+	////   for the initial v3 release.
+	//if request.Selector == nil || (request.Selector.Id == "" && len(request.Selector.Tags) == 0) {
+	//	devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceSystem)
+	//} else {
+	//	devices = server.deviceManager.GetDevicesForTags(DeviceSelectorToTags(request.Selector)...)
+	//}
 
 	for _, device := range devices {
 		rlog.WithField("device", device.id).Debug("[grpc] getting reading(s) for device")
@@ -516,16 +524,19 @@ func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3P
 		"route": "WRITE ASYNC",
 	}).Info("[grpc] processing request")
 
-	deviceID := DeviceSelectorToID(request.Selector)
-	if deviceID == nil {
+	if request.Selector.Id == "" {
 		return SelectorRequiresIDError
 	}
-	device := server.deviceManager.GetDevices(deviceID)
-	if len(device) != 1 {
+
+	devices, err := server.deviceManager.GetDevices(request.Selector)
+	if err != nil {
+		return err
+	}
+	if len(devices) != 1 {
 		return NoDeviceForSelectorError
 	}
 
-	transactions, err := server.scheduler.Write(device[0], request.Data)
+	transactions, err := server.scheduler.Write(devices[0], request.Data)
 	if err != nil {
 		return err
 	}
@@ -549,16 +560,19 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 		"route": "WRITE SYNC",
 	}).Info("[grpc] processing request")
 
-	deviceID := DeviceSelectorToID(request.Selector)
-	if deviceID == nil {
+	if request.Selector.Id == "" {
 		return SelectorRequiresIDError
 	}
-	device := server.deviceManager.GetDevices(deviceID)
-	if len(device) != 1 {
+
+	devices, err := server.deviceManager.GetDevices(request.Selector)
+	if err != nil {
+		return err
+	}
+	if len(devices) != 1 {
 		return NoDeviceForSelectorError
 	}
 
-	transactions, err := server.scheduler.WriteAndWait(device[0], request.Data)
+	transactions, err := server.scheduler.WriteAndWait(devices[0], request.Data)
 	if err != nil {
 		return err
 	}
