@@ -43,10 +43,10 @@ pipeline {
             sh 'cd ${PROJ_PATH} && go build -v ./sdk'
 
             // Build the SDK example plugins
-            sh 'cd ${PROJ_PATH} && for d in examples/*/; do cd $d; go build -v -o plugin ; cd ../.. ; done'
+            sh 'cd ${PROJ_PATH} && for d in examples/*/; do cd $d; if [[ "$$d" != "examples/c_plugin/" ]]; then go build -v -o plugin; fi ; cd ../.. ; done'
 
             // Check that the example plugins dry-run successfully
-            sh 'cd ${PROJ_PATH} && for d in examples/*/; do cd $d; if [ ! -f "plugin" ]; then echo "plugin binary not found"; fi; if ! ./plugin --dry-run; then exit 1; fi; cd ../.. ; done'
+            sh 'cd ${PROJ_PATH} && for d in examples/*/; do if [[ "$$d" == "examples/c_plugin/" ]]; then continue; fi; cd $d; if [ ! -f "plugin" ]; then echo "plugin binary not found"; fi; if ! ./plugin --dry-run; then exit 1; fi; cd ../.. ; done'
           }
         }
       }
