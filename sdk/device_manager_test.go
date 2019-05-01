@@ -27,6 +27,7 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 func Test_newDeviceManager_nil(t *testing.T) {
@@ -306,7 +307,173 @@ func TestDeviceManager_GetDevice_exists(t *testing.T) {
 	assert.Equal(t, "123", device.id)
 }
 
-func TestDeviceManager_GetDevices(t *testing.T) {
+func TestDeviceManager_GetDevices_nilSelector(t *testing.T) {
+	m := deviceManager{}
+
+	devices, err := m.GetDevices(nil)
+	assert.Nil(t, devices)
+	assert.Error(t, err)
+}
+
+func TestDeviceManager_GetDevices_emptySelectorFields(t *testing.T) {
+	m := deviceManager{
+		tagCache: &TagCache{
+			cache: map[string]map[string]map[string][]*Device{
+				"system": {
+					"": {"": {&Device{id: "123"}}},
+				},
+				"bar": {
+					"": {"": {&Device{id: "456"}}},
+				},
+			},
+		},
+	}
+
+	devices, err := m.GetDevices(&synse.V3DeviceSelector{})
+	assert.NoError(t, err)
+	assert.Len(t, devices, 1)
+}
+
+func TestDeviceManager_GetDevices_WithID(t *testing.T) {
+	m := deviceManager{
+		tagCache: &TagCache{
+			cache: map[string]map[string]map[string][]*Device{
+				"system": {
+					"": {"": {&Device{id: "123"}}},
+				},
+				"bar": {
+					"": {"": {&Device{id: "456"}}},
+				},
+			},
+		},
+		devices: map[string]*Device{
+			"123": {id: "123", Type: "temperature"},
+			"456": {id: "456", Type: "led"},
+		},
+	}
+
+	devices, err := m.GetDevices(&synse.V3DeviceSelector{
+		Id: "123",
+	})
+	assert.NoError(t, err)
+	assert.Len(t, devices, 1)
+	assert.Equal(t, "123", devices[0].id)
+}
+
+func TestDeviceManager_GetDevices_WithIDAndTags(t *testing.T) {
+	m := deviceManager{
+		tagCache: &TagCache{
+			cache: map[string]map[string]map[string][]*Device{
+				"system": {
+					"": {"": {&Device{id: "123"}}},
+				},
+				"bar": {
+					"": {"": {&Device{id: "456"}}},
+				},
+			},
+		},
+		devices: map[string]*Device{
+			"123": {id: "123", Type: "temperature"},
+			"456": {id: "456", Type: "led"},
+		},
+	}
+
+	devices, err := m.GetDevices(&synse.V3DeviceSelector{
+		Id: "123",
+		Tags: []*synse.V3Tag{
+			{Namespace: "default", Label: "foo"},
+		},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, devices, 1)
+	assert.Equal(t, "123", devices[0].id)
+}
+
+func TestDeviceManager_GetDevices_WithAlias(t *testing.T) {
+	m := deviceManager{
+		tagCache: &TagCache{
+			cache: map[string]map[string]map[string][]*Device{
+				"system": {
+					"": {"": {&Device{id: "123"}}},
+				},
+				"bar": {
+					"": {"": {&Device{id: "456"}}},
+				},
+			},
+		},
+		devices: map[string]*Device{
+			"123": {id: "123", Type: "temperature"},
+			"456": {id: "456", Type: "led"},
+		},
+		aliasCache: &AliasCache{
+			cache: map[string]*Device{
+				"device-alias-1": {id: "123", Type: "temperature"},
+			},
+		},
+	}
+
+	devices, err := m.GetDevices(&synse.V3DeviceSelector{
+		Id: "device-alias-1",
+	})
+	assert.NoError(t, err)
+	assert.Len(t, devices, 1)
+	assert.Equal(t, "123", devices[0].id)
+}
+
+func TestDeviceManager_GetDevices_WithAliasNoMatch(t *testing.T) {
+	m := deviceManager{
+		tagCache: &TagCache{
+			cache: map[string]map[string]map[string][]*Device{
+				"system": {
+					"": {"": {&Device{id: "123"}}},
+				},
+				"bar": {
+					"": {"": {&Device{id: "456"}}},
+				},
+			},
+		},
+		devices: map[string]*Device{
+			"123": {id: "123", Type: "temperature"},
+			"456": {id: "456", Type: "led"},
+		},
+		aliasCache: &AliasCache{
+			cache: map[string]*Device{
+				"device-alias-1": {id: "123", Type: "temperature"},
+			},
+		},
+	}
+
+	devices, err := m.GetDevices(&synse.V3DeviceSelector{
+		Id: "device-alias-unknown",
+	})
+	assert.Error(t, err)
+	assert.Len(t, devices, 0)
+}
+
+func TestDeviceManager_GetDevices_WithTags(t *testing.T) {
+	m := deviceManager{
+		tagCache: &TagCache{
+			cache: map[string]map[string]map[string][]*Device{
+				"system": {
+					"": {"test-1": {&Device{id: "123"}}},
+				},
+				"bar": {
+					"": {"test-2": {&Device{id: "456"}}},
+				},
+			},
+		},
+	}
+
+	devices, err := m.GetDevices(&synse.V3DeviceSelector{
+		Tags: []*synse.V3Tag{
+			{Namespace: "bar", Label: "test-2"},
+		},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, devices, 1)
+}
+
+func TestDeviceManager_GetDevicesForTags(t *testing.T) {
 	m := deviceManager{
 		tagCache: &TagCache{
 			cache: map[string]map[string]map[string][]*Device{
@@ -321,13 +488,13 @@ func TestDeviceManager_GetDevices(t *testing.T) {
 		},
 	}
 
-	devices := m.GetDevices(&Tag{Namespace: "foo", Label: "c"})
+	devices := m.GetDevicesForTags(&Tag{Namespace: "foo", Label: "c"})
 	assert.Len(t, devices, 2)
 
-	devices = m.GetDevices(&Tag{Namespace: "bar", Label: "b"})
+	devices = m.GetDevicesForTags(&Tag{Namespace: "bar", Label: "b"})
 	assert.Len(t, devices, 1)
 
-	devices = m.GetDevices(
+	devices = m.GetDevicesForTags(
 		&Tag{Namespace: "foo", Label: "c"},
 		&Tag{Namespace: "bar", Annotation: "baz", Label: "a"},
 	)
@@ -617,9 +784,35 @@ func TestDeviceManager_AddDevice_idExists(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDeviceManager_AddDevice_aliasExists(t *testing.T) {
+	m := deviceManager{
+		handlers: map[string]*DeviceHandler{
+			"foo": {Name: "foo"},
+		},
+		devices: map[string]*Device{
+			"1234": {id: "1234"},
+		},
+		aliasCache: &AliasCache{
+			cache: map[string]*Device{
+				"test-alias-1": {id: "1234"},
+			},
+		},
+		pluginHandlers: NewDefaultPluginHandlers(),
+	}
+	device := Device{
+		Handler: "foo",
+		id:      "5678",
+		Alias:   "test-alias-1",
+	}
+
+	err := m.AddDevice(&device)
+	assert.Error(t, err)
+}
+
 func TestDeviceManager_AddDevice(t *testing.T) {
 	handler := DeviceHandler{Name: "foo"}
 	m := deviceManager{
+		aliasCache:     NewAliasCache(),
 		tagCache:       NewTagCache(),
 		id:             &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))},
 		pluginHandlers: NewDefaultPluginHandlers(),
@@ -638,10 +831,12 @@ func TestDeviceManager_AddDevice(t *testing.T) {
 		Tags: []*Tag{
 			{Namespace: "default", Label: "foo"},
 		},
+		Alias: "example-alias-1",
 	}
 
 	// Before we add the device, make sure the state is empty.
 	assert.Empty(t, m.tagCache.cache)
+	assert.Empty(t, m.aliasCache.cache)
 	assert.Empty(t, m.devices)
 
 	err := m.AddDevice(&device)
@@ -657,6 +852,9 @@ func TestDeviceManager_AddDevice(t *testing.T) {
 	assert.Len(t, m.tagCache.cache, 2)
 	assert.Contains(t, m.tagCache.cache, "default")
 	assert.Contains(t, m.tagCache.cache, "system")
+
+	assert.Len(t, m.aliasCache.cache, 1)
+	assert.Contains(t, m.aliasCache.cache, "example-alias-1")
 
 	// Make sure the device was updated with its pertinent fields.
 	assert.Equal(t, &handler, device.handler)

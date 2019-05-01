@@ -325,6 +325,7 @@ func TestServer_Devices(t *testing.T) {
 					"other":  {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readings:     map[string][]*output.Reading{},
@@ -367,6 +368,7 @@ func TestServer_Devices2(t *testing.T) {
 					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readings: map[string][]*output.Reading{
@@ -389,8 +391,8 @@ func TestServer_Devices2(t *testing.T) {
 	assert.Contains(t, mock.Results, "67890")
 }
 
-func TestServer_Devices3(t *testing.T) {
-	// Get devices when there is a tag selector set, but no match
+func TestServer_Devices3A(t *testing.T) {
+	// Get devices when there is an ID tag selector set, but no match
 	handler := &DeviceHandler{Name: "foo"}
 	s := server{
 		deviceManager: &deviceManager{
@@ -400,6 +402,7 @@ func TestServer_Devices3(t *testing.T) {
 					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readings:     map[string][]*output.Reading{},
@@ -410,6 +413,37 @@ func TestServer_Devices3(t *testing.T) {
 		},
 	}
 	req := &synse.V3DeviceSelector{Id: "abcdef"}
+	mock := test.NewMockDevicesStream()
+	err := s.Devices(req, mock)
+
+	assert.Error(t, err)
+	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_Devices3B(t *testing.T) {
+	// Get devices when there is a tag selector set, but no match
+	handler := &DeviceHandler{Name: "foo"}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", handler: handler}}}},
+					"other":   {"": {"bar": {&Device{id: "67890", handler: handler}}}},
+				},
+			},
+			aliasCache: NewAliasCache(),
+		},
+		stateManager: &stateManager{
+			readings:     map[string][]*output.Reading{},
+			readingsLock: &sync.RWMutex{},
+		},
+		id: &pluginID{
+			uuid: uuid.New(),
+		},
+	}
+	req := &synse.V3DeviceSelector{Tags: []*synse.V3Tag{
+		{Namespace: "default", Label: "unknown"},
+	}}
 	mock := test.NewMockDevicesStream()
 	err := s.Devices(req, mock)
 
@@ -447,6 +481,7 @@ func TestServer_Devices4(t *testing.T) {
 					},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readings: map[string][]*output.Reading{
@@ -507,6 +542,7 @@ func TestServer_Devices5(t *testing.T) {
 					"default": {"": {"foo": {&Device{id: "12345", handler: handler1}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readings: map[string][]*output.Reading{
@@ -560,6 +596,7 @@ func TestServer_Devices6(t *testing.T) {
 					"default": {"": {"foo": {&Device{id: "12345", handler: handler1}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readings: map[string][]*output.Reading{
@@ -615,6 +652,7 @@ func TestServer_Devices7(t *testing.T) {
 					"default": {"": {"foo": {&Device{id: "12345", handler: handler1}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readings: map[string][]*output.Reading{
@@ -713,6 +751,7 @@ func TestServer_Read(t *testing.T) {
 					"other":  {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readingsLock: &sync.RWMutex{},
@@ -749,6 +788,7 @@ func TestServer_Read2(t *testing.T) {
 					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readingsLock: &sync.RWMutex{},
@@ -789,6 +829,7 @@ func TestServer_Read_error(t *testing.T) {
 					"other":   {"": {"bar": {&Device{id: "67890", Type: "bar"}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		stateManager: &stateManager{
 			readingsLock: &sync.RWMutex{},
@@ -883,11 +924,15 @@ func TestServer_WriteAsync(t *testing.T) {
 	}
 	s := server{
 		deviceManager: &deviceManager{
-			tagCache: &TagCache{
-				cache: map[string]map[string]map[string][]*Device{
-					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
-				},
+			//tagCache: &TagCache{
+			//	cache: map[string]map[string]map[string][]*Device{
+			//		"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+			//	},
+			//},
+			devices: map[string]*Device{
+				"1234": {id: "1234", handler: &handler},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -925,6 +970,7 @@ func TestServer_WriteAsync_noSelector(t *testing.T) {
 					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -961,6 +1007,7 @@ func TestServer_WriteAsync_noDevice(t *testing.T) {
 					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -995,6 +1042,7 @@ func TestServer_WriteAsync_failedWrite(t *testing.T) {
 					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -1032,6 +1080,7 @@ func TestServer_WriteAsync_error(t *testing.T) {
 					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -1063,11 +1112,15 @@ func TestServer_WriteSync(t *testing.T) {
 	}
 	s := server{
 		deviceManager: &deviceManager{
-			tagCache: &TagCache{
-				cache: map[string]map[string]map[string][]*Device{
-					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
-				},
+			//tagCache: &TagCache{
+			//	cache: map[string]map[string]map[string][]*Device{
+			//		"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
+			//	},
+			//},
+			devices: map[string]*Device{
+				"1234": {id: "1234", handler: &handler},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -1116,6 +1169,7 @@ func TestServer_WriteSync_noSelector(t *testing.T) {
 					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -1163,6 +1217,7 @@ func TestServer_WriteSync_noDevice(t *testing.T) {
 					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -1208,6 +1263,7 @@ func TestServer_WriteSync_failedWrite(t *testing.T) {
 					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
@@ -1256,6 +1312,7 @@ func TestServer_WriteSync_error(t *testing.T) {
 					"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
 				},
 			},
+			aliasCache: NewAliasCache(),
 		},
 		scheduler: &scheduler{
 			writeChan: make(chan *WriteContext, 2),
