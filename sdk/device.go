@@ -328,6 +328,21 @@ func (device *Device) Write(data *WriteData) error {
 	if !device.IsWritable() {
 		return &errors.UnsupportedCommandError{}
 	}
+
+	if len(device.handler.Actions) > 0 {
+		hasAction := false
+		for _, action := range device.handler.Actions {
+			if data.Action == action {
+				hasAction = true
+			}
+		}
+		if !hasAction {
+			return errors.InvalidArgumentErr(
+				"unsupported write action '%v' for device %s", data.Action, device.id,
+			)
+		}
+	}
+
 	return device.handler.Write(device, data)
 }
 
@@ -356,6 +371,12 @@ func (device *Device) encode() *synse.V3Device {
 		tags[i] = t.Encode()
 	}
 
+	// If the device is writable, include the pre-defined write actions.
+	var actions []string
+	if device.IsWritable() {
+		actions = device.handler.Actions
+	}
+
 	// outputs are augmented into this in server.go, prior to it being returned
 	// as a gRPC response.
 	return &synse.V3Device{
@@ -369,7 +390,7 @@ func (device *Device) encode() *synse.V3Device {
 		Capabilities: &synse.V3DeviceCapability{
 			Mode: device.handler.GetCapabilitiesMode(),
 			Write: &synse.V3WriteCapability{
-				Actions: device.handler.Actions,
+				Actions: actions,
 			},
 		},
 	}
