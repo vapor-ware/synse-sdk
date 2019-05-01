@@ -25,6 +25,7 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
+	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
 const (
@@ -72,6 +73,7 @@ type deviceManager struct {
 	policies       *policy.Policies
 	dynamicConfig  *config.DynamicRegistrationSettings
 	tagCache       *TagCache
+	aliasCache     *AliasCache
 	setupActions   []*DeviceAction
 	devices        map[string]*Device
 	handlers       map[string]*DeviceHandler
@@ -90,6 +92,7 @@ func newDeviceManager(plugin *Plugin) *deviceManager {
 		dynamicConfig:  plugin.config.DynamicRegistration,
 		policies:       plugin.policies,
 		tagCache:       NewTagCache(),
+		aliasCache:     NewAliasCache(),
 		devices:        make(map[string]*Device),
 		handlers:       make(map[string]*DeviceHandler),
 	}
@@ -193,6 +196,7 @@ func (manager *deviceManager) Start(plugin *Plugin) error {
 func (manager *deviceManager) GetDevice(id string) *Device {
 	device, exists := manager.devices[id]
 	if !exists {
+
 		log.WithFields(log.Fields{
 			"id": id,
 		}).Warn("[device manager] device does not exist")
@@ -200,8 +204,54 @@ func (manager *deviceManager) GetDevice(id string) *Device {
 	return device
 }
 
-// GetDevices gets all devices which match the given set of tags.
-func (manager *deviceManager) GetDevices(tags ...*Tag) []*Device {
+// GetDevices get all devices which match the given selector.
+func (manager *deviceManager) GetDevices(selector *synse.V3DeviceSelector) ([]*Device, error) {
+	if selector == nil {
+		return nil, errors.New("cannot get devices for nil selector")
+	}
+
+	// If there is no info specified for the selector, assume all devices in the system namespace.
+	// Otherwise, get the set of devices from the specified selector.
+	// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
+	//   we use the namespaces to limit access to devices, this will need to change, as we do not want
+	//   to expose all devices to everyone. We are not doing that currently, so it is not an issue
+	//   for the initial v3 release.
+	if selector.Id == "" && len(selector.Tags) == 0 {
+		//return manager.GetDevicesByTagNamespace(TagNamespaceDefault), nil
+		return manager.GetDevicesByTagNamespace(TagNamespaceSystem), nil
+	}
+
+	// If there is an ID specified, use it, ignore any tags which may also be included.
+	// The ID field can hold either the full ID of the device (e.g. generated UUID), or
+	// an alias of the device. UUID lookup happens first, then alias lookup.
+	if selector.Id != "" {
+		if len(selector.Tags) > 0 {
+			log.WithFields(log.Fields{
+				"id":   selector.Id,
+				"tags": selector.Tags,
+			}).Warn("[device manager] device selector specifies id and tags; only using id (tags ignored)")
+		}
+		device := manager.GetDevice(selector.Id)
+		if device == nil {
+			device = manager.aliasCache.Get(selector.Id)
+			if device == nil {
+				log.WithFields(log.Fields{
+					"selector": selector,
+				}).Error("[device manager] no device found for specified selector")
+				return nil, sdkError.NotFoundErr("no device found for specified selector")
+			}
+		}
+		return []*Device{device}, nil
+	}
+
+	// Otherwise, get the device(s) via the selector tags.
+	return manager.tagCache.GetDevicesFromTags(
+		DeviceSelectorToTags(selector)...,
+	), nil
+}
+
+// GetDevicesForTags gets all devices which match the given set of tags.
+func (manager *deviceManager) GetDevicesForTags(tags ...*Tag) []*Device {
 	return manager.tagCache.GetDevicesFromTags(tags...)
 }
 
@@ -315,6 +365,13 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 	// Check if the Device ID collides with an existing device.
 	if _, exists := manager.devices[device.id]; exists {
 		return DeviceIdExistsError
+	}
+
+	// Add the device alias to the lookup cache, if it has an associated alias.
+	if device.Alias != "" {
+		if err := manager.aliasCache.Add(device.Alias, device); err != nil {
+			return err
+		}
 	}
 
 	// Update the device with the SDK auto-generated tags.
