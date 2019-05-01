@@ -38,7 +38,15 @@ pipeline {
           docker.image('vaporio/jenkins-agent-golang:latest').inside('-v $WORKSPACE:$PROJ_PATH') {
             // All the deps to build this project are provided by the runtime container
             // Skip the configuration management and let the pipeline assets do that for you.
-            sh 'cd ${PROJ_PATH} && make build examples check-examples'
+
+            // Build the SDK project
+            sh 'cd ${PROJ_PATH} && go build -v ./sdk'
+
+            // Build the SDK example plugins
+            sh 'cd ${PROJ_PATH} && for d in examples/*/; do cd $d; go build -v -o plugin ; cd ../.. ; done'
+
+            // Check that the example plugins dry-run successfully
+            sh 'cd ${PROJ_PATH} && for d in examples/*/; do cd $d; if [ ! -f "plugin" ]; then echo "plugin binary not found"; fi; if ! ./plugin --dry-run; then exit 1; fi; cd ../.. ; done'
           }
         }
       }
