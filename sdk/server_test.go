@@ -341,6 +341,15 @@ func TestServer_Devices(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 1)
 	assert.Contains(t, mock.Results, "12345")
+
+	// The device handler is not readable or writable, ensure the capabilities
+	// reflect that.
+	dev := mock.Results["12345"]
+
+	assert.NotNil(t, dev.Capabilities)
+	assert.NotNil(t, dev.Capabilities.Write)
+	assert.Equal(t, "", dev.Capabilities.Mode)
+	assert.Empty(t, dev.Capabilities.Write.Actions)
 }
 
 func TestServer_Devices2(t *testing.T) {
@@ -406,6 +415,236 @@ func TestServer_Devices3(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 0)
+}
+
+func TestServer_Devices4(t *testing.T) {
+	// Get devices with different handlers, ensure the capabilities are correct.
+	handler1 := &DeviceHandler{
+		Name: "foo",
+		Read: func(device *Device) (readings []*output.Reading, e error) {
+			return nil, nil
+		},
+	}
+	handler2 := &DeviceHandler{
+		Name: "bar",
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+	o := output.Output{
+		Name: "test-output-1",
+		Type: "test",
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"system": {
+						"": {
+							"foo": {&Device{id: "12345", handler: handler1}},
+							"bar": {&Device{id: "67890", handler: handler2}},
+						},
+					},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readings: map[string][]*output.Reading{
+				"67890": {o.MakeReading(1)},
+			},
+			readingsLock: &sync.RWMutex{},
+		},
+		id: &pluginID{
+			uuid: uuid.New(),
+		},
+	}
+
+	req := &synse.V3DeviceSelector{}
+	mock := test.NewMockDevicesStream()
+	err := s.Devices(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 2)
+	assert.Contains(t, mock.Results, "12345")
+	assert.Contains(t, mock.Results, "67890")
+
+	// The device handler is read-only, ensure the capabilities
+	// reflect that.
+	dev1 := mock.Results["12345"]
+
+	assert.NotNil(t, dev1.Capabilities)
+	assert.NotNil(t, dev1.Capabilities.Write)
+	assert.Equal(t, "r", dev1.Capabilities.Mode)
+	assert.Empty(t, dev1.Capabilities.Write.Actions)
+
+	// The device handler is write-only, ensure the capabilities
+	// reflect that.
+	dev2 := mock.Results["67890"]
+
+	assert.NotNil(t, dev2.Capabilities)
+	assert.NotNil(t, dev2.Capabilities.Write)
+	assert.Equal(t, "w", dev2.Capabilities.Mode)
+	assert.Empty(t, dev2.Capabilities.Write.Actions)
+}
+
+func TestServer_Devices5(t *testing.T) {
+	// Verify that the device info is correct for a read-only device with actions.
+	handler1 := &DeviceHandler{
+		Name: "foo",
+		Read: func(device *Device) (readings []*output.Reading, e error) {
+			return nil, nil
+		},
+		Actions: []string{"action-1", "action-2"},
+	}
+	o := output.Output{
+		Name: "test-output-1",
+		Type: "test",
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", handler: handler1}}}},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readings: map[string][]*output.Reading{
+				"12345": {o.MakeReading(1)},
+			},
+			readingsLock: &sync.RWMutex{},
+		},
+		id: &pluginID{
+			uuid: uuid.New(),
+		},
+	}
+
+	req := &synse.V3DeviceSelector{Tags: []*synse.V3Tag{
+		{Namespace: "default", Label: "foo"},
+	}}
+	mock := test.NewMockDevicesStream()
+	err := s.Devices(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	assert.Contains(t, mock.Results, "12345")
+
+	// The device handler is read-only, ensure the capabilities
+	// reflect that.
+	dev1 := mock.Results["12345"]
+
+	assert.NotNil(t, dev1.Capabilities)
+	assert.NotNil(t, dev1.Capabilities.Write)
+	assert.Equal(t, "r", dev1.Capabilities.Mode)
+	// This should be empty, as the device must be writable for actions to be provided.
+	assert.Empty(t, []string{}, dev1.Capabilities.Write.Actions)
+}
+
+func TestServer_Devices6(t *testing.T) {
+	// Verify that the device info is correct for a write-only device with actions.
+	handler1 := &DeviceHandler{
+		Name: "foo",
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+		Actions: []string{"action-1", "action-2"},
+	}
+	o := output.Output{
+		Name: "test-output-1",
+		Type: "test",
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", handler: handler1}}}},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readings: map[string][]*output.Reading{
+				"12345": {o.MakeReading(1)},
+			},
+			readingsLock: &sync.RWMutex{},
+		},
+		id: &pluginID{
+			uuid: uuid.New(),
+		},
+	}
+
+	req := &synse.V3DeviceSelector{Tags: []*synse.V3Tag{
+		{Namespace: "default", Label: "foo"},
+	}}
+	mock := test.NewMockDevicesStream()
+	err := s.Devices(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	assert.Contains(t, mock.Results, "12345")
+
+	// The device handler is read-only, ensure the capabilities
+	// reflect that.
+	dev1 := mock.Results["12345"]
+
+	assert.NotNil(t, dev1.Capabilities)
+	assert.NotNil(t, dev1.Capabilities.Write)
+	assert.Equal(t, "w", dev1.Capabilities.Mode)
+	assert.Equal(t, []string{"action-1", "action-2"}, dev1.Capabilities.Write.Actions)
+}
+
+func TestServer_Devices7(t *testing.T) {
+	// Verify that the device info is correct for a read-write device with actions.
+	handler1 := &DeviceHandler{
+		Name: "foo",
+		Read: func(device *Device) (readings []*output.Reading, e error) {
+			return nil, nil
+		},
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+		Actions: []string{"action-1", "action-2"},
+	}
+	o := output.Output{
+		Name: "test-output-1",
+		Type: "test",
+	}
+	s := server{
+		deviceManager: &deviceManager{
+			tagCache: &TagCache{
+				cache: map[string]map[string]map[string][]*Device{
+					"default": {"": {"foo": {&Device{id: "12345", handler: handler1}}}},
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readings: map[string][]*output.Reading{
+				"12345": {o.MakeReading(1)},
+			},
+			readingsLock: &sync.RWMutex{},
+		},
+		id: &pluginID{
+			uuid: uuid.New(),
+		},
+	}
+
+	req := &synse.V3DeviceSelector{Tags: []*synse.V3Tag{
+		{Namespace: "default", Label: "foo"},
+	}}
+	mock := test.NewMockDevicesStream()
+	err := s.Devices(req, mock)
+
+	assert.NoError(t, err)
+	assert.Len(t, mock.Results, 1)
+	assert.Contains(t, mock.Results, "12345")
+
+	// The device handler is read-only, ensure the capabilities
+	// reflect that.
+	dev1 := mock.Results["12345"]
+
+	assert.NotNil(t, dev1.Capabilities)
+	assert.NotNil(t, dev1.Capabilities.Write)
+	assert.Equal(t, "rw", dev1.Capabilities.Mode)
+	assert.Equal(t, []string{"action-1", "action-2"}, dev1.Capabilities.Write.Actions)
 }
 
 func TestServer_Devices_error(t *testing.T) {

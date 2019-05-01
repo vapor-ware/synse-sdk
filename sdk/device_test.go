@@ -676,6 +676,36 @@ func TestDevice_Write_notWritable(t *testing.T) {
 	assert.IsType(t, &errors.UnsupportedCommandError{}, err)
 }
 
+func TestDevice_Write_hasMatchingAction(t *testing.T) {
+	device := Device{
+		id: "123",
+		handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+			Actions: []string{"test-action"},
+		},
+	}
+
+	err := device.Write(&WriteData{Action: "test-action"})
+	assert.NoError(t, err)
+}
+
+func TestDevice_Write_hasNonMatchingAction(t *testing.T) {
+	device := Device{
+		id: "123",
+		handler: &DeviceHandler{
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+			Actions: []string{"test-action"},
+		},
+	}
+
+	err := device.Write(&WriteData{Action: "unsupported-action"})
+	assert.Error(t, err)
+}
+
 func TestDevice_Write_ok(t *testing.T) {
 	device := Device{
 		handler: &DeviceHandler{
@@ -801,6 +831,85 @@ func TestDevice_encode(t *testing.T) {
 	assert.Equal(t, map[string]string{"abc": "123"}, encoded.Metadata)
 	assert.Equal(t, "r", encoded.Capabilities.Mode)
 	assert.Nil(t, encoded.Capabilities.Write.Actions)
+	assert.Equal(t, 1, len(encoded.Tags))
+	assert.Equal(t, 0, len(encoded.Outputs))
+	assert.Equal(t, int32(1), encoded.SortIndex)
+}
+
+func TestDevice_encode_2(t *testing.T) {
+	// Encode when there are handler actions, but no Write handler
+	device := Device{
+		Type: "foo",
+		Metadata: map[string]string{
+			"abc": "123",
+		},
+		Info:    "test",
+		Handler: "vapor",
+		Tags: []*Tag{
+			{Namespace: "1", Annotation: "2", Label: "3"},
+		},
+		Alias:     "vaportest",
+		SortIndex: 1,
+		id:        "1234",
+		handler: &DeviceHandler{
+			Name: "vapor",
+			Read: func(device *Device) (readings []*output.Reading, e error) {
+				return nil, nil
+			},
+			Actions: []string{"action-1", "action-2"},
+		},
+	}
+
+	encoded := device.encode()
+	assert.NotEmpty(t, encoded.Timestamp)
+	assert.Equal(t, "1234", encoded.Id)
+	assert.Equal(t, "foo", encoded.Type)
+	assert.Equal(t, "", encoded.Plugin)
+	assert.Equal(t, "test", encoded.Info)
+	assert.Equal(t, map[string]string{"abc": "123"}, encoded.Metadata)
+	assert.Equal(t, "r", encoded.Capabilities.Mode)
+	assert.Nil(t, encoded.Capabilities.Write.Actions)
+	assert.Equal(t, 1, len(encoded.Tags))
+	assert.Equal(t, 0, len(encoded.Outputs))
+	assert.Equal(t, int32(1), encoded.SortIndex)
+}
+
+func TestDevice_encode_3(t *testing.T) {
+	// Encode when there are handler actions and a Write handler is specified
+	device := Device{
+		Type: "foo",
+		Metadata: map[string]string{
+			"abc": "123",
+		},
+		Info:    "test",
+		Handler: "vapor",
+		Tags: []*Tag{
+			{Namespace: "1", Annotation: "2", Label: "3"},
+		},
+		Alias:     "vaportest",
+		SortIndex: 1,
+		id:        "1234",
+		handler: &DeviceHandler{
+			Name: "vapor",
+			Read: func(device *Device) (readings []*output.Reading, e error) {
+				return nil, nil
+			},
+			Write: func(device *Device, data *WriteData) error {
+				return nil
+			},
+			Actions: []string{"action-1", "action-2"},
+		},
+	}
+
+	encoded := device.encode()
+	assert.NotEmpty(t, encoded.Timestamp)
+	assert.Equal(t, "1234", encoded.Id)
+	assert.Equal(t, "foo", encoded.Type)
+	assert.Equal(t, "", encoded.Plugin)
+	assert.Equal(t, "test", encoded.Info)
+	assert.Equal(t, map[string]string{"abc": "123"}, encoded.Metadata)
+	assert.Equal(t, "rw", encoded.Capabilities.Mode)
+	assert.Equal(t, []string{"action-1", "action-2"}, encoded.Capabilities.Write.Actions)
 	assert.Equal(t, 1, len(encoded.Tags))
 	assert.Equal(t, 0, len(encoded.Outputs))
 	assert.Equal(t, int32(1), encoded.SortIndex)
