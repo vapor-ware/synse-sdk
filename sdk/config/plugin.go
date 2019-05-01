@@ -168,7 +168,11 @@ type ReadSettings struct {
 	// An interval may be useful for tuning the performance of a plugin. In
 	// particular, it can be useful for serial protocols to introduce a
 	// bit of a delay so the serial bus is not constantly hammered.
-	Interval time.Duration `default:"0s" yaml:"interval,omitempty"`
+	//
+	// It is not recommended to set the interval to 0. This would cause
+	// reads to loop unbounded, causing the plugin to consume excessive
+	// CPU resources.
+	Interval time.Duration `default:"1s" yaml:"interval,omitempty"`
 
 	// Delay specifies a plugin-global delay between successive reads.
 	// By default, no delay is specified.
@@ -212,7 +216,11 @@ type WriteSettings struct {
 	// An interval may be useful for tuning the performance of a plugin. In
 	// particular, it can be useful for serial protocols to introduce a
 	// bit of a delay so the serial bus is not constantly hammered.
-	Interval time.Duration `default:"0s" yaml:"interval,omitempty"`
+	//
+	// It is not recommended to set the interval to 0. This would cause
+	// writes to loop unbounded, causing the plugin to consume excessive
+	// CPU resources.
+	Interval time.Duration `default:"1s" yaml:"interval,omitempty"`
 
 	// Delay specifies a plugin-global delay between successive writes.
 	// By default, no delay is specified.
