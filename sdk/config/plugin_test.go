@@ -47,6 +47,16 @@ func TestIDSettings_Log(t *testing.T) {
 	c.Log()
 }
 
+func TestMetricsSettings_Log_nil(t *testing.T) {
+	var c *MetricsSettings
+	c.Log()
+}
+
+func TestMetricsSettings_Log(t *testing.T) {
+	c := MetricsSettings{}
+	c.Log()
+}
+
 func TestPluginSettings_Log_nil(t *testing.T) {
 	var c *PluginSettings
 	c.Log()
@@ -141,6 +151,7 @@ func TestDynamicRegistrationSettings_Log_nil(t *testing.T) {
 	var c *DynamicRegistrationSettings
 	c.Log()
 }
+
 func TestDynamicRegistrationSettings_Log(t *testing.T) {
 	c := DynamicRegistrationSettings{}
 	c.Log()
@@ -159,6 +170,7 @@ func TestHealthCheckSettings_Log_nil(t *testing.T) {
 	var c *HealthCheckSettings
 	c.Log()
 }
+
 func TestHealthCheckSettings_Log(t *testing.T) {
 	c := HealthCheckSettings{}
 	c.Log()
