@@ -384,6 +384,7 @@ func (device *Device) encode() *synse.V3Device {
 		Id:        device.id,
 		Type:      device.Type,
 		Info:      device.Info,
+		Alias:     device.Alias,
 		Metadata:  device.Metadata,
 		SortIndex: device.SortIndex,
 		Tags:      tags,
