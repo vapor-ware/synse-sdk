@@ -1,5 +1,7 @@
 version: 3
 debug: true
+metrics:
+  enabled: true
 network:
   type: tcp
   address: ":5001"

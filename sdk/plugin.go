@@ -275,6 +275,12 @@ func (plugin *Plugin) initialize() error {
 func (plugin *Plugin) run() error {
 	log.Info("[plugin] running")
 
+	// Start the Prometheus metrics exporter, if metrics are enabled for
+	// the plugin. This is a blocking function so it must be called in a goroutine.
+	if plugin.config.Metrics.Enabled {
+		go exposeMetrics()
+	}
+
 	// Start the plugin components. Order matters here.
 	if err := plugin.device.Start(plugin); err != nil {
 		return err
