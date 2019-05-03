@@ -34,6 +34,9 @@ type Plugin struct {
 	// ID specifies the options for generating a plugin namespace ID.
 	ID *IDSettings `default:"{}" yaml:"id,omitempty"`
 
+	// Metrics specifies the options for exposing application metrics.
+	Metrics *MetricsSettings `default:"{}" yaml:"metrics,omitempty"`
+
 	// Settings specifies how the plugin should run.
 	Settings *PluginSettings `default:"{}" yaml:"settings,omitempty"`
 
@@ -96,6 +99,22 @@ func (conf *IDSettings) Log() {
 		log.Infof("    UseMachineID: %v", conf.UseMachineID)
 		log.Infof("    UseEnv:       %v", conf.UseEnv)
 		log.Infof("    UseCustom:    %v", conf.UseCustom)
+	}
+}
+
+// MetricsSettings are the settings around exposing application metrics.
+type MetricsSettings struct {
+	// Enabled sets whether the application should report metrics or not.
+	Enabled bool `yaml:"enabled,omitempty"`
+}
+
+// Log logs out the config at INFO level.
+func (conf *MetricsSettings) Log() {
+	if conf == nil {
+		log.Info("  Metrics: nil")
+	} else {
+		log.Infof("  Metrics:")
+		log.Infof("    Enabled: %v", conf.Enabled)
 	}
 }
 
