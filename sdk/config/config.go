@@ -34,9 +34,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// fixme (etd): add logging throughout. will do this once this gets folded back into the
-//  main sdk folder and has access to the sdk logger.
-
 const (
 	// Yaml-extension configuration files.
 	ExtYaml = "yaml"
@@ -144,6 +141,7 @@ func (loader *Loader) Load(pol policy.Policy) error {
 		"paths":  loader.SearchPaths,
 		"name":   loader.FileName,
 		"ext":    loader.Ext,
+		"policy": pol,
 	}).Info("[config] loading configuration")
 
 	loader.policy = pol
@@ -199,6 +197,7 @@ func (loader *Loader) Scan(out interface{}) error {
 	}).Debug("[config] scanning config into struct")
 
 	if err := defaults.Set(out); err != nil {
+		log.WithField("error", err).Error("[config] failed to set config defaults")
 		return err
 	}
 
@@ -212,6 +211,7 @@ func (loader *Loader) Scan(out interface{}) error {
 		),
 	})
 	if err != nil {
+		log.WithField("error", err).Error("[config] failed to decode config data")
 		return err
 	}
 
@@ -234,11 +234,16 @@ func (loader *Loader) checkOverrides() error {
 		return nil
 	}
 
+	log.Debug("[config] loading ENV overrides")
+
 	// Get info on the specified path. We will need to know whether it is
 	// a specific file (load that file), or a directory (load all configs in
 	// that directory).
 	info, err := os.Stat(value)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"path": value,
+		}).Error("[config] failed to stat path")
 		return err
 	}
 
@@ -263,6 +268,11 @@ func (loader *Loader) checkOverrides() error {
 		loader.SearchPaths = []string{dir}
 		loader.FileName = file
 	}
+	log.WithFields(log.Fields{
+		"file":  loader.FileName,
+		"paths": loader.SearchPaths,
+	}).Info("[config] ENV overrides loaded")
+
 	return nil
 }
 
@@ -276,6 +286,7 @@ func (loader *Loader) loadEnv() error {
 
 		for _, env := range os.Environ() {
 			if strings.HasPrefix(env, loader.EnvPrefix) {
+				log.WithField("env", env).Debug("[config] found prefixed ENV variable")
 				pair := strings.SplitN(env, "=", 2)
 
 				// If the key matches the environment override key, ignore it.
@@ -304,7 +315,14 @@ func (loader *Loader) loadEnv() error {
 					tmp = map[string]interface{}{key: tmp}
 				}
 
+				if len(tmp) != 0 {
+					log.WithFields(log.Fields{
+						"data": tmp,
+					}).Debug("[config] loaded environment data")
+				}
+
 				if err := mergo.Map(&envConfig, tmp); err != nil {
+					log.WithField("error", err).Error("[config] failed to merge env config")
 					return err
 				}
 			}
@@ -358,6 +376,7 @@ func (loader *Loader) search(pol policy.Policy) error {
 	// If the config is required, make sure that we found something. If no
 	// config was found on any of the search paths, return an error.
 	if required && len(loader.files) == 0 {
+		log.Error("[config] config is required but not found")
 		return sdkError.NewConfigsNotFoundError(loader.SearchPaths)
 	}
 
@@ -368,12 +387,18 @@ func (loader *Loader) search(pol policy.Policy) error {
 // These data mappings are collected by the Loader to be merged later.
 func (loader *Loader) read(pol policy.Policy) error {
 	if pol == policy.Required && len(loader.files) == 0 {
+		log.WithFields(log.Fields{
+			"policy": pol,
+			"files":  loader.files,
+		}).Error("[config] no files loaded")
 		return sdkError.NewConfigsNotFoundError(loader.SearchPaths)
 	}
 
 	for _, path := range loader.files {
+		log.WithField("file", path).Debug("[config] reading config file")
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
+			log.WithField("error", err).Error("[config] failed to read file")
 			return err
 		}
 
@@ -383,10 +408,12 @@ func (loader *Loader) read(pol policy.Policy) error {
 		case ExtYaml:
 			err := yaml.Unmarshal(data, &res)
 			if err != nil {
+				log.WithField("error", err).Error("[config] failed to unmarshal config data")
 				return err
 			}
 			loader.data = append(loader.data, res)
 		default:
+			log.WithField("ext", loader.Ext).Error("[config] unsupported file format")
 			return fmt.Errorf("config: unsupported file format '%v'", loader.Ext)
 		}
 	}
@@ -396,6 +423,7 @@ func (loader *Loader) read(pol policy.Policy) error {
 // merge merges all of the data mappings from all config files and environment
 // variables that were found, generating a single unified config.
 func (loader *Loader) merge() error {
+	log.Debug("[config] merging configuration sources")
 	for _, data := range loader.data {
 		// If there are any nil maps, there is nothing to merge.
 		if data == nil {
@@ -409,6 +437,7 @@ func (loader *Loader) merge() error {
 
 		// Merge the data map.
 		if err := mergo.Map(&loader.merged, data, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
+			log.Error("[config] failed to merge config data")
 			return err
 		}
 	}

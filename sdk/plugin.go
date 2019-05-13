@@ -126,6 +126,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 	}
 
 	// Set custom options for the plugin.
+	log.WithField("options", len(options)).Debug("[plugin] loading plugin options")
 	for _, option := range options {
 		option(&p)
 	}
@@ -177,6 +178,7 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 func (plugin *Plugin) Run() error {
 	// Initialize the plugin and its components.
 	if err := plugin.initialize(); err != nil {
+		log.Error("[plugin] failed to initialize plugin")
 		return err
 	}
 
@@ -188,6 +190,7 @@ func (plugin *Plugin) Run() error {
 
 	// Run pre-run actions, if any exist.
 	if err := plugin.execPreRun(); err != nil {
+		log.Error("[plugin] failed to execute plugin pre-run actions")
 		return err
 	}
 
@@ -278,11 +281,13 @@ func (plugin *Plugin) run() error {
 	// Start the Prometheus metrics exporter, if metrics are enabled for
 	// the plugin. This is a blocking function so it must be called in a goroutine.
 	if plugin.config.Metrics.Enabled {
+		log.Debug("[plugin] application metrics enabled")
 		go exposeMetrics()
 	}
 
 	// Start the plugin components. Order matters here.
 	if err := plugin.device.Start(plugin); err != nil {
+		log.Error("[plugin] failed to start device manager")
 		return err
 	}
 	plugin.state.Start()
@@ -387,6 +392,7 @@ func (plugin *Plugin) loadConfig() error {
 
 	// Load the plugin configuration.
 	if err := loader.Load(plugin.policies.PluginConfig); err != nil {
+		log.WithField("error", err).Error("[plugin] failed to load plugin configuration")
 		return err
 	}
 
