@@ -60,6 +60,9 @@ func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, erro
 	if conf.UseMachineID {
 		id, err := machineid.ProtectedID(meta.Tag())
 		if err != nil {
+			log.WithField("error", err).Error(
+				"[id] failed to load machine id (this may may not work if running in a container)",
+			)
 			return nil, err
 		}
 		log.WithFields(log.Fields{
@@ -76,7 +79,7 @@ func newPluginID(conf *config.IDSettings, meta *PluginMetadata) (*pluginID, erro
 				return nil, errors.New("unable to create plugin id: env enabled but not set")
 			}
 			log.WithFields(log.Fields{
-				"envVar": k,
+				"env": k,
 			}).Debug("[id] using env variable tag as uuid component")
 			components = append(components, val)
 		}

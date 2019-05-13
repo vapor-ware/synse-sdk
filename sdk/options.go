@@ -16,7 +16,10 @@
 
 package sdk
 
-import "github.com/vapor-ware/synse-sdk/sdk/policy"
+import (
+	log "github.com/sirupsen/logrus"
+	"github.com/vapor-ware/synse-sdk/sdk/policy"
+)
 
 // A PluginOption sets optional configurations or functional capabilities for
 // a plugin. This includes things like device identification and device
@@ -26,6 +29,7 @@ type PluginOption func(*Plugin)
 // CustomDeviceIdentifier lets you set a custom function for creating a deterministic
 // identifier for a device using the config data for the device.
 func CustomDeviceIdentifier(identifier DeviceIdentifier) PluginOption {
+	log.Debug("[options] using custom device identifier")
 	return func(plugin *Plugin) {
 		plugin.pluginHandlers.DeviceIdentifier = identifier
 	}
@@ -34,6 +38,7 @@ func CustomDeviceIdentifier(identifier DeviceIdentifier) PluginOption {
 // CustomDynamicDeviceRegistration lets you set a custom function for dynamically registering
 // Device instances using the data from the "dynamic registration" field in the Plugin config.
 func CustomDynamicDeviceRegistration(registrar DynamicDeviceRegistrar) PluginOption {
+	log.Debug("[options] using custom device registration")
 	return func(plugin *Plugin) {
 		plugin.pluginHandlers.DynamicRegistrar = registrar
 	}
@@ -43,6 +48,7 @@ func CustomDynamicDeviceRegistration(registrar DynamicDeviceRegistrar) PluginOpt
 // registering DeviceConfig instances using the data from the "dynamic registration" field
 // in the Plugin config.
 func CustomDynamicDeviceConfigRegistration(registrar DynamicDeviceConfigRegistrar) PluginOption {
+	log.Debug("[options] using custom device config registration")
 	return func(plugin *Plugin) {
 		plugin.pluginHandlers.DynamicConfigRegistrar = registrar
 	}
@@ -52,6 +58,7 @@ func CustomDynamicDeviceConfigRegistration(registrar DynamicDeviceConfigRegistra
 // of a device's config. By default, this data is not validated by the SDK, since it is
 // plugin-specific.
 func CustomDeviceDataValidator(validator DeviceDataValidator) PluginOption {
+	log.Debug("[options] using custom data validator")
 	return func(plugin *Plugin) {
 		plugin.pluginHandlers.DeviceDataValidator = validator
 	}
