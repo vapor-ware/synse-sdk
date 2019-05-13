@@ -34,6 +34,10 @@ import (
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
+const (
+	defaultWriteTimeout = 30 * time.Second
+)
+
 // Device is a single physical or virtual device which the Plugin manages.
 //
 // It defines all of the information known about the device, which typically
@@ -154,6 +158,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 			encountered[t] = struct{}{}
 			tag, err := NewTag(t)
 			if err != nil {
+				log.WithField("tag", t).Error("[device] failed to create new tag")
 				return nil, err
 			}
 			deviceTags = append(deviceTags, tag)
@@ -167,6 +172,10 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 
 	// We require devices to have a type; error if there is none set.
 	if deviceType == "" {
+		log.WithFields(log.Fields{
+			"prototype": proto,
+			"instance":  instance,
+		}).Error("[device] required field 'type' is missing")
 		return nil, fmt.Errorf("new device: required field 'type' is missing")
 	}
 
@@ -185,6 +194,10 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	// with that name exists. If not, the device config is incorrect.
 	if instance.Output != "" {
 		if output.Get(instance.Output) == nil {
+			log.WithFields(log.Fields{
+				"prototype": proto,
+				"instance":  instance,
+			}).Error("[device] unknown output specified")
 			return nil, fmt.Errorf("new device: unknown output specified '%s'", instance.Output)
 		}
 	}
@@ -193,6 +206,10 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	for _, fn := range instance.Apply {
 		f := funcs.Get(fn)
 		if f == nil {
+			log.WithFields(log.Fields{
+				"prototype": proto,
+				"instance":  instance,
+			}).Error("[device] unknown transform function specified")
 			return nil, fmt.Errorf("new device: unknown transform function specified '%s'", fn)
 		}
 		fns = append(fns, f)
@@ -206,7 +223,8 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		scalingFactor, err = strconv.ParseFloat(instance.ScalingFactor, 64)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"scalingFactor": instance.ScalingFactor,
+				"prototype": proto,
+				"instance":  instance,
 			}).Error("[device] failed to load device: bad scaling factor")
 			return nil, err
 		}
@@ -219,7 +237,8 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	// Since we are merging proto + instance, we can't easily set a default value
 	// in the config struct annotations, so make sure that the timeout is not 0 here.
 	if writeTimeout == 0 {
-		writeTimeout = 30 * time.Second // the default write timeout
+		log.WithField("timeout", defaultWriteTimeout).Debug()
+		writeTimeout = defaultWriteTimeout
 	}
 
 	d := &Device{
@@ -237,6 +256,10 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	}
 
 	if err := d.setAlias(instance.Alias); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"alias": instance.Alias,
+		}).Error("[device] failed to set device alias")
 		return nil, err
 	}
 
@@ -310,11 +333,16 @@ func (device *Device) GetID() string {
 // returned.
 func (device *Device) Read() (*ReadContext, error) {
 	if !device.IsReadable() {
+		log.WithField("id", device.id).Debug("[device] device is not readable")
 		return nil, &errors.UnsupportedCommandError{}
 	}
 
 	readings, err := device.handler.Read(device)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"id":    device.id,
+		}).Error("[device] failed to read from device")
 		return nil, err
 	}
 	return NewReadContext(device, readings), nil
@@ -326,6 +354,7 @@ func (device *Device) Read() (*ReadContext, error) {
 // returned.
 func (device *Device) Write(data *WriteData) error {
 	if !device.IsWritable() {
+		log.WithField("id", device.id).Debug("[device] device is not writable")
 		return &errors.UnsupportedCommandError{}
 	}
 
@@ -343,7 +372,15 @@ func (device *Device) Write(data *WriteData) error {
 		}
 	}
 
-	return device.handler.Write(device, data)
+	err := device.handler.Write(device, data)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"id":    device.id,
+		}).Error("[device] failed to write to device")
+
+	}
+	return err
 }
 
 // IsReadable checks if the Device is readable based on the presence/absence

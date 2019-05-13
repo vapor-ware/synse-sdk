@@ -131,6 +131,7 @@ func (manager *deviceManager) init() error {
 // registrar plugin handler.
 func (manager *deviceManager) loadDynamicConfig() error {
 	if manager.dynamicConfig != nil {
+		log.Debug("[device manager] loading dynamic config...")
 		for _, cfg := range manager.dynamicConfig.Config {
 			devices, err := manager.pluginHandlers.DynamicConfigRegistrar(cfg)
 			if err != nil {
@@ -155,6 +156,7 @@ func (manager *deviceManager) loadDynamicConfig() error {
 // createDynamicDevices creates devices using the dynamic device registrar plugin handler.
 func (manager *deviceManager) createDynamicDevices() error {
 	if manager.dynamicConfig != nil {
+		log.Debug("[device manager] creating dynamic devices...")
 		for _, cfg := range manager.dynamicConfig.Config {
 			devices, err := manager.pluginHandlers.DynamicRegistrar(cfg)
 			if err != nil {
@@ -173,6 +175,7 @@ func (manager *deviceManager) createDynamicDevices() error {
 
 			for _, device := range devices {
 				if err := manager.AddDevice(device); err != nil {
+					log.WithField("error", err).Error("[device manager] failed to add device to manager")
 					return err
 				}
 			}
@@ -196,7 +199,6 @@ func (manager *deviceManager) Start(plugin *Plugin) error {
 func (manager *deviceManager) GetDevice(id string) *Device {
 	device, exists := manager.devices[id]
 	if !exists {
-
 		log.WithFields(log.Fields{
 			"id": id,
 		}).Warn("[device manager] device does not exist")
