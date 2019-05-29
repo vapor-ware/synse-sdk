@@ -40,8 +40,9 @@ var (
 	defaultDeviceConfig = "/etc/synse/plugin/config/device"
 )
 
+// Device manager error definitions.
 var (
-	DeviceIdExistsError = errors.New("conflict: device id already exists")
+	ErrDeviceIDExists = errors.New("conflict: device id already exists")
 )
 
 // DeviceAction defines an action that can be run before the main Plugin run
@@ -366,7 +367,7 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 
 	// Check if the Device ID collides with an existing device.
 	if _, exists := manager.devices[device.id]; exists {
-		return DeviceIdExistsError
+		return ErrDeviceIDExists
 	}
 
 	// Add the device alias to the lookup cache, if it has an associated alias.

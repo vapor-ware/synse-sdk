@@ -36,11 +36,12 @@ const (
 	modeParallel = "parallel"
 )
 
+// Scheduler error definitions.
 var (
-	DeviceNotWritable  = errors.New("writing is not enabled for the device")
-	DeviceWriteTimeout = errors.New("device write timed out")
-	NilDeviceError     = errors.New("cannot perform action on nil device")
-	NilDataError       = errors.New("cannot write nil data to device")
+	ErrDeviceNotWritable  = errors.New("writing is not enabled for the device")
+	ErrDeviceWriteTimeout = errors.New("device write timed out")
+	ErrNilDevice          = errors.New("cannot perform action on nil device")
+	ErrNilData            = errors.New("cannot write nil data to device")
 )
 
 // ListenerCtx is the context needed for a listener function to be called
@@ -189,13 +190,13 @@ func (scheduler *scheduler) Stop() error {
 // Write queues up a write request into the scheduler's write queue.
 func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]*synse.V3WriteTransaction, error) {
 	if device == nil {
-		return nil, NilDeviceError
+		return nil, ErrNilDevice
 	}
 	if data == nil {
-		return nil, NilDataError
+		return nil, ErrNilData
 	}
 	if !device.IsWritable() {
-		return nil, DeviceNotWritable
+		return nil, ErrDeviceNotWritable
 	}
 
 	var response []*synse.V3WriteTransaction
@@ -232,13 +233,13 @@ func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 
 func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteData) ([]*synse.V3TransactionStatus, error) {
 	if device == nil {
-		return nil, NilDeviceError
+		return nil, ErrNilDevice
 	}
 	if data == nil {
-		return nil, NilDataError
+		return nil, ErrNilData
 	}
 	if !device.IsWritable() {
-		return nil, DeviceNotWritable
+		return nil, ErrDeviceNotWritable
 	}
 
 	var response []*synse.V3TransactionStatus
@@ -403,7 +404,7 @@ func (scheduler *scheduler) scheduleWrites() {
 				// Increment the WaitGroup counter for all writes being executed
 				// in this batch.
 				waitGroup.Add(1)
-				totalWrites += 1
+				totalWrites++
 
 				// Launch the device write.
 				go func(wg *sync.WaitGroup, writeContext *WriteContext) {
@@ -748,7 +749,7 @@ func (scheduler *scheduler) write(writeCtx *WriteContext) {
 	case writeErr := <-writer:
 		err = writeErr
 	case <-time.After(device.WriteTimeout):
-		err = DeviceWriteTimeout
+		err = ErrDeviceWriteTimeout
 	}
 
 	if err != nil {

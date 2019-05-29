@@ -45,6 +45,7 @@ type DynamicDeviceConfigRegistrar func(map[string]interface{}) ([]*config.Device
 // plugin-specific config fields.
 type DeviceDataValidator func(map[string]interface{}) error
 
+// PluginHandlers defines the set of handler functions that a Plugin instance may use.
 type PluginHandlers struct {
 	// DeviceIdentifier is a plugin-defined function for uniquely identifying devices.
 	DeviceIdentifier DeviceIdentifier
