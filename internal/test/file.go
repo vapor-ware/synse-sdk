@@ -48,15 +48,3 @@ func (f FileInfo) Mode() os.FileMode  { return f.mode }               // nolint
 func (f FileInfo) Name() string       { return f.name }               // nolint
 func (f FileInfo) Size() int64        { return f.size }               // nolint
 func (f FileInfo) Sys() interface{}   { return f.sys }                // nolint
-
-//// WriteTempFile is a test helper that will write the specified file to
-//// a test directory. This is essentially a wrapper around ioutil.WriteFile
-//// that ensures the test directory is in place.
-//func WriteTempFile(t *testing.T, filename, data string, perm os.FileMode) string {
-//	fullPath := filepath.Join(TempDir, filename)
-//	err := ioutil.WriteFile(filepath.Join(TempDir, filename), []byte(data), perm)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	return fullPath
-//}

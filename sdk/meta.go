@@ -40,7 +40,7 @@ func SetPluginInfo(name, maintainer, desc, vcs string) {
 	}
 }
 
-// PluginMeta is the metadata associated with a Plugin.
+// PluginMetadata is the metadata associated with a Plugin.
 type PluginMetadata struct {
 	Name        string
 	Maintainer  string
