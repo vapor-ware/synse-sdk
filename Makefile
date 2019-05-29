@@ -38,10 +38,6 @@ ifndef HAS_DEP
 endif
 	dep ensure -v -update
 
-.PHONY: docs
-docs:  ## Build the docs locally
-	(cd docs ; make html)
-
 .PHONY: check-examples
 check-examples:  ## Check that the examples run without failing.
 	@for d in examples/*/ ; do \
