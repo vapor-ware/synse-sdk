@@ -110,7 +110,7 @@ func TestOutput_MakeReading(t *testing.T) {
 	assert.Equal(t, o.Type, r.Type)
 	assert.Equal(t, o.Unit.Symbol, r.Unit.Symbol)
 	assert.Equal(t, o.Unit.Name, r.Unit.Name)
-	assert.Empty(t, r.Info)
+	assert.Empty(t, r.Context)
 	assert.NotEmpty(t, r.Timestamp)
 }
 
@@ -127,7 +127,7 @@ func TestOutput_MakeReading_noUnit(t *testing.T) {
 	assert.Equal(t, 3, r.Value)
 	assert.Equal(t, o.Type, r.Type)
 	assert.Nil(t, r.Unit)
-	assert.Empty(t, r.Info)
+	assert.Empty(t, r.Context)
 	assert.NotEmpty(t, r.Timestamp)
 }
 

@@ -56,6 +56,9 @@ func TestNewDeviceFromConfig(t *testing.T) {
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
+		Context: map[string]string{
+			"foo": "bar",
+		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
 		WriteTimeout: 3 * time.Second,
@@ -66,6 +69,9 @@ func TestNewDeviceFromConfig(t *testing.T) {
 		Tags: []string{"vapor/io"},
 		Data: map[string]interface{}{
 			"address": "localhost",
+		},
+		Context: map[string]string{
+			"123": "456",
 		},
 		Output:    "temperature",
 		SortIndex: 1,
@@ -85,6 +91,7 @@ func TestNewDeviceFromConfig(t *testing.T) {
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
+	assert.Equal(t, map[string]string{"foo": "bar", "123": "456"}, device.Context)
 	assert.Equal(t, "testhandler2", device.Handler)
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
@@ -104,6 +111,9 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 		},
 		Data: map[string]interface{}{
 			"port": 5000,
+		},
+		Context: map[string]string{
+			"foo": "bar",
 		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
@@ -132,6 +142,7 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
+	assert.Equal(t, map[string]string{"foo": "bar"}, device.Context)
 	assert.Equal(t, "testhandler", device.Handler)
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
@@ -208,6 +219,7 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
+	assert.Empty(t, device.Context)
 	assert.Equal(t, "type2", device.Handler)
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
@@ -227,6 +239,9 @@ func TestNewDeviceFromConfig5a(t *testing.T) {
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
+		Context: map[string]string{
+			"foo": "bar",
+		},
 		Tags:         []string{"default/foo"},
 		Handler:      "testhandler",
 		WriteTimeout: 3 * time.Second,
@@ -237,6 +252,9 @@ func TestNewDeviceFromConfig5a(t *testing.T) {
 		Tags: []string{"vapor/io"},
 		Data: map[string]interface{}{
 			"address": "localhost",
+		},
+		Context: map[string]string{
+			"abc": "def",
 		},
 		SortIndex: 1,
 		Alias: &config.DeviceAlias{
@@ -253,6 +271,7 @@ func TestNewDeviceFromConfig5a(t *testing.T) {
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 1, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost"}, device.Data)
+	assert.Equal(t, map[string]string{"abc": "def"}, device.Context)
 	assert.Equal(t, "type2", device.Handler) // inheritance disabled, does not get proto handler
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
@@ -299,6 +318,7 @@ func TestNewDeviceFromConfig5b(t *testing.T) {
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
+	assert.Empty(t, device.Context)
 	assert.Equal(t, "testhandler", device.Handler) // inheritance enabled, gets proto handler
 	assert.Equal(t, int32(1), device.SortIndex)
 	assert.Equal(t, "foo", device.Alias)
@@ -517,6 +537,64 @@ func TestNewDeviceFromConfig11(t *testing.T) {
 	device, err := NewDeviceFromConfig(proto, instance)
 	assert.Error(t, err)
 	assert.Nil(t, device)
+}
+
+func TestNewDeviceFromConfig12(t *testing.T) {
+	// Tests creating a device where inheritance is enabled and the instance context
+	// overrides some values in the prototype context.
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Metadata: map[string]string{
+			"a": "b",
+		},
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Context: map[string]string{
+			"foo": "bar",
+			"123": "456",
+		},
+		Tags:         []string{"default/foo"},
+		Handler:      "testhandler",
+		WriteTimeout: 3 * time.Second,
+	}
+	instance := &config.DeviceInstance{
+		Type: "type2",
+		Info: "testdata",
+		Tags: []string{"vapor/io"},
+		Data: map[string]interface{}{
+			"address": "localhost",
+		},
+		Context: map[string]string{
+			"123": "abc",
+			"xyz": "456",
+		},
+		Output:    "temperature",
+		SortIndex: 1,
+		Handler:   "testhandler2",
+		Alias: &config.DeviceAlias{
+			Name: "foo",
+		},
+		ScalingFactor:      "2",
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+
+	device, err := NewDeviceFromConfig(proto, instance)
+	assert.NoError(t, err)
+	assert.Equal(t, "type2", device.Type)
+	assert.Equal(t, map[string]string{"a": "b"}, device.Metadata)
+	assert.Equal(t, "testdata", device.Info)
+	assert.Equal(t, 2, len(device.Tags))
+	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
+	assert.Equal(t, map[string]string{"foo": "bar", "123": "abc", "xyz": "456"}, device.Context)
+	assert.Equal(t, "testhandler2", device.Handler)
+	assert.Equal(t, int32(1), device.SortIndex)
+	assert.Equal(t, "foo", device.Alias)
+	assert.Equal(t, float64(2), device.ScalingFactor)
+	assert.Equal(t, 5*time.Second, device.WriteTimeout)
+	assert.Equal(t, "temperature", device.Output)
+	assert.Equal(t, 0, len(device.fns))
 }
 
 func TestDevice_setAlias_noConf(t *testing.T) {

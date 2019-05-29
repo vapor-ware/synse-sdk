@@ -38,6 +38,39 @@ func TestReading_GetOutput_noOutput(t *testing.T) {
 	assert.Nil(t, r.GetOutput())
 }
 
+func TestReading_WithContext_noContext(t *testing.T) {
+	r := Reading{}
+	r.WithContext(map[string]string{})
+
+	assert.Empty(t, r.Context)
+}
+
+func TestReading_WithContext_newContext(t *testing.T) {
+	r := Reading{}
+	r.WithContext(map[string]string{"foo": "bar"})
+
+	assert.Equal(t, map[string]string{"foo": "bar"}, r.Context)
+}
+
+func TestReading_WithContext_noOverride(t *testing.T) {
+	r := Reading{
+		Context: map[string]string{"abc": "def"},
+	}
+	r.WithContext(map[string]string{"123": "456"})
+
+	assert.Equal(t, map[string]string{"abc": "def", "123": "456"}, r.Context)
+}
+
+func TestReading_WithContext_withOverride(t *testing.T) {
+	r := Reading{
+		Context: map[string]string{"abc": "def"},
+	}
+
+	r.WithContext(map[string]string{"abc": "456"})
+
+	assert.Equal(t, map[string]string{"abc": "456"}, r.Context)
+}
+
 func TestReading_Scale(t *testing.T) {
 	cases := []struct {
 		value    interface{}
@@ -138,7 +171,7 @@ func TestReading_Encode(t *testing.T) {
 		r := Reading{
 			Timestamp: "now",
 			Type:      "testtype",
-			Info:      "foo",
+			Context:   map[string]string{"foo": "bar"},
 			Value:     c.value,
 		}
 
@@ -149,6 +182,7 @@ func TestReading_Encode(t *testing.T) {
 		assert.Equal(t, "testtype", encoded.Type)
 		assert.Equal(t, "", encoded.Unit.Name)
 		assert.Equal(t, "", encoded.Unit.Symbol)
+		assert.Equal(t, map[string]string{"foo": "bar"}, encoded.Context)
 	}
 }
 
@@ -157,7 +191,7 @@ func TestReading_Encode2(t *testing.T) {
 	r := Reading{
 		Timestamp: "now",
 		Type:      "testtype",
-		Info:      "foo",
+		Context:   map[string]string{"foo": "bar"},
 		Value:     123,
 		Unit: &Unit{
 			Name:   "unit",
@@ -172,6 +206,7 @@ func TestReading_Encode2(t *testing.T) {
 	assert.Equal(t, "testtype", encoded.Type)
 	assert.Equal(t, "unit", encoded.Unit.Name)
 	assert.Equal(t, "u", encoded.Unit.Symbol)
+	assert.Equal(t, map[string]string{"foo": "bar"}, encoded.Context)
 }
 
 func TestReading_Encode_error(t *testing.T) {
@@ -187,7 +222,7 @@ func TestReading_Encode_error(t *testing.T) {
 		r := Reading{
 			Timestamp: "now",
 			Type:      "testtype",
-			Info:      "foo",
+			Context:   map[string]string{"foo": "bar"},
 			Value:     c.value,
 		}
 
