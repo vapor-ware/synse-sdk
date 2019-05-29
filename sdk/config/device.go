@@ -71,6 +71,11 @@ type DeviceProto struct {
 	// back to the default value of 30s.
 	WriteTimeout time.Duration `yaml:"writeTimeout,omitempty"`
 
+	// Context defines any context information which should be associated
+	// with a device instance's reading(s). If specified here, all prototype
+	// instances will inherit the context, unless inheritance is disabled.
+	Context map[string]string `yaml:"context,omitempty"`
+
 	// Instances contains the data for all configured instances of the
 	// device prototype.
 	Instances []*DeviceInstance `yaml:"instances,omitempty"`
@@ -95,6 +100,11 @@ type DeviceInstance struct {
 	// is not required to define tags. All devices will get system-generated
 	// tags, so these are supplemental.
 	Tags []string `yaml:"tags,omitempty"`
+
+	// Context defines any context information which should be associated with
+	// the device instance's reading(s). Any values specified here will be
+	// applied to the reading context automatically by the SDK.
+	Context map[string]string `yaml:"context,omitempty"`
 
 	// Data contains any protocol/plugin/device-specific configuration that
 	// is associated with the device instance. It is the responsibility of the
