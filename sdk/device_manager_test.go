@@ -1297,7 +1297,7 @@ func TestDeviceManager_execDeviceSetupActions_withBadFilter(t *testing.T) {
 					"something": {"foo"},
 				},
 				Action: func(p *Plugin, d *Device) error {
-					counter += 1
+					counter++
 					return nil
 				},
 			},
@@ -1325,7 +1325,7 @@ func TestDeviceManager_execDeviceSetupActions_ok(t *testing.T) {
 					"type": {"foo"},
 				},
 				Action: func(p *Plugin, d *Device) error {
-					counter += 1
+					counter++
 					return nil
 				},
 			},
@@ -1353,7 +1353,7 @@ func TestDeviceManager_execDeviceSetupActions_ok2(t *testing.T) {
 					"type": {"foo", "bar"},
 				},
 				Action: func(p *Plugin, d *Device) error {
-					counter += 1
+					counter++
 					return nil
 				},
 			},
@@ -1378,7 +1378,7 @@ func TestDeviceManager_execDeviceSetupActions_ok3(t *testing.T) {
 			{
 				Name: "ok",
 				Action: func(p *Plugin, d *Device) error {
-					counter += 1
+					counter++
 					return nil
 				},
 			},

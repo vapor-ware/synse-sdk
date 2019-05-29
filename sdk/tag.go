@@ -25,6 +25,7 @@ import (
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 
+// Tag component constants.
 const (
 	// Tag namespace constants
 	TagNamespaceDefault = "default"

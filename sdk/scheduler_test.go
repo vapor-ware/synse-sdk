@@ -133,7 +133,7 @@ func TestScheduler_Write_nilDevice(t *testing.T) {
 
 	resp, err := s.Write(nil, []*synse.V3WriteData{{Action: "test"}})
 	assert.Error(t, err)
-	assert.Equal(t, NilDeviceError, err)
+	assert.Equal(t, ErrNilDevice, err)
 	assert.Nil(t, resp)
 }
 
@@ -149,7 +149,7 @@ func TestScheduler_Write_nilData(t *testing.T) {
 
 	resp, err := s.Write(dev, nil)
 	assert.Error(t, err)
-	assert.Equal(t, NilDataError, err)
+	assert.Equal(t, ErrNilData, err)
 	assert.Nil(t, resp)
 }
 
@@ -161,7 +161,7 @@ func TestScheduler_Write_deviceNotWritable(t *testing.T) {
 
 	resp, err := s.Write(dev, []*synse.V3WriteData{{Action: "test"}})
 	assert.Error(t, err)
-	assert.Equal(t, DeviceNotWritable, err)
+	assert.Equal(t, ErrDeviceNotWritable, err)
 	assert.Nil(t, resp)
 }
 
@@ -202,7 +202,7 @@ func TestScheduler_WriteAndWait_nilDevice(t *testing.T) {
 
 	resp, err := s.WriteAndWait(nil, []*synse.V3WriteData{{Action: "test"}})
 	assert.Error(t, err)
-	assert.Equal(t, NilDeviceError, err)
+	assert.Equal(t, ErrNilDevice, err)
 	assert.Nil(t, resp)
 }
 
@@ -218,7 +218,7 @@ func TestScheduler_WriteAndWait_nilData(t *testing.T) {
 
 	resp, err := s.WriteAndWait(dev, nil)
 	assert.Error(t, err)
-	assert.Equal(t, NilDataError, err)
+	assert.Equal(t, ErrNilData, err)
 	assert.Nil(t, resp)
 }
 
@@ -230,7 +230,7 @@ func TestScheduler_WriteAndWait_deviceNotWritable(t *testing.T) {
 
 	resp, err := s.WriteAndWait(dev, []*synse.V3WriteData{{Action: "test"}})
 	assert.Error(t, err)
-	assert.Equal(t, DeviceNotWritable, err)
+	assert.Equal(t, ErrDeviceNotWritable, err)
 	assert.Nil(t, resp)
 }
 
