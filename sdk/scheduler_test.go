@@ -523,11 +523,14 @@ func TestScheduler_applyTransformations_noFns(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.NoError(t, err)
 
 	// Verify that the reading value did not change.
 	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_noFns_withScale(t *testing.T) {
@@ -541,11 +544,14 @@ func TestScheduler_applyTransformations_noFns_withScale(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.NoError(t, err)
 
 	// Verify that the reading value changed
 	assert.Equal(t, float64(4), rctx.Reading[0].Value.(float64))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_oneFnOk(t *testing.T) {
@@ -566,11 +572,14 @@ func TestScheduler_applyTransformations_oneFnOk(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.NoError(t, err)
 
 	// Verify that the reading value changed.
 	assert.Equal(t, 4, rctx.Reading[0].Value.(int))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_oneFnOk_withScale(t *testing.T) {
@@ -591,11 +600,14 @@ func TestScheduler_applyTransformations_oneFnOk_withScale(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.NoError(t, err)
 
 	// Verify that the reading value changed.
 	assert.Equal(t, float64(8), rctx.Reading[0].Value.(float64))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_multipleFnsOk(t *testing.T) {
@@ -622,11 +634,14 @@ func TestScheduler_applyTransformations_multipleFnsOk(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.NoError(t, err)
 
 	// Verify that the reading value changed.
 	assert.Equal(t, 7, rctx.Reading[0].Value.(int))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_multipleFnsOk_withScale(t *testing.T) {
@@ -653,11 +668,14 @@ func TestScheduler_applyTransformations_multipleFnsOk_withScale(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.NoError(t, err)
 
 	// Verify that the reading value changed.
 	assert.Equal(t, float64(14), rctx.Reading[0].Value.(float64))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_oneFnErr(t *testing.T) {
@@ -678,11 +696,14 @@ func TestScheduler_applyTransformations_oneFnErr(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.Error(t, err)
 
 	// Verify that the reading value did not change.
 	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_oneFnErr_withScale(t *testing.T) {
@@ -703,11 +724,14 @@ func TestScheduler_applyTransformations_oneFnErr_withScale(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.Error(t, err)
 
 	// Verify that the reading value did not change.
 	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_multipleFnsErr(t *testing.T) {
@@ -734,13 +758,16 @@ func TestScheduler_applyTransformations_multipleFnsErr(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.Error(t, err)
 
 	// Verify that the reading value changed. It should change because the first
 	// fn was applied successfully. It is up to the upstream caller to check the
 	// error and make sure all transforms succeed before using the value.
 	assert.Equal(t, 4, rctx.Reading[0].Value.(int))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_multipleFnsErr_withScale(t *testing.T) {
@@ -767,13 +794,16 @@ func TestScheduler_applyTransformations_multipleFnsErr_withScale(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.Error(t, err)
 
 	// Verify that the reading value changed. It should change because the first
 	// fn was applied successfully. It is up to the upstream caller to check the
 	// error and make sure all transforms succeed before using the value.
 	assert.Equal(t, 4, rctx.Reading[0].Value.(int))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
 }
 
 func TestScheduler_applyTransformations_oneFnOk_withScaleErr(t *testing.T) {
@@ -794,10 +824,82 @@ func TestScheduler_applyTransformations_oneFnOk_withScaleErr(t *testing.T) {
 		},
 	}
 
-	err := applyTransformations(device, rctx)
+	err := finalizeReadings(device, rctx)
 	assert.Error(t, err)
 
 	// Verify that the reading value changed. It should change because the
 	// transform fn ran, but the scaling fn should not have run.
 	assert.Equal(t, 4, rctx.Reading[0].Value.(int))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
+}
+
+func TestScheduler_finalizeReadings_withContext(t *testing.T) {
+	device := &Device{
+		Context:       map[string]string{"foo": "bar"},
+		ScalingFactor: 1,
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	err := finalizeReadings(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value did not change.
+	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
+
+	// Verify that the deice context was set.
+	assert.Equal(t, map[string]string{"foo": "bar"}, rctx.Reading[0].Context)
+}
+
+func TestScheduler_finalizeReadings_withContextAugment(t *testing.T) {
+	device := &Device{
+		Context:       map[string]string{"foo": "bar"},
+		ScalingFactor: 1,
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{
+				Value:   2,
+				Context: map[string]string{"abc": "def"},
+			},
+		},
+	}
+
+	err := finalizeReadings(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value did not change.
+	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
+
+	// Verify that the deice context was set.
+	assert.Equal(t, map[string]string{"foo": "bar", "abc": "def"}, rctx.Reading[0].Context)
+}
+
+func TestScheduler_finalizeReadings_withContextOverride(t *testing.T) {
+	device := &Device{
+		Context:       map[string]string{"foo": "bar"},
+		ScalingFactor: 1,
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{
+				Value:   2,
+				Context: map[string]string{"foo": "123"},
+			},
+		},
+	}
+
+	err := finalizeReadings(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value did not change.
+	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
+
+	// Verify that the deice context was set.
+	assert.Equal(t, map[string]string{"foo": "bar"}, rctx.Reading[0].Context)
 }

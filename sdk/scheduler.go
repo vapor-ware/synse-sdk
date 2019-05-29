@@ -474,9 +474,10 @@ func (scheduler *scheduler) scheduleListen() {
 	}
 }
 
-// applyTransformations is a helper function to apply any transformation functions
-// which a device specifies to its readings.
-func applyTransformations(device *Device, rctx *ReadContext) error {
+// finalizeReadings is a helper function which takes a read context and
+// applies any transformations and augmentations which are defined by its
+// Device to produce the final reading result.
+func finalizeReadings(device *Device, rctx *ReadContext) error {
 	for _, reading := range rctx.Reading {
 		// Apply any transformation functions which are defined for the device
 		// to the device's readings.
@@ -530,6 +531,9 @@ func applyTransformations(device *Device, rctx *ReadContext) error {
 				return err
 			}
 		}
+
+		// Add any reading context that is specified by the device to the reading.
+		reading.WithContext(device.Context)
 	}
 
 	return nil
@@ -577,7 +581,7 @@ func (scheduler *scheduler) read(device *Device) {
 				rlog.Error("[scheduler] failed device read")
 			}
 		} else {
-			err := applyTransformations(device, response)
+			err := finalizeReadings(device, response)
 			if err != nil {
 				rlog.Error("[scheduler] discarding readings")
 			} else {
@@ -635,7 +639,7 @@ func (scheduler *scheduler) bulkRead(handler *DeviceHandler) {
 		} else {
 			for _, readCtx := range response {
 				device := scheduler.deviceManager.GetDevice(readCtx.Device)
-				err := applyTransformations(device, readCtx)
+				err := finalizeReadings(device, readCtx)
 				if err != nil {
 					rlog.Error("[scheduler] discarding readings")
 				} else {

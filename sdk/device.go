@@ -61,6 +61,10 @@ type Device struct {
 	// Data contains any plugin-specific configuration data for the device.
 	Data map[string]interface{}
 
+	// Context contains any contextual information which should be associated
+	// with the device's reading(s).
+	Context map[string]string
+
 	// Handler is the name of the device's handler.
 	Handler string
 
@@ -124,6 +128,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	// device prototype configuration.
 	var (
 		data         map[string]interface{}
+		context      map[string]string
 		tags         []string
 		handler      string
 		deviceType   string
@@ -133,6 +138,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	// If inheritance is enabled, use the prototype defined value as the base.
 	if !instance.DisableInheritance {
 		data = proto.Data
+		context = proto.Context
 		tags = proto.Tags
 		handler = proto.Handler
 		deviceType = proto.Type
@@ -144,8 +150,13 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 
 	// Merge instance data.
 	if err := mergo.Map(&data, instance.Data, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
-		log.WithField("error", err).Error("[device] failed merging device instance config")
+		log.WithField("error", err).Error("[device] failed merging device instance config: data")
 		return nil, err
+	}
+
+	// Merge context data.
+	if err := mergo.Map(&context, instance.Context, mergo.WithOverride); err != nil {
+		log.WithField("error", err).Error("[device] failed merging device instance config: context")
 	}
 
 	// Merge tags. It is okay if the same tag is defined more than once, (e.g.
@@ -245,6 +256,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		Type:          deviceType,
 		Tags:          deviceTags,
 		Data:          data,
+		Context:       context,
 		Handler:       handler,
 		Metadata:      proto.Metadata,
 		Info:          instance.Info,
