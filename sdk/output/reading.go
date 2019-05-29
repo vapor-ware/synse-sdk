@@ -33,14 +33,17 @@ type Reading struct {
 	// Type is the type of the reading, as defined by the Reading's output.
 	Type string
 
-	// Info provides additional information about a reading.
-	Info string
-
 	// Unit describes the unit of measure for the reading.
 	Unit *Unit
 
 	// Value is the reading value itself.
 	Value interface{}
+
+	// Context provides an arbitrary key-value mapping which can be used to
+	// provide contextual information about the reading. This is not required
+	// but can be useful if a device provides multiple readings from the
+	// same output, or readings which are meaningless on their own.
+	Context map[string]string
 
 	// output is the Output used to render and format the reading.
 	output *Output
@@ -49,6 +52,25 @@ type Reading struct {
 // GetOutput gets the associated output for a Reading.
 func (reading *Reading) GetOutput() *Output {
 	return reading.output
+}
+
+// WithContext adds a context to the reading. This is useful when creating a
+// reading from an output and you wish to in-line the setting of the reading
+// context, e.g.
+//
+//    SomeOutput.MakeReading(3).WithContext(map[string]string{"source": "foo"})
+//
+// This will merge the provided context with any existing context. If there
+// is a conflict, the context value provided here will override the pre-existing
+// value.
+func (reading *Reading) WithContext(ctx map[string]string) *Reading {
+	if reading.Context == nil {
+		reading.Context = make(map[string]string)
+	}
+	for k, v := range ctx {
+		reading.Context[k] = v
+	}
+	return reading
 }
 
 // Scale multiplies the given scaling factor to the Reading value and updates
@@ -96,12 +118,8 @@ func (reading *Reading) Encode() *synse.V3Reading {
 	r := synse.V3Reading{
 		Timestamp: reading.Timestamp,
 		Type:      reading.Type,
-		Context:   map[string]string{}, // todo: adding context to reading
+		Context:   reading.Context,
 		Unit:      unit.Encode(),
-	}
-
-	if reading.Info != "" {
-		r.Context["info"] = reading.Info
 	}
 
 	switch t := reading.Value.(type) {
