@@ -34,6 +34,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Definitions of supported configuration file types.
 const (
 	// Yaml-extension configuration files.
 	ExtYaml = "yaml"

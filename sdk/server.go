@@ -49,13 +49,14 @@ var (
 	socketDir = "/tmp/synse"
 )
 
+// Server error definitions.
 var (
-	ServerNeedsConfigError    = errors.New("server requires configuration to initialize")
-	ServerNotInitializedError = errors.New("unable to run: server not initialized")
+	ErrServerNeedsConfig    = errors.New("server requires configuration to initialize")
+	ErrServerNotInitialized = errors.New("unable to run: server not initialized")
 
-	SelectorRequiresIDError  = sdkError.InvalidArgumentErr("selector must specify device id")
-	NoDeviceForSelectorError = sdkError.NotFoundErr("no device found for specified selector")
-	TransactionNotFoundError = sdkError.NotFoundErr("transaction not found")
+	ErrSelectorRequiresID  = sdkError.InvalidArgumentErr("selector must specify device id")
+	ErrNoDeviceForSelector = sdkError.NotFoundErr("no device found for specified selector")
+	ErrTransactionNotFound = sdkError.NotFoundErr("transaction not found")
 )
 
 // server implements the Synse Plugin gRPC server. It is used by the
@@ -90,7 +91,7 @@ func newServer(plugin *Plugin) *server {
 
 func (server *server) init() error {
 	if server.conf == nil {
-		return ServerNeedsConfigError
+		return ErrServerNeedsConfig
 	}
 
 	log.Debug("[server] initializing")
@@ -143,7 +144,7 @@ func (server *server) start() error {
 	log.Info("[server] starting")
 
 	if !server.initialized || server.grpc == nil {
-		return ServerNotInitializedError
+		return ErrServerNotInitialized
 	}
 
 	// Create the listener over the configured protocol and address.
@@ -525,7 +526,7 @@ func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3P
 	}).Info("[grpc] processing request")
 
 	if request.Selector.Id == "" {
-		return SelectorRequiresIDError
+		return ErrSelectorRequiresID
 	}
 
 	devices, err := server.deviceManager.GetDevices(request.Selector)
@@ -533,7 +534,7 @@ func (server *server) WriteAsync(request *synse.V3WritePayload, stream synse.V3P
 		return err
 	}
 	if len(devices) != 1 {
-		return NoDeviceForSelectorError
+		return ErrNoDeviceForSelector
 	}
 
 	transactions, err := server.scheduler.Write(devices[0], request.Data)
@@ -561,7 +562,7 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 	}).Info("[grpc] processing request")
 
 	if request.Selector.Id == "" {
-		return SelectorRequiresIDError
+		return ErrSelectorRequiresID
 	}
 
 	devices, err := server.deviceManager.GetDevices(request.Selector)
@@ -569,7 +570,7 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 		return err
 	}
 	if len(devices) != 1 {
-		return NoDeviceForSelectorError
+		return ErrNoDeviceForSelector
 	}
 
 	transactions, err := server.scheduler.WriteAndWait(devices[0], request.Data)
@@ -600,7 +601,7 @@ func (server *server) Transaction(ctx context.Context, request *synse.V3Transact
 	t := server.stateManager.getTransaction(request.Id)
 	if t == nil {
 		rlog.Error("transaction not found")
-		return nil, TransactionNotFoundError
+		return nil, ErrTransactionNotFound
 	}
 	return t.encode(), nil
 }

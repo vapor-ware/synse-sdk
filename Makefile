@@ -53,7 +53,7 @@ godoc:  ## Server godocs locally on port 8080
 
 .PHONY: lint
 lint:  ## Lint project source files
-	golint ./sdk/... ./internal/... ./examples/...
+	golint -set_exit_status ./sdk/... ./examples/...
 
 .PHONY: test
 test:  ## Run all tests
