@@ -4,7 +4,9 @@
 
 SDK_VERSION := $(shell cat sdk/version.go | grep 'const Version' | awk '{print $$4}')
 
-HAS_LINT := $(shell which golangci-lint)
+HAS_LINT := $(shell which gometalinter)
+HAS_DEP  := $(shell which dep)
+
 
 .PHONY: build
 build:  ## Build the SDK locally
@@ -22,9 +24,19 @@ clean:  ## Remove temporary files
 cover: test  ## Run tests and open the coverage report
 	go tool cover -html=coverage.out
 
-.PHONY: docs
-docs:  ## Build the docs locally
-	(cd docs ; make html)
+.PHONY: dep
+dep:  ## Ensure and prune dependencies
+ifndef HAS_DEP
+	go get -u github.com/golang/dep/cmd/dep
+endif
+	dep ensure -v
+
+.PHONY: dep-update
+dep-update:  ## Ensure, update, and prune dependencies
+ifndef HAS_DEP
+	go get -u github.com/golang/dep/cmd/dep
+endif
+	dep ensure -v -update
 
 .PHONY: check-examples
 check-examples:  ## Check that the examples run without failing.
@@ -63,9 +75,19 @@ godoc:  ## Run godoc to get a local version of docs on port 8080
 .PHONY: lint
 lint:  ## Lint project source files
 ifndef HAS_LINT
-	$(shell curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $$(go env GOPATH)/bin v1.18.0)
+	go get -u github.com/alecthomas/gometalinter
+	gometalinter --install
 endif
-	golangci-lint run --deadline=5m
+	@ # disable gotype: https://github.com/alecthomas/gometalinter/issues/40
+	gometalinter \
+		--disable=gotype --disable=interfacer \
+		--tests \
+		--vendor \
+		--sort=path --sort=line \
+		--aggregate \
+		--deadline=5m \
+		-e $$(go env GOROOT) \
+		./... || exit
 
 .PHONY: setup
 setup:  ## Install the build and development dependencies

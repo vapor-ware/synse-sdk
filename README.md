@@ -1,11 +1,9 @@
-<p align="center"><a href="https://www.vapor.io/"><img src="docs/_static/logo.png" width="360"></a></p>
 <p align="center">
     <a href="https://build.vio.sh/blue/organizations/jenkins/vapor-ware%2Fsynse-sdk/activity"><img src="https://build.vio.sh/buildStatus/icon?job=vapor-ware/synse-sdk/master" /></a>
     <a href="https://codecov.io/gh/vapor-ware/synse-sdk"><img src="https://codecov.io/gh/vapor-ware/synse-sdk/branch/master/graph/badge.svg?token=K9qxpN6AE2" /></a>
 <a href="https://app.fossa.io/projects/git%2Bgithub.com%2Fvapor-ware%2Fsynse-sdk?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvapor-ware%2Fsynse-sdk.svg?type=shield"/></a>
     <a href="https://godoc.org/github.com/vapor-ware/synse-sdk/sdk"><img src="https://godoc.org/github.com/vapor-ware/synse-sdk/sdk?status.svg"></a>
     <a href="https://goreportcard.com/report/github.com/vapor-ware/synse-sdk"><img src="https://goreportcard.com/badge/github.com/vapor-ware/synse-sdk"></a>
-    <a href='https://synse-sdk.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/synse-sdk/badge/?version=latest' alt='Documentation Status' /></a>
 
 <h1 align="center">Synse Plugin SDK</h1>
 </p>
@@ -48,8 +46,8 @@ The Synse SDK is one component of the greater Synse Ecosystem.
 
 
 ## Getting Started
-It is strongly recommended that you use a [release][releases] version of the SDK.
-The SDK can be installed with:
+It is strongly recommended that you use a [release][releases] version of the SDK if you are
+vendoring dependencies, e.g. with [dep][dep]. The SDK can be installed with:
 
 ```
 go get -u github.com/vapor-ware/synse-sdk/sdk
@@ -86,7 +84,8 @@ The Synse Plugin SDK is released under the [GPL-3.0](LICENSE) license.
 
 [go-install]: https://golang.org/doc/install
 [releases]: https://github.com/vapor-ware/synse-sdk/releases
-[sdk-docs]: http://synse-sdk.readthedocs.io/en/latest/
+[dep]: https://github.com/golang/dep
+[sdk-docs]: https://synse.readthedocs.io/en/latest/sdk/intro/
 [synse-server]: https://github.com/vapor-ware/synse-server
 [synse-cli]: https://github.com/vapor-ware/synse-cli
 [synse-emulator]: https://github.com/vapor-ware/synse-emulator-plugin
