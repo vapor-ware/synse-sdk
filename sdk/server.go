@@ -383,21 +383,6 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 	if err != nil {
 		return err
 	}
-
-	//var devices []*Device
-	//
-	//// If there is no info specified for the selector, assume all devices in the system namespace.
-	//// Otherwise, get the set of devices from the specified selector.
-	//// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
-	////   we use the namespaces to limit access to devices, this will need to change, as we do not want
-	////   to expose all devices to everyone. We are not doing that currently, so it is not an issue
-	////   for the initial v3 release.
-	//if request.Id == "" && len(request.Tags) == 0 {
-	//	//devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceDefault)
-	//	devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceSystem)
-	//} else {
-	//	devices = server.deviceManager.GetDevicesForTags(DeviceSelectorToTags(request)...)
-	//}
 	rlog.WithField("devices", len(devices)).Debug("[grpc] got devices")
 
 	// Encode and stream the devices back to the client.
@@ -448,20 +433,6 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 	if err != nil {
 		return err
 	}
-
-	//var devices []*Device
-	//
-	//// If there is no info specified for the selector, assume all devices in the system namespace.
-	//// Otherwise, get the set of devices from the specified selector.
-	//// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
-	////   we use the namespaces to limit access to devices, this will need to change, as we do not want
-	////   to expose all devices to everyone. We are not doing that currently, so it is not an issue
-	////   for the initial v3 release.
-	//if request.Selector == nil || (request.Selector.Id == "" && len(request.Selector.Tags) == 0) {
-	//	devices = server.deviceManager.GetDevicesByTagNamespace(TagNamespaceSystem)
-	//} else {
-	//	devices = server.deviceManager.GetDevicesForTags(DeviceSelectorToTags(request.Selector)...)
-	//}
 
 	for _, device := range devices {
 		rlog.WithField("device", device.id).Debug("[grpc] getting reading(s) for device")
