@@ -6,8 +6,7 @@ new plugins. These plugins form the backbone of the Synse platform, interfacing
 with devices and exposing them to Synse Server so all devices can be managed
 and controlled though a simple HTTP interface, regardless of backend protocol.
 
-todo: overview of the SDK arch/flow.
-
+For more information, see: https://synse.readthedocs.io/en/latest/sdk/intro/
 */
 package sdk
 

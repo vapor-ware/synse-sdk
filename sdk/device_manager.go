@@ -213,14 +213,13 @@ func (manager *deviceManager) GetDevices(selector *synse.V3DeviceSelector) ([]*D
 		return nil, errors.New("cannot get devices for nil selector")
 	}
 
-	// If there is no info specified for the selector, assume all devices in the system namespace.
-	// Otherwise, get the set of devices from the specified selector.
+	// If there is no info specified for the selector, assume all devices in the system namespace
+	// (e.g. all devices). Otherwise, get the set of devices from the specified selector.
 	// TODO (etd): post v3.0: getting all devices in the system namespace means all devices. if/when
 	//   we use the namespaces to limit access to devices, this will need to change, as we do not want
 	//   to expose all devices to everyone. We are not doing that currently, so it is not an issue
 	//   for the initial v3 release.
 	if selector.Id == "" && len(selector.Tags) == 0 {
-		//return manager.GetDevicesByTagNamespace(TagNamespaceDefault), nil
 		return manager.GetDevicesByTagNamespace(TagNamespaceSystem), nil
 	}
 
