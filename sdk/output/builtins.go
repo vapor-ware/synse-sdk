@@ -24,7 +24,10 @@ func GetBuiltins() []*Output {
 		&ElectricResistance,
 		&Frequency,
 		&Humidity,
-		&Pressure,
+		&Kilojoule,
+		&KilowattHour,
+		&Pascal,
+		&PSI,
 		&RPM,
 		&Seconds,
 		&State,
@@ -32,6 +35,8 @@ func GetBuiltins() []*Output {
 		&Temperature,
 		&Velocity,
 		&Voltage,
+		&Watt,
+		&Weber,
 	}
 }
 
@@ -45,17 +50,6 @@ var Color = Output{
 	Type: "color",
 }
 
-// Seconds is an output type for a duration, measured in seconds.
-var Seconds = Output{
-	Name:      "seconds",
-	Type:      "duration",
-	Precision: 3,
-	Unit: &Unit{
-		Name:   "seconds",
-		Symbol: "s",
-	},
-}
-
 // ElectricCurrent is an output type for electrical current readings,
 // measured in Amperes.
 var ElectricCurrent = Output{
@@ -63,7 +57,7 @@ var ElectricCurrent = Output{
 	Type:      "current",
 	Precision: 3,
 	Unit: &Unit{
-		Name:   "amps",
+		Name:   "ampere",
 		Symbol: "A",
 	},
 }
@@ -102,14 +96,47 @@ var Humidity = Output{
 	},
 }
 
-// Pressure is an output type for pressure readings, measured in Pascals.
-var Pressure = Output{
-	Name:      "pressure",
+// Kilojoule is an output type for energy readings, measured in kilojoules.
+var Kilojoule = Output{
+	Name:      "kilojoule",
+	Type:      "energy",
+	Precision: 3,
+	Unit: &Unit{
+		Name:   "kilojoule",
+		Symbol: "kJ",
+	},
+}
+
+// KilowattHour is an output type for energy readings, measured in kilowatt-hours.
+var KilowattHour = Output{
+	Name:      "kilowatt-hour",
+	Type:      "energy",
+	Precision: 3,
+	Unit: &Unit{
+		Name:   "kilowatt-hour",
+		Symbol: "kWh",
+	},
+}
+
+// Pascal is an output type for pressure readings, measured in Pascals.
+var Pascal = Output{
+	Name:      "pascal",
 	Type:      "pressure",
 	Precision: 3,
 	Unit: &Unit{
 		Name:   "pascal",
 		Symbol: "Pa",
+	},
+}
+
+// PSI is an output type for pressure readings, measured in PSI.
+var PSI = Output{
+	Name:      "psi",
+	Type:      "pressure",
+	Precision: 3,
+	Unit: &Unit{
+		Name:   "pounds per square inch",
+		Symbol: "psi",
 	},
 }
 
@@ -124,14 +151,14 @@ var RPM = Output{
 	},
 }
 
-// Velocity is an output type for velocity readings, measured in meters per second.
-var Velocity = Output{
-	Name:      "velocity",
-	Type:      "velocity",
+// Seconds is an output type for a duration, measured in seconds.
+var Seconds = Output{
+	Name:      "seconds",
+	Type:      "duration",
 	Precision: 3,
 	Unit: &Unit{
-		Name:   "meters per second",
-		Symbol: "m/s",
+		Name:   "seconds",
+		Symbol: "s",
 	},
 }
 
@@ -165,6 +192,17 @@ var Temperature = Output{
 	},
 }
 
+// Velocity is an output type for velocity readings, measured in meters per second.
+var Velocity = Output{
+	Name:      "velocity",
+	Type:      "velocity",
+	Precision: 3,
+	Unit: &Unit{
+		Name:   "meters per second",
+		Symbol: "m/s",
+	},
+}
+
 // Voltage is an output type for voltage readings, measured in volts.
 var Voltage = Output{
 	Name:      "voltage",
@@ -173,5 +211,32 @@ var Voltage = Output{
 	Unit: &Unit{
 		Name:   "volt",
 		Symbol: "V",
+	},
+}
+
+// Watt is an output type for power readings, measured in watts.
+var Watt = Output{
+	Name:      "watt",
+	Type:      "power",
+	Precision: 3,
+	Unit: &Unit{
+		Name:   "watt",
+		Symbol: "W",
+	},
+}
+
+// Weber is an output type for magnetic flux readings, measured in Webers.
+//
+// Note that:
+//  Wb = kg•m²/s²•A = Ω•C = V•s = H•A = T•m² = J/A
+//
+// That means this output can be used in place of a Volt-second, for example.
+var Weber = Output{
+	Name:      "weber",
+	Type:      "flux",
+	Precision: 3,
+	Unit: &Unit{
+		Name:   "weber",
+		Symbol: "Wb",
 	},
 }
