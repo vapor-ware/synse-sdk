@@ -97,8 +97,11 @@ func (manager *Manager) Init() error {
 
 // Start starts the health Manager.
 func (manager *Manager) Start() {
+	log.Info("[health] starting")
+
 	// Run default health checks, if enabled.
 	if !manager.config.Checks.DisableDefaults {
+		log.Debug("[health] running default checks")
 		for _, check := range manager.defaults {
 			go check.Run()
 		}
@@ -111,6 +114,13 @@ func (manager *Manager) Start() {
 
 	// Update the health file, if configured.
 	if manager.config.HealthFile != "" {
+		// Run a health file update immediately. This will create it without having
+		// to wait the full time of the ticker.
+		if err := manager.updateHealthFile(); err != nil {
+			log.WithField("error", err).Errorf("[health] failed to update health file")
+		}
+
+		// Continue to update the health file periodically.
 		go func() {
 			t := time.NewTicker(manager.config.UpdateInterval)
 			for {
