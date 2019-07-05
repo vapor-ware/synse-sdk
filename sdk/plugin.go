@@ -271,6 +271,9 @@ func (plugin *Plugin) initialize() error {
 	if err := plugin.server.init(); err != nil {
 		return err
 	}
+	if err := plugin.health.Init(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -290,6 +293,7 @@ func (plugin *Plugin) run() error {
 		log.Error("[plugin] failed to start device manager")
 		return err
 	}
+	plugin.health.Start()
 	plugin.state.Start()
 	plugin.scheduler.Start()
 

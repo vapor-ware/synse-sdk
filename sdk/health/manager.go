@@ -97,8 +97,11 @@ func (manager *Manager) Init() error {
 
 // Start starts the health Manager.
 func (manager *Manager) Start() {
+	log.Info("[health] starting")
+
 	// Run default health checks, if enabled.
 	if !manager.config.Checks.DisableDefaults {
+		log.Debug("[health] running default checks")
 		for _, check := range manager.defaults {
 			go check.Run()
 		}
@@ -111,10 +114,18 @@ func (manager *Manager) Start() {
 
 	// Update the health file, if configured.
 	if manager.config.HealthFile != "" {
+		// Run a health file update immediately. This will create it without having
+		// to wait the full time of the ticker.
+		if err := manager.updateHealthFile(); err != nil {
+			log.WithField("error", err).Errorf("[health] failed to update health file")
+		}
+
+		// Continue to update the health file periodically.
 		go func() {
 			t := time.NewTicker(manager.config.UpdateInterval)
 			for {
-				<-t.C
+				tick := <-t.C
+				log.WithField("tick", tick).Debug("[health] updating health file")
 				if err := manager.updateHealthFile(); err != nil {
 					log.WithField("error", err).Errorf("[health] failed to update health file")
 				}
@@ -164,6 +175,7 @@ func (manager *Manager) updateHealthFile() error {
 
 	// First, get the health summary.
 	summary := manager.Status()
+	log.WithField("summary", summary).Debug("[health] got health summary")
 
 	// Determine if the health file already exists.
 	var exists bool
@@ -177,11 +189,13 @@ func (manager *Manager) updateHealthFile() error {
 
 	if summary.Ok && !exists {
 		// The status is OK and the health file is not present; add it.
+		log.Debug("[health] creating health file")
 		if err := ioutil.WriteFile(manager.config.HealthFile, []byte("ok"), os.ModePerm); err != nil {
 			return err
 		}
 	} else if !summary.Ok && exists {
 		// The status is not OK and the health file exists; remove it.
+		log.Debug("[health] removing health file")
 		if err := os.Remove(manager.config.HealthFile); err != nil {
 			return err
 		}

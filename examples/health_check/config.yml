@@ -10,3 +10,5 @@ settings:
     interval: 5s
   transaction:
     ttl: 8m
+health:
+  healthFile: "./tmp"

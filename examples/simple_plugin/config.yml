@@ -10,3 +10,6 @@ settings:
     interval: 5s
   transaction:
     ttl: 8m
+health:
+  # disable health file for examples
+  healthFile: ""
