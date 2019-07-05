@@ -599,6 +599,7 @@ func TestPlugin_initialize_ok(t *testing.T) {
 				Address: "localhost:5001",
 			},
 		},
+		health: health.NewManager(&config.HealthSettings{}),
 	}
 
 	err := p.initialize()

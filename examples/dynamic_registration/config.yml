@@ -14,3 +14,6 @@ dynamicRegistration:
   config:
     - base: 10
     - base: 13
+health:
+  # disable health file for examples
+  healthFile: ""

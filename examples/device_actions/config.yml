@@ -12,3 +12,6 @@ settings:
     queueSize: 150
   transaction:
     ttl: 8m
+health:
+  # disable health file for examples
+  healthFile: ""
