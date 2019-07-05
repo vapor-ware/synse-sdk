@@ -3,3 +3,6 @@ debug: true
 network:
   type: unix
   address: c-plugin.sock
+health:
+  # disable health file for examples
+  healthFile: ""
