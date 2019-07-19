@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -37,6 +38,9 @@ type stateManager struct {
 	readingsCache *cache.Cache
 	readingsLock  *sync.RWMutex
 	transactions  *cache.Cache
+
+	streams    map[uuid.UUID]ReadStream
+	streamLock *sync.Mutex
 }
 
 // newStateManager creates a new instance of the stateManager.
@@ -61,6 +65,8 @@ func newStateManager(conf *config.PluginSettings) *stateManager {
 		),
 		readingsCache: readingsCache,
 		readingsLock:  &sync.RWMutex{},
+		streams:       make(map[uuid.UUID]ReadStream),
+		streamLock:    &sync.Mutex{},
 	}
 }
 
@@ -68,6 +74,22 @@ func newStateManager(conf *config.PluginSettings) *stateManager {
 func (manager *stateManager) Start() {
 	log.Info("[state manager] starting")
 	go manager.updateReadings()
+}
+
+// addStream adds a new stream for the stateManager to send reading data to.
+func (manager *stateManager) addStream(stream ReadStream) {
+	manager.streamLock.Lock()
+	defer manager.streamLock.Unlock()
+
+	manager.streams[stream.id] = stream
+}
+
+// removeStream removes a stream which the stateManager was sending data to.
+func (manager *stateManager) removeStream(id uuid.UUID) {
+	manager.streamLock.Lock()
+	defer manager.streamLock.Unlock()
+
+	delete(manager.streams, id)
 }
 
 // registerActions registers pre-run (setup) and post-run (teardown) actions
@@ -113,8 +135,22 @@ func (manager *stateManager) updateReadings() {
 		manager.readings[id] = readings
 		manager.readingsLock.Unlock()
 
+		// Dispatch the reading to all connected streams.
+		manager.dispatchToStreams(reading)
+
 		// Update the local readings cache, if enabled.
 		manager.addReadingToCache(reading)
+	}
+}
+
+// dispatchToStreams dispatches the given reading to all streams currently
+// connected to the state manager.
+func (manager *stateManager) dispatchToStreams(reading *ReadContext) {
+	manager.streamLock.Lock()
+	defer manager.streamLock.Unlock()
+
+	for _, stream := range manager.streams {
+		stream.stream <- reading
 	}
 }
 
