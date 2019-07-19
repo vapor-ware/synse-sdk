@@ -124,8 +124,7 @@ func (manager *Manager) Start() {
 		go func() {
 			t := time.NewTicker(manager.config.UpdateInterval)
 			for {
-				tick := <-t.C
-				log.WithField("tick", tick).Debug("[health] updating health file")
+				<-t.C
 				if err := manager.updateHealthFile(); err != nil {
 					log.WithField("error", err).Errorf("[health] failed to update health file")
 				}
@@ -175,7 +174,6 @@ func (manager *Manager) updateHealthFile() error {
 
 	// First, get the health summary.
 	summary := manager.Status()
-	log.WithField("summary", summary).Debug("[health] got health summary")
 
 	// Determine if the health file already exists.
 	var exists bool
@@ -189,13 +187,13 @@ func (manager *Manager) updateHealthFile() error {
 
 	if summary.Ok && !exists {
 		// The status is OK and the health file is not present; add it.
-		log.Debug("[health] creating health file")
+		log.WithField("healthy", summary.Ok).Debug("[health] creating health file")
 		if err := ioutil.WriteFile(manager.config.HealthFile, []byte("ok"), os.ModePerm); err != nil {
 			return err
 		}
 	} else if !summary.Ok && exists {
 		// The status is not OK and the health file exists; remove it.
-		log.Debug("[health] removing health file")
+		log.WithField("healthy", summary.Ok).Debug("[health] removing health file")
 		if err := os.Remove(manager.config.HealthFile); err != nil {
 			return err
 		}
