@@ -39,7 +39,7 @@
 
 [[constraint]]
   name = "github.com/vapor-ware/synse-server-grpc"
-  version = "3.0.0-alpha.1"
+  branch = "v3/staging"
 
 [[constraint]]
   branch = "master"

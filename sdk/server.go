@@ -485,6 +485,65 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 	return nil
 }
 
+// ReadStream streams readings to the caller as they are read from the plugin.
+func (server *server) ReadStream(request *synse.V3StreamRequest, stream synse.V3Plugin_ReadStreamServer) error {
+	log.WithFields(log.Fields{
+		"selectors": request.Selectors,
+		"route":     "READSTREAM",
+	}).Info("[grpc] processing request")
+
+	// Get all devices which will match the stream selector.
+	devices := map[string]*Device{}
+	for _, s := range request.Selectors {
+		devs, err := server.deviceManager.GetDevices(s)
+		if err != nil {
+			return err
+		}
+		for _, d := range devs {
+			if _, ok := devices[d.id]; !ok {
+				devices[d.id] = d
+			}
+		}
+	}
+
+	// If any selectors were specified, but no devices were found matching those
+	// selectors, return an error. This prevents the invalid selector(s) from defaulting
+	// to return readings for all configured devices.
+	if len(devices) == 0 && len(request.Selectors) != 0 {
+		return errors.New("specified selector does not match any known devices")
+	}
+
+	filter := make([]string, len(devices))
+	for id := range devices {
+		filter = append(filter, id)
+	}
+
+	s := newReadStream(filter)
+	server.stateManager.addStream(s)
+	defer func() {
+		server.stateManager.removeStream(s.id)
+		s.close()
+	}()
+	go s.listen()
+
+	log.Info("[server] streaming readings from device manager")
+	for r := range s.readings {
+		device := server.deviceManager.GetDevice(r.Device)
+		for _, data := range r.Reading {
+			reading := data.Encode()
+			if device != nil {
+				reading.Id = device.id
+				reading.DeviceType = device.Type
+			}
+			if err := stream.Send(reading); err != nil {
+				return err
+			}
+		}
+	}
+	log.Info("[server] done streaming readings")
+	return nil
+}
+
 // WriteAsync writes data to the specified plugin device. A transaction ID is returned
 // so the status of the write can be checked asynchronously.
 //
