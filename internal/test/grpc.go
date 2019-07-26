@@ -123,6 +123,39 @@ func (mock *MockReadCachedStreamErr) Send(reading *synse.V3Reading) error {
 }
 
 //
+// READ STREAM
+//
+
+// MockReadStreamStream mocks the stream for the ReadCached request, with no error.
+type MockReadStreamStream struct {
+	grpc.ServerStream
+	Results []*synse.V3Reading
+}
+
+// NewMockReadStreamStream creates a new mock read cache stream.
+func NewMockReadStreamStream() *MockReadStreamStream {
+	return &MockReadStreamStream{
+		Results: []*synse.V3Reading{},
+	}
+}
+
+// Send fulfils the stream interface for the mock grpc stream.
+func (mock *MockReadStreamStream) Send(reading *synse.V3Reading) error {
+	mock.Results = append(mock.Results, reading)
+	return nil
+}
+
+// MockReadStreamStreamErr mocks the stream for a ReadCached request, with error.
+type MockReadStreamStreamErr struct {
+	grpc.ServerStream
+}
+
+// Send fulfils the stream interface for the mock grpc stream.
+func (mock *MockReadStreamStreamErr) Send(reading *synse.V3Reading) error {
+	return fmt.Errorf("grpc error")
+}
+
+//
 // WRITE ASYNC
 //
 

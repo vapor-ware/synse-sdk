@@ -916,6 +916,86 @@ func TestServer_ReadCache_error(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestServer_ReadStream_noDeviceMatchID(t *testing.T) {
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+	}
+
+	s := server{
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			config: &config.PluginSettings{
+				Cache: &config.CacheSettings{
+					Enabled: false,
+				},
+			},
+			readings: map[string][]*output.Reading{
+				"12345": {o.MakeReading(1)},
+				"67890": {o.MakeReading(2)},
+				"abcde": {o.MakeReading(3)},
+			},
+		},
+		deviceManager: &deviceManager{
+			devices:    map[string]*Device{},
+			aliasCache: NewAliasCache(),
+		},
+	}
+
+	req := &synse.V3StreamRequest{
+		Selectors: []*synse.V3DeviceSelector{
+			{Id: "998877"},
+		},
+	}
+	mock := test.NewMockReadStreamStream()
+	err := s.ReadStream(req, mock)
+
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(mock.Results))
+}
+
+func TestServer_ReadStream_noDeviceMatchTag(t *testing.T) {
+	o := output.Output{
+		Name: "test",
+		Type: "foo",
+	}
+
+	s := server{
+		stateManager: &stateManager{
+			readingsLock: &sync.RWMutex{},
+			config: &config.PluginSettings{
+				Cache: &config.CacheSettings{
+					Enabled: false,
+				},
+			},
+			readings: map[string][]*output.Reading{
+				"12345": {o.MakeReading(1)},
+				"67890": {o.MakeReading(2)},
+				"abcde": {o.MakeReading(3)},
+			},
+		},
+		deviceManager: &deviceManager{
+			devices:    map[string]*Device{},
+			aliasCache: NewAliasCache(),
+			tagCache:   NewTagCache(),
+		},
+	}
+
+	req := &synse.V3StreamRequest{
+		Selectors: []*synse.V3DeviceSelector{
+			{Tags: []*synse.V3Tag{{
+				Namespace: "nonexistent",
+				Label:     "tag",
+			}}},
+		},
+	}
+	mock := test.NewMockReadStreamStream()
+	err := s.ReadStream(req, mock)
+
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(mock.Results))
+}
+
 func TestServer_WriteAsync(t *testing.T) {
 	handler := DeviceHandler{
 		Write: func(device *Device, data *WriteData) error {
@@ -924,11 +1004,6 @@ func TestServer_WriteAsync(t *testing.T) {
 	}
 	s := server{
 		deviceManager: &deviceManager{
-			//tagCache: &TagCache{
-			//	cache: map[string]map[string]map[string][]*Device{
-			//		"system": {"id": {"1234": {{id: "1234", handler: &handler}}}},
-			//	},
-			//},
 			devices: map[string]*Device{
 				"1234": {id: "1234", handler: &handler},
 			},
