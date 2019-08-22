@@ -14,10 +14,6 @@ clean:  ## Remove temporary files
 cover: test  ## Run tests and open the coverage report
 	go tool cover -html=coverage.out
 
-.PHONY: dep
-dep:  ## Ensure and prune dependencies
-	dep ensure -v
-
 .PHONY: check-examples
 check-examples:  ## Check that the example pluginss run without failing
 	@for d in examples/*/ ; do \
