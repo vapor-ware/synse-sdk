@@ -4,6 +4,7 @@ before:
   hooks:
     - go clean -v
     - rm -rf dist
+    - go mod download
 archive:
   format: tar.gz
 checksum:
