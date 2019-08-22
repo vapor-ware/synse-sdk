@@ -2,7 +2,9 @@
 
 pipeline {
 
-  agent any
+  agent {
+      label 'golang-next'
+  }
 
   stages {
     stage('Checkout') {
@@ -16,29 +18,24 @@ pipeline {
         CODECOV_TOKEN = credentials('codecov-token')
       }
       steps {
-        script {
-          docker.image('vaporio/jenkins-agent-golang:latest').inside('-e CODECOV_TOKEN=$CODECOV_TOKEN') {
-            sh 'CGO_ENABLED=0 go test -coverprofile=coverage.txt -covermode=atomic ./sdk/...'
-            sh 'curl -s https://codecov.io/bash | bash -s - -t ${CODECOV_TOKEN}'
-          }
+        container('golang'){
+          sh 'CGO_ENABLED=0 go test -coverprofile=coverage.txt -covermode=atomic ./sdk/...'
+          sh 'curl -s https://codecov.io/bash | bash -s - -t ${CODECOV_TOKEN}'
         }
       }
     }
 
     stage('Lint') {
       steps {
-        script {
-          docker.image('vaporio/jenkins-agent-golang:latest').inside() {
-            sh 'golint -set_exit_status ./sdk/... ./examples/...'
-          }
+        container('golang'){
+          sh 'golint -set_exit_status ./sdk/... ./examples/...'
         }
       }
     }
 
     stage('Build') {
       steps {
-        script {
-          docker.image('vaporio/jenkins-agent-golang:latest').inside() {
+        container('golang'){
             // Build the SDK project
             sh 'go build -v ./sdk'
 
@@ -47,7 +44,6 @@ pipeline {
 
             // Check that the example plugins dry-run successfully
             sh 'for d in examples/*/; do if [ "$d" != "examples/c_plugin/" ]; then cd $d; if [ ! -f "plugin" ]; then echo "plugin binary not found"; fi; if ! ./plugin --dry-run; then exit 1; fi; cd ../.. ; fi ; done'
-          }
         }
       }
     }
@@ -61,11 +57,9 @@ pipeline {
         GITHUB_TOKEN = credentials('vio-bot-gh-token')
       }
       steps {
-        script {
-          docker.image('vaporio/jenkins-agent-golang:latest').inside('-v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker -e GITHUB_TOKEN=$GITHUB_TOKEN --group-add docker') {
-            withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
-              sh 'goreleaser release --rm-dist'
-            }
+        container('golang') {
+          withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+            sh 'goreleaser release --rm-dist'
           }
         }
       }
