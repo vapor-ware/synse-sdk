@@ -4,10 +4,6 @@ pipeline {
 
   agent any
 
-  environment {
-    PROJ_PATH = '/go/src/github.com/vapor-ware/synse-sdk'
-  }
-
   stages {
     stage('Checkout') {
       steps {
@@ -21,11 +17,9 @@ pipeline {
       }
       steps {
         script {
-          docker.image('vaporio/jenkins-agent-golang:latest').inside('-v $WORKSPACE:$PROJ_PATH -e CODECOV_TOKEN=$CODECOV_TOKEN') {
-            // All the deps to build this project are provided by the runtime container
-            // Skip the configuration management and let the pipeline assets do that for you.
-            sh 'cd ${PROJ_PATH} && CGO_ENABLED=0 go test -coverprofile=coverage.txt -covermode=atomic ./sdk/...'
-            sh 'cd ${PROJ_PATH} && curl -s https://codecov.io/bash | bash -s - -t ${CODECOV_TOKEN}'
+          docker.image('vaporio/jenkins-agent-golang:latest').inside('-e CODECOV_TOKEN=$CODECOV_TOKEN') {
+            sh 'CGO_ENABLED=0 go test -coverprofile=coverage.txt -covermode=atomic ./sdk/...'
+            sh 'curl -s https://codecov.io/bash | bash -s - -t ${CODECOV_TOKEN}'
           }
         }
       }
@@ -34,10 +28,8 @@ pipeline {
     stage('Lint') {
       steps {
         script {
-          docker.image('vaporio/jenkins-agent-golang:latest').inside('-v $WORKSPACE:$PROJ_PATH') {
-            // All the deps to build this project are provided by the runtime container
-            // Skip the configuration management and let the pipeline assets do that for you.
-            sh 'cd ${PROJ_PATH} && golint -set_exit_status ./sdk/... ./examples/...'
+          docker.image('vaporio/jenkins-agent-golang:latest').inside() {
+            sh 'golint -set_exit_status ./sdk/... ./examples/...'
           }
         }
       }
@@ -46,18 +38,15 @@ pipeline {
     stage('Build') {
       steps {
         script {
-          docker.image('vaporio/jenkins-agent-golang:latest').inside('-v $WORKSPACE:$PROJ_PATH') {
-            // All the deps to build this project are provided by the runtime container
-            // Skip the configuration management and let the pipeline assets do that for you.
-
+          docker.image('vaporio/jenkins-agent-golang:latest').inside() {
             // Build the SDK project
-            sh 'cd ${PROJ_PATH} && go build -v ./sdk'
+            sh 'go build -v ./sdk'
 
             // Build the SDK example plugins
-            sh 'cd ${PROJ_PATH} && for d in examples/*/; do cd $d; if [ "$d" != "examples/c_plugin/" ]; then go build -v -o plugin; fi ; cd ../.. ; done'
+            sh 'for d in examples/*/; do cd $d; if [ "$d" != "examples/c_plugin/" ]; then go build -v -o plugin; fi ; cd ../.. ; done'
 
             // Check that the example plugins dry-run successfully
-            sh 'cd ${PROJ_PATH} && for d in examples/*/; do if [ "$d" != "examples/c_plugin/" ]; then cd $d; if [ ! -f "plugin" ]; then echo "plugin binary not found"; fi; if ! ./plugin --dry-run; then exit 1; fi; cd ../.. ; fi ; done'
+            sh 'for d in examples/*/; do if [ "$d" != "examples/c_plugin/" ]; then cd $d; if [ ! -f "plugin" ]; then echo "plugin binary not found"; fi; if ! ./plugin --dry-run; then exit 1; fi; cd ../.. ; fi ; done'
           }
         }
       }
@@ -73,9 +62,9 @@ pipeline {
       }
       steps {
         script {
-          docker.image('vaporio/jenkins-agent-golang:latest').inside('-v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker -e GITHUB_TOKEN=$GITHUB_TOKEN -v $WORKSPACE:$PROJ_PATH --group-add docker') {
+          docker.image('vaporio/jenkins-agent-golang:latest').inside('-v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker -e GITHUB_TOKEN=$GITHUB_TOKEN --group-add docker') {
             withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
-              sh 'cd ${PROJ_PATH} && goreleaser release --rm-dist'
+              sh 'goreleaser release --rm-dist'
             }
           }
         }
