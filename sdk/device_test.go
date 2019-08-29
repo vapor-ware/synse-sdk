@@ -50,9 +50,6 @@ func TestNewDeviceFromConfig(t *testing.T) {
 	// instance defines all inheritable things.
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -87,7 +84,6 @@ func TestNewDeviceFromConfig(t *testing.T) {
 	device, err := NewDeviceFromConfig(proto, instance)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
-	assert.Equal(t, map[string]string{"a": "b"}, device.Metadata)
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
@@ -106,9 +102,6 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 	// inherit values from the prototype.
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -138,7 +131,6 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 	device, err := NewDeviceFromConfig(proto, instance)
 	assert.NoError(t, err)
 	assert.Equal(t, "type1", device.Type)
-	assert.Equal(t, map[string]string{"a": "b"}, device.Metadata)
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
@@ -155,9 +147,6 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 func TestNewDeviceFromConfig3(t *testing.T) {
 	// Test when no type is resolved, resulting in error.
 	proto := &config.DeviceProto{
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -189,9 +178,6 @@ func TestNewDeviceFromConfig3(t *testing.T) {
 func TestNewDeviceFromConfig4(t *testing.T) {
 	// Test inheriting from prototype when there is nothing to inherit.
 	proto := &config.DeviceProto{
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -215,7 +201,6 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 	device, err := NewDeviceFromConfig(proto, instance)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
-	assert.Equal(t, map[string]string{"a": "b"}, device.Metadata)
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
@@ -233,9 +218,6 @@ func TestNewDeviceFromConfig5a(t *testing.T) {
 	// Test disabling inheritance when there are inheritable values.
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -267,7 +249,6 @@ func TestNewDeviceFromConfig5a(t *testing.T) {
 	device, err := NewDeviceFromConfig(proto, instance)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
-	assert.Equal(t, map[string]string{"a": "b"}, device.Metadata)
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 1, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost"}, device.Data)
@@ -286,9 +267,6 @@ func TestNewDeviceFromConfig5b(t *testing.T) {
 	// defines a handler, but the instance does not.
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -314,7 +292,6 @@ func TestNewDeviceFromConfig5b(t *testing.T) {
 	device, err := NewDeviceFromConfig(proto, instance)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
-	assert.Equal(t, map[string]string{"a": "b"}, device.Metadata)
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
@@ -332,9 +309,6 @@ func TestNewDeviceFromConfig6(t *testing.T) {
 	// Bad tags specified.
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -368,9 +342,6 @@ func TestNewDeviceFromConfig7(t *testing.T) {
 	// Bad alias specified.
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -404,9 +375,6 @@ func TestNewDeviceFromConfig8(t *testing.T) {
 	// Fail data map merging
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"address": 1234,
 			"port":    5000,
@@ -442,9 +410,6 @@ func TestNewDeviceFromConfig9(t *testing.T) {
 	// Unknown output type specified
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -476,9 +441,6 @@ func TestNewDeviceFromConfig10(t *testing.T) {
 	// Unknown transformation function specified
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -510,9 +472,6 @@ func TestNewDeviceFromConfig11(t *testing.T) {
 	// Invalid scaling factor defined
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -544,9 +503,6 @@ func TestNewDeviceFromConfig12(t *testing.T) {
 	// overrides some values in the prototype context.
 	proto := &config.DeviceProto{
 		Type: "type1",
-		Metadata: map[string]string{
-			"a": "b",
-		},
 		Data: map[string]interface{}{
 			"port": 5000,
 		},
@@ -583,7 +539,6 @@ func TestNewDeviceFromConfig12(t *testing.T) {
 	device, err := NewDeviceFromConfig(proto, instance)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
-	assert.Equal(t, map[string]string{"a": "b"}, device.Metadata)
 	assert.Equal(t, "testdata", device.Info)
 	assert.Equal(t, 2, len(device.Tags))
 	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
@@ -655,17 +610,17 @@ func TestDevice_setAlias_templateOk(t *testing.T) {
 	assert.Equal(t, "testtype", device.Alias)
 }
 
-func TestDevice_GetMetadata(t *testing.T) {
+func TestDevice_GetContext(t *testing.T) {
 	device := Device{
-		Metadata: map[string]string{
+		Context: map[string]string{
 			"foo": "bar",
 			"abc": "xyz",
 		},
 	}
 
-	assert.Equal(t, "", device.GetMetadata("vapor"))
-	assert.Equal(t, "bar", device.GetMetadata("foo"))
-	assert.Equal(t, "xyz", device.GetMetadata("abc"))
+	assert.Equal(t, "", device.GetContext("vapor"))
+	assert.Equal(t, "bar", device.GetContext("foo"))
+	assert.Equal(t, "xyz", device.GetContext("abc"))
 }
 
 func TestDevice_GetHandler(t *testing.T) {
@@ -881,7 +836,7 @@ func TestDevice_IsWritable_false(t *testing.T) {
 func TestDevice_encode(t *testing.T) {
 	device := Device{
 		Type: "foo",
-		Metadata: map[string]string{
+		Context: map[string]string{
 			"abc": "123",
 		},
 		Info:    "test",
@@ -918,7 +873,7 @@ func TestDevice_encode_2(t *testing.T) {
 	// Encode when there are handler actions, but no Write handler
 	device := Device{
 		Type: "foo",
-		Metadata: map[string]string{
+		Context: map[string]string{
 			"abc": "123",
 		},
 		Info:    "test",
@@ -956,7 +911,7 @@ func TestDevice_encode_3(t *testing.T) {
 	// Encode when there are handler actions and a Write handler is specified
 	device := Device{
 		Type: "foo",
-		Metadata: map[string]string{
+		Context: map[string]string{
 			"abc": "123",
 		},
 		Info:    "test",

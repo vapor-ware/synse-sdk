@@ -43,12 +43,6 @@ type DeviceProto struct {
 	// meaning that devices are free to define their own types.
 	Type string `yaml:"type,omitempty"`
 
-	// Metadata contains any meta-information for the device(s). There is no
-	// restriction on what data can be specified here. It is optional, so a
-	// device does not need to specify any meta-information, though it can
-	// be helpful in identifying the device or tracking information about it.
-	Metadata map[string]string `yaml:"metadata,omitempty"`
-
 	// Tags contains the set of tags to apply to each of the devices that
 	// are instances of this prototype. It is not required to define tags.
 	// All devices will get system-generated tags, so these are supplemental.

@@ -48,9 +48,6 @@ type Device struct {
 	// be used upstream to categorize the device.
 	Type string
 
-	// Metadata is arbitrary metadata that is associated with the device.
-	Metadata map[string]string
-
 	// Info is a human-readable string that provides a summary of what
 	// the device is or what it does.
 	Info string
@@ -258,7 +255,6 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		Data:          data,
 		Context:       context,
 		Handler:       handler,
-		Metadata:      proto.Metadata,
 		Info:          instance.Info,
 		SortIndex:     instance.SortIndex,
 		ScalingFactor: scalingFactor,
@@ -308,8 +304,8 @@ func (device *Device) setAlias(conf *config.DeviceAlias) error {
 		var buf bytes.Buffer
 
 		t, err := template.New("alias").Funcs(template.FuncMap{
-			"env":  os.Getenv,
-			"meta": device.GetMetadata,
+			"env": os.Getenv,
+			"ctx": device.GetContext,
 		}).Parse(conf.Template)
 		if err != nil {
 			return err
@@ -324,9 +320,9 @@ func (device *Device) setAlias(conf *config.DeviceAlias) error {
 	return nil
 }
 
-// GetMetadata gets a value out of the device's metadata map.
-func (device *Device) GetMetadata(key string) string {
-	return device.Metadata[key]
+// GetContext gets a value out of the device's context map.
+func (device *Device) GetContext(key string) string {
+	return device.Context[key]
 }
 
 // GetHandler gets the DeviceHandler of the device.
@@ -434,7 +430,7 @@ func (device *Device) encode() *synse.V3Device {
 		Type:      device.Type,
 		Info:      device.Info,
 		Alias:     device.Alias,
-		Metadata:  device.Metadata,
+		Metadata:  device.Context,
 		SortIndex: device.SortIndex,
 		Tags:      tags,
 		Capabilities: &synse.V3DeviceCapability{

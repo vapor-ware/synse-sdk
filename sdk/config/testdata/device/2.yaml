@@ -2,7 +2,7 @@ version: 3
 devices:
   - type: temperature
     handler: max11610
-    metadata:
+    context:
       model: MAX11610
     tags:
       - something/model:max11610

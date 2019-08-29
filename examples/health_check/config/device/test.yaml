@@ -2,7 +2,7 @@ version: 3
 devices:
   - type: temperature
     handler: example.temperature
-    metadata:
+    context:
       author: vaporio
     instances:
       - info: CEC Temperature 1

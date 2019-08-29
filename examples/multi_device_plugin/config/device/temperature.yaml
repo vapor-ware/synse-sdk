@@ -2,7 +2,7 @@ version: 3
 devices:
   - type: temperature
     handler: temperature
-    metadata:
+    context:
       model: temp2010
     instances:
       - info: Temperature Device 1
