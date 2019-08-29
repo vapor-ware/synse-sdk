@@ -2,7 +2,7 @@ version: 3
 devices:
   - type: voltage
     handler: voltage
-    metadata:
+    context:
       model: volt1103
     instances:
       - info: Voltage Device 1

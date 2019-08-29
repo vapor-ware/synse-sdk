@@ -2,7 +2,7 @@ version: 3
 devices:
   - type: pusher
     handler: pusher
-    metadata:
+    context:
       model: test-device
     instances:
       - info: Test Pusher Device

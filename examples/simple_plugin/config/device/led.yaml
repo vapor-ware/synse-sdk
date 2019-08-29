@@ -2,7 +2,7 @@ version: 3
 devices:
   - type: led
     handler: example.led
-    metadata:
+    context:
       model: sample-led
     tags:
       - foobar/xyz:led

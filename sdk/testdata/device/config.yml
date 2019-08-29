@@ -3,7 +3,7 @@ tags:
   - etd/kind:complex
 devices:
   - handler: input_register
-    metadata:
+    context:
       foo: bar
     data:
       host: 10.194.4.250
