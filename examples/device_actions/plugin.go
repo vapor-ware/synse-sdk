@@ -38,9 +38,9 @@ func preRunAction2(p *sdk.Plugin) error {
 func deviceSetupAction(_ *sdk.Plugin, d *sdk.Device) error {
 	logger.Debug("deviceSetupAction1 -> print device info for the given filter")
 	logger.Debug("device")
-	logger.Debugf("  id:    %v", d.GetID())
-	logger.Debugf("  type:  %v", d.Type)
-	logger.Debugf("  meta:  %v", d.Metadata)
+	logger.Debugf("  id:      %v", d.GetID())
+	logger.Debugf("  type:    %v", d.Type)
+	logger.Debugf("  context: %v", d.Context)
 	return nil
 }
 

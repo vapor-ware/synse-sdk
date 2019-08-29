@@ -54,7 +54,7 @@ func DynamicDeviceConfig(cfg map[string]interface{}) ([]*config.DeviceProto, err
 	res := []*config.DeviceProto{
 		{
 			Type: "temperature",
-			Metadata: map[string]string{
+			Context: map[string]string{
 				"model": "temp2010",
 			},
 			Instances: []*config.DeviceInstance{

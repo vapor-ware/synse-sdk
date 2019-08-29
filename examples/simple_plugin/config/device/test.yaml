@@ -2,7 +2,7 @@ version: 3
 devices:
   - type: temperature
     handler: example.temperature
-    metadata:
+    context:
       model: sample-temperature
     tags:
       - foobar/xyz:temp
