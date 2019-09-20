@@ -20,6 +20,7 @@ package output
 func GetBuiltins() []*Output {
 	return []*Output{
 		&Color,
+		&Direction,
 		&ElectricCurrent,
 		&ElectricResistance,
 		&Frequency,
@@ -27,6 +28,7 @@ func GetBuiltins() []*Output {
 		&Kilojoule,
 		&KilowattHour,
 		&Pascal,
+		&Percentage,
 		&PSI,
 		&RPM,
 		&Seconds,
@@ -48,6 +50,13 @@ func GetBuiltins() []*Output {
 var Color = Output{
 	Name: "color",
 	Type: "color",
+}
+
+// Direction is an output type for directionality (e.g. the direction
+// in which a fan may be spinning). This output has no unit.
+var Direction = Output{
+	Name: "direction",
+	Type: "direction",
 }
 
 // ElectricCurrent is an output type for electrical current readings,
@@ -126,6 +135,16 @@ var Pascal = Output{
 	Unit: &Unit{
 		Name:   "pascal",
 		Symbol: "Pa",
+	},
+}
+
+// Percentage is an output type for general percentages.
+var Percentage = Output{
+	Name: "percentage",
+	Type: "percentage",
+	Unit: &Unit{
+		Name:   "percent",
+		Symbol: "%",
 	},
 }
 
