@@ -48,8 +48,8 @@ The Synse SDK is one component of the greater Synse Ecosystem.
 
 
 ## Getting Started
-It is strongly recommended that you use a [release][releases] version of the SDK if you are
-vendoring dependencies, e.g. with [dep][dep]. The SDK can be installed with:
+It is strongly recommended that you use a [release][releases] version of the SDK.
+The SDK can be installed with:
 
 ```
 go get -u github.com/vapor-ware/synse-sdk/sdk
@@ -86,7 +86,6 @@ The Synse Plugin SDK is released under the [GPL-3.0](LICENSE) license.
 
 [go-install]: https://golang.org/doc/install
 [releases]: https://github.com/vapor-ware/synse-sdk/releases
-[dep]: https://github.com/golang/dep
 [sdk-docs]: http://synse-sdk.readthedocs.io/en/latest/
 [synse-server]: https://github.com/vapor-ware/synse-server
 [synse-cli]: https://github.com/vapor-ware/synse-cli

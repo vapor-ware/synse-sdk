@@ -3,9 +3,9 @@ package sdk
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/xid"
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-server-grpc/go"
 )
 
