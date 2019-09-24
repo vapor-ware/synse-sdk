@@ -14,7 +14,7 @@ and management of transaction state for each incoming write request.
 package sdk
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
