@@ -53,9 +53,6 @@ func init() {
 	flag.BoolVar(&flagDebug, "debug", false, "enable debug logging")
 	flag.BoolVar(&flagVersion, "version", false, "print the plugin version information")
 	flag.BoolVar(&flagDryRun, "dry-run", false, "run only the setup actions to verify functionality and configuration")
-
-	flag.Parse()
-	handleRunOptions()
 }
 
 // PluginAction defines an action that can be run before or after the main
@@ -96,6 +93,12 @@ type Plugin struct {
 // or invalid, this will fail. All other Plugin component initialization
 // is deferred until Run is called.
 func NewPlugin(options ...PluginOption) (*Plugin, error) {
+
+	// These used to be called in the init() fn. As of go1.13, there is an issue with
+	// parsing flags in init() when running tests. https://github.com/golang/go/issues/31859
+	flag.Parse()
+	handleRunOptions()
+
 	// Since this is essentially the entry point for the plugin and setup actions
 	// occur as part of plugin construction, we want to set the log level as early
 	// as possible. If the debug flag is set, set the level to debug.

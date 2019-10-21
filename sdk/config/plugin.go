@@ -60,6 +60,7 @@ func (conf *Plugin) Log() {
 		log.Infof("  Version: %d", conf.Version)
 		log.Infof("  Debug:   %v", conf.Debug)
 		conf.ID.Log()
+		conf.Metrics.Log()
 		conf.Settings.Log()
 		conf.Network.Log()
 		conf.Health.Log()
