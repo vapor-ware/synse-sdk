@@ -78,6 +78,7 @@ func (manager *stateManager) Start() {
 
 // addStream adds a new stream for the stateManager to send reading data to.
 func (manager *stateManager) addStream(stream ReadStream) {
+	log.WithField("id", stream.id).Debug("[state manager] adding stream")
 	manager.streamLock.Lock()
 	defer manager.streamLock.Unlock()
 
@@ -86,6 +87,7 @@ func (manager *stateManager) addStream(stream ReadStream) {
 
 // removeStream removes a stream which the stateManager was sending data to.
 func (manager *stateManager) removeStream(id uuid.UUID) {
+	log.WithField("id", id).Debug("[state manager] removing stream")
 	manager.streamLock.Lock()
 	defer manager.streamLock.Unlock()
 

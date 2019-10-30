@@ -519,6 +519,10 @@ func (server *server) ReadStream(request *synse.V3StreamRequest, stream synse.V3
 	}
 
 	s := newReadStream(filter)
+	log.WithFields(log.Fields{
+		"id":     s.id,
+		"filter": s.filter,
+	}).Debug("[server] created new stream for readings")
 	server.stateManager.addStream(s)
 	defer func() {
 		server.stateManager.removeStream(s.id)
