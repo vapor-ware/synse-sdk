@@ -27,6 +27,7 @@ type ReadStream struct {
 	readings chan *ReadContext
 	id       uuid.UUID
 	filter   []string
+	closing  bool
 }
 
 // listen collects all new readings and filters them based on the supplied filter.
@@ -36,6 +37,9 @@ func (s *ReadStream) listen() {
 		"id":     s.id,
 	}).Info("starting stream listen")
 	for {
+		if s.closing {
+			return
+		}
 		r, open := <-s.stream
 		if !open {
 			break
@@ -43,12 +47,18 @@ func (s *ReadStream) listen() {
 
 		if len(s.filter) == 0 {
 			log.WithField("device", r.Device).Debug("collecting reading")
+			if s.closing {
+				return
+			}
 			s.readings <- r
 		}
 
 		for _, id := range s.filter {
 			if r.Device == id {
 				log.WithField("device", r.Device).Debug("collecting reading")
+				if s.closing {
+					return
+				}
 				s.readings <- r
 				break
 			}
@@ -59,6 +69,7 @@ func (s *ReadStream) listen() {
 // close the ReadStream.
 func (s *ReadStream) close() {
 	log.WithField("id", s.id).Info("closing read stream")
+	s.closing = true
 	if s.stream != nil {
 		close(s.stream)
 	}
