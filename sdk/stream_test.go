@@ -21,9 +21,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
 func TestNewReadStream(t *testing.T) {
@@ -33,6 +32,7 @@ func TestNewReadStream(t *testing.T) {
 	assert.NotNil(t, s.readings)
 	assert.NotNil(t, s.id)
 	assert.Equal(t, []string{"foo", "bar"}, s.filter)
+	assert.False(t, s.closing)
 }
 
 func TestReadStream_close_openChannels(t *testing.T) {
@@ -51,9 +51,11 @@ func TestReadStream_close_openChannels(t *testing.T) {
 	assert.True(t, open)
 	_, open = <-readingsChan
 	assert.True(t, open)
+	assert.False(t, s.closing)
 
 	s.close()
 
+	assert.True(t, s.closing)
 	_, open = <-streamChan
 	assert.False(t, open)
 	_, open = <-readingsChan
@@ -64,10 +66,12 @@ func TestReadStream_close_nilChannels(t *testing.T) {
 	s := ReadStream{}
 	assert.Nil(t, s.stream)
 	assert.Nil(t, s.readings)
+	assert.False(t, s.closing)
 
 	assert.NotPanics(t, func() {
 		s.close()
 	})
+	assert.True(t, s.closing)
 }
 
 func TestReadStream_listen_withFilter(t *testing.T) {
@@ -77,6 +81,7 @@ func TestReadStream_listen_withFilter(t *testing.T) {
 		id:       uuid.New(),
 		filter:   []string{"12345", "11111"},
 	}
+	assert.False(t, s.closing)
 
 	// Create read contexts to send to the stream.
 	ctxs := []*ReadContext{
@@ -126,6 +131,9 @@ func TestReadStream_listen_withFilter(t *testing.T) {
 	assert.Len(t, readings, 2)
 	assert.Equal(t, "11111", readings[0].Device)
 	assert.Equal(t, "12345", readings[1].Device)
+
+	// We did not call close(), so the stream should not be in the closing state
+	assert.False(t, s.closing)
 }
 
 func TestReadStream_listen_noFilter(t *testing.T) {
@@ -135,6 +143,7 @@ func TestReadStream_listen_noFilter(t *testing.T) {
 		id:       uuid.New(),
 		filter:   []string{},
 	}
+	assert.False(t, s.closing)
 
 	// Create read contexts to send to the stream.
 	ctxs := []*ReadContext{
@@ -186,4 +195,48 @@ func TestReadStream_listen_noFilter(t *testing.T) {
 	assert.Equal(t, "22222", readings[1].Device)
 	assert.Equal(t, "12345", readings[2].Device)
 	assert.Equal(t, "54321", readings[3].Device)
+
+	// We did not call close(), so the stream should not be in the closing state
+	assert.False(t, s.closing)
+}
+
+func TestReadStream_listen_close(t *testing.T) {
+	s := ReadStream{
+		stream:   make(chan *ReadContext, 128),
+		readings: make(chan *ReadContext, 128),
+		id:       uuid.New(),
+		filter:   []string{},
+	}
+	assert.False(t, s.closing)
+
+	// Create read contexts to send to the stream.
+	ctxs := []*ReadContext{
+		{
+			Device:  "11111",
+			Reading: []*output.Reading{{Value: 1}},
+		},
+		{
+			Device:  "22222",
+			Reading: []*output.Reading{{Value: 1}},
+		},
+		{
+			Device:  "12345",
+			Reading: []*output.Reading{{Value: 1}},
+		},
+		{
+			Device:  "54321",
+			Reading: []*output.Reading{{Value: 1}},
+		},
+	}
+
+	for _, c := range ctxs {
+		s.stream <- c
+	}
+	s.close()
+	s.listen()
+
+	_, open := <-s.readings
+	assert.False(t, open)
+
+	assert.True(t, s.closing)
 }
