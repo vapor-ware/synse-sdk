@@ -40,10 +40,6 @@ The Synse SDK is one component of the greater Synse Ecosystem.
 - [**vapor-ware/synse-cli**][synse-cli]: A CLI that allows you to easily interact with
   Synse Server (via HTTP) and Plugins (via gRPC) directly from the command line.
 
-- [**vapor-ware/synse-graphql**][synse-graphql]: A GraphQL wrapper around Synse Server's
-  HTTP API that provides a powerful query language enabling simple aggregations and
-  operations over multiple devices.
-
 
 ## Getting Started
 It is strongly recommended that you use a [release][releases] version of the SDK. It may be
