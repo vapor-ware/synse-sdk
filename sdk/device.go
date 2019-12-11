@@ -136,7 +136,7 @@ func (device *Device) JSON() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(bytes), nil
+	return RedactPasswords(string(bytes))
 }
 
 // GetType gets the type of the device. The type of the device is the last

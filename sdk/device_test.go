@@ -183,7 +183,7 @@ func TestDevice_JSON_1(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		`{"Kind":"","Metadata":null,"Plugin":"","Info":"","Location":null,"Data":null,"Outputs":null,"SortOrdinal":0}`,
+		"{\"Data\":null,\"Info\":\"\",\"Kind\":\"\",\"Location\":null,\"Metadata\":null,\"Outputs\":null,\"Plugin\":\"\",\"SortOrdinal\":0}",
 		out,
 	)
 }
@@ -206,7 +206,7 @@ func TestDevice_JSON_2(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		`{"Kind":"foo","Metadata":{"test":"data"},"Plugin":"","Info":"info","Location":{"Rack":"rack","Board":"board"},"Data":null,"Outputs":null,"SortOrdinal":1}`,
+		"{\"Data\":null,\"Info\":\"info\",\"Kind\":\"foo\",\"Location\":{\"Board\":\"board\",\"Rack\":\"rack\"},\"Metadata\":{\"test\":\"data\"},\"Outputs\":null,\"Plugin\":\"\",\"SortOrdinal\":1}",
 		out,
 	)
 }
