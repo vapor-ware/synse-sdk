@@ -487,3 +487,21 @@ func Test_registerDevices4(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(ctx.devices))
 }
+
+// TestRedactedJsonConfigOutput tests that we redact passwords when we dump
+// them to the logs. map[string]interface{} values will be replaced with
+// REDACTED if the lowercase map key contains "pass".
+func TestRedactedJsonConfigOutput(t *testing.T) {
+	// Test string from a log before we redacted passwords.
+	s := "{\"Version\":\"1\",\"Debug\":true,\"Settings\":{\"Mode\":\"serial\",\"Listen\":{\"Enabled\":true,\"Buffer\":100},\"Read\":{\"Enabled\":true,\"Interval\":\"3s\",\"Buffer\":1024},\"Write\":{\"Enabled\":true,\"Interval\":\"1s\",\"Buffer\":1024,\"Max\":100},\"Transaction\":{\"TTL\":\"5m\"},\"Cache\":{\"Enabled\":false,\"TTL\":180000000000}},\"Network\":{\"Type\":\"tcp\",\"Address\":\"0.0.0.0:5003\",\"TLS\":null},\"DynamicRegistration\":{\"Config\":[{\"authenticationPassphrase\":\"dog\",\"authenticationProtocol\":\"SHA\",\"endpoint\":\"10.193.3.201\",\"model\":\"PXGMS UPS + EATON 93PM\",\"port\":161,\"privacyPassphrase\":\"cat\",\"privacyProtocol\":\"AES\",\"userName\":\"user\",\"version\":\"v3\"}]},\"Limiter\":null,\"Health\":{\"UseDefaults\":true},\"Context\":{}}"
+
+	expected := `{"Context":{},"Debug":true,"DynamicRegistration":{"Config":[{"authenticationPassphrase":"REDACTED","authenticationProtocol":"SHA","endpoint":"10.193.3.201","model":"PXGMS UPS + EATON 93PM","port":161,"privacyPassphrase":"REDACTED","privacyProtocol":"AES","userName":"user","version":"v3"}]},"Health":{"UseDefaults":true},"Limiter":null,"Network":{"Address":"0.0.0.0:5003","TLS":null,"Type":"tcp"},"Settings":{"Cache":{"Enabled":false,"TTL":180000000000},"Listen":{"Buffer":100,"Enabled":true},"Mode":"serial","Read":{"Buffer":1024,"Enabled":true,"Interval":"3s"},"Transaction":{"TTL":"5m"},"Write":{"Buffer":1024,"Enabled":true,"Interval":"1s","Max":100}},"Version":"1"}`
+
+	output, err := RedactPasswords(s)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, output)
+}

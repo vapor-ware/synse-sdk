@@ -2,8 +2,10 @@ package sdk
 
 import (
 	"crypto/md5" // #nosec
+	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -189,4 +191,133 @@ func logStartupInfo() {
 		log.Infof("  %v (%v)", id, dev.Kind)
 	}
 	log.Info("--------------------------------")
+}
+
+// RedactPasswords redacts map fields containing key substring "pass"
+// (case-insensitive) in Marshaled json string s, and returns a string where
+// those field values are emitted as REDACTED.
+func RedactPasswords(s string) (output string, err error) {
+
+	// Unmarshal json string to structure.
+	var x interface{}
+	err = json.Unmarshal([]byte(s), &x)
+	if err != nil {
+		return
+	}
+
+	// We only need to be concerned with the following types.
+	// If someone has a magic string that happens to be a password, we cannot
+	// help you.
+	switch v := x.(type) {
+	case map[string]interface{}:
+		err = traverseMap(x.(map[string]interface{}))
+	case []interface{}:
+		err = traverseSlice(x.([]interface{}))
+	default:
+		err = fmt.Errorf("Unsupported type: %v\n", v)
+	}
+
+	if err != nil {
+		fmt.Printf("Error traversing: %v\n", err)
+		return
+	}
+
+	// Marshal to bytes. Return string.
+	outputTemp, err := json.Marshal(x)
+	if err != nil {
+		return
+	}
+	return string(outputTemp), nil
+}
+
+// traverseMap iterates through all keys and values in a map[string]interface{}.
+// If it finds a nested map[string]interface{} we recurse into it.
+func traverseMap(m map[string]interface{}) (err error) {
+
+	for k, v := range m {
+
+		// If the key contains the string "pass" (case-insensitive), we substitute
+		// with the string REDACTED
+		klower := strings.ToLower(k)
+		if strings.Contains(klower, "pass") {
+			// Redact the data whatever it is.
+			m[k] = "REDACTED"
+			continue
+		}
+
+		// Is this a map of [string]interface{}?
+		vvalue := reflect.ValueOf(v)
+		vkind := vvalue.Kind()
+		if vkind == reflect.Map {
+			// Yes this is a map of [string]interface{}
+			if vvalue.IsNil() {
+				continue
+			}
+			nestedMap, ok := v.(map[string]interface{})
+			if ok {
+				err := traverseMap(nestedMap)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// Is this a []interface{}?
+		if vkind == reflect.Slice {
+			// Yes.
+			if vvalue.IsNil() {
+				continue
+			}
+			nestedSlice, ok := v.([]interface{})
+			if ok {
+				err := traverseSlice(nestedSlice)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// traverseSlice iterates through all values in a []interface{}. If it finds a
+// nested map[string]interface{} or a []interface we recurse into it.
+func traverseSlice(s []interface{}) (err error) {
+
+	for i := 0; i < len(s); i++ {
+		v := s[i]
+
+		// Is this a map of [string]interface{}?
+		vvalue := reflect.ValueOf(v)
+		vkind := vvalue.Kind()
+		if vkind == reflect.Map {
+			// Yes this is a map [string]interface{}
+			if vvalue.IsNil() {
+				continue
+			}
+			nestedMap, ok := v.(map[string]interface{})
+			if ok {
+				err := traverseMap(nestedMap)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// Is this a []interface{}
+		if vkind == reflect.Slice {
+			// Yes.
+			if vvalue.IsNil() {
+				continue
+			}
+			nestedSlice, ok := v.([]interface{})
+			if ok {
+				err := traverseSlice(nestedSlice)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }

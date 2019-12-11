@@ -362,7 +362,7 @@ func (config *PluginConfig) JSON() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(bytes), nil
+	return RedactPasswords(string(bytes))
 }
 
 // Validate validates that the PluginConfig has no configuration errors.
