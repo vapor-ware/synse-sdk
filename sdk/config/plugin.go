@@ -20,6 +20,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vapor-ware/synse-sdk/sdk/utils"
 )
 
 // Plugin contains the configuration for a Synse Plugin.
@@ -415,7 +416,7 @@ func (conf *DynamicRegistrationSettings) Log() {
 		log.Infof("  DynamicRegistration: nil")
 	} else {
 		log.Infof("  DynamicRegistration:")
-		log.Infof("    Config: %v", conf.Config)
+		log.Infof("    Config: %v", utils.RedactPasswords(conf.Config))
 	}
 }
 
