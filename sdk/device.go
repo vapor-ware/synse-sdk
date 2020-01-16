@@ -124,19 +124,25 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 	// Define variable for the Device fields that can be inherited from the
 	// device prototype configuration.
 	var (
-		data         map[string]interface{}
-		context      map[string]string
+		data         = map[string]interface{}{}
+		context      = map[string]string{}
 		tags         []string
 		handler      string
 		deviceType   string
 		writeTimeout time.Duration
 	)
 
-	// If inheritance is enabled, use the prototype defined value as the base.
+	// If inheritance is enabled, use the prototype defined value as the base. For
+	// map and slice types, we need to make a copy so we do not mutate the prototype
+	// values for other instances built off the same prototype.
 	if !instance.DisableInheritance {
-		data = proto.Data
-		context = proto.Context
-		tags = proto.Tags
+		for k, v := range proto.Data {
+			data[k] = v
+		}
+		for k, v := range proto.Context {
+			context[k] = v
+		}
+		tags = append(tags, proto.Tags...)
 		handler = proto.Handler
 		deviceType = proto.Type
 		writeTimeout = proto.WriteTimeout
