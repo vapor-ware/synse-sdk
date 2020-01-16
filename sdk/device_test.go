@@ -552,6 +552,124 @@ func TestNewDeviceFromConfig12(t *testing.T) {
 	assert.Equal(t, 0, len(device.fns))
 }
 
+func TestNewDeviceFromConfig13(t *testing.T) {
+	// A regression test for a bug where having multiple instances with different
+	// contexts and shared prototype context would lead to context overrwrite.
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Context: map[string]string{
+			"foo": "bar",
+		},
+		Tags:         []string{"default/foo"},
+		Handler:      "testhandler",
+		WriteTimeout: 3 * time.Second,
+	}
+	instance1 := &config.DeviceInstance{
+		Type: "type2",
+		Info: "test device 1",
+		Tags: []string{
+			"vapor/io",
+			"tag/1",
+			"abc/123",
+		},
+		Data: map[string]interface{}{
+			"address": "localhost",
+			"value":   123,
+			"foo":     "a",
+		},
+		Context: map[string]string{
+			"alpha": "value-1",
+			"bravo": "value-2",
+		},
+		Output:    "temperature",
+		SortIndex: 1,
+		Handler:   "testhandler2",
+		Alias: &config.DeviceAlias{
+			Name: "foo",
+		},
+		ScalingFactor:      "2",
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+	instance2 := &config.DeviceInstance{
+		Type: "type3",
+		Info: "test device 2",
+		Tags: []string{
+			"vapor/io",
+			"tag/2",
+			"def/456",
+		},
+		Data: map[string]interface{}{
+			"address": "localhost",
+			"value":   456,
+			"bar":     "b",
+		},
+		Context: map[string]string{
+			"bravo":   "value-3",
+			"charlie": "value-4",
+		},
+		Output:    "temperature",
+		SortIndex: 2,
+		Handler:   "testhandler2",
+		Alias: &config.DeviceAlias{
+			Name: "bar",
+		},
+		ScalingFactor:      "2",
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+
+	t1, _ := NewTag("default/foo")
+	t2, _ := NewTag("vapor/io")
+	t3, _ := NewTag("tag/1")
+	t4, _ := NewTag("tag/2")
+	t5, _ := NewTag("abc/123")
+	t6, _ := NewTag("def/456")
+
+	dev1ExpectedTags := []*Tag{t1, t2, t3, t5}
+	dev2ExpectedTags := []*Tag{t1, t2, t4, t6}
+
+	dev1, err := NewDeviceFromConfig(proto, instance1)
+	assert.NoError(t, err)
+	assert.Equal(t, "type2", dev1.Type)
+	assert.Equal(t, "test device 1", dev1.Info)
+	assert.Equal(t, 4, len(dev1.Tags))
+	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000, "value": 123, "foo": "a"}, dev1.Data)
+	assert.Equal(t, map[string]string{"foo": "bar", "alpha": "value-1", "bravo": "value-2"}, dev1.Context)
+	assert.Equal(t, "testhandler2", dev1.Handler)
+	assert.Equal(t, int32(1), dev1.SortIndex)
+	assert.Equal(t, "foo", dev1.Alias)
+	assert.Equal(t, float64(2), dev1.ScalingFactor)
+	assert.Equal(t, 5*time.Second, dev1.WriteTimeout)
+	assert.Equal(t, "temperature", dev1.Output)
+	assert.Equal(t, 0, len(dev1.fns))
+	for i, tag := range dev1.Tags {
+		assert.Equal(t, dev1ExpectedTags[i], tag)
+	}
+
+	// Use the same prototype for the next instance
+	dev2, err := NewDeviceFromConfig(proto, instance2)
+	assert.NoError(t, err)
+	assert.Equal(t, "type3", dev2.Type)
+	assert.Equal(t, "test device 2", dev2.Info)
+	assert.Equal(t, 4, len(dev2.Tags))
+	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000, "value": 456, "bar": "b"}, dev2.Data)
+	assert.Equal(t, map[string]string{"foo": "bar", "charlie": "value-4", "bravo": "value-3"}, dev2.Context)
+	assert.Equal(t, "testhandler2", dev2.Handler)
+	assert.Equal(t, int32(2), dev2.SortIndex)
+	assert.Equal(t, "bar", dev2.Alias)
+	assert.Equal(t, float64(2), dev2.ScalingFactor)
+	assert.Equal(t, 5*time.Second, dev2.WriteTimeout)
+	assert.Equal(t, "temperature", dev2.Output)
+	assert.Equal(t, 0, len(dev2.fns))
+	for i, tag := range dev2.Tags {
+		assert.Equal(t, dev2ExpectedTags[i], tag)
+	}
+}
+
 func TestDevice_setAlias_noConf(t *testing.T) {
 	device := Device{}
 
