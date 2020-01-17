@@ -27,20 +27,28 @@ import (
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 )
 
+// A map of DeviceHandlers for the test data. The handlers do nothing.
+var testHandlers = map[string]*DeviceHandler{
+	"testhandler":  {Name: "testhandler"},
+	"testhandler2": {Name: "testhandler2"},
+	"type1":        {Name: "type1"},
+	"type2":        {Name: "type2"},
+}
+
 func TestNewDeviceFromConfig_nil1(t *testing.T) {
-	d, err := NewDeviceFromConfig(nil, &config.DeviceInstance{})
+	d, err := NewDeviceFromConfig(nil, &config.DeviceInstance{}, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, d)
 }
 
 func TestNewDeviceFromConfig_nil2(t *testing.T) {
-	d, err := NewDeviceFromConfig(&config.DeviceProto{}, nil)
+	d, err := NewDeviceFromConfig(&config.DeviceProto{}, nil, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, d)
 }
 
 func TestNewDeviceFromConfig_nil3(t *testing.T) {
-	d, err := NewDeviceFromConfig(nil, nil)
+	d, err := NewDeviceFromConfig(nil, nil, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, d)
 }
@@ -81,7 +89,7 @@ func TestNewDeviceFromConfig(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
 	assert.Equal(t, "testdata", device.Info)
@@ -128,7 +136,7 @@ func TestNewDeviceFromConfig2(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.NoError(t, err)
 	assert.Equal(t, "type1", device.Type)
 	assert.Equal(t, "testdata", device.Info)
@@ -170,7 +178,7 @@ func TestNewDeviceFromConfig3(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, device)
 }
@@ -198,7 +206,7 @@ func TestNewDeviceFromConfig4(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
 	assert.Equal(t, "testdata", device.Info)
@@ -246,7 +254,7 @@ func TestNewDeviceFromConfig5a(t *testing.T) {
 		DisableInheritance: true,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
 	assert.Equal(t, "testdata", device.Info)
@@ -289,7 +297,7 @@ func TestNewDeviceFromConfig5b(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
 	assert.Equal(t, "testdata", device.Info)
@@ -333,7 +341,7 @@ func TestNewDeviceFromConfig6(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, device)
 }
@@ -366,7 +374,7 @@ func TestNewDeviceFromConfig7(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, device)
 }
@@ -401,7 +409,7 @@ func TestNewDeviceFromConfig8(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, device)
 }
@@ -432,7 +440,7 @@ func TestNewDeviceFromConfig9(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, device)
 }
@@ -463,7 +471,7 @@ func TestNewDeviceFromConfig10(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, device)
 }
@@ -493,7 +501,7 @@ func TestNewDeviceFromConfig11(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.Error(t, err)
 	assert.Nil(t, device)
 }
@@ -536,7 +544,7 @@ func TestNewDeviceFromConfig12(t *testing.T) {
 		DisableInheritance: false,
 	}
 
-	device, err := NewDeviceFromConfig(proto, instance)
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", device.Type)
 	assert.Equal(t, "testdata", device.Info)
@@ -632,7 +640,7 @@ func TestNewDeviceFromConfig13(t *testing.T) {
 	dev1ExpectedTags := []*Tag{t1, t2, t3, t5}
 	dev2ExpectedTags := []*Tag{t1, t2, t4, t6}
 
-	dev1, err := NewDeviceFromConfig(proto, instance1)
+	dev1, err := NewDeviceFromConfig(proto, instance1, testHandlers)
 	assert.NoError(t, err)
 	assert.Equal(t, "type2", dev1.Type)
 	assert.Equal(t, "test device 1", dev1.Info)
@@ -651,7 +659,7 @@ func TestNewDeviceFromConfig13(t *testing.T) {
 	}
 
 	// Use the same prototype for the next instance
-	dev2, err := NewDeviceFromConfig(proto, instance2)
+	dev2, err := NewDeviceFromConfig(proto, instance2, testHandlers)
 	assert.NoError(t, err)
 	assert.Equal(t, "type3", dev2.Type)
 	assert.Equal(t, "test device 2", dev2.Info)
@@ -668,6 +676,28 @@ func TestNewDeviceFromConfig13(t *testing.T) {
 	for i, tag := range dev2.Tags {
 		assert.Equal(t, dev2ExpectedTags[i], tag)
 	}
+}
+
+func TestNewDeviceFromConfig14(t *testing.T) {
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Handler: "handler-that-does-not-exist",
+	}
+	instance := &config.DeviceInstance{
+		Info:               "testdata",
+		Tags:               []string{"vapor/io"},
+		Output:             "temperature",
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
+	assert.Nil(t, device)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown handler specified")
 }
 
 func TestDevice_setAlias_noConf(t *testing.T) {
