@@ -507,7 +507,7 @@ func (manager *deviceManager) createDevices() error {
 		for _, instance := range proto.Instances {
 
 			// Create the device.
-			device, err := NewDeviceFromConfig(proto, instance)
+			device, err := NewDeviceFromConfig(proto, instance, manager.handlers)
 			if err != nil {
 				log.WithField("error", err).Error("[device manager] failed to create device from config")
 				failedLoad = true
