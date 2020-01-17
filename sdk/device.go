@@ -116,7 +116,20 @@ type Device struct {
 // and device instance configuration.
 //
 // These configuration components are loaded from config file.
-func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInstance) (*Device, error) {
+//
+// The device instance and prototype may specify a device handler name in their
+// Handler field. This is only the name of the Handler, not a reference to the
+// device Handler itself. A map[string]*DeviceHandler must be passed to this function
+// to register the device handler with the device (in the private `handler` field,
+// looking up the appropriate handler from the map using the `Handler` name.
+//
+// If no handler is found in the map for the device, an error is returned.
+func NewDeviceFromConfig(
+	proto *config.DeviceProto,
+	instance *config.DeviceInstance,
+	handlers map[string]*DeviceHandler,
+) (*Device, error) {
+
 	if proto == nil || instance == nil {
 		return nil, fmt.Errorf("cannot create new device from nil config")
 	}
@@ -204,6 +217,11 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		handler = deviceType
 	}
 
+	handlerFn, found := handlers[handler]
+	if !found {
+		return nil, fmt.Errorf("new device: unknown handler specified '%s'", handler)
+	}
+
 	// If an output is specified for the device, make sure that an output
 	// with that name exists. If not, the device config is incorrect.
 	if instance.Output != "" {
@@ -267,6 +285,7 @@ func NewDeviceFromConfig(proto *config.DeviceProto, instance *config.DeviceInsta
 		WriteTimeout:  writeTimeout,
 		Output:        instance.Output,
 		fns:           fns,
+		handler:       handlerFn,
 	}
 
 	if err := d.setAlias(instance.Alias); err != nil {
