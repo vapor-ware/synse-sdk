@@ -27,6 +27,9 @@ func GetBuiltins() []*Output {
 		&Humidity,
 		&Kilojoule,
 		&KilowattHour,
+		&Microseconds,
+		&Milliseconds,
+		&Nanoseconds,
 		&Pascal,
 		&Percentage,
 		&PSI,
@@ -34,9 +37,11 @@ func GetBuiltins() []*Output {
 		&Seconds,
 		&State,
 		&Status,
+		&Switch,
 		&Temperature,
 		&Velocity,
 		&Voltage,
+		&VoltSecond,
 		&Watt,
 		&Weber,
 	}
@@ -127,6 +132,39 @@ var KilowattHour = Output{
 	},
 }
 
+// Microseconds is an output type for a duration, measured in seconds.
+var Microseconds = Output{
+	Name:      "microseconds",
+	Type:      "duration",
+	Precision: 6,
+	Unit: &Unit{
+		Name:   "microseconds",
+		Symbol: "µs",
+	},
+}
+
+// Milliseconds is an output type for a duration, measured in milliseconds.
+var Milliseconds = Output{
+	Name:      "milliseconds",
+	Type:      "duration",
+	Precision: 6,
+	Unit: &Unit{
+		Name:   "milliseconds",
+		Symbol: "ms",
+	},
+}
+
+// Nanoseconds is an output type for a duration, measured in seconds.
+var Nanoseconds = Output{
+	Name:      "nanoseconds",
+	Type:      "duration",
+	Precision: 6,
+	Unit: &Unit{
+		Name:   "nanoseconds",
+		Symbol: "ns",
+	},
+}
+
 // Pascal is an output type for pressure readings, measured in Pascals.
 var Pascal = Output{
 	Name:      "pascal",
@@ -199,6 +237,20 @@ var Status = Output{
 	Type: "status",
 }
 
+// Switch is an output type for a boolean switch (on/off, high/low, true/false)
+// reading. This output has no unit.
+//
+// This unit is similar to "state", and "state" could be used in place of this
+// if desired. The "state" output is more general, applying to any state, where
+// this "switch" state is more focused on a two-state reading. This distinction
+// is semantic though, as the SDK does not encode nor enforce the above statements
+// in any way.
+var Switch = Output{
+	Name:      "switch",
+	Type:      "state",
+	Precision: 1,
+}
+
 // Temperature is an output type for temperature readings, measured in degrees
 // Celsius.
 var Temperature = Output{
@@ -230,6 +282,22 @@ var Voltage = Output{
 	Unit: &Unit{
 		Name:   "volt",
 		Symbol: "V",
+	},
+}
+
+// VoltSecond is an output type for magnetic flux readings, measured in Volt seconds.
+//
+// Note that:
+//  Wb = kg•m²/s²•A = Ω•C = V•s = H•A = T•m² = J/A
+//
+// That means this output can be used in place of a Weber, for example.
+var VoltSecond = Output{
+	Name:      "voltSecond",
+	Type:      "flux",
+	Precision: 3,
+	Unit: &Unit{
+		Name:   "volt second",
+		Symbol: "Vs",
 	},
 }
 
