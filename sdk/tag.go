@@ -17,9 +17,12 @@
 package sdk
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
+	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
@@ -39,6 +42,12 @@ const (
 	TagLabelAll = "**"
 )
 
+var (
+	tagsTmpl = template.New("tags").Funcs(template.FuncMap{
+		"env": os.Getenv,
+	})
+)
+
 // Tag represents a group identifier which a Synse device can belong to.
 type Tag struct {
 	Namespace  string
@@ -50,6 +59,22 @@ type Tag struct {
 
 // NewTag creates a new Tag from a tag string.
 func NewTag(tag string) (*Tag, error) {
+	if tag == "" {
+		return nil, fmt.Errorf("cannot create tag from empty string")
+	}
+
+	// First, attempt to parse the tag string as if it were a template - this could be
+	// the case if part of the tag is templated out in config, e.g. "foo/bar:{{ env BAZ }}".
+	tmpl, err := tagsTmpl.Parse(tag)
+	if err != nil {
+		return nil, err
+	}
+	buf := bytes.Buffer{}
+	if err := tmpl.Execute(&buf, tag); err != nil {
+		return nil, err
+	}
+	tag = buf.String()
+
 	tag = strings.TrimSpace(tag)
 	if strings.Contains(tag, " ") {
 		log.WithField("tag", tag).Error("[tag] invalid: tag must not contain spaces")

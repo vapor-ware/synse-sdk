@@ -113,7 +113,8 @@ type Device struct {
 }
 
 // NewDeviceFromConfig creates a new instance of a Device from its device prototype
-// and device instance configuration.
+// and device instance configuration. This is the primary and recommended way of
+// building devices.
 //
 // These configuration components are loaded from config file.
 //
@@ -273,6 +274,11 @@ func NewDeviceFromConfig(
 		writeTimeout = defaultWriteTimeout
 	}
 
+	// Render any templates which may exist in the context.
+	if err := parseContext(context); err != nil {
+		return nil, err
+	}
+
 	d := &Device{
 		Type:          deviceType,
 		Tags:          deviceTags,
@@ -297,6 +303,43 @@ func NewDeviceFromConfig(
 	}
 
 	return d, nil
+}
+
+// parseContext is a utility function to parse the context map and render any templates
+// which may exist in the context values.
+func parseContext(ctx map[string]string) error {
+	ctxTmpl := template.New("ctx").Funcs(template.FuncMap{
+		"env": os.Getenv,
+	})
+
+	for k := range ctx {
+		val := ctx[k]
+		if val == "" {
+			continue
+		}
+
+		tmpl, err := ctxTmpl.Parse(val)
+		if err != nil {
+			return err
+		}
+		buf := bytes.Buffer{}
+		if err := tmpl.Execute(&buf, val); err != nil {
+			return err
+		}
+
+		// NOTE: The SDK does not currently verify that the specified environment
+		// variable was actually set. This is left to the configurer. Is this an
+		// okay assumption/design choice?
+		newVal := buf.String()
+		if newVal == "" {
+			log.WithFields(log.Fields{
+				"key":   k,
+				"value": val,
+			}).Warn("[device] template detected in device context, but no value rendered for parsed template")
+		}
+		ctx[k] = newVal
+	}
+	return nil
 }
 
 // AliasContext is the context that is used to render alias templates.
