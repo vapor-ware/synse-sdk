@@ -138,7 +138,7 @@ func (manager *deviceManager) loadDynamicConfig() error {
 			if err != nil {
 				switch manager.policies.DynamicDeviceConfig {
 				case policy.Optional:
-					log.Info("[device manager] failed dynamic device config; skipping since its optional")
+					log.WithField("err", err).Info("[device manager] failed dynamic device config; skipping since its optional")
 					continue
 				case policy.Required:
 					log.Error("[device manager] failed dynamic device config; erroring since its required")
