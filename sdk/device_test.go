@@ -18,6 +18,7 @@ package sdk
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -700,6 +701,78 @@ func TestNewDeviceFromConfig14(t *testing.T) {
 	assert.Contains(t, err.Error(), "unknown handler specified")
 }
 
+func TestNewDeviceFromConfig15(t *testing.T) {
+	// Tests creating a device with tags and context including templates
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Context: map[string]string{
+			"foo": "bar",
+			"123": "456",
+		},
+		Tags:         []string{`default/{{ env "FOO" }}`},
+		Handler:      "testhandler",
+		WriteTimeout: 3 * time.Second,
+	}
+	instance := &config.DeviceInstance{
+		Type: "type2",
+		Info: "testdata",
+		Data: map[string]interface{}{
+			"address": "localhost",
+		},
+		Context: map[string]string{
+			"123": "abc",
+			"xyz": `{{ env "BAR" }}`,
+		},
+		Output:    "temperature",
+		SortIndex: 1,
+		Handler:   "testhandler2",
+		Alias: &config.DeviceAlias{
+			Name: "foo",
+		},
+		ScalingFactor:      "2",
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+
+	// Set ENV vars for the test case.
+	testEnv := map[string]string{
+		"FOO": "foo",
+		"BAR": "bar",
+	}
+	// Setup the environment for the test case.
+	for k, v := range testEnv {
+		err := os.Setenv(k, v)
+		assert.NoError(t, err)
+	}
+	defer func() {
+		for k := range testEnv {
+			err := os.Unsetenv(k)
+			assert.NoError(t, err)
+		}
+	}()
+
+	t1, _ := NewTag("default/foo")
+
+	device, err := NewDeviceFromConfig(proto, instance, testHandlers)
+	assert.NoError(t, err)
+	assert.Equal(t, "type2", device.Type)
+	assert.Equal(t, "testdata", device.Info)
+	assert.Equal(t, 1, len(device.Tags))
+	assert.Equal(t, t1, device.Tags[0])
+	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
+	assert.Equal(t, map[string]string{"foo": "bar", "123": "abc", "xyz": "bar"}, device.Context)
+	assert.Equal(t, "testhandler2", device.Handler)
+	assert.Equal(t, int32(1), device.SortIndex)
+	assert.Equal(t, "foo", device.Alias)
+	assert.Equal(t, float64(2), device.ScalingFactor)
+	assert.Equal(t, 5*time.Second, device.WriteTimeout)
+	assert.Equal(t, "temperature", device.Output)
+	assert.Equal(t, 0, len(device.fns))
+}
+
 func TestDevice_setAlias_noConf(t *testing.T) {
 	device := Device{}
 
@@ -1094,4 +1167,79 @@ func TestDevice_encode_3(t *testing.T) {
 	assert.Equal(t, 1, len(encoded.Tags))
 	assert.Equal(t, 0, len(encoded.Outputs))
 	assert.Equal(t, int32(1), encoded.SortIndex)
+}
+
+func TestDevice_parseContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		ctx      map[string]string
+		expected map[string]string
+	}{
+		{
+			name:     "no template",
+			ctx:      map[string]string{"foo": "bar", "abc": "123"},
+			expected: map[string]string{"foo": "bar", "abc": "123"},
+		},
+		{
+			name:     "template whole value",
+			ctx:      map[string]string{"foo": `{{ env "BAR" }}`},
+			expected: map[string]string{"foo": "bar"},
+		},
+		{
+			name:     "template part of value",
+			ctx:      map[string]string{"foo": `value-{{ env "TEST_ENV_VAL_1" }}`},
+			expected: map[string]string{"foo": "value-1"},
+		},
+		{
+			name: "multiple env template",
+			ctx: map[string]string{
+				"first":  `{{env "FOO"}}`,
+				"second": `val-{{env "FOO"}}-{{ env "BAR" }}`,
+				"third":  `{{ env "FOO" }}.{{ env "TEST_ENV_VAL_1" }}`,
+			},
+			expected: map[string]string{
+				"first":  "foo",
+				"second": "val-foo-bar",
+				"third":  "foo.1",
+			},
+		},
+		{
+			name:     "no env set",
+			ctx:      map[string]string{"foo": `{{ env "ENV_VALUE_NOT_SET" }}`},
+			expected: map[string]string{"foo": ""},
+		},
+	}
+
+	testEnv := map[string]string{
+		"FOO":            "foo",
+		"BAR":            "bar",
+		"TEST_ENV_VAL_1": "1",
+	}
+	// Setup the environment for the test case.
+	for k, v := range testEnv {
+		err := os.Setenv(k, v)
+		assert.NoError(t, err)
+	}
+	defer func() {
+		for k := range testEnv {
+			err := os.Unsetenv(k)
+			assert.NoError(t, err)
+		}
+	}()
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := parseContext(test.ctx)
+			assert.NoError(t, err, test.name)
+			assert.Equal(t, test.expected, test.ctx, test.name)
+		})
+	}
+}
+
+func TestDevice_parseContextError(t *testing.T) {
+	ctx := map[string]string{
+		"foo": `{{ foobar "ENV_VALUE_NOT_SET" }}`, // no such function
+	}
+	err := parseContext(ctx)
+	assert.Error(t, err)
 }

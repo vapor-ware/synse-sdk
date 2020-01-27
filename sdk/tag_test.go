@@ -18,6 +18,7 @@ package sdk
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -130,6 +131,103 @@ func TestNewTag_Error(t *testing.T) {
 		{tag: ":"},
 		{tag: "::"},
 		{tag: "vaporio/contains spaces:foo"},
+	}
+
+	for i, c := range cases {
+		tag, err := NewTag(c.tag)
+
+		assert.Error(t, err, "case: %d", i)
+		assert.Nil(t, tag, "case: %d", i)
+	}
+}
+
+func TestNewTagWithEnv(t *testing.T) {
+	cases := []struct {
+		tag        string
+		namespace  string
+		annotation string
+		label      string
+		str        string
+	}{
+		{
+			tag:        `{{ env "FOO" }}`,
+			namespace:  "default",
+			annotation: "",
+			label:      "foo",
+			str:        "foo",
+		},
+		{
+			tag:        `foo/{{ env "BAR" }}`,
+			namespace:  "foo",
+			annotation: "",
+			label:      "bar",
+			str:        "foo/bar",
+		},
+		{
+			tag:        `{{env "FOO"}}/{{env "BAR"}}`,
+			namespace:  "foo",
+			annotation: "",
+			label:      "bar",
+			str:        "foo/bar",
+		},
+		{
+			tag:        ` testing/{{ env "FOO"}}:{{ env "TEST_ENV_VAL_1" }} `,
+			namespace:  "testing",
+			annotation: "foo",
+			label:      "1",
+			str:        "testing/foo:1",
+		},
+		{
+			tag:        `{{env "FOO"}}/{{env "BAR"}}:{{env "TEST_ENV_VAL_2"}}`,
+			namespace:  "foo",
+			annotation: "bar",
+			label:      "2",
+			str:        "foo/bar:2",
+		},
+	}
+
+	testEnv := map[string]string{
+		"FOO":            "foo",
+		"BAR":            "bar",
+		"TEST_ENV_VAL_1": "1",
+		"TEST_ENV_VAL_2": "2",
+	}
+	// Setup the environment for the test case.
+	for k, v := range testEnv {
+		err := os.Setenv(k, v)
+		assert.NoError(t, err)
+	}
+	defer func() {
+		for k := range testEnv {
+			err := os.Unsetenv(k)
+			assert.NoError(t, err)
+		}
+	}()
+
+	for i, c := range cases {
+		tag, err := NewTag(c.tag)
+
+		assert.NoError(t, err, "case: %d", i)
+		assert.Equal(t, c.namespace, tag.Namespace, "case: %d", i)
+		assert.Equal(t, c.annotation, tag.Annotation, "case: %d", i)
+		assert.Equal(t, c.label, tag.Label, "case: %d", i)
+
+		str := c.str
+		if c.str == "" {
+			str = c.tag
+		}
+
+		assert.Equal(t, str, tag.String(), "case: %d", i)
+	}
+}
+
+func TestNewTagWithEnv_Error(t *testing.T) {
+	cases := []struct {
+		tag string
+	}{
+		{tag: `default/{{ env "VALUE_NOT_SET" }}`},
+		{tag: `{{ env "VALUE_NOT_SET" }}`},
+		{tag: `{{ env "VALUE_NOT_SET" }}/foo`},
 	}
 
 	for i, c := range cases {
