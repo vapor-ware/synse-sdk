@@ -524,12 +524,18 @@ func finalizeReadings(device *Device, rctx *ReadContext) error {
 
 			err := reading.Scale(device.ScalingFactor)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"device": device.id,
-					"factor": device.ScalingFactor,
-				}).Error("[scheduler] failed to apply scaling factor")
 				return err
 			}
+		}
+
+		// Apply any conversion after scaling.
+		err := reading.Convert(device.Conversion)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"device":     device.id,
+				"conversion": device.Conversion,
+			}).Error("[scheduler] failed to apply conversion")
+			return err
 		}
 
 		// Add any reading context that is specified by the device to the reading.

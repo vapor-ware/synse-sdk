@@ -145,6 +145,67 @@ func TestReading_Scale_err(t *testing.T) {
 	}
 }
 
+func TestReading_Conversion(t *testing.T) {
+	cases := []struct {
+		value      interface{} // farenheit
+		conversion string
+		expected   interface{} // celsius
+	}{
+		{
+			value:      -.1,
+			conversion: "englishToMetricTemperature",
+			expected:   float64(-17.833333333333332),
+		},
+		{
+			value:      31.9,
+			conversion: "englishToMetricTemperature",
+			expected:   -0.055555555555556344,
+		},
+		{
+			value:      32.1,
+			conversion: "englishToMetricTemperature",
+			expected:   0.055555555555556344,
+		},
+		{
+			value:      150,
+			conversion: "englishToMetricTemperature",
+			expected:   65.55555555555556,
+		},
+	}
+
+	for i, c := range cases {
+		r := Reading{
+			Value: c.value,
+		}
+		err := r.Convert(c.conversion)
+		assert.NoError(t, err, "test case: %d", i)
+		// Note: Comparing floats with equality is always dangerous, so it's
+		// possible that these tests fail by just a little at some point in the
+		// future. Ideally we would have a small amount of slop here.
+		assert.Equal(t, c.expected, r.Value, "test case: %d", i)
+	}
+}
+
+func TestReading_Conversion_err(t *testing.T) {
+	cases := []struct {
+		value      interface{}
+		conversion string
+	}{
+		{
+			value:      150,
+			conversion: "unknownConversion",
+		},
+	}
+
+	for i, c := range cases {
+		r := Reading{
+			Value: c.value,
+		}
+		err := r.Convert(c.conversion)
+		assert.Error(t, err, "test case: %d", i)
+	}
+}
+
 func TestReading_Encode(t *testing.T) {
 	cases := []struct {
 		value interface{}

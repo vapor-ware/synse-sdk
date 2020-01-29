@@ -84,6 +84,11 @@ type Device struct {
 	// representation of the value, e.g. "1e-2".
 	ScalingFactor float64
 
+	// Conversion is an arbitrary string that allows the sdk to
+	// perform a conversion. Initially only the string englishToMetricTemperature
+	// will be supported for temperature sensors.
+	Conversion string
+
 	// WriteTimeout defines the time within which a write action (transaction)
 	// will remain valid for this device.
 	WriteTimeout time.Duration

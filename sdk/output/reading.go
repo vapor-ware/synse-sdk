@@ -108,6 +108,30 @@ func (reading *Reading) Scale(factor float64) error {
 	return nil
 }
 
+// Convert applies the conversion based on the output conversion string and
+// the scaled reading.
+// For now this is pretty limited, but it's a place to start.
+func (reading *Reading) Convert(conversion string) (err error) {
+	// Only one supported conversion string for now.
+	switch conversion {
+	case "": // Nothing to do.
+		return
+	case "englishToMetricTemperature":
+		farenheit, err := utils.ConvertToFloat64(reading.Value)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"value": reading.Value,
+			}).Error("[reading] error converting reading value to float64")
+			return err
+		}
+		// Farenheit to Celsius conversion.
+		reading.Value = (farenheit - 32.0) * 5.0 / 9.0
+		return err
+	default:
+		return fmt.Errorf("Unknown conversion %v", conversion)
+	}
+}
+
 // Encode translates the Reading to its corresponding gRPC message.
 func (reading *Reading) Encode() *synse.V3Reading {
 	var unit = &Unit{}
