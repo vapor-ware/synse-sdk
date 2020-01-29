@@ -90,7 +90,7 @@ type DeviceProto struct {
 	// inheritance is disabled. If both the prototype and the instance specify
 	// transform, the prototype transforms are applied first in order, followed
 	// by the instance transforms in order.
-	Transforms []*TransformConfig
+	Transforms []*TransformConfig `yaml:"transforms,omitempty"`
 
 	// Instances contains the data for all configured instances of the
 	// device prototype.
@@ -163,7 +163,7 @@ type DeviceInstance struct {
 	// If both the prototype and the instance specify transform, the prototype
 	// transforms are applied first in order, followed by the instance
 	// transforms in order.
-	Transforms []*TransformConfig
+	Transforms []*TransformConfig `yaml:"transforms,omitempty"`
 
 	// WriteTimeout defines a custom write timeout for the device instance. This
 	// is the time within which the write transaction will remain valid. If left
