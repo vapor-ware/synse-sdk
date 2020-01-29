@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"strconv"
 	"text/template"
 	"time"
 
@@ -28,7 +27,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/funcs"
 	"github.com/vapor-ware/synse-sdk/sdk/output"
 	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
@@ -75,14 +73,16 @@ type Device struct {
 	// to reference it as well.
 	Alias string
 
-	// ScalingFactor is an optional value by which to scale the device readings.
-	// If defined, the reading values for the device will be multiplied by this
-	// value.
+	// Transforms is a collection of the device reading transformers that are to
+	// be applied to the device's reading(s). These are generally (but not limited)
+	// to scale or convert the device reading(s). Typically, these will be defined
+	// for general-purpose plugins where the device handler is not specific enough
+	// to know the desired output of a device reading.
 	//
-	// This value should resolve to a numeric. Negative values and fractional values
-	// are supported. This can be the value itself, e.g. "0.01", or a mathematical
-	// representation of the value, e.g. "1e-2".
-	ScalingFactor float64
+	// Transformations are applied in the order in which they are defined.
+	//
+	// See the TransformConfig and Transformer godoc for more details.
+	Transforms []Transformer
 
 	// WriteTimeout defines the time within which a write action (transaction)
 	// will remain valid for this device.
@@ -106,10 +106,6 @@ type Device struct {
 	// populated via the SDK on device loading and parsing and uses the Handler
 	// field to match the name of the handler to the actual instance.
 	handler *DeviceHandler
-
-	// fns defines a list of functions which should be applied to the reading value(s)
-	// for the device. This is called internally, if any fns are defined.
-	fns []*funcs.Func
 }
 
 // NewDeviceFromConfig creates a new instance of a Device from its device prototype
@@ -141,6 +137,7 @@ func NewDeviceFromConfig(
 		data         = map[string]interface{}{}
 		context      = map[string]string{}
 		tags         []string
+		transforms   []Transformer
 		handler      string
 		deviceType   string
 		writeTimeout time.Duration
@@ -160,6 +157,18 @@ func NewDeviceFromConfig(
 		handler = proto.Handler
 		deviceType = proto.Type
 		writeTimeout = proto.WriteTimeout
+
+		for _, v := range proto.Transforms {
+			t, err := NewTransformer(v)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":  err,
+					"config": v,
+				}).Error("[device] unable to create reading transformer")
+				return nil, err
+			}
+			transforms = append(transforms, t)
+		}
 	}
 
 	// If the instance also defines the same variable, we either need to merge
@@ -235,32 +244,18 @@ func NewDeviceFromConfig(
 		}
 	}
 
-	var fns []*funcs.Func
-	for _, fn := range instance.Apply {
-		f := funcs.Get(fn)
-		if f == nil {
-			log.WithFields(log.Fields{
-				"prototype": proto,
-				"instance":  instance,
-			}).Error("[device] unknown transform function specified")
-			return nil, fmt.Errorf("new device: unknown transform function specified '%s'", fn)
-		}
-		fns = append(fns, f)
-	}
-
-	var scalingFactor float64
-	var err error
-	if instance.ScalingFactor == "" {
-		scalingFactor = 1
-	} else {
-		scalingFactor, err = strconv.ParseFloat(instance.ScalingFactor, 64)
+	// Collect the instance transforms, then parse the transform configs
+	// to validate they are correct.
+	for _, v := range instance.Transforms {
+		t, err := NewTransformer(v)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"prototype": proto,
-				"instance":  instance,
-			}).Error("[device] failed to load device: bad scaling factor")
+				"error":  err,
+				"config": v,
+			}).Error("[device] unable to create reading transformer")
 			return nil, err
 		}
+		transforms = append(transforms, t)
 	}
 
 	// Override write timeout, if set.
@@ -280,18 +275,17 @@ func NewDeviceFromConfig(
 	}
 
 	d := &Device{
-		Type:          deviceType,
-		Tags:          deviceTags,
-		Data:          data,
-		Context:       context,
-		Handler:       handler,
-		Info:          instance.Info,
-		SortIndex:     instance.SortIndex,
-		ScalingFactor: scalingFactor,
-		WriteTimeout:  writeTimeout,
-		Output:        instance.Output,
-		fns:           fns,
-		handler:       handlerFn,
+		Type:         deviceType,
+		Tags:         deviceTags,
+		Data:         data,
+		Context:      context,
+		Handler:      handler,
+		Info:         instance.Info,
+		SortIndex:    instance.SortIndex,
+		Transforms:   transforms,
+		WriteTimeout: writeTimeout,
+		Output:       instance.Output,
+		handler:      handlerFn,
 	}
 
 	if err := d.setAlias(instance.Alias); err != nil {

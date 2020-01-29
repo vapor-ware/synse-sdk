@@ -16,7 +16,15 @@
 
 package config
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+// Errors for device configuration validation.
+var (
+	ErrInvalidTransform = errors.New("invalid transform config: must have only one of: 'apply', 'scale'")
+)
 
 // Devices is the top-level configuration for devices for Synse plugins.
 //
@@ -69,6 +77,20 @@ type DeviceProto struct {
 	// with a device instance's reading(s). If specified here, all prototype
 	// instances will inherit the context, unless inheritance is disabled.
 	Context map[string]string `yaml:"context,omitempty"`
+
+	// Transforms define a collection of operations to apply to the device's
+	// reading values to transform it. This could be done for scaling, conversion,
+	// etc. See the TransformConfig godoc for details on its configuration.
+	//
+	// Transforms are applied in the order in which they are specified. That is
+	// to say, with the transforms [scale, apply], the scale operation would happen
+	// before the apply operation.
+	//
+	// The transforms defined here will inherited by all instances, unless
+	// inheritance is disabled. If both the prototype and the instance specify
+	// transform, the prototype transforms are applied first in order, followed
+	// by the instance transforms in order.
+	Transforms []*TransformConfig
 
 	// Instances contains the data for all configured instances of the
 	// device prototype.
@@ -130,22 +152,18 @@ type DeviceInstance struct {
 	// can not do so across multiple plugins which may be active in the system.
 	Alias *DeviceAlias `yaml:"alias,omitempty"`
 
-	// ScalingFactor is an optional value which indicates a scaling transformation
-	// to be applied to a device reading. Generally, this will only be used for
-	// plugins with generalized DeviceHandlers, such as Modbus-IP.
+	// Transforms define a collection of operations to apply to the device's
+	// reading values to transform it. This could be done for scaling, conversion,
+	// etc. See the TransformConfig godoc for details on its configuration.
 	//
-	// This value should resolve to a numeric. By default, it will hve a value of
-	// 1. Negative values and fractional values are supported. This can be the
-	// value itself, e.g. "0.01", or a mathematical representation of the value,
-	// e.g. "1e-2".
-	ScalingFactor string `yaml:"scalingFactor,omitempty"`
-
-	// Apply defines a list of functions which are to be applied to the device
-	// reading values, in the order in which they are defined.
+	// Transforms are applied in the order in which they are specified. That is
+	// to say, with the transforms [scale, apply], the scale operation would happen
+	// before the apply operation.
 	//
-	// There are some built-in functions that the SDK provides. A plugin can also
-	// register their own functions.
-	Apply []string `yaml:"apply,omitempty"`
+	// If both the prototype and the instance specify transform, the prototype
+	// transforms are applied first in order, followed by the instance
+	// transforms in order.
+	Transforms []*TransformConfig
 
 	// WriteTimeout defines a custom write timeout for the device instance. This
 	// is the time within which the write transaction will remain valid. If left
@@ -165,4 +183,53 @@ type DeviceAlias struct {
 	// Template is a Go template string that will be rendered into
 	// an alias string by the SDK.
 	Template string `yaml:"template,omitempty"`
+}
+
+// TransformConfig defines the configuration options for transformations to be
+// applied to a device's readings. This is typically used more in general-purpose
+// plugin implementations, where the handler does not bake-in any scaling or
+// conversions.
+//
+// TransformConfigs are specified as a list of items underneath the 'transforms'
+// key of either the device prototype config or device instance config. Instances
+// of the transform config should only define a single field, e.g.
+//
+//    transforms:
+//		- apply: foo
+//		- scale: 1
+//
+// It should never specify multiple, as then the order in which the operations
+// should be executed are ambiguous, e.g.
+//
+//    transforms:
+//      - apply: foo
+//        scale: 1
+//
+// The Validate method can be called to ensure that the config adheres to the
+// above requirement.
+type TransformConfig struct {
+	// Apply defines a function to be applied to the device's reading value(s).
+	// The function to apply could be anything, e.g. a unit conversion. The SDK
+	// defines built-in functions in the 'funcs' package. A plugin may also register
+	// custom functions. Functions are referenced here by name.
+	Apply string `yaml:"apply,omitempty"`
+
+	// Scale defines a scaling transformation value to be applied to a device's
+	// reading(s). The scaling factor defined here is multiplied with the device
+	// reading. This allows it to be scaled up (multiplication, e.g. "* 2"), or
+	// scaled down (division, e.g. "/ 2" == "* 0.5").
+	//
+	// This value is specified as a string, but should resolve to a numeric. By
+	// default, it will have a value of 1 (e.g. no-op). Negative values and
+	// fractional values are supported. This can be the value itself, e.g. "0.01",
+	// or a mathematical representation of the value, e.g. "1e-2".
+	Scale string `yaml:"scale,omitempty"`
+}
+
+// Validate that the TransformConfig adheres to its configuration restrictions.
+func (c *TransformConfig) Validate() error {
+	if c.Apply != "" && c.Scale != "" {
+		return ErrInvalidTransform
+	}
+	return nil
 }

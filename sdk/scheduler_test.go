@@ -174,9 +174,8 @@ func TestScheduler_Write(t *testing.T) {
 	}
 
 	dev := &Device{
-		WriteTimeout:  1 * time.Minute,
-		ScalingFactor: 1,
-		id:            "test-1",
+		WriteTimeout: 1 * time.Minute,
+		id:           "test-1",
 		handler: &DeviceHandler{
 			Write: func(device *Device, data *WriteData) error {
 				return nil
@@ -243,9 +242,8 @@ func TestScheduler_WriteAndWait(t *testing.T) {
 	}
 
 	dev := &Device{
-		WriteTimeout:  1 * time.Minute,
-		ScalingFactor: 1,
-		id:            "test-1",
+		WriteTimeout: 1 * time.Minute,
+		id:           "test-1",
 		handler: &DeviceHandler{
 			Write: func(device *Device, data *WriteData) error {
 				return nil
@@ -327,9 +325,8 @@ func TestScheduler_scheduleReads(t *testing.T) {
 			},
 			devices: map[string]*Device{
 				"123": {
-					id:            "123",
-					handler:       handler,
-					ScalingFactor: 1,
+					id:      "123",
+					handler: handler,
 				},
 			},
 		},
@@ -404,10 +401,9 @@ func TestScheduler_scheduleWrites(t *testing.T) {
 			},
 			devices: map[string]*Device{
 				"123": {
-					id:            "123",
-					handler:       handler,
-					WriteTimeout:  1 * time.Second,
-					ScalingFactor: 1,
+					id:           "123",
+					handler:      handler,
+					WriteTimeout: 1 * time.Second,
 				},
 			},
 		},
@@ -491,10 +487,9 @@ func TestScheduler_scheduleListen(t *testing.T) {
 			},
 			devices: map[string]*Device{
 				"123": {
-					id:            "123",
-					handler:       handler,
-					Handler:       "test",
-					ScalingFactor: 1,
+					id:      "123",
+					handler: handler,
+					Handler: "test",
 				},
 			},
 		},
@@ -512,10 +507,9 @@ func TestScheduler_scheduleListen(t *testing.T) {
 	assert.Equal(t, "123", reading.Device)
 }
 
-func TestScheduler_applyTransformations_noFns(t *testing.T) {
+func TestScheduler_applyTransformations_NoTransformers(t *testing.T) {
 	device := &Device{
-		fns:           []*funcs.Func{},
-		ScalingFactor: 1,
+		Transforms: []Transformer{},
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -533,10 +527,11 @@ func TestScheduler_applyTransformations_noFns(t *testing.T) {
 	assert.Empty(t, rctx.Reading[0].Context)
 }
 
-func TestScheduler_applyTransformations_noFns_withScale(t *testing.T) {
+func TestScheduler_applyTransformations_ScaleTransformerOk(t *testing.T) {
 	device := &Device{
-		fns:           []*funcs.Func{},
-		ScalingFactor: 2,
+		Transforms: []Transformer{
+			&ScaleTransformer{Factor: 2},
+		},
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -554,17 +549,18 @@ func TestScheduler_applyTransformations_noFns_withScale(t *testing.T) {
 	assert.Empty(t, rctx.Reading[0].Context)
 }
 
-func TestScheduler_applyTransformations_oneFnOk(t *testing.T) {
+func TestScheduler_applyTransformations_ApplyTransformerOk(t *testing.T) {
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) * 2, nil
+		Transforms: []Transformer{
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (value.(int)) * 2, nil
+					},
 				},
 			},
 		},
-		ScalingFactor: 1,
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -582,17 +578,23 @@ func TestScheduler_applyTransformations_oneFnOk(t *testing.T) {
 	assert.Empty(t, rctx.Reading[0].Context)
 }
 
-func TestScheduler_applyTransformations_oneFnOk_withScale(t *testing.T) {
+func TestScheduler_applyTransformations_ApplyAndScaleTransformerOK(t *testing.T) {
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) * 2, nil
+		Transforms: []Transformer{
+			// First scale
+			&ScaleTransformer{
+				Factor: 2,
+			},
+			// Then apply
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return ((value.(float64)) / 4.0) + 1, nil
+					},
 				},
 			},
 		},
-		ScalingFactor: 2,
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -603,8 +605,46 @@ func TestScheduler_applyTransformations_oneFnOk_withScale(t *testing.T) {
 	err := finalizeReadings(device, rctx)
 	assert.NoError(t, err)
 
-	// Verify that the reading value changed.
-	assert.Equal(t, float64(8), rctx.Reading[0].Value.(float64))
+	// Verify that the reading value changed. We should expect the value to first follow
+	// the scale transform then the apply transform.
+	assert.Equal(t, float64(2), rctx.Reading[0].Value.(float64))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
+}
+
+func TestScheduler_applyTransformations_ApplyAndScaleTransformerOK_OrderChanged(t *testing.T) {
+	device := &Device{
+		Transforms: []Transformer{
+			// First apply
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (float64(value.(int)) / 4.0) + 1, nil
+					},
+				},
+			},
+			// Then scale
+			&ScaleTransformer{
+				Factor: 2,
+			},
+		},
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	fmt.Println("==============================================")
+
+	err := finalizeReadings(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value changed. We should expect the value to first follow
+	// the apply transform then the scale transform.
+	assert.Equal(t, float64(3), rctx.Reading[0].Value.(float64))
 
 	// Verify that no additional context was set.
 	assert.Empty(t, rctx.Reading[0].Context)
@@ -612,21 +652,24 @@ func TestScheduler_applyTransformations_oneFnOk_withScale(t *testing.T) {
 
 func TestScheduler_applyTransformations_multipleFnsOk(t *testing.T) {
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) * 2, nil
+		Transforms: []Transformer{
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (value.(int)) * 2, nil
+					},
 				},
 			},
-			{
-				Name: "test-fn-2",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) + 3, nil
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-2",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (value.(int)) + 3, nil
+					},
 				},
 			},
 		},
-		ScalingFactor: 1,
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -646,21 +689,27 @@ func TestScheduler_applyTransformations_multipleFnsOk(t *testing.T) {
 
 func TestScheduler_applyTransformations_multipleFnsOk_withScale(t *testing.T) {
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) * 2, nil
+		Transforms: []Transformer{
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (value.(int)) * 2, nil
+					},
 				},
 			},
-			{
-				Name: "test-fn-2",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) + 3, nil
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-2",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (value.(int)) + 3, nil
+					},
 				},
+			},
+			&ScaleTransformer{
+				Factor: 2,
 			},
 		},
-		ScalingFactor: 2,
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -678,17 +727,18 @@ func TestScheduler_applyTransformations_multipleFnsOk_withScale(t *testing.T) {
 	assert.Empty(t, rctx.Reading[0].Context)
 }
 
-func TestScheduler_applyTransformations_oneFnErr(t *testing.T) {
+func TestScheduler_applyTransformations_ApplyTransformerErr(t *testing.T) {
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return nil, fmt.Errorf("test error")
+		Transforms: []Transformer{
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return nil, fmt.Errorf("test error")
+					},
 				},
 			},
 		},
-		ScalingFactor: 1,
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -706,17 +756,21 @@ func TestScheduler_applyTransformations_oneFnErr(t *testing.T) {
 	assert.Empty(t, rctx.Reading[0].Context)
 }
 
-func TestScheduler_applyTransformations_oneFnErr_withScale(t *testing.T) {
+func TestScheduler_applyTransformations_ApplyTransformerErr_WithScale(t *testing.T) {
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return nil, fmt.Errorf("test error")
+		Transforms: []Transformer{
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return nil, fmt.Errorf("test error")
+					},
 				},
 			},
+			&ScaleTransformer{
+				Factor: 2,
+			},
 		},
-		ScalingFactor: 2,
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -734,23 +788,61 @@ func TestScheduler_applyTransformations_oneFnErr_withScale(t *testing.T) {
 	assert.Empty(t, rctx.Reading[0].Context)
 }
 
-func TestScheduler_applyTransformations_multipleFnsErr(t *testing.T) {
+func TestScheduler_applyTransformations_ApplyTransformerErr_WithScale_Reordered(t *testing.T) {
+	// Same test as above, but transforms in different order.
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) * 2, nil
-				},
+		Transforms: []Transformer{
+			&ScaleTransformer{
+				Factor: 2,
 			},
-			{
-				Name: "test-fn-2",
-				Fn: func(value interface{}) (interface{}, error) {
-					return nil, fmt.Errorf("test err")
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return nil, fmt.Errorf("test error")
+					},
 				},
 			},
 		},
-		ScalingFactor: 1,
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	err := finalizeReadings(device, rctx)
+	assert.Error(t, err)
+
+	// Verify that the reading value changed. It changed from the first scale transform.
+	// This is okay since the error on the second transform would cause an error on read,
+	// so we wouldn't propagate this partially transformed value.
+	assert.Equal(t, float64(4), rctx.Reading[0].Value.(float64))
+
+	// Verify that no additional context was set.
+	assert.Empty(t, rctx.Reading[0].Context)
+}
+
+func TestScheduler_applyTransformations_MultipleApplyTransformerError(t *testing.T) {
+	device := &Device{
+		Transforms: []Transformer{
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (value.(int)) * 2, nil
+					},
+				},
+			},
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-2",
+					Fn: func(value interface{}) (interface{}, error) {
+						return nil, fmt.Errorf("test err")
+					},
+				},
+			},
+		},
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -770,23 +862,29 @@ func TestScheduler_applyTransformations_multipleFnsErr(t *testing.T) {
 	assert.Empty(t, rctx.Reading[0].Context)
 }
 
-func TestScheduler_applyTransformations_multipleFnsErr_withScale(t *testing.T) {
+func TestScheduler_applyTransformations_MultipleApplyErr_WithScale(t *testing.T) {
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) * 2, nil
+		Transforms: []Transformer{
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (value.(int)) * 2, nil
+					},
 				},
 			},
-			{
-				Name: "test-fn-2",
-				Fn: func(value interface{}) (interface{}, error) {
-					return nil, fmt.Errorf("test err")
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-2",
+					Fn: func(value interface{}) (interface{}, error) {
+						return nil, fmt.Errorf("test err")
+					},
 				},
+			},
+			&ScaleTransformer{
+				Factor: 3,
 			},
 		},
-		ScalingFactor: 3,
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -808,15 +906,19 @@ func TestScheduler_applyTransformations_multipleFnsErr_withScale(t *testing.T) {
 
 func TestScheduler_applyTransformations_oneFnOk_withScaleErr(t *testing.T) {
 	device := &Device{
-		fns: []*funcs.Func{
-			{
-				Name: "test-fn-1",
-				Fn: func(value interface{}) (interface{}, error) {
-					return (value.(int)) * 2, nil
+		Transforms: []Transformer{
+			&ApplyTransformer{
+				Func: &funcs.Func{
+					Name: "test-fn-1",
+					Fn: func(value interface{}) (interface{}, error) {
+						return (value.(int)) * 2, nil
+					},
 				},
 			},
+			&ScaleTransformer{
+				Factor: 0,
+			},
 		},
-		ScalingFactor: 0,
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -837,8 +939,7 @@ func TestScheduler_applyTransformations_oneFnOk_withScaleErr(t *testing.T) {
 
 func TestScheduler_finalizeReadings_withContext(t *testing.T) {
 	device := &Device{
-		Context:       map[string]string{"foo": "bar"},
-		ScalingFactor: 1,
+		Context: map[string]string{"foo": "bar"},
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -852,14 +953,13 @@ func TestScheduler_finalizeReadings_withContext(t *testing.T) {
 	// Verify that the reading value did not change.
 	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
 
-	// Verify that the deice context was set.
+	// Verify that the device context was set.
 	assert.Equal(t, map[string]string{"foo": "bar"}, rctx.Reading[0].Context)
 }
 
 func TestScheduler_finalizeReadings_withContextAugment(t *testing.T) {
 	device := &Device{
-		Context:       map[string]string{"foo": "bar"},
-		ScalingFactor: 1,
+		Context: map[string]string{"foo": "bar"},
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -876,14 +976,13 @@ func TestScheduler_finalizeReadings_withContextAugment(t *testing.T) {
 	// Verify that the reading value did not change.
 	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
 
-	// Verify that the deice context was set.
+	// Verify that the device context was set.
 	assert.Equal(t, map[string]string{"foo": "bar", "abc": "def"}, rctx.Reading[0].Context)
 }
 
 func TestScheduler_finalizeReadings_withContextOverride(t *testing.T) {
 	device := &Device{
-		Context:       map[string]string{"foo": "bar"},
-		ScalingFactor: 1,
+		Context: map[string]string{"foo": "bar"},
 	}
 	rctx := &ReadContext{
 		Reading: []*output.Reading{
@@ -900,6 +999,29 @@ func TestScheduler_finalizeReadings_withContextOverride(t *testing.T) {
 	// Verify that the reading value did not change.
 	assert.Equal(t, 2, rctx.Reading[0].Value.(int))
 
-	// Verify that the deice context was set.
+	// Verify that the device context was set.
+	assert.Equal(t, map[string]string{"foo": "bar"}, rctx.Reading[0].Context)
+}
+
+func TestScheduler_finalizeReadings_withContextAndTransform(t *testing.T) {
+	device := &Device{
+		Transforms: []Transformer{
+			&ScaleTransformer{Factor: 2},
+		},
+		Context: map[string]string{"foo": "bar"},
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: 2},
+		},
+	}
+
+	err := finalizeReadings(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value did not change.
+	assert.Equal(t, float64(4), rctx.Reading[0].Value.(float64))
+
+	// Verify that the device context was set.
 	assert.Equal(t, map[string]string{"foo": "bar"}, rctx.Reading[0].Context)
 }
