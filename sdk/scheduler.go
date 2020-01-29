@@ -479,60 +479,32 @@ func (scheduler *scheduler) scheduleListen() {
 // Device to produce the final reading result.
 func finalizeReadings(device *Device, rctx *ReadContext) error {
 	for _, reading := range rctx.Reading {
-		// Apply any transformation functions which are defined for the device
-		// to the device's readings.
-		if len(device.fns) > 0 {
-			log.WithFields(log.Fields{
-				"fns":    len(device.fns),
-				"device": device.id,
-			}).Info("[scheduler] applying reading transform fns")
+		// Apply all transformations to the reading, in the order in which
+		// they are defined.
+		for _, transformer := range device.Transforms {
+			devlog := log.WithFields(log.Fields{
+				"device":      device.id,
+				"info":        device.Info,
+				"transformer": transformer.Name(),
+			})
 
-			for _, fn := range device.fns {
-				log.WithFields(log.Fields{
-					"device": device.id,
-					"fn":     fn.Name,
-					"value":  reading.Value,
-				}).Debug("[scheduler] reading value pre-transform")
-				newVal, err := fn.Call(reading.Value)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"device": device.id,
-						"fn":     fn.Name,
-						"value":  reading.Value,
-						"error":  err,
-					}).Error("[scheduler] failed to apply transform function")
-					return err
-				}
-				log.WithFields(log.Fields{
-					"device": device.id,
-					"fn":     fn.Name,
-					"value":  newVal,
-				}).Debug("[scheduler] reading value post-transform")
-				reading.Value = newVal
-			}
-		}
+			devlog.WithField(
+				"value", reading.Value,
+			).Debug("[scheduler] applying device reading transformer")
 
-		// Apply any scaling factor transformations which are defined for the
-		// device to the device's readings. This must be done after all
-		// other transformations are completed.
-		if device.ScalingFactor != 1 {
-			log.WithFields(log.Fields{
-				"reading": reading.Value,
-				"factor":  device.ScalingFactor,
-				"device":  device.id,
-			}).Info("[scheduler] applying scaling factor to reading")
-
-			err := reading.Scale(device.ScalingFactor)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"device": device.id,
-					"factor": device.ScalingFactor,
-				}).Error("[scheduler] failed to apply scaling factor")
+			if err := transformer.Apply(reading); err != nil {
+				devlog.WithFields(log.Fields{
+					"error": err,
+					"value": reading.Value,
+				}).Error("[scheduler] failed to apply reading transformer")
 				return err
 			}
+			devlog.WithField(
+				"value", reading.Value,
+			).Debug("[scheduler] new value after transform")
 		}
 
-		// Add any reading context that is specified by the device to the reading.
+		// Add any context that is specified by the device to the reading.
 		reading.WithContext(device.Context)
 	}
 
