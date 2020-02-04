@@ -48,6 +48,14 @@ func RedactPasswords(m interface{}) interface{} {
 		traverseSlice(redacted)
 		return redacted
 
+	case []map[string]interface{}:
+		var redacted []interface{}
+		for _, v := range m.([]map[string]interface{}) {
+			redacted = append(redacted, v)
+		}
+		traverseSlice(redacted)
+		return redacted
+
 	default:
 		return m
 	}

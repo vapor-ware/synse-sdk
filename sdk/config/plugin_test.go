@@ -16,7 +16,13 @@
 
 package config
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+)
 
 //
 // Unless there are updates done to the logger such that we can
@@ -148,13 +154,41 @@ func TestTLSNetworkSettings_Log(t *testing.T) {
 }
 
 func TestDynamicRegistrationSettings_Log_nil(t *testing.T) {
+	out := bytes.Buffer{}
+	log.SetOutput(&out)
+
 	var c *DynamicRegistrationSettings
 	c.Log()
+
+	assert.Contains(t, out.String(), "msg=\"  DynamicRegistration: nil\"\n")
 }
 
 func TestDynamicRegistrationSettings_Log(t *testing.T) {
+	out := bytes.Buffer{}
+	log.SetOutput(&out)
+
 	c := DynamicRegistrationSettings{}
 	c.Log()
+
+	assert.Contains(t, out.String(), "msg=\"  DynamicRegistration:\"\n")
+	assert.Contains(t, out.String(), "msg=\"    Config: []\"\n")
+}
+
+func TestDynamicRegistrationSettings_Log_withPass(t *testing.T) {
+	out := bytes.Buffer{}
+	log.SetOutput(&out)
+
+	c := DynamicRegistrationSettings{
+		Config: []map[string]interface{}{
+			{
+				"authenticationPassphrase": "foobar",
+			},
+		},
+	}
+	c.Log()
+
+	assert.Contains(t, out.String(), "msg=\"  DynamicRegistration:\"\n")
+	assert.Contains(t, out.String(), "msg=\"    Config: [map[authenticationPassphrase:REDACTED]]\"\n")
 }
 
 func TestHealthSettings_Log_nil(t *testing.T) {

@@ -68,6 +68,11 @@ func TestRedactPasswords(t *testing.T) {
 			expected: map[string]interface{}{"key": "value", "Password": "REDACTED"},
 		},
 		{
+			name:     "map with key authenticationPassphrase, value string",
+			input:    map[string]interface{}{"key": "value", "authenticationPassphrase": "password"},
+			expected: map[string]interface{}{"key": "value", "authenticationPassphrase": "REDACTED"},
+		},
+		{
 			name:     "map with key User Password, value map",
 			input:    map[string]interface{}{"key": "value", "User Password": map[string]interface{}{"foo": "bar"}},
 			expected: map[string]interface{}{"key": "value", "User Password": "REDACTED"},
@@ -91,6 +96,31 @@ func TestRedactPasswords(t *testing.T) {
 			name:     "map with nested slice with nested map with password",
 			input:    map[string]interface{}{"foo": []interface{}{map[string]interface{}{"pass": "foo", "other": "bar"}}},
 			expected: map[string]interface{}{"foo": []interface{}{map[string]interface{}{"pass": "REDACTED", "other": "bar"}}},
+		},
+		{
+			name:     "slice of map with no password",
+			input:    []map[string]interface{}{{"key": "value"}},
+			expected: []interface{}{map[string]interface{}{"key": "value"}},
+		},
+		{
+			name:     "slice of map with key pass, value string",
+			input:    []map[string]interface{}{{"key": "value", "pass": "foobar"}},
+			expected: []interface{}{map[string]interface{}{"key": "value", "pass": "REDACTED"}},
+		},
+		{
+			name:     "slice of map with key PASS, value int",
+			input:    []map[string]interface{}{{"key": "value", "PASS": 123}},
+			expected: []interface{}{map[string]interface{}{"key": "value", "PASS": "REDACTED"}},
+		},
+		{
+			name:     "slice of map with key Password, value string",
+			input:    []map[string]interface{}{{"key": "value", "Password": "password"}},
+			expected: []interface{}{map[string]interface{}{"key": "value", "Password": "REDACTED"}},
+		},
+		{
+			name:     "slice of map with key authenticationPassphrase, value string",
+			input:    []map[string]interface{}{{"key": "value", "authenticationPassphrase": "password"}},
+			expected: []interface{}{map[string]interface{}{"key": "value", "authenticationPassphrase": "REDACTED"}},
 		},
 		{
 			name:     "map with empty slice",
