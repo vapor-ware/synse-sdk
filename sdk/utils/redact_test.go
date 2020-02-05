@@ -175,12 +175,12 @@ func TestRedactPasswords(t *testing.T) {
 		{
 			name:     "slice with empty slice",
 			input:    []interface{}{[]interface{}{}},
-			expected: []interface{}{[]interface{}{}},
+			expected: []interface{}{nilSlice},
 		},
 		{
 			name:     "slice with nil map",
 			input:    []interface{}{nilMap},
-			expected: []interface{}{nilMap},
+			expected: []interface{}{map[string]interface{}{}},
 		},
 		{
 			name:     "slice with nil slice",
@@ -194,4 +194,90 @@ func TestRedactPasswords(t *testing.T) {
 			assert.Equal(t, test.expected, redacted)
 		})
 	}
+}
+
+func TestRedactPasswords_NoMutate_1(t *testing.T) {
+	// No mutate for map[string]interface{}
+
+	input := map[string]interface{}{
+		"key":  "value",
+		"pass": "foobar",
+	}
+
+	expected := map[string]interface{}{
+		"key":  "value",
+		"pass": "REDACTED",
+	}
+
+	redacted := RedactPasswords(input)
+	assert.Equal(t, expected, redacted)
+
+	// Verify that the input password was not mutated.
+	assert.NotEqual(t, input["pass"], "REDACTED")
+}
+
+func TestRedactPasswords_NoMutate_2(t *testing.T) {
+	// No mutate for []map[string]interface{}
+
+	input := []map[string]interface{}{
+		{
+			"key":  "value",
+			"pass": "foobar",
+		},
+		{
+			"key":      "value",
+			"password": "barfoo",
+		},
+	}
+
+	expected := []interface{}{
+		map[string]interface{}{
+			"key":  "value",
+			"pass": "REDACTED",
+		},
+		map[string]interface{}{
+			"key":      "value",
+			"password": "REDACTED",
+		},
+	}
+
+	redacted := RedactPasswords(input)
+	assert.Equal(t, expected, redacted)
+
+	// Verify that the input password was not mutated.
+	assert.NotEqual(t, input[0]["pass"], "REDACTED")
+	assert.NotEqual(t, input[1]["password"], "REDACTED")
+}
+
+func TestRedactPasswords_NoMutate_3(t *testing.T) {
+	// No mutate for []interface{}
+
+	input := []interface{}{
+		map[string]interface{}{
+			"key":  "value",
+			"pass": "foobar",
+		},
+		map[string]interface{}{
+			"key":      "value",
+			"authPass": "password",
+		},
+	}
+
+	expected := []interface{}{
+		map[string]interface{}{
+			"key":  "value",
+			"pass": "REDACTED",
+		},
+		map[string]interface{}{
+			"key":      "value",
+			"authPass": "REDACTED",
+		},
+	}
+
+	redacted := RedactPasswords(input)
+	assert.Equal(t, expected, redacted)
+
+	// Verify that the input password was not mutated.
+	assert.NotEqual(t, input[0].(map[string]interface{})["pass"], "REDACTED")
+	assert.NotEqual(t, input[1].(map[string]interface{})["authPass"], "REDACTED")
 }
