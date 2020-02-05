@@ -29,6 +29,10 @@ import (
 // magic strings. via regex, or via entropy. This is just meant to cover the
 // basic case of "pass": "foo" within various config locations where it is
 // likely to exist and should not be leaked out into logs.
+//
+// This function is likely very inefficient due to the interface casting and
+// the need to copy the lists/maps provided so that it does not overwrite the
+// original list/map.
 func RedactPasswords(m interface{}) interface{} {
 
 	switch m.(type) {
@@ -43,15 +47,19 @@ func RedactPasswords(m interface{}) interface{} {
 	case []interface{}:
 		var redacted []interface{}
 		for _, v := range m.([]interface{}) {
-			redacted = append(redacted, v)
+			redacted = append(redacted, RedactPasswords(v))
 		}
 		traverseSlice(redacted)
 		return redacted
 
 	case []map[string]interface{}:
 		var redacted []interface{}
-		for _, v := range m.([]map[string]interface{}) {
-			redacted = append(redacted, v)
+		for _, i := range m.([]map[string]interface{}) {
+			mapCopy := map[string]interface{}{}
+			for k, v := range i {
+				mapCopy[k] = v
+			}
+			redacted = append(redacted, mapCopy)
 		}
 		traverseSlice(redacted)
 		return redacted
