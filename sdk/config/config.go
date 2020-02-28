@@ -167,6 +167,14 @@ func (loader *Loader) Load(pol policy.Policy) error {
 		return err
 	}
 
+	log.WithFields(log.Fields{
+		"loader": loader.Name,
+		"paths":  loader.SearchPaths,
+		"name":   loader.FileName,
+		"ext":    loader.Ext,
+		"policy": loader.policy,
+		"data":   loader.merged,
+	}).Info("[config] successfully loaded configuration data")
 	return nil
 }
 
@@ -396,7 +404,7 @@ func (loader *Loader) read(pol policy.Policy) error {
 	}
 
 	for _, path := range loader.files {
-		log.WithField("file", path).Debug("[config] reading config file")
+		log.WithField("file", path).Info("[config] reading config file")
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
 			log.WithField("error", err).Error("[config] failed to read file")
@@ -412,6 +420,10 @@ func (loader *Loader) read(pol policy.Policy) error {
 				log.WithField("error", err).Error("[config] failed to unmarshal config data")
 				return err
 			}
+			log.WithFields(log.Fields{
+				"file": path,
+				"data": res,
+			}).Debug("[config] loaded configuration from file")
 			loader.data = append(loader.data, res)
 		default:
 			log.WithField("ext", loader.Ext).Error("[config] unsupported file format")
