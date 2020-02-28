@@ -23,7 +23,6 @@ import (
 )
 
 func TestRedactPasswords(t *testing.T) {
-
 	var nilMap map[string]interface{}
 	var nilSlice []interface{}
 
@@ -100,27 +99,27 @@ func TestRedactPasswords(t *testing.T) {
 		{
 			name:     "slice of map with no password",
 			input:    []map[string]interface{}{{"key": "value"}},
-			expected: []interface{}{map[string]interface{}{"key": "value"}},
+			expected: []map[string]interface{}{{"key": "value"}},
 		},
 		{
 			name:     "slice of map with key pass, value string",
 			input:    []map[string]interface{}{{"key": "value", "pass": "foobar"}},
-			expected: []interface{}{map[string]interface{}{"key": "value", "pass": "REDACTED"}},
+			expected: []map[string]interface{}{{"key": "value", "pass": "REDACTED"}},
 		},
 		{
 			name:     "slice of map with key PASS, value int",
 			input:    []map[string]interface{}{{"key": "value", "PASS": 123}},
-			expected: []interface{}{map[string]interface{}{"key": "value", "PASS": "REDACTED"}},
+			expected: []map[string]interface{}{{"key": "value", "PASS": "REDACTED"}},
 		},
 		{
 			name:     "slice of map with key Password, value string",
 			input:    []map[string]interface{}{{"key": "value", "Password": "password"}},
-			expected: []interface{}{map[string]interface{}{"key": "value", "Password": "REDACTED"}},
+			expected: []map[string]interface{}{{"key": "value", "Password": "REDACTED"}},
 		},
 		{
 			name:     "slice of map with key authenticationPassphrase, value string",
 			input:    []map[string]interface{}{{"key": "value", "authenticationPassphrase": "password"}},
-			expected: []interface{}{map[string]interface{}{"key": "value", "authenticationPassphrase": "REDACTED"}},
+			expected: []map[string]interface{}{{"key": "value", "authenticationPassphrase": "REDACTED"}},
 		},
 		{
 			name:     "map with empty slice",
@@ -135,12 +134,12 @@ func TestRedactPasswords(t *testing.T) {
 		{
 			name:     "map with nil slice",
 			input:    map[string]interface{}{"key": nilSlice},
-			expected: map[string]interface{}{"key": nilSlice},
+			expected: map[string]interface{}{"key": []interface{}{}},
 		},
 		{
 			name:     "map with nil map",
 			input:    map[string]interface{}{"key": nilMap},
-			expected: map[string]interface{}{"key": nilMap},
+			expected: map[string]interface{}{"key": map[string]interface{}{}},
 		},
 		{
 			name:     "slice with no maps",
@@ -175,7 +174,7 @@ func TestRedactPasswords(t *testing.T) {
 		{
 			name:     "slice with empty slice",
 			input:    []interface{}{[]interface{}{}},
-			expected: []interface{}{nilSlice},
+			expected: []interface{}{[]interface{}{}},
 		},
 		{
 			name:     "slice with nil map",
@@ -185,7 +184,7 @@ func TestRedactPasswords(t *testing.T) {
 		{
 			name:     "slice with nil slice",
 			input:    []interface{}{nilSlice},
-			expected: []interface{}{nilSlice},
+			expected: []interface{}{[]interface{}{}},
 		},
 	}
 	for _, test := range tests {
@@ -230,12 +229,12 @@ func TestRedactPasswords_NoMutate_2(t *testing.T) {
 		},
 	}
 
-	expected := []interface{}{
-		map[string]interface{}{
+	expected := []map[string]interface{}{
+		{
 			"key":  "value",
 			"pass": "REDACTED",
 		},
-		map[string]interface{}{
+		{
 			"key":      "value",
 			"password": "REDACTED",
 		},

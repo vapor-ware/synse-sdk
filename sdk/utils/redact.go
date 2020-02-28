@@ -33,113 +33,110 @@ import (
 // This function is likely very inefficient due to the interface casting and
 // the need to copy the lists/maps provided so that it does not overwrite the
 // original list/map.
-func RedactPasswords(m interface{}) interface{} {
+func RedactPasswords(obj interface{}) interface{} {
+	// Wrap the original obj in a reflect.Value
+	original := reflect.ValueOf(obj)
 
-	switch m.(type) {
-	case map[string]interface{}:
-		redacted := map[string]interface{}{}
-		for k, v := range m.(map[string]interface{}) {
-			redacted[k] = v
+	if !original.IsValid() {
+		return obj
+	}
+
+	// Create a new copy of the object type
+	copied := reflect.New(original.Type()).Elem()
+	redactRecursive(copied, original)
+
+	// Return the value of the copy
+	return copied.Interface()
+}
+
+func redactRecursive(copied, original reflect.Value) {
+	switch original.Kind() {
+
+	// If a pointer, unwrap and call again.
+	case reflect.Ptr:
+		originalValue := original.Elem()
+		// Check if the pointer is nil. If so, there is nothing to do here.
+		if !originalValue.IsValid() {
+			return
 		}
-		traverseMap(redacted)
-		return redacted
+		// Create a new object and set the pointer to it, then recurse.
+		copied.Set(reflect.New(originalValue.Type()))
+		redactRecursive(copied.Elem(), originalValue)
 
-	case []interface{}:
-		var redacted []interface{}
-		for _, v := range m.([]interface{}) {
-			redacted = append(redacted, RedactPasswords(v))
+	// If an interface, unwrap the interface and recurse.
+	case reflect.Interface:
+		// Unwrap the interface
+		originalValue := original.Elem()
+		// Create a new object. New gives us a pointer which we don't want,
+		// so call Elem to dereference the pointer.
+		if !originalValue.IsValid() {
+			copied.Set(originalValue)
+		} else {
+			copyValue := reflect.New(originalValue.Type()).Elem()
+			redactRecursive(copyValue, originalValue)
+			copied.Set(copyValue)
 		}
-		traverseSlice(redacted)
-		return redacted
 
-	case []map[string]interface{}:
-		var redacted []interface{}
-		for _, i := range m.([]map[string]interface{}) {
-			mapCopy := map[string]interface{}{}
-			for k, v := range i {
-				mapCopy[k] = v
+	// If a slice, create a new slice and check each element in the slice.
+	case reflect.Slice:
+		copied.Set(reflect.MakeSlice(original.Type(), original.Len(), original.Cap()))
+		for i := 0; i < original.Len(); i++ {
+			redactRecursive(copied.Index(i), original.Index(i))
+		}
+
+	// If a map, create a new map and check each element in the map.
+	case reflect.Map:
+		copied.Set(reflect.MakeMap(original.Type()))
+		for _, key := range original.MapKeys() {
+			originalValue := original.MapIndex(key)
+
+			// First, check that the key is a string, and if so, that it contains the
+			// "pass" substring. If the key is an interface, first unwrap the interface.
+			if key.Kind() == reflect.Interface {
+				key = key.Elem()
 			}
-			redacted = append(redacted, mapCopy)
-		}
-		traverseSlice(redacted)
-		return redacted
 
+			if key.Kind() == reflect.String {
+				if strings.Contains(strings.ToLower(key.Interface().(string)), "pass") {
+					// Check that the original value is a string or interface. If either
+					// case is true, set the value to "REDACTED"
+					switch originalValue.Kind() {
+					case reflect.String:
+						if !originalValue.IsValid() {
+							copied.SetMapIndex(key, originalValue)
+						} else {
+							copyValue := reflect.New(originalValue.Type()).Elem()
+							copyValue.SetString("REDACTED")
+							copied.SetMapIndex(key, copyValue)
+						}
+
+					case reflect.Interface:
+						if !originalValue.IsValid() {
+							copied.SetMapIndex(key, originalValue)
+						} else {
+							copyValue := reflect.New(originalValue.Type()).Elem()
+							copyValue.Set(reflect.ValueOf("REDACTED"))
+							copied.SetMapIndex(key, copyValue)
+						}
+					}
+				} else {
+					if !originalValue.IsValid() {
+						copied.SetMapIndex(key, originalValue)
+					} else {
+						copyValue := reflect.New(originalValue.Type()).Elem()
+						redactRecursive(copyValue, originalValue)
+						copied.SetMapIndex(key, copyValue)
+					}
+				}
+			} else {
+				copyValue := reflect.New(originalValue.Type()).Elem()
+				redactRecursive(copyValue, originalValue)
+				copied.SetMapIndex(key, copyValue)
+			}
+		}
+
+	// Otherwise, simply take the original value.
 	default:
-		return m
-	}
-}
-
-// traverseMap iterates through all keys and values in a map[string]interface{},
-// replacing passwords with a redacted string. If it finds a nested
-// map[string]interface{} we recurse into it.
-func traverseMap(m map[string]interface{}) {
-	for k, v := range m {
-
-		// If the key contains the string "pass" (case-insensitive), we substitute
-		// with the string REDACTED
-		if strings.Contains(strings.ToLower(k), "pass") {
-			// Redact the data whatever it is.
-			m[k] = "REDACTED"
-			continue
-		}
-
-		// Is this a map of [string]interface{}?
-		vvalue := reflect.ValueOf(v)
-		vkind := vvalue.Kind()
-		if vkind == reflect.Map {
-			// Yes this is a map of [string]interface{}
-			if vvalue.IsNil() {
-				continue
-			}
-			nestedMap, ok := v.(map[string]interface{})
-			if ok {
-				traverseMap(nestedMap)
-			}
-		}
-
-		// Is this a []interface{}?
-		if vkind == reflect.Slice {
-			// Yes.
-			if vvalue.IsNil() {
-				continue
-			}
-			nestedSlice, ok := v.([]interface{})
-			if ok {
-				traverseSlice(nestedSlice)
-			}
-		}
-	}
-}
-
-// traverseSlice iterates through all values in a []interface{}. If it finds a
-// nested map[string]interface{} or a []interface we recurse into it.
-func traverseSlice(s []interface{}) {
-	for _, v := range s {
-
-		// Is this a map of [string]interface{}?
-		vvalue := reflect.ValueOf(v)
-		vkind := vvalue.Kind()
-		if vkind == reflect.Map {
-			// Yes this is a map [string]interface{}
-			if vvalue.IsNil() {
-				continue
-			}
-			nestedMap, ok := v.(map[string]interface{})
-			if ok {
-				traverseMap(nestedMap)
-			}
-		}
-
-		// Is this a []interface{}
-		if vkind == reflect.Slice {
-			// Yes.
-			if vvalue.IsNil() {
-				continue
-			}
-			nestedSlice, ok := v.([]interface{})
-			if ok {
-				traverseSlice(nestedSlice)
-			}
-		}
+		copied.Set(original)
 	}
 }
