@@ -265,7 +265,9 @@ func NewDeviceFromConfig(
 	// Since we are merging proto + instance, we can't easily set a default value
 	// in the config struct annotations, so make sure that the timeout is not 0 here.
 	if writeTimeout == 0 {
-		log.WithField("timeout", defaultWriteTimeout).Debug()
+		log.WithField("timeout", defaultWriteTimeout).Debug(
+			"[device] no write timeout found in device config, using default timeout",
+		)
 		writeTimeout = defaultWriteTimeout
 	}
 
