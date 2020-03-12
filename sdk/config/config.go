@@ -412,6 +412,10 @@ func (loader *Loader) read(pol policy.Policy) error {
 			return err
 		}
 
+		// Log the config so we can see it before the container crashes.
+		log.Infof("*** data: %v\n", data)
+		logInfoMultiline(string(data[:]))
+
 		res := map[string]interface{}{}
 
 		switch loader.Ext {
@@ -502,4 +506,16 @@ func (loader *Loader) isValidExt(path string) bool {
 
 	log.WithField("path", path).Debug("[config] path contains unsupported extension")
 	return false
+}
+
+// infoMultiline logs a multi-line string at the debug level.
+// logrus emits a newline as a literal \n which isn't always desirable.
+// This function is useful for logging configuration files so that we can:
+// - Spot a syntax error.
+// - Determine the configuration from a log file.
+func logInfoMultiline(toLog string) {
+	lines := strings.Split(toLog, "\n")
+	for line := 0; line < len(lines); line++ {
+		log.Infof("Line %04d: %v", line, lines[line])
+	}
 }
