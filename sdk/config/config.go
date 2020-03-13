@@ -406,8 +406,13 @@ func (loader *Loader) read(pol policy.Policy) error {
 
 	for _, path := range loader.files {
 		log.WithField("file", path).Info("[config] reading config file")
+		log.Info("*** one:\n")
+		log.WithFields(log.Fields{
+			"help": "I'm drowning",
+		}).Error("[config] *** Please help me ***")
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
+			log.Info("*** two:\n")
 			log.WithField("error", err).Error("[config] failed to read file")
 			return err
 		}
