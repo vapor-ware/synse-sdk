@@ -79,7 +79,7 @@ var ElectricCurrent = Output{
 // ElectricResistance is an output type for electrical resistance readings,
 // measured in Ohms.
 var ElectricResistance = Output{
-	Name:      "electric_resistance",
+	Name:      "electric-resistance",
 	Type:      "resistance",
 	Precision: 2,
 	Unit: &Unit{
@@ -292,7 +292,7 @@ var Voltage = Output{
 //
 // That means this output can be used in place of a Weber, for example.
 var VoltSecond = Output{
-	Name:      "voltSecond",
+	Name:      "volt-second",
 	Type:      "flux",
 	Precision: 3,
 	Unit: &Unit{
