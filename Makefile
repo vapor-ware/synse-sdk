@@ -15,7 +15,7 @@ cover: test  ## Run tests and open the coverage report
 	go tool cover -html=coverage.out
 
 .PHONY: check-examples
-check-examples:  ## Check that the example pluginss run without failing
+check-examples:  ## Check that the example plugins run without failing
 	@for d in examples/*/ ; do \
 		echo "\n\033[32m$$d\033[0m" ; \
 		cd $$d ; \
