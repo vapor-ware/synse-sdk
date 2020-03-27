@@ -1,5 +1,5 @@
 // Synse SDK
-// Copyright (c) 2019-2020 Vapor IO
+// Copyright (c) 2017-2020 Vapor IO
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -624,7 +624,6 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 // associated with that action on write.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Transaction` RPC method.
-//ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
 func (server *server) Transaction(ctx context.Context, request *synse.V3TransactionSelector) (*synse.V3TransactionStatus, error) {
 	rlog := log.WithFields(log.Fields{
 		"id":    request.Id,

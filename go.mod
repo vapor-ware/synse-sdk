@@ -1,6 +1,6 @@
 module github.com/vapor-ware/synse-sdk
 
-go 1.12
+go 1.13
 
 require (
 	github.com/creasty/defaults v1.3.0

@@ -1,5 +1,5 @@
 // Synse SDK
-// Copyright (c) 2019-2020 Vapor IO
+// Copyright (c) 2017-2020 Vapor IO
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -290,12 +290,12 @@ func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 // - No registered device handlers implement a read function.
 func (scheduler *scheduler) scheduleReads() {
 	if scheduler.config.Read.Disable {
-		log.Info("[scheduler] reading will not be scheduled (reads globally disabled)")
+		log.Warn("[scheduler] reading will not be scheduled (reads globally disabled)")
 		return
 	}
 
 	if !scheduler.deviceManager.HasReadHandlers() {
-		log.Info("[scheduler] reading will not be scheduled (no read handlers registered)")
+		log.Warn("[scheduler] reading will not be scheduled (no read handlers registered)")
 		return
 	}
 
@@ -480,7 +480,9 @@ func (scheduler *scheduler) scheduleListen() {
 func finalizeReadings(device *Device, rctx *ReadContext) error {
 	for _, reading := range rctx.Reading {
 		// Apply all transformations to the reading, in the order in which
-		// they are defined.
+		// they are defined. Typically, scale should happen before conversion,
+		// but ultimately, it is up to the configurer to ensure transformations
+		// are defined in the correct order.
 		for _, transformer := range device.Transforms {
 			devlog := log.WithFields(log.Fields{
 				"device":      device.id,

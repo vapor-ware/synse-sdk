@@ -1,5 +1,5 @@
 // Synse SDK
-// Copyright (c) 2019-2020 Vapor IO
+// Copyright (c) 2017-2020 Vapor IO
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,9 +21,24 @@ type CheckType string
 
 // Check is an interface which all health checks should implement.
 type Check interface {
+
+	// GetName gets the human-readable name of the health check.
 	GetName() string
+
+	// GetType gets the type of the health check. Currently, the supported
+	// types are: periodic.
 	GetType() CheckType
+
+	// Status gets the latest status of the health check. The status tells
+	// whether the health check passed or not at a given time.
 	Status() *Status
+
+	// Update the state of the health check. The behavior/timing of how
+	// Update is called is based on the type of the check. For example,
+	// periodic checks run the Update function on a timed interval.
 	Update()
+
+	// Run starts the health check. This is where the update call behavior is
+	// defined.
 	Run()
 }
