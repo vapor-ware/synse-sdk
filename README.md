@@ -10,7 +10,6 @@
 
 <p align="center">A Golang SDK for creating plugins for Synse Server</p>
 
-
 [Synse Server][synse-server] provides an HTTP API for monitoring and controlling physical
 and virtual devices; Synse Plugins provide the backend support for all the devices Synse
 Server exposes. This repo contains the official Synse Plugin SDK (written in [Go][go-install])
@@ -21,8 +20,8 @@ parsing, background read/write, transaction generation and tracking, meta-info c
 This means the plugin author should only need to worry about the plugin-specific device support.
 See the [SDK Documentation][sdk-docs] for more info.
 
-
 ## The Synse Ecosystem
+
 The Synse SDK is one component of the greater Synse Ecosystem.
 
 - [**vapor-ware/synse-server**][synse-server]: An HTTP server providing a uniform API to interact
@@ -40,8 +39,8 @@ The Synse SDK is one component of the greater Synse Ecosystem.
 - [**vapor-ware/synse-cli**][synse-cli]: A CLI that allows you to easily interact with
   Synse Server (via HTTP) and Plugins (via gRPC) directly from the command line.
 
-
 ## Getting Started
+
 It is strongly recommended that you use a [release][releases] version of the SDK. It may be
 installed with:
 
@@ -54,29 +53,34 @@ provides some useful information on writing plugins. You can also check out the 
 directory which contains various example plugins using this SDK. The examples, in conjunction
 with the documentation, should get you well on your way to start writing your own plugin(s).
 
-
 ### Developing
+
 If you wish to develop the SDK, see the Developing section in the [SDK Documentation][sdk-docs].
 
-
 ## Sharing Plugins
+
 Have you written a plugin and want to share it with the Synse community? Let us know!
 There currently is not a tool or site to search for plugins, so we will maintain a list
 here. You can also add the [`synse-plugin`][synse-plugin-tag] tag to your plugin's GitHub repo.
 
 ## Feedback
+
 Feedback for the Synse Plugin SDK, or any component of the Synse ecosystem, is greatly appreciated!
 If you experience any issues, find the documentation unclear, have requests for features,
 or just have questions about it, we'd love to know. Feel free to open an issue for any
 feedback you may have.
 
 ## Contributing
+
 We welcome contributions to the project. The project maintainers actively manage the issues
 and pull requests. If you choose to contribute, we ask that you either comment on an existing
 issue or open a new one. This project follows the typical [GitHub Workflow][gh-workflow].
 
+## License
+
 The Synse Plugin SDK is released under the [GPL-3.0](LICENSE) license.
 
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvapor-ware%2Fsynse-sdk.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvapor-ware%2Fsynse-sdk?ref=badge_large)
 
 [go-install]: https://golang.org/doc/install
 [releases]: https://github.com/vapor-ware/synse-sdk/releases
@@ -88,6 +92,3 @@ The Synse Plugin SDK is released under the [GPL-3.0](LICENSE) license.
 [synse-grpc]: https://github.com/vapor-ware/synse-server-grpc
 [gh-workflow]: https://guides.github.com/introduction/flow/
 [synse-plugin-tag]: https://github.com/topics/synse-plugin
-
-## License
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvapor-ware%2Fsynse-sdk.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvapor-ware%2Fsynse-sdk?ref=badge_large)
