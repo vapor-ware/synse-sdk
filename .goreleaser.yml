@@ -2,9 +2,8 @@
 project_name: synse-sdk
 before:
   hooks:
-    - go clean -v
-    - rm -rf dist
     - go mod download
+    - rm -rf dist
 archive:
   format: tar.gz
 checksum:
