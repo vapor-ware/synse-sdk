@@ -3,7 +3,7 @@
 pipeline {
 
   agent {
-      label 'golang-next'
+      label 'golang-alpha'
   }
 
   stages {
