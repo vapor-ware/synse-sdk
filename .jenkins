@@ -21,6 +21,7 @@ pipeline {
         container('golang'){
           sh 'CGO_ENABLED=0 go test -coverprofile=coverage.txt -covermode=atomic ./sdk/...'
           sh 'curl -s https://codecov.io/bash | bash -s - -t ${CODECOV_TOKEN}'
+          sh 'rm coverage.txt'
         }
       }
     }
