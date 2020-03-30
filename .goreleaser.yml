@@ -4,8 +4,12 @@ before:
   hooks:
     - go mod download
     - rm -rf dist
-archive:
-  format: tar.gz
+builds:
+  -
+    goos:
+      - linux
+    goarch:
+      - amd64
 checksum:
   name_template: 'checksums-{{ .Tag }}.txt'
 release:

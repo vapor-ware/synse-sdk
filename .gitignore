@@ -19,3 +19,6 @@ vendor/
 
 # System files
 .DS_Store
+
+# GoReleaser build artifacts
+dist/
