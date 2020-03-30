@@ -57,6 +57,15 @@ with the documentation, should get you well on your way to start writing your ow
 
 If you wish to develop the SDK, see the Developing section in the [SDK Documentation][sdk-docs].
 
+## Compatibility
+
+Below is a table describing the compatibility of various SDK versions with Synse platform versions.
+
+|          | Synse v2 | Synse v3 |
+| -------- | -------- | -------- |
+| SDK v1.x | ✓        | ✗        |
+| SDK v2.x | ✗        | ✓        |
+
 ## Sharing Plugins
 
 Have you written a plugin and want to share it with the Synse community? Let us know!
