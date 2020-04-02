@@ -138,13 +138,15 @@ func (manager *deviceManager) loadDynamicConfig() error {
 			if err != nil {
 				switch manager.policies.DynamicDeviceConfig {
 				case policy.Optional:
-					log.WithField("err", err).Info("[device manager] failed dynamic device config; skipping since its optional")
+					log.WithError(err).Info("[device manager] failed loading dynamic device config; skipping since its optional")
 					continue
 				case policy.Required:
-					log.Error("[device manager] failed dynamic device config; erroring since its required")
+					log.WithError(err).Error("[device manager] failed loading dynamic device config; erroring since its required")
 					return err
 				default:
-					log.Error("[device manager] invalid policy when loading dynamic device config")
+					log.WithFields(log.Fields{
+						"policy": manager.policies.DynamicDeviceConfig,
+					}).Error("[device manager] invalid policy when loading dynamic device config")
 					return err
 				}
 			}
@@ -163,20 +165,22 @@ func (manager *deviceManager) createDynamicDevices() error {
 			if err != nil {
 				switch manager.policies.DynamicDeviceConfig {
 				case policy.Optional:
-					log.Info("[device manager] failed dynamic devices; skipping since its optional")
+					log.WithError(err).Info("[device manager] failed creating dynamic devices; skipping since its optional")
 					continue
 				case policy.Required:
-					log.Error("[device manager] failed dynamic devices; erroring since its required")
+					log.WithError(err).Error("[device manager] failed creating dynamic devices; erroring since its required")
 					return err
 				default:
-					log.Error("[device manager] invalid policy when loading dynamic devices")
+					log.WithFields(log.Fields{
+						"policy": manager.policies.DynamicDeviceConfig,
+					}).Error("[device manager] invalid policy when loading dynamic devices")
 					return err
 				}
 			}
 
 			for _, device := range devices {
 				if err := manager.AddDevice(device); err != nil {
-					log.WithField("error", err).Error("[device manager] failed to add device to manager")
+					log.WithError(err).Error("[device manager] failed to add device to manager")
 					return err
 				}
 			}
