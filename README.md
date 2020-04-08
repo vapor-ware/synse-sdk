@@ -13,7 +13,7 @@
 [Synse Server][synse-server] provides an HTTP API for monitoring and controlling physical
 and virtual devices; Synse Plugins provide the backend support for all the devices Synse
 Server exposes. This repo contains the official Synse Plugin SDK (written in [Go][go-install])
-that can be used to create plugin backends for Synse Server.
+which can be used to create plugin backends for Synse Server.
 
 The SDK handles most of the common functionality needed for plugins, such as configuration
 parsing, background read/write, transaction generation and tracking, meta-info caching, and more.
@@ -41,21 +41,28 @@ The Synse SDK is one component of the greater Synse Ecosystem.
 
 ## Getting Started
 
-It is strongly recommended that you use a [release][releases] version of the SDK. It may be
-installed with:
+The Synse SDK can be installed with
 
 ```
-go get -u github.com/vapor-ware/synse-sdk/sdk
+go get github.com/vapor-ware/synse-sdk/sdk
+```
+
+It is recommended that you use a [release][releases] version of the SDK. How you pin
+to a release version depends on the dependency manager you use. For go modules, this would
+mean specifying the version at get, e.g. for SDK 2.0.0
+
+```
+go get github.com/vapor-ware/synse-sdk/sdk@2.0.0
 ```
 
 From there, it is easy to start building your own plugin. The [SDK Documentation][sdk-docs]
-provides some useful information on writing plugins. You can also check out the [examples](examples)
-directory which contains various example plugins using this SDK. The examples, in conjunction
+provides useful information on writing plugins. You can also check out the [examples](examples)
+directory, which contains various example plugins built using the SDK. The examples, in conjunction
 with the documentation, should get you well on your way to start writing your own plugin(s).
 
 ### Developing
 
-If you wish to develop the SDK, see the Developing section in the [SDK Documentation][sdk-docs].
+If you wish to develop the SDK, see the "Developer Guide" section in the [SDK Documentation][sdk-docs].
 
 ## Compatibility
 
@@ -70,7 +77,8 @@ Below is a table describing the compatibility of various SDK versions with Synse
 
 Have you written a plugin and want to share it with the Synse community? Let us know!
 There currently is not a tool or site to search for plugins, so we will maintain a list
-here. You can also add the [`synse-plugin`][synse-plugin-tag] tag to your plugin's GitHub repo.
+[here](https://synse.readthedocs.io/en/latest/plugins/). You can also add the [`synse-plugin`][synse-plugin-tag]
+tag to your plugin's GitHub repo.
 
 ## Feedback
 
