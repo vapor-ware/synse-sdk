@@ -31,7 +31,7 @@ import (
 // Note that the collection of readings in a single ReadContext would correspond
 // to a single Read request.
 type ReadContext struct {
-	Device  string
+	Device  *Device
 	Reading []*output.Reading
 }
 
@@ -39,7 +39,7 @@ type ReadContext struct {
 // device and corresponding readings.
 func NewReadContext(device *Device, readings []*output.Reading) *ReadContext {
 	return &ReadContext{
-		Device:  device.id, // fixme: should we just store the pointer to the device instead??
+		Device:  device,
 		Reading: readings,
 	}
 }
@@ -47,7 +47,7 @@ func NewReadContext(device *Device, readings []*output.Reading) *ReadContext {
 // WriteContext describes a single write transaction.
 type WriteContext struct {
 	transaction *transaction
-	device      string
+	device      *Device
 	data        *synse.V3WriteData
 }
 

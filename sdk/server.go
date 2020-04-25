@@ -470,7 +470,7 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 
 	// Encode and stream the readings back to the client.
 	for r := range readings {
-		device := server.deviceManager.GetDevice(r.Device)
+		device := server.deviceManager.GetDevice(r.Device.id)
 		for _, data := range r.Reading {
 			reading := data.Encode()
 			if device != nil {
@@ -532,7 +532,7 @@ func (server *server) ReadStream(request *synse.V3StreamRequest, stream synse.V3
 
 	log.Info("[server] streaming readings from device manager")
 	for r := range s.readings {
-		device := server.deviceManager.GetDevice(r.Device)
+		device := server.deviceManager.GetDevice(r.Device.id)
 		for _, data := range r.Reading {
 			reading := data.Encode()
 			if device != nil {

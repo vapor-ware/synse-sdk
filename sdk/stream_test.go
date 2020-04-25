@@ -86,19 +86,19 @@ func TestReadStream_listen_withFilter(t *testing.T) {
 	// Create read contexts to send to the stream.
 	ctxs := []*ReadContext{
 		{
-			Device:  "11111",
+			Device:  &Device{id: "11111"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "22222",
+			Device:  &Device{id: "22222"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "12345",
+			Device:  &Device{id: "12345"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "54321",
+			Device:  &Device{id: "54321"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 	}
@@ -129,8 +129,8 @@ func TestReadStream_listen_withFilter(t *testing.T) {
 
 	// Ensure that only the devices specified by the match filter were collected.
 	assert.Len(t, readings, 2)
-	assert.Equal(t, "11111", readings[0].Device)
-	assert.Equal(t, "12345", readings[1].Device)
+	assert.Equal(t, "11111", readings[0].Device.id)
+	assert.Equal(t, "12345", readings[1].Device.id)
 
 	// We did not call close(), so the stream should not be in the closing state
 	assert.False(t, s.closing)
@@ -148,19 +148,19 @@ func TestReadStream_listen_noFilter(t *testing.T) {
 	// Create read contexts to send to the stream.
 	ctxs := []*ReadContext{
 		{
-			Device:  "11111",
+			Device:  &Device{id: "11111"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "22222",
+			Device:  &Device{id: "22222"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "12345",
+			Device:  &Device{id: "12345"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "54321",
+			Device:  &Device{id: "54321"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 	}
@@ -191,10 +191,10 @@ func TestReadStream_listen_noFilter(t *testing.T) {
 
 	// Ensure that all devices were collected since there is no filter.
 	assert.Len(t, readings, 4)
-	assert.Equal(t, "11111", readings[0].Device)
-	assert.Equal(t, "22222", readings[1].Device)
-	assert.Equal(t, "12345", readings[2].Device)
-	assert.Equal(t, "54321", readings[3].Device)
+	assert.Equal(t, "11111", readings[0].Device.id)
+	assert.Equal(t, "22222", readings[1].Device.id)
+	assert.Equal(t, "12345", readings[2].Device.id)
+	assert.Equal(t, "54321", readings[3].Device.id)
 
 	// We did not call close(), so the stream should not be in the closing state
 	assert.False(t, s.closing)
@@ -212,19 +212,19 @@ func TestReadStream_listen_close(t *testing.T) {
 	// Create read contexts to send to the stream.
 	ctxs := []*ReadContext{
 		{
-			Device:  "11111",
+			Device:  &Device{id: "11111"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "22222",
+			Device:  &Device{id: "22222"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "12345",
+			Device:  &Device{id: "12345"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 		{
-			Device:  "54321",
+			Device:  &Device{id: "54321"},
 			Reading: []*output.Reading{{Value: 1}},
 		},
 	}

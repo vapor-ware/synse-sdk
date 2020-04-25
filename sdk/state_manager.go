@@ -33,6 +33,7 @@ import (
 // stateManager manages the read and write (transaction) state for plugin devices.
 type stateManager struct {
 	config        *config.PluginSettings
+	deviceManager *deviceManager
 	readChan      chan *ReadContext
 	readings      map[string][]*output.Reading
 	readingsCache *cache.Cache
@@ -44,9 +45,12 @@ type stateManager struct {
 }
 
 // newStateManager creates a new instance of the stateManager.
-func newStateManager(conf *config.PluginSettings) *stateManager {
+func newStateManager(conf *config.PluginSettings, deviceManager *deviceManager) *stateManager {
 	if conf == nil {
 		panic("state manager requires a non-nil config")
+	}
+	if deviceManager == nil {
+		panic("state manager requires a non-nil device manager")
 	}
 
 	var readingsCache *cache.Cache
@@ -56,9 +60,10 @@ func newStateManager(conf *config.PluginSettings) *stateManager {
 	}
 
 	return &stateManager{
-		config:   conf,
-		readChan: make(chan *ReadContext, conf.Read.QueueSize),
-		readings: make(map[string][]*output.Reading),
+		config:        conf,
+		deviceManager: deviceManager,
+		readChan:      make(chan *ReadContext, conf.Read.QueueSize),
+		readings:      make(map[string][]*output.Reading),
 		transactions: cache.New(
 			conf.Transaction.TTL,
 			conf.Transaction.TTL*2,
@@ -129,7 +134,7 @@ func (manager *stateManager) updateReadings() {
 	for {
 		// Read from the read channel for incoming readings.
 		reading := <-manager.readChan
-		id := reading.Device
+		id := reading.Device.id
 		readings := reading.Reading
 
 		// Update the reading state.
@@ -270,14 +275,16 @@ func (manager *stateManager) dumpCachedReadings(start, end time.Time, readings c
 // dumpCurrentReadings dumps the current readings out to the provided channel.
 func (manager *stateManager) dumpCurrentReadings(readings chan *ReadContext) {
 	for id, data := range manager.GetReadings() {
+		device := manager.deviceManager.GetDevice(id)
 		readings <- &ReadContext{
-			Device:  id,
+			Device:  device,
 			Reading: data,
 		}
 	}
 }
 
-// GetReadings gets a copy of the entire current readings state in the StateManager.
+// GetReadings gets a copy of the entire current readings state in the
+// StateManager as a map with the device id as the key.
 func (manager *stateManager) GetReadings() map[string][]*output.Reading {
 	readings := make(map[string][]*output.Reading)
 	manager.readingsLock.RLock()

@@ -193,7 +193,7 @@ func TestScheduler_Write(t *testing.T) {
 	// Verify that the write was put in the write queue.
 	w, isOpen := <-s.writeChan
 	assert.True(t, isOpen)
-	assert.Equal(t, "test-1", w.device)
+	assert.Equal(t, dev, w.device)
 }
 
 func TestScheduler_WriteAndWait_nilDevice(t *testing.T) {
@@ -255,7 +255,7 @@ func TestScheduler_WriteAndWait(t *testing.T) {
 		// Verify that the write was put in the write queue.
 		w, isOpen := <-s.writeChan
 		assert.True(t, isOpen)
-		assert.Equal(t, "test-1", w.device)
+		assert.Equal(t, dev, w.device)
 
 		// Close the transaction to unblock
 		close(w.transaction.done)
@@ -341,7 +341,7 @@ func TestScheduler_scheduleReads(t *testing.T) {
 
 	reading, isOpen := <-s.stateManager.readChan
 	assert.True(t, isOpen)
-	assert.Equal(t, "123", reading.Device)
+	assert.Equal(t, s.deviceManager.GetDevice("123"), reading.Device)
 }
 
 func TestScheduler_scheduleWrites_writeDisabled(t *testing.T) {
@@ -423,7 +423,7 @@ func TestScheduler_scheduleWrites(t *testing.T) {
 
 	wctx := &WriteContext{
 		txn,
-		"123",
+		s.deviceManager.GetDevice("123"),
 		&synse.V3WriteData{Action: "test"},
 	}
 	s.writeChan <- wctx
@@ -469,7 +469,7 @@ func TestScheduler_scheduleListen(t *testing.T) {
 	handler := &DeviceHandler{
 		Name: "test",
 		Listen: func(device *Device, contexts chan *ReadContext) error {
-			contexts <- &ReadContext{Device: device.id}
+			contexts <- &ReadContext{Device: device}
 			return nil
 		},
 	}
@@ -504,7 +504,7 @@ func TestScheduler_scheduleListen(t *testing.T) {
 
 	reading, isOpen := <-s.stateManager.readChan
 	assert.True(t, isOpen)
-	assert.Equal(t, "123", reading.Device)
+	assert.Equal(t, s.deviceManager.GetDevice("123"), reading.Device)
 }
 
 func TestScheduler_applyTransformations_NoTransformers(t *testing.T) {

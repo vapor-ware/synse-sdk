@@ -161,11 +161,12 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 
 	// Initialize the plugin components. The order in which components are initialized
 	// is important, since a dependency chain exists between some components. In particular:
+	// * the state manager requires the device manager.
 	// * the scheduler requires the device manager and state manager
 	// * the server requires the device manager, state manager, scheduler, and health manager
 	p.health = health.NewManager(p.config.Health)
-	p.state = newStateManager(p.config.Settings)
 	p.device = newDeviceManager(&p)
+	p.state = newStateManager(p.config.Settings, p.device)
 	p.scheduler = newScheduler(&p)
 	p.server = newServer(&p)
 
