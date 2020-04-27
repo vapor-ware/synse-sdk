@@ -25,9 +25,10 @@ import (
 )
 
 func TestNewReadContext(t *testing.T) {
-	r := NewReadContext(&Device{id: "123"}, []*output.Reading{{Value: 1}})
+	device := &Device{id: "123"}
+	r := NewReadContext(device, []*output.Reading{{Value: 1}})
 
-	assert.Equal(t, "123", r.Device)
+	assert.Equal(t, device, r.Device)
 	assert.Len(t, r.Reading, 1)
 }
 

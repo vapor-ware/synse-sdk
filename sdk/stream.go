@@ -54,8 +54,8 @@ func (s *ReadStream) listen() {
 		}
 
 		for _, id := range s.filter {
-			if r.Device == id {
-				log.WithField("device", r.Device).Debug("collecting reading")
+			if r.Device.id == id {
+				log.WithField("device", r.Device.id).Debug("collecting reading")
 				if s.closing {
 					return
 				}

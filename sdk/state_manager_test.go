@@ -29,12 +29,14 @@ import (
 )
 
 func Test_newStateManager_nilConfig(t *testing.T) {
+	deviceManager := deviceManager{}
+
 	assert.Panics(t, func() {
-		newStateManager(nil)
+		newStateManager(nil, &deviceManager)
 	})
 }
 
-func Test_newStateManager(t *testing.T) {
+func Test_newStateManager_nilDeviceManager(t *testing.T) {
 	conf := config.PluginSettings{
 		Mode: modeParallel,
 		Cache: &config.CacheSettings{
@@ -52,13 +54,58 @@ func Test_newStateManager(t *testing.T) {
 		},
 	}
 
-	sm := newStateManager(&conf)
+	assert.Panics(t, func() {
+		newStateManager(&conf, nil)
+	})
+}
+func Test_newStateManager(t *testing.T) {
+	// Create plugin settings.
+	conf := config.PluginSettings{
+		Mode: modeParallel,
+		Cache: &config.CacheSettings{
+			Enabled: true,
+			TTL:     5 * time.Minute,
+		},
+		Read: &config.ReadSettings{
+			Disable:   false,
+			Interval:  0,
+			Delay:     0,
+			QueueSize: 100,
+		},
+		Transaction: &config.TransactionSettings{
+			TTL: 5 * time.Second,
+		},
+	}
+
+	// Create deviceManager.
+	handler := &DeviceHandler{
+		Name: "test",
+		Read: func(device *Device) ([]*output.Reading, error) {
+			return nil, nil
+		},
+	}
+
+	deviceManager := deviceManager{
+		handlers: map[string]*DeviceHandler{
+			"test": handler,
+		},
+		devices: map[string]*Device{
+			"123": {
+				id:      "123",
+				handler: handler,
+			},
+		},
+	}
+
+	sm := newStateManager(&conf, &deviceManager)
 
 	assert.Equal(t, &conf, sm.config)
 	assert.Equal(t, 100, cap(sm.readChan))
 	assert.Empty(t, sm.readings)
 	assert.NotNil(t, sm.transactions)
 	assert.NotNil(t, sm.readingsCache)
+
+	assert.Equal(t, &deviceManager, sm.deviceManager)
 }
 
 func TestStateManager_registerActions(t *testing.T) {
@@ -99,7 +146,9 @@ func TestStateManager_addReadingToCache_cacheDisabled(t *testing.T) {
 	assert.Equal(t, 0, sm.readingsCache.ItemCount())
 
 	sm.addReadingToCache(&ReadContext{
-		Device:  "test-1",
+		Device: &Device{
+			id: "test-1",
+		},
 		Reading: []*output.Reading{{Value: 1}},
 	})
 
@@ -122,7 +171,9 @@ func TestStateManager_addReadingToCache_new(t *testing.T) {
 	assert.Equal(t, 0, sm.readingsCache.ItemCount())
 
 	sm.addReadingToCache(&ReadContext{
-		Device:  "test-1",
+		Device: &Device{
+			id: "test-1",
+		},
 		Reading: []*output.Reading{{Value: 1}},
 	})
 
@@ -143,7 +194,9 @@ func TestStateManager_addReadingToCache_twoReadings(t *testing.T) {
 
 	// Add first reading
 	sm.addReadingToCache(&ReadContext{
-		Device:  "test-1",
+		Device: &Device{
+			id: "test-1",
+		},
 		Reading: []*output.Reading{{Value: 1}},
 	})
 
@@ -151,7 +204,9 @@ func TestStateManager_addReadingToCache_twoReadings(t *testing.T) {
 
 	// Add second reading for the device
 	sm.addReadingToCache(&ReadContext{
-		Device:  "test-1",
+		Device: &Device{
+			id: "test-1",
+		},
 		Reading: []*output.Reading{{Value: 1}},
 	})
 
@@ -293,7 +348,7 @@ func TestStateManager_GetCachedReadings_cacheEnabled(t *testing.T) {
 		readingsCache: cache.New(1*time.Minute, 2*time.Minute),
 	}
 
-	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
+	newCtxs := []*ReadContext{{Device: &Device{id: "123"}, Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("2019-03-22T09:48:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -303,7 +358,7 @@ func TestStateManager_GetCachedReadings_cacheEnabled(t *testing.T) {
 	assert.Len(t, readings, 1)
 
 	rctx := <-readings
-	assert.Equal(t, "123", rctx.Device)
+	assert.Equal(t, "123", rctx.Device.id)
 
 	// Verify the channel was closed
 	_, isOpen := <-readings
@@ -311,7 +366,14 @@ func TestStateManager_GetCachedReadings_cacheEnabled(t *testing.T) {
 }
 
 func TestStateManager_GetCachedReadings_cacheDisabled(t *testing.T) {
+	deviceManager := &deviceManager{
+		devices: map[string]*Device{
+			"1": &Device{id: "1"},
+		},
+	}
+
 	sm := stateManager{
+		deviceManager: deviceManager,
 		config: &config.PluginSettings{
 			Cache: &config.CacheSettings{
 				Enabled: false,
@@ -329,7 +391,7 @@ func TestStateManager_GetCachedReadings_cacheDisabled(t *testing.T) {
 	assert.Len(t, readings, 1)
 
 	rctx := <-readings
-	assert.Equal(t, "1", rctx.Device)
+	assert.Equal(t, "1", rctx.Device.id)
 
 	// Verify the channel was closed
 	_, isOpen := <-readings
@@ -370,7 +432,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingBeforeStart(t *testing.T) 
 	}
 
 	// Test data setup
-	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
+	newCtxs := []*ReadContext{{Device: &Device{id: "123"}, Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("2019-03-22T09:40:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -398,7 +460,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingAfterEnd(t *testing.T) {
 	}
 
 	// Test data setup
-	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
+	newCtxs := []*ReadContext{{Device: &Device{id: "123"}, Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("2019-03-22T09:55:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -426,7 +488,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingOk(t *testing.T) {
 	}
 
 	// Test data setup
-	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
+	newCtxs := []*ReadContext{{Device: &Device{id: "123"}, Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("2019-03-22T09:48:00Z", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -443,7 +505,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingOk(t *testing.T) {
 	assert.Len(t, readings, 1)
 
 	rctx := <-readings
-	assert.Equal(t, "123", rctx.Device)
+	assert.Equal(t, "123", rctx.Device.id)
 }
 
 func TestStateManager_dumpCachedReadings_cachedReadingBadTS(t *testing.T) {
@@ -457,7 +519,7 @@ func TestStateManager_dumpCachedReadings_cachedReadingBadTS(t *testing.T) {
 	}
 
 	// Test data setup
-	newCtxs := []*ReadContext{{Device: "123", Reading: []*output.Reading{{Value: 3}}}}
+	newCtxs := []*ReadContext{{Device: &Device{id: "123"}, Reading: []*output.Reading{{Value: 3}}}}
 	err := sm.readingsCache.Add("foobar", &newCtxs, cache.DefaultExpiration)
 	assert.NoError(t, err)
 
@@ -488,8 +550,15 @@ func TestStateManager_dumpCurrentReadings_noReadings(t *testing.T) {
 }
 
 func TestStateManager_dumpCurrentReadings_hasReadings(t *testing.T) {
+	deviceManager := &deviceManager{
+		devices: map[string]*Device{
+			"1": &Device{id: "1"},
+		},
+	}
+
 	sm := stateManager{
-		readingsLock: &sync.RWMutex{},
+		deviceManager: deviceManager,
+		readingsLock:  &sync.RWMutex{},
 		readings: map[string][]*output.Reading{
 			"1": {{Value: 3}},
 		},
@@ -502,7 +571,7 @@ func TestStateManager_dumpCurrentReadings_hasReadings(t *testing.T) {
 	assert.Len(t, readings, 1)
 
 	rctx := <-readings
-	assert.Equal(t, "1", rctx.Device)
+	assert.Equal(t, "1", rctx.Device.id)
 }
 
 func TestStateManager_GetReadings_noReadings(t *testing.T) {

@@ -224,7 +224,7 @@ func (scheduler *scheduler) Write(device *Device, data []*synse.V3WriteData) ([]
 		// Queue up the write.
 		scheduler.writeChan <- &WriteContext{
 			transaction: t,
-			device:      device.id,
+			device:      device,
 			data:        writeData,
 		}
 	}
@@ -264,7 +264,7 @@ func (scheduler *scheduler) WriteAndWait(device *Device, data []*synse.V3WriteDa
 		// Queue up the write.
 		scheduler.writeChan <- &WriteContext{
 			transaction: t,
-			device:      device.id,
+			device:      device,
 			data:        writeData,
 		}
 
@@ -612,7 +612,7 @@ func (scheduler *scheduler) bulkRead(handler *DeviceHandler) {
 			rlog.WithField("error", err).Error("[scheduler] handler failed bulk read")
 		} else {
 			for _, readCtx := range response {
-				device := scheduler.deviceManager.GetDevice(readCtx.Device)
+				device := readCtx.Device
 				err := finalizeReadings(device, readCtx)
 				if err != nil {
 					rlog.Error("[scheduler] discarding readings")
@@ -660,17 +660,17 @@ func (scheduler *scheduler) write(writeCtx *WriteContext) {
 	wlog.Debug("[scheduler] starting device write")
 
 	// Get the device.
-	device := scheduler.deviceManager.GetDevice(writeCtx.device)
+	device := writeCtx.device
 	if device == nil {
 		writeCtx.transaction.setStatusError()
-		writeCtx.transaction.message = "no device found with ID: " + writeCtx.device
+		writeCtx.transaction.message = "no device found with ID: " + writeCtx.device.id
 		wlog.Error("[scheduler] " + writeCtx.transaction.message)
 		return
 	}
 
 	if !device.IsWritable() {
 		writeCtx.transaction.setStatusError()
-		writeCtx.transaction.message = "device is not writable: " + writeCtx.device
+		writeCtx.transaction.message = "device is not writable: " + writeCtx.device.id
 		wlog.Error("[scheduler] " + writeCtx.transaction.message)
 		return
 	}
