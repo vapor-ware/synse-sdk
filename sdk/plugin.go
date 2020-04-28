@@ -19,6 +19,8 @@ package sdk
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof" // Allows plugin profiling via pprof
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,6 +44,7 @@ var (
 	flagDebug   bool
 	flagVersion bool
 	flagDryRun  bool
+	flagPprof   bool
 
 	// Config file locations
 	currentDirConfig    = "."
@@ -53,6 +56,7 @@ func init() {
 	flag.BoolVar(&flagDebug, "debug", false, "enable debug logging")
 	flag.BoolVar(&flagVersion, "version", false, "print the plugin version information")
 	flag.BoolVar(&flagDryRun, "dry-run", false, "run only the setup actions to verify functionality and configuration")
+	flag.BoolVar(&flagPprof, "pprof", false, "run the plugin with profiling enabled (port 6060)")
 }
 
 // PluginAction defines an action that can be run before or after the main
@@ -421,6 +425,15 @@ func handleRunOptions() {
 	if flagVersion {
 		fmt.Println(version.format())
 		terminate = true
+	}
+
+	if flagPprof {
+		log.Info("[plugin] running plugin with profiling enabled (0.0.0.0:6060)")
+		go func() {
+			if err := http.ListenAndServe("0.0.0.0:6060", nil); err != nil {
+				log.WithError(err).Error("[plugin] error serving pprof data on 0.0.0.0:6060")
+			}
+		}()
 	}
 
 	if terminate {
