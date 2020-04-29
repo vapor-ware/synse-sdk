@@ -20,6 +20,7 @@ package output
 func GetBuiltins() []*Output {
 	return []*Output{
 		&Color,
+		&Count,
 		&Direction,
 		&ElectricCurrent,
 		&ElectricResistance,
@@ -29,7 +30,9 @@ func GetBuiltins() []*Output {
 		&KilowattHour,
 		&Microseconds,
 		&Milliseconds,
+		&Minutes,
 		&Nanoseconds,
+		&Number,
 		&Pascal,
 		&Percentage,
 		&PSI,
@@ -37,6 +40,7 @@ func GetBuiltins() []*Output {
 		&Seconds,
 		&State,
 		&Status,
+		&String,
 		&Switch,
 		&Temperature,
 		&Velocity,
@@ -55,6 +59,12 @@ func GetBuiltins() []*Output {
 var Color = Output{
 	Name: "color",
 	Type: "color",
+}
+
+// Count is an output type for counts of things. This output has no unit.
+var Count = Output{
+	Name: "count",
+	Type: "count",
 }
 
 // Direction is an output type for directionality (e.g. the direction
@@ -154,6 +164,17 @@ var Milliseconds = Output{
 	},
 }
 
+// Minutes is an output type for a duration, measured in minutes.
+var Minutes = Output{
+	Name:      "minutes",
+	Type:      "duration",
+	Precision: 6,
+	Unit: &Unit{
+		Name:   "minutes",
+		Symbol: "min",
+	},
+}
+
 // Nanoseconds is an output type for a duration, measured in seconds.
 var Nanoseconds = Output{
 	Name:      "nanoseconds",
@@ -163,6 +184,23 @@ var Nanoseconds = Output{
 		Name:   "nanoseconds",
 		Symbol: "ns",
 	},
+}
+
+// Number is an output type for some number of things. This output has
+// no unit.
+//
+// An example of what a number could be include: an index into something,
+// the number of rows/columns of a table, etc.
+//
+// The Number output is intended to provide context for numeric values which
+// do not have any unit associated with them. The value itself could be a
+// signed/unsigned int, float, or complex number. This output just tells
+// upstream consumers that the value is numeric and there is no unit associated
+// with the value.
+var Number = Output{
+	Name:      "number",
+	Type:      "number",
+	Precision: 2,
 }
 
 // Pascal is an output type for pressure readings, measured in Pascals.
@@ -237,6 +275,15 @@ var Status = Output{
 	Type: "status",
 }
 
+// String is an output type for string data. This output has no unit.
+//
+// A string can be anything. Some examples include identifiers, descriptions,
+// version numbers, etc.
+var String = Output{
+	Name: "string",
+	Type: "string",
+}
+
 // Switch is an output type for a boolean switch (on/off, high/low, true/false)
 // reading. This output has no unit.
 //
@@ -261,6 +308,13 @@ var Temperature = Output{
 		Name:   "celsius",
 		Symbol: "C",
 	},
+}
+
+// Timestamp is an output type for a string describing a timestamp. This output
+// has no unit. The timestamp may have any format.
+var Timestamp = Output{
+	Name: "timestamp",
+	Type: "timestamp",
 }
 
 // Velocity is an output type for velocity readings, measured in meters per second.
