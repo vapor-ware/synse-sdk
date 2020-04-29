@@ -43,6 +43,7 @@ func GetBuiltins() []*Output {
 		&String,
 		&Switch,
 		&Temperature,
+		&Timestamp,
 		&Velocity,
 		&Voltage,
 		&VoltSecond,
