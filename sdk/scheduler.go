@@ -479,31 +479,39 @@ func (scheduler *scheduler) scheduleListen() {
 // Device to produce the final reading result.
 func finalizeReadings(device *Device, rctx *ReadContext) error {
 	for _, reading := range rctx.Reading {
-		// Apply all transformations to the reading, in the order in which
-		// they are defined. Typically, scale should happen before conversion,
-		// but ultimately, it is up to the configurer to ensure transformations
-		// are defined in the correct order.
-		for _, transformer := range device.Transforms {
-			devlog := log.WithFields(log.Fields{
-				"device":      device.id,
-				"info":        device.Info,
-				"transformer": transformer.Name(),
-			})
+		// A nil reading value indicates that there is no reading for a particular
+		// read. In such case, it does not make sense to apply any transformations,
+		// so skip that step.
+		if reading.Value != nil {
 
-			devlog.WithField(
-				"value", reading.Value,
-			).Debug("[scheduler] applying device reading transformer")
+			// Apply all transformations to the reading, in the order in which
+			// they are defined. Typically, scale should happen before conversion,
+			// but ultimately, it is up to the configurer to ensure transformations
+			// are defined in the correct order.
+			for _, transformer := range device.Transforms {
+				devlog := log.WithFields(log.Fields{
+					"device":      device.id,
+					"info":        device.Info,
+					"transformer": transformer.Name(),
+				})
 
-			if err := transformer.Apply(reading); err != nil {
-				devlog.WithFields(log.Fields{
-					"error": err,
-					"value": reading.Value,
-				}).Error("[scheduler] failed to apply reading transformer")
-				return err
+				devlog.WithField(
+					"value", reading.Value,
+				).Debug("[scheduler] applying device reading transformer")
+
+				if err := transformer.Apply(reading); err != nil {
+					devlog.WithFields(log.Fields{
+						"error": err,
+						"value": reading.Value,
+					}).Error("[scheduler] failed to apply reading transformer")
+					return err
+				}
+				devlog.WithField(
+					"value", reading.Value,
+				).Debug("[scheduler] new value after transform")
 			}
-			devlog.WithField(
-				"value", reading.Value,
-			).Debug("[scheduler] new value after transform")
+		} else {
+			log.Debug("[scheduler] reading value is nil; will not apply transform functions")
 		}
 
 		// Add any context that is specified by the device to the reading.
