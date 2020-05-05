@@ -368,7 +368,7 @@ func TestStateManager_GetCachedReadings_cacheEnabled(t *testing.T) {
 func TestStateManager_GetCachedReadings_cacheDisabled(t *testing.T) {
 	deviceManager := &deviceManager{
 		devices: map[string]*Device{
-			"1": &Device{id: "1"},
+			"1": {id: "1"},
 		},
 	}
 
@@ -552,7 +552,7 @@ func TestStateManager_dumpCurrentReadings_noReadings(t *testing.T) {
 func TestStateManager_dumpCurrentReadings_hasReadings(t *testing.T) {
 	deviceManager := &deviceManager{
 		devices: map[string]*Device{
-			"1": &Device{id: "1"},
+			"1": {id: "1"},
 		},
 	}
 
