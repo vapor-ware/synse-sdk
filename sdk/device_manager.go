@@ -122,7 +122,7 @@ func (manager *deviceManager) init() error {
 
 	// Create devices dynamically.
 	if err := manager.createDynamicDevices(); err != nil {
-
+		return err
 	}
 
 	return nil
