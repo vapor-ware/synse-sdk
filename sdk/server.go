@@ -116,7 +116,6 @@ func (server *server) init() error {
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
-		break
 
 	case networkTypeTCP:
 		// No setup required.

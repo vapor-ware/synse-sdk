@@ -887,9 +887,9 @@ func TestServer_ReadCache(t *testing.T) {
 	// server can get them from the device manager when creating a ReadContext.
 	deviceManager := &deviceManager{
 		devices: map[string]*Device{
-			"12345": &Device{id: "12345"},
-			"67890": &Device{id: "67890"},
-			"abcde": &Device{id: "abcde"},
+			"12345": {id: "12345"},
+			"67890": {id: "67890"},
+			"abcde": {id: "abcde"},
 		},
 	}
 
@@ -927,9 +927,9 @@ func TestServer_ReadCache_error(t *testing.T) {
 	// server can get them from the device manager when creating a ReadContext.
 	deviceManager := &deviceManager{
 		devices: map[string]*Device{
-			"12345": &Device{id: "12345"},
-			"67890": &Device{id: "67890"},
-			"abcde": &Device{id: "abcde"},
+			"12345": {id: "12345"},
+			"67890": {id: "67890"},
+			"abcde": {id: "abcde"},
 		},
 	}
 
