@@ -1019,8 +1019,31 @@ func TestScheduler_finalizeReadings_withContextAndTransform(t *testing.T) {
 	err := finalizeReadings(device, rctx)
 	assert.NoError(t, err)
 
-	// Verify that the reading value did not change.
+	// Verify that the reading value changed.
 	assert.Equal(t, float64(4), rctx.Reading[0].Value.(float64))
+
+	// Verify that the device context was set.
+	assert.Equal(t, map[string]string{"foo": "bar"}, rctx.Reading[0].Context)
+}
+
+func TestScheduler_finalizeReadings_nilReading(t *testing.T) {
+	device := &Device{
+		Transforms: []Transformer{
+			&ScaleTransformer{Factor: 2},
+		},
+		Context: map[string]string{"foo": "bar"},
+	}
+	rctx := &ReadContext{
+		Reading: []*output.Reading{
+			{Value: nil},
+		},
+	}
+
+	err := finalizeReadings(device, rctx)
+	assert.NoError(t, err)
+
+	// Verify that the reading value did not change.
+	assert.Equal(t, nil, rctx.Reading[0].Value)
 
 	// Verify that the device context was set.
 	assert.Equal(t, map[string]string{"foo": "bar"}, rctx.Reading[0].Context)
