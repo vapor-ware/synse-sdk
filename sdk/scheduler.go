@@ -443,6 +443,8 @@ func (scheduler *scheduler) scheduleListen() {
 		log.Info("[scheduler] listeners will not be scheduled (listening globally disabled)")
 		return
 	}
+	// DEPRECATE (etd)
+	log.Warning("[scheduler] Deprecation Warning: the SDK listener behavior for DeviceHandlers will be removed in a future release of the SDK")
 
 	if !scheduler.deviceManager.HasListenerHandlers() {
 		log.Info("[scheduler] listeners will not be scheduled (no listener handlers registered)")

@@ -46,6 +46,9 @@ type DeviceHandler struct {
 	// other handler functions (e.g. read, write) defined. The listener function
 	// will run in a separate goroutine for each device. The goroutines are started
 	// before the read/write loops.
+	//
+	// NOTE: The Listen function is deprecated and will be removed in a future version
+	// of the SDK.
 	Listen func(*Device, chan *ReadContext) error
 
 	// Actions specifies a list of the supported write actions for the handler.
