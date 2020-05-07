@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/vapor-ware/synse-sdk/internal/test"
@@ -646,4 +648,123 @@ func TestPlugin_initialize_fail2(t *testing.T) {
 
 func Test_handleRunOptions(t *testing.T) {
 	// TODO: need to override exiter..
+}
+
+func TestPlugin_NewDevice(t *testing.T) {
+	p := Plugin{
+		device: &deviceManager{
+			handlers: map[string]*DeviceHandler{
+				"type1": {Name: "type1"},
+				"type2": {Name: "type2"},
+			},
+		},
+	}
+
+	proto := &config.DeviceProto{
+		Type: "type1",
+		Data: map[string]interface{}{
+			"port": 5000,
+		},
+		Context: map[string]string{
+			"foo": "bar",
+		},
+		Tags:         []string{"default/foo"},
+		Handler:      "testhandler",
+		WriteTimeout: 3 * time.Second,
+	}
+	instance := &config.DeviceInstance{
+		Type: "type2",
+		Info: "testdata",
+		Tags: []string{"vapor/io"},
+		Data: map[string]interface{}{
+			"address": "localhost",
+		},
+		Context: map[string]string{
+			"123": "456",
+		},
+		Output:    "temperature",
+		SortIndex: 1,
+		Handler:   "type2",
+		Alias: &config.DeviceAlias{
+			Name: "foo",
+		},
+		Transforms: []*config.TransformConfig{
+			{Scale: "2"},
+			{Apply: "FtoC"},
+		},
+		WriteTimeout:       5 * time.Second,
+		DisableInheritance: false,
+	}
+
+	device, err := p.NewDevice(proto, instance)
+	assert.NoError(t, err)
+	assert.Equal(t, "type2", device.Type)
+	assert.Equal(t, "testdata", device.Info)
+	assert.Equal(t, 2, len(device.Tags))
+	assert.Equal(t, map[string]interface{}{"address": "localhost", "port": 5000}, device.Data)
+	assert.Equal(t, map[string]string{"foo": "bar", "123": "456"}, device.Context)
+	assert.Equal(t, "type2", device.Handler)
+	assert.Equal(t, int32(1), device.SortIndex)
+	assert.Equal(t, "foo", device.Alias)
+	assert.Equal(t, 2, len(device.Transforms))
+	assert.Equal(t, "scale [2]", device.Transforms[0].Name())
+	assert.Equal(t, "apply [FtoC]", device.Transforms[1].Name())
+	assert.Equal(t, 5*time.Second, device.WriteTimeout)
+	assert.Equal(t, "temperature", device.Output)
+}
+
+func TestPlugin_AddDevice(t *testing.T) {
+	handler := DeviceHandler{Name: "foo"}
+	p := Plugin{
+		device: &deviceManager{
+			aliasCache:     NewAliasCache(),
+			tagCache:       NewTagCache(),
+			id:             &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))},
+			pluginHandlers: NewDefaultPluginHandlers(),
+			handlers: map[string]*DeviceHandler{
+				"foo": &handler,
+			},
+			devices: map[string]*Device{},
+		},
+	}
+	device := Device{
+		Type:    "testtype",
+		Handler: "foo",
+		Data: map[string]interface{}{
+			"id":  1,
+			"foo": "bar",
+		},
+		Tags: []*Tag{
+			{Namespace: "default", Label: "foo"},
+		},
+		Alias: "example-alias-1",
+	}
+
+	// Before we add the device, make sure the state is empty.
+	assert.Empty(t, p.device.tagCache.cache)
+	assert.Empty(t, p.device.aliasCache.cache)
+	assert.Empty(t, p.device.devices)
+
+	err := p.AddDevice(&device)
+	assert.NoError(t, err)
+
+	// Make sure that the device was added to the manager, and its
+	// tags were updated in the tag cache.
+	expectedID := "81c0d156-06c0-50de-8e37-410cdb881eaf"
+	assert.Len(t, p.device.devices, 1)
+	assert.Contains(t, p.device.devices, expectedID)
+	assert.Equal(t, &device, p.device.devices[expectedID])
+
+	assert.Len(t, p.device.tagCache.cache, 2)
+	assert.Contains(t, p.device.tagCache.cache, "default")
+	assert.Contains(t, p.device.tagCache.cache, "system")
+
+	assert.Len(t, p.device.aliasCache.cache, 1)
+	assert.Contains(t, p.device.aliasCache.cache, "example-alias-1")
+
+	// Make sure the device was updated with its pertinent fields.
+	assert.Equal(t, &handler, device.handler)
+	assert.Equal(t, "testtype.foo.bar1", device.idName)
+	assert.Equal(t, expectedID, device.id)
+	assert.Len(t, device.Tags, 3) // two additional system-generated tags added
 }

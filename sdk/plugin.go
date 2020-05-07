@@ -268,6 +268,18 @@ func (plugin *Plugin) RegisterDeviceSetupActions(actions ...*DeviceAction) error
 	return plugin.device.AddDeviceSetupActions(actions...)
 }
 
+// NewDevice creates a new device, using the Device handlers registered with the plugin.
+//
+// Note that this does not add the new device to the plugin.
+func (plugin *Plugin) NewDevice(proto *config.DeviceProto, instance *config.DeviceInstance) (*Device, error) {
+	return NewDeviceFromConfig(proto, instance, plugin.device.handlers)
+}
+
+// AddDevice adds a new device to the plugin's device manager.
+func (plugin *Plugin) AddDevice(device *Device) error {
+	return plugin.device.AddDevice(device)
+}
+
 // initialize initializes the plugin and all plugin components.
 func (plugin *Plugin) initialize() error {
 	log.Info("[plugin] initializing")
