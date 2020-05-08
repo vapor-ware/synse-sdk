@@ -280,6 +280,11 @@ func (plugin *Plugin) AddDevice(device *Device) error {
 	return plugin.device.AddDevice(device)
 }
 
+// GetDevice gets a device from the plugin's device manager.
+func (plugin *Plugin) GetDevice(id string) *Device {
+	return plugin.device.GetDevice(id)
+}
+
 // initialize initializes the plugin and all plugin components.
 func (plugin *Plugin) initialize() error {
 	log.Info("[plugin] initializing")

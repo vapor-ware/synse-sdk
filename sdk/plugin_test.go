@@ -768,3 +768,17 @@ func TestPlugin_AddDevice(t *testing.T) {
 	assert.Equal(t, expectedID, device.id)
 	assert.Len(t, device.Tags, 3) // two additional system-generated tags added
 }
+
+func TestPlugin_GetDevice(t *testing.T) {
+	p := Plugin{
+		device: &deviceManager{
+			devices: map[string]*Device{
+				"123": {id: "123"},
+			},
+		},
+	}
+
+	device := p.GetDevice("123")
+	assert.NotNil(t, device)
+	assert.Equal(t, "123", device.id)
+}
