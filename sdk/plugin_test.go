@@ -715,14 +715,14 @@ func TestPlugin_NewDevice(t *testing.T) {
 
 func TestPlugin_AddDevice(t *testing.T) {
 	handler := DeviceHandler{Name: "foo"}
-	pid := &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))}
+	pluginid := &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))}
 	p := Plugin{
 		pluginHandlers: NewDefaultPluginHandlers(),
-		id:             pid,
+		id:             pluginid,
 		device: &deviceManager{
 			aliasCache:     NewAliasCache(),
 			tagCache:       NewTagCache(),
-			id:             pid,
+			id:             pluginid,
 			pluginHandlers: NewDefaultPluginHandlers(),
 			handlers: map[string]*DeviceHandler{
 				"foo": &handler,
@@ -730,7 +730,7 @@ func TestPlugin_AddDevice(t *testing.T) {
 			devices: map[string]*Device{},
 		},
 	}
-	p.device.p = &p
+	p.device.plugin = &p
 	device := Device{
 		Type:    "testtype",
 		Handler: "foo",
