@@ -23,6 +23,7 @@ import (
 	_ "net/http/pprof" // Allows plugin profiling via pprof
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
@@ -283,6 +284,23 @@ func (plugin *Plugin) AddDevice(device *Device) error {
 // GetDevice gets a device from the plugin's device manager.
 func (plugin *Plugin) GetDevice(id string) *Device {
 	return plugin.device.GetDevice(id)
+}
+
+// GenerateDeviceID generates the deterministic ID for a device using the data contained
+// within a Device definition as well as the DeviceIdentifier function, whether custom or
+// default.
+func (plugin *Plugin) GenerateDeviceID(device *Device) string {
+	component := plugin.pluginHandlers.DeviceIdentifier(device.Data)
+	name := strings.Join([]string{
+		device.Type,
+		device.Handler,
+		component,
+	}, ".")
+
+	device.idName = name
+	device.id = plugin.id.NewNamespacedID(name)
+
+	return device.id
 }
 
 // initialize initializes the plugin and all plugin components.
