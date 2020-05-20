@@ -78,7 +78,7 @@ type deviceManager struct {
 	devices        map[string]*Device
 	handlers       map[string]*DeviceHandler
 
-	p *Plugin
+	plugin *Plugin
 }
 
 // newDeviceManager creates a new DeviceManager.
@@ -97,7 +97,7 @@ func newDeviceManager(plugin *Plugin) *deviceManager {
 		aliasCache:     NewAliasCache(),
 		devices:        make(map[string]*Device),
 		handlers:       make(map[string]*DeviceHandler),
-		p:              plugin,
+		plugin:         plugin,
 	}
 }
 
@@ -357,7 +357,7 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 	// If the device ID has not already been set, generate it and set
 	// it before adding it to the deviceManager.
 	if device.id == "" {
-		manager.p.GenerateDeviceID(device)
+		manager.plugin.GenerateDeviceID(device)
 	}
 
 	// Check if the Device ID collides with an existing device.
