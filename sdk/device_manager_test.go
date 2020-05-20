@@ -811,15 +811,20 @@ func TestDeviceManager_AddDevice_aliasExists(t *testing.T) {
 
 func TestDeviceManager_AddDevice(t *testing.T) {
 	handler := DeviceHandler{Name: "foo"}
+	pid := &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))}
 	m := deviceManager{
 		aliasCache:     NewAliasCache(),
 		tagCache:       NewTagCache(),
-		id:             &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))},
+		id:             pid,
 		pluginHandlers: NewDefaultPluginHandlers(),
 		handlers: map[string]*DeviceHandler{
 			"foo": &handler,
 		},
 		devices: map[string]*Device{},
+		p: &Plugin{
+			id:             pid,
+			pluginHandlers: NewDefaultPluginHandlers(),
+		},
 	}
 	device := Device{
 		Type:    "testtype",
@@ -1137,15 +1142,20 @@ func TestDeviceManager_createDevices_ok(t *testing.T) {
 			},
 		},
 	}
+	pid := &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))}
 	m := deviceManager{
 		config:         cfg,
 		tagCache:       NewTagCache(),
 		pluginHandlers: NewDefaultPluginHandlers(),
-		id:             &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))},
+		id:             pid,
 		handlers: map[string]*DeviceHandler{
 			"foo": {Name: "foo"},
 		},
 		devices: map[string]*Device{},
+		p: &Plugin{
+			id:             pid,
+			pluginHandlers: NewDefaultPluginHandlers(),
+		},
 	}
 
 	err := m.createDevices()

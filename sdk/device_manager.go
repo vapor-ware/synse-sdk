@@ -19,7 +19,6 @@ package sdk
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
@@ -78,6 +77,8 @@ type deviceManager struct {
 	setupActions   []*DeviceAction
 	devices        map[string]*Device
 	handlers       map[string]*DeviceHandler
+
+	p *Plugin
 }
 
 // newDeviceManager creates a new DeviceManager.
@@ -96,6 +97,7 @@ func newDeviceManager(plugin *Plugin) *deviceManager {
 		aliasCache:     NewAliasCache(),
 		devices:        make(map[string]*Device),
 		handlers:       make(map[string]*DeviceHandler),
+		p:              plugin,
 	}
 }
 
@@ -355,17 +357,7 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 	// If the device ID has not already been set, generate it and set
 	// it before adding it to the deviceManager.
 	if device.id == "" {
-		// todo: see about cleaning this up/making it its own fn so it can be reused.
-		component := manager.pluginHandlers.DeviceIdentifier(device.Data)
-		name := strings.Join([]string{
-			device.Type,
-			device.Handler,
-			component,
-		}, ".")
-		device.idName = name
-
-		deviceID := manager.id.NewNamespacedID(name)
-		device.id = deviceID
+		manager.p.GenerateDeviceID(device)
 	}
 
 	// Check if the Device ID collides with an existing device.

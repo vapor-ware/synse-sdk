@@ -715,11 +715,14 @@ func TestPlugin_NewDevice(t *testing.T) {
 
 func TestPlugin_AddDevice(t *testing.T) {
 	handler := DeviceHandler{Name: "foo"}
+	pid := &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))}
 	p := Plugin{
+		pluginHandlers: NewDefaultPluginHandlers(),
+		id:             pid,
 		device: &deviceManager{
 			aliasCache:     NewAliasCache(),
 			tagCache:       NewTagCache(),
-			id:             &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))},
+			id:             pid,
 			pluginHandlers: NewDefaultPluginHandlers(),
 			handlers: map[string]*DeviceHandler{
 				"foo": &handler,
@@ -727,6 +730,7 @@ func TestPlugin_AddDevice(t *testing.T) {
 			devices: map[string]*Device{},
 		},
 	}
+	p.device.p = &p
 	device := Device{
 		Type:    "testtype",
 		Handler: "foo",
@@ -781,4 +785,22 @@ func TestPlugin_GetDevice(t *testing.T) {
 	device := p.GetDevice("123")
 	assert.NotNil(t, device)
 	assert.Equal(t, "123", device.id)
+}
+
+func TestPlugin_GenerateDeviceID(t *testing.T) {
+	p := Plugin{
+		pluginHandlers: NewDefaultPluginHandlers(),
+		id:             &pluginID{uuid: uuid.NewSHA1(uuid.NameSpaceDNS, []byte("test"))},
+	}
+	d := Device{
+		Type:    "foo",
+		Handler: "bar",
+		Data: map[string]interface{}{
+			"key1": "value1",
+			"key2": 2,
+		},
+	}
+
+	devID := p.GenerateDeviceID(&d)
+	assert.Equal(t, "e534b6b2-006e-5f61-93c0-b00ae7535155", devID)
 }
