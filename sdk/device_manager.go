@@ -362,6 +362,12 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 
 	// Check if the Device ID collides with an existing device.
 	if _, exists := manager.devices[device.id]; exists {
+		// Log at least device.id and device.info here so we can see the duplicate.
+		log.WithFields(log.Fields{
+			"id":   device.id,
+			"type": device.Type,
+			"info": device.Info,
+		}).Error("[device manager] failed to add device. Id alredy exists")
 		return ErrDeviceIDExists
 	}
 
@@ -386,6 +392,7 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 	log.WithFields(log.Fields{
 		"id":   device.id,
 		"type": device.Type,
+		"info": device.Info,
 	}).Info("[device manager] added new device")
 
 	return nil
