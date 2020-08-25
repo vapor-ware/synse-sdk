@@ -18,6 +18,7 @@ package sdk
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -342,6 +343,292 @@ func TestScheduler_scheduleReads(t *testing.T) {
 	reading, isOpen := <-s.stateManager.readChan
 	assert.True(t, isOpen)
 	assert.Equal(t, s.deviceManager.GetDevice("123"), reading.Device)
+}
+
+// When configured in serial mode, scheduleReads should execute all reads serially, even
+// if there is a mix of single-read and batch-read handlers.
+//
+// In order to check if things were run serially, each handler sleeps for a short period
+// of time. We time the execution of the scheduler run to see if the timing profile fits
+// that of a serial run.
+func TestScheduler_scheduleReadsSerial(t *testing.T) {
+	// Define a set of DeviceHandlers which will be used for the test case.
+	singleReadHandler1 := &DeviceHandler{
+		Name: "handler1",
+		Read: func(device *Device) ([]*output.Reading, error) {
+			time.Sleep(1 * 500 * time.Millisecond)
+			return []*output.Reading{{Value: device.Info}}, nil
+		},
+	}
+	singleReadHandler2 := &DeviceHandler{
+		Name: "handler2",
+		Read: func(device *Device) ([]*output.Reading, error) {
+			time.Sleep(1 * 500 * time.Millisecond)
+			return []*output.Reading{{Value: device.Info}}, nil
+		},
+	}
+	batchReadHandler3 := &DeviceHandler{
+		Name: "handler3",
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			time.Sleep(1 * 500 * time.Millisecond)
+			var readings []*ReadContext
+			for _, d := range devices {
+				readings = append(readings, &ReadContext{
+					Device:  d,
+					Reading: []*output.Reading{{Value: d.Info}},
+				})
+			}
+			return readings, nil
+		},
+	}
+	batchReadHandler4 := &DeviceHandler{
+		Name: "handler4",
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			time.Sleep(1 * 500 * time.Millisecond)
+			var readings []*ReadContext
+			for _, d := range devices {
+				readings = append(readings, &ReadContext{
+					Device:  d,
+					Reading: []*output.Reading{{Value: d.Info}},
+				})
+			}
+			return readings, nil
+		},
+	}
+
+	// Create an instance of the scheduler to test.
+	s := scheduler{
+		config: &config.PluginSettings{
+			Mode: modeSerial,
+			Read: &config.ReadSettings{
+				Disable:  false,
+				Interval: 100 * time.Millisecond,
+				Delay:    0 * time.Second,
+			},
+		},
+		deviceManager: &deviceManager{
+			handlers: map[string]*DeviceHandler{
+				"handler1": singleReadHandler1,
+				"handler2": singleReadHandler2,
+				"handler3": batchReadHandler3,
+				"handler4": batchReadHandler4,
+			},
+			devices: map[string]*Device{
+				// We define two devices per handler here.
+				"1": {id: "1", Info: "1", Handler: "handler1", handler: singleReadHandler1},
+				"2": {id: "2", Info: "2", Handler: "handler1", handler: singleReadHandler1},
+
+				"3": {id: "3", Info: "3", Handler: "handler2", handler: singleReadHandler2},
+				"4": {id: "4", Info: "4", Handler: "handler2", handler: singleReadHandler2},
+
+				"5": {id: "5", Info: "5", Handler: "handler3", handler: batchReadHandler3},
+				"6": {id: "6", Info: "6", Handler: "handler3", handler: batchReadHandler3},
+
+				"7": {id: "7", Info: "7", Handler: "handler4", handler: batchReadHandler4},
+				"8": {id: "8", Info: "8", Handler: "handler4", handler: batchReadHandler4},
+			},
+		},
+		stateManager: &stateManager{
+			readChan: make(chan *ReadContext, 100),
+		},
+		stop:       make(chan struct{}, 1),
+		serialLock: &sync.Mutex{},
+	}
+
+	// Wait a short period of time for scheduleReads to run before closing the
+	// channel, stopping the scheduleReads loop. This only needs to be short, since
+	// it is checked at the top of the loop. We just need enough time to ensure we
+	// get into the loop.
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		close(s.stop)
+	}()
+
+	start := time.Now()
+	s.scheduleReads()
+	stop := time.Now()
+
+	// Verify that the execution time matches the expected run time for serial reads.
+	// Individual reads @ 500ms (2 handlers, 2 devices each) = 2s
+	// Bulk reads @ 500ms (2 handlers) = 1s
+	// Total = 2s + 1s + 100ms of overhead for an expected 3100ms
+	assert.InDelta(t, 3100*time.Millisecond, stop.Sub(start), float64(150*time.Millisecond))
+
+	// Close the read channel so we can iterate over it without blocking.
+	close(s.stateManager.readChan)
+
+	// Collect all the readings
+	var readings []*ReadContext
+	for ctx := range s.stateManager.readChan {
+		readings = append(readings, ctx)
+	}
+
+	// We can't guarantee the number of times that the scheduler loop ran during the
+	// test, but we know how many readings we should get per run based on the number
+	// of devices and the handler responses. There should be one ReadContext per device,
+	// with 8 devices, so 8 ReadContexts.
+	assert.Greater(t, len(readings), 0)
+	assert.Equal(t, 0, len(readings)%8)
+
+	// We'll only check the first 8, since that constitutes a single run. Despite being
+	// run serially, we can't actually guarantee the order of the returned readings because
+	// it depends on which read goroutine acquires the lock first. While values may be out
+	// of sequential order, it doesn't mean they weren't run serially.
+	var values []string
+	for i := 0; i < 8; i++ {
+		values = append(values, readings[i].Reading[0].Value.(string))
+	}
+
+	assert.Contains(t, values, "1")
+	assert.Contains(t, values, "2")
+	assert.Contains(t, values, "3")
+	assert.Contains(t, values, "4")
+	assert.Contains(t, values, "5")
+	assert.Contains(t, values, "6")
+	assert.Contains(t, values, "7")
+	assert.Contains(t, values, "8")
+}
+
+// When configured in parallel mode, scheduleReads should execute all reads in parallel,
+// even if there is a mix of single-read and batch-read handlers.
+//
+// In order to check if things were run in parallel, each handler sleeps for a short period
+// of time. We time the execution of the scheduler run to see if the timing profile fits
+// that of a parallel run.
+func TestScheduler_scheduleReadsParallel(t *testing.T) {
+	// Define a set of DeviceHandlers which will be used for the test case.
+	singleReadHandler1 := &DeviceHandler{
+		Name: "handler1",
+		Read: func(device *Device) ([]*output.Reading, error) {
+			time.Sleep(1 * 500 * time.Millisecond)
+			return []*output.Reading{{Value: device.Info}}, nil
+		},
+	}
+	singleReadHandler2 := &DeviceHandler{
+		Name: "handler2",
+		Read: func(device *Device) ([]*output.Reading, error) {
+			time.Sleep(1 * 500 * time.Millisecond)
+			return []*output.Reading{{Value: device.Info}}, nil
+		},
+	}
+	batchReadHandler3 := &DeviceHandler{
+		Name: "handler3",
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			time.Sleep(1 * 500 * time.Millisecond)
+			var readings []*ReadContext
+			for _, d := range devices {
+				readings = append(readings, &ReadContext{
+					Device:  d,
+					Reading: []*output.Reading{{Value: d.Info}},
+				})
+			}
+			return readings, nil
+		},
+	}
+	batchReadHandler4 := &DeviceHandler{
+		Name: "handler4",
+		BulkRead: func(devices []*Device) ([]*ReadContext, error) {
+			time.Sleep(1 * 500 * time.Millisecond)
+			var readings []*ReadContext
+			for _, d := range devices {
+				readings = append(readings, &ReadContext{
+					Device:  d,
+					Reading: []*output.Reading{{Value: d.Info}},
+				})
+			}
+			return readings, nil
+		},
+	}
+
+	// Create an instance of the scheduler to test.
+	s := scheduler{
+		config: &config.PluginSettings{
+			Mode: modeParallel,
+			Read: &config.ReadSettings{
+				Disable:  false,
+				Interval: 100 * time.Millisecond,
+				Delay:    0 * time.Second,
+			},
+		},
+		deviceManager: &deviceManager{
+			handlers: map[string]*DeviceHandler{
+				"handler1": singleReadHandler1,
+				"handler2": singleReadHandler2,
+				"handler3": batchReadHandler3,
+				"handler4": batchReadHandler4,
+			},
+			devices: map[string]*Device{
+				// We define two devices per handler here.
+				"1": {id: "1", Info: "1", Handler: "handler1", handler: singleReadHandler1},
+				"2": {id: "2", Info: "2", Handler: "handler1", handler: singleReadHandler1},
+
+				"3": {id: "3", Info: "3", Handler: "handler2", handler: singleReadHandler2},
+				"4": {id: "4", Info: "4", Handler: "handler2", handler: singleReadHandler2},
+
+				"5": {id: "5", Info: "5", Handler: "handler3", handler: batchReadHandler3},
+				"6": {id: "6", Info: "6", Handler: "handler3", handler: batchReadHandler3},
+
+				"7": {id: "7", Info: "7", Handler: "handler4", handler: batchReadHandler4},
+				"8": {id: "8", Info: "8", Handler: "handler4", handler: batchReadHandler4},
+			},
+		},
+		stateManager: &stateManager{
+			readChan: make(chan *ReadContext, 100),
+		},
+		stop:       make(chan struct{}, 1),
+		serialLock: &sync.Mutex{},
+	}
+
+	// Wait a short period of time for scheduleReads to run before closing the
+	// channel, stopping the scheduleReads loop. This only needs to be short, since
+	// it is checked at the top of the loop. We just need enough time to ensure we
+	// get into the loop.
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		close(s.stop)
+	}()
+
+	start := time.Now()
+	s.scheduleReads()
+	stop := time.Now()
+
+	// Verify that the execution time matches the expected run time for parallel reads.
+	// Individual reads @ 500ms (2 handlers, 2 devices each) ~= 500ms
+	// Bulk reads @ 500ms (2 handlers) ~= 500ms
+	// Total = 500ms + 100ms of overhead for an expected 600ms
+	assert.InDelta(t, 600*time.Millisecond, stop.Sub(start), float64(100*time.Millisecond))
+
+	// Close the read channel so we can iterate over it without blocking.
+	close(s.stateManager.readChan)
+
+	// Collect all the readings
+	var readings []*ReadContext
+	for ctx := range s.stateManager.readChan {
+		readings = append(readings, ctx)
+	}
+
+	// We can't guarantee the number of times that the scheduler loop ran during the
+	// test, but we know how many readings we should get per run based on the number
+	// of devices and the handler responses. There should be one ReadContext per device,
+	// with 8 devices, so 8 ReadContexts.
+	assert.Greater(t, len(readings), 0)
+	assert.Equal(t, 0, len(readings)%8)
+
+	// We'll only check the first 8, since that constitutes a single run. Being run in
+	// parallel, we can't guarantee any order, but we do know which values we should get.
+	var values []string
+	for i := 0; i < 8; i++ {
+		values = append(values, readings[i].Reading[0].Value.(string))
+	}
+
+	assert.Contains(t, values, "1")
+	assert.Contains(t, values, "2")
+	assert.Contains(t, values, "3")
+	assert.Contains(t, values, "4")
+	assert.Contains(t, values, "5")
+	assert.Contains(t, values, "6")
+	assert.Contains(t, values, "7")
+	assert.Contains(t, values, "8")
 }
 
 func TestScheduler_scheduleWrites_writeDisabled(t *testing.T) {
