@@ -315,7 +315,8 @@ func (scheduler *scheduler) scheduleReads() {
 		select {
 		case <-scheduler.stop:
 			scheduler.isReading = false
-			break
+			log.Info("[scheduler] stop channel closed, terminating scheduleReads")
+			return
 		default:
 			// no stop signal
 		}
@@ -388,7 +389,8 @@ func (scheduler *scheduler) scheduleWrites() {
 		select {
 		case <-scheduler.stop:
 			scheduler.isWriting = false
-			break
+			log.Info("[scheduler] stop channel closed, terminating scheduleWrites")
+			return
 		default:
 			// no stop signal
 		}
