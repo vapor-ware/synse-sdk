@@ -1404,3 +1404,115 @@ func TestDeviceManager_execDeviceSetupActions_ok3(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, counter)
 }
+
+func TestDeviceManager_execDeviceSetupActions_ok4(t *testing.T) {
+	counter := 0
+	p := &Plugin{}
+	m := deviceManager{
+		setupActions: []*DeviceAction{
+			{
+				Name: "ok",
+				Filter: map[string][]string{
+					"type": {"*oo"},
+				},
+				Action: func(p *Plugin, d *Device) error {
+					counter++
+					return nil
+				},
+			},
+		},
+		devices: map[string]*Device{
+			"123": {id: "123", Type: "foo"},
+			"456": {id: "456", Type: "bar"},
+			"678": {id: "678", Type: "foo"},
+		},
+	}
+
+	err := m.execDeviceSetupActions(p)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, counter)
+}
+
+func TestDeviceManager_execDeviceSetupActions_ok5(t *testing.T) {
+	counter := 0
+	p := &Plugin{}
+	m := deviceManager{
+		setupActions: []*DeviceAction{
+			{
+				Name: "ok",
+				Filter: map[string][]string{
+					"type": {"*"},
+				},
+				Action: func(p *Plugin, d *Device) error {
+					counter++
+					return nil
+				},
+			},
+		},
+		devices: map[string]*Device{
+			"123": {id: "123", Type: "foo"},
+			"456": {id: "456", Type: "bar"},
+			"678": {id: "678", Type: "foo"},
+		},
+	}
+
+	err := m.execDeviceSetupActions(p)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, counter)
+}
+
+func TestDeviceManager_execDeviceSetupActions_ok6(t *testing.T) {
+	counter := 0
+	p := &Plugin{}
+	m := deviceManager{
+		setupActions: []*DeviceAction{
+			{
+				Name: "ok",
+				Filter: map[string][]string{
+					"type": {"?ar"},
+				},
+				Action: func(p *Plugin, d *Device) error {
+					counter++
+					return nil
+				},
+			},
+		},
+		devices: map[string]*Device{
+			"123": {id: "123", Type: "foo"},
+			"456": {id: "456", Type: "bar"},
+			"678": {id: "678", Type: "foo"},
+		},
+	}
+
+	err := m.execDeviceSetupActions(p)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, counter)
+}
+
+func TestDeviceManager_execDeviceSetupActions_ok7(t *testing.T) {
+	counter := 0
+	p := &Plugin{}
+	m := deviceManager{
+		setupActions: []*DeviceAction{
+			{
+				Name: "ok",
+				Filter: map[string][]string{
+					"type": {"*temperature"},
+				},
+				Action: func(p *Plugin, d *Device) error {
+					counter++
+					return nil
+				},
+			},
+		},
+		devices: map[string]*Device{
+			"123": {id: "123", Type: "a.temperature"},
+			"456": {id: "456", Type: "foo-temperature"},
+			"678": {id: "678", Type: "temperature"},
+		},
+	}
+
+	err := m.execDeviceSetupActions(p)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, counter)
+}

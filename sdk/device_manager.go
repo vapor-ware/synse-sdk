@@ -20,6 +20,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gobwas/glob"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/vapor-ware/synse-sdk/sdk/config"
 	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
@@ -473,8 +475,11 @@ func (manager *deviceManager) FilterDevices(filter map[string][]string) ([]*Devi
 		switch k {
 		case "type":
 			check = func(d *Device) bool {
+				var g glob.Glob
+
 				for _, val := range v {
-					if d.Type == val || val == "*" {
+					g = glob.MustCompile(val)
+					if g.Match(d.Type) {
 						return true
 					}
 				}
