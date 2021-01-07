@@ -19,6 +19,8 @@ package utils
 import (
 	"reflect"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // RedactPasswords redacts any map fields where the key contains the substring
@@ -50,6 +52,8 @@ func RedactPasswords(obj interface{}) interface{} {
 }
 
 func redactRecursive(copied, original reflect.Value) {
+	originalKind := original.Kind()
+	log.Errorf("redactRecursive original.Kind(): %T %#v", originalKind, originalKind)
 	switch original.Kind() {
 
 	// If a pointer, unwrap and call again.
