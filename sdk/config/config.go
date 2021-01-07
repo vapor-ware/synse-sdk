@@ -31,7 +31,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
 	"github.com/vapor-ware/synse-sdk/sdk/policy"
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -174,7 +173,8 @@ func (loader *Loader) Load(pol policy.Policy) error {
 		"name":   loader.FileName,
 		"ext":    loader.Ext,
 		"policy": loader.policy,
-		"data":   utils.RedactPasswords(loader.merged),
+		//"data":   utils.RedactPasswords(loader.merged),
+		"data": loader.merged,
 	}).Info("[config] successfully loaded configuration data")
 	return nil
 }
@@ -423,7 +423,8 @@ func (loader *Loader) read(pol policy.Policy) error {
 			}
 			log.WithFields(log.Fields{
 				"file": path,
-				"data": utils.RedactPasswords(res),
+				//"data": utils.RedactPasswords(res),
+				"data": res,
 			}).Debug("[config] loaded configuration from file")
 			loader.data = append(loader.data, res)
 		default:
