@@ -71,6 +71,7 @@ func redactRecursive(copied, original reflect.Value) {
 	case reflect.Interface:
 		// Unwrap the interface
 		originalValue := original.Elem()
+		log.Errorf("Interface(1), originalValue: %#v", originalValue)
 		// Create a new object. New gives us a pointer which we don't want,
 		// so call Elem to dereference the pointer.
 		if !originalValue.IsValid() {
@@ -97,7 +98,9 @@ func redactRecursive(copied, original reflect.Value) {
 			// First, check that the key is a string, and if so, that it contains the
 			// "pass" substring. If the key is an interface, first unwrap the interface.
 			if key.Kind() == reflect.Interface {
+				log.Errorf("Interface(2a), key: %#v", key)
 				key = key.Elem()
+				log.Errorf("Interface(2b), key: %#v", key)
 			}
 
 			if key.Kind() == reflect.String {
@@ -115,6 +118,7 @@ func redactRecursive(copied, original reflect.Value) {
 						}
 
 					case reflect.Interface:
+						log.Errorf("Interface(3), originalValue: %#v", originalValue)
 						if !originalValue.IsValid() {
 							copied.SetMapIndex(key, originalValue)
 						} else {
