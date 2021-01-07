@@ -53,7 +53,7 @@ func RedactPasswords(obj interface{}) interface{} {
 
 func redactRecursive(copied, original reflect.Value) {
 	originalKind := original.Kind()
-	log.Errorf("redactRecursive original.Kind(): %T %#v", originalKind, originalKind)
+	log.Errorf("redactRecursive original.Kind(): %T %#v %v", originalKind, originalKind, originalKind.String())
 	switch original.Kind() {
 
 	// If a pointer, unwrap and call again.
@@ -141,6 +141,7 @@ func redactRecursive(copied, original reflect.Value) {
 
 	// Otherwise, simply take the original value.
 	default:
+		log.Errorf("redactRecursive default original: %T %#v", original, original)
 		copied.Set(original)
 	}
 }
