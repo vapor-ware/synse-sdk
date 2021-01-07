@@ -75,7 +75,9 @@ func redactRecursive(copied, original reflect.Value) {
 		// Create a new object. New gives us a pointer which we don't want,
 		// so call Elem to dereference the pointer.
 		if !originalValue.IsValid() {
-			copied.Set(originalValue)
+			// *** This is where we are failing. ***
+			log.Errorf("*** Ignoring invalid originalValue ***")
+			// copied.Set(originalValue)
 		} else {
 			copyValue := reflect.New(originalValue.Type()).Elem()
 			redactRecursive(copyValue, originalValue)
