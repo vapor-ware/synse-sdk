@@ -865,5 +865,6 @@ func TestNilInterfaceValue(t *testing.T) {
 	loader.AddSearchPaths("./testdata/nil")
 	err := loader.Load(policy.Required)
 	assert.Error(t, err)
+	assert.Contains(t, "THE RIGHT ERROR MESSAGE", err.Error())
 	// TODO: Validate error message. On the first shot, this will just blow up.
 }

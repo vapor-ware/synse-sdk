@@ -17,6 +17,7 @@
 package utils
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -81,16 +82,16 @@ func redactRecursive(copied, original reflect.Value) (err error) {
 			// This is an untyped nil interface. We cannot set to the originalValue.
 			// See https://github.com/vapor-ware/synse-sdk/issues/480.
 			//
-
+			return fmt.Errorf("TODO: Put contextual string in error message")
 			//copied.Set(originalValue)
-		} else {
-			copyValue := reflect.New(originalValue.Type()).Elem()
-			err = redactRecursive(copyValue, originalValue)
-			if err != nil {
-				return
-			}
-			copied.Set(copyValue)
 		}
+
+		copyValue := reflect.New(originalValue.Type()).Elem()
+		err = redactRecursive(copyValue, originalValue)
+		if err != nil {
+			return
+		}
+		copied.Set(copyValue)
 
 	// If a slice, create a new slice and check each element in the slice.
 	case reflect.Slice:
