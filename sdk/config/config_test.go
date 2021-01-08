@@ -854,3 +854,16 @@ func TestLoader_Load2(t *testing.T) {
 	assert.Equal(t, 1, d.Foo)
 	assert.Equal(t, 2, d.Bar)
 }
+
+// Sad case tests.
+
+// TestNilInterfaceValue tests an untyped nil interface, which used to cause a panic.
+// This happens on yaml as in ./testdata/nil/nil_interface.yaml. See that file for where.
+// We should get a reasonable error message in this case.
+func TestNilInterfaceValue(t *testing.T) {
+	loader := NewYamlLoader("sad-loader-nil")
+	loader.AddSearchPaths("./testdata/nil")
+	err := loader.Load(policy.Required)
+	assert.Error(t, err)
+	// TODO: Validate error message. On the first shot, this will just blow up.
+}

@@ -1,0 +1,53 @@
+version: 3
+devices:
+  - type: current
+    handler: read_only_holding_register
+    data:
+      host: "10.193.12.210"
+      port: 502
+      timeout: 10s
+      failOnError: false
+      type: u16
+      width: 1
+    context:
+      rack: r1
+      model: AC CPM
+    tags:
+      - 'vapor/rack:r1'
+    instances:
+      - info: Infeed L1 Current Low Resolution
+        output: electric-current
+        data:
+          address: 1
+      - info: Infeed L2 Current Low Resolution
+        output: electric-current
+        data:
+          address: 2
+      - info: Infeed L3 Current Low Resolution
+        output: electric-current
+        data:
+          address: 3
+      - info: Infeed Neutral Current Low Resolution
+        output: electric-current
+        data:
+          address: 4
+  - type: macAddressWide
+    handler: read_only_holding_register
+    data:
+      host: "10.193.12.210"
+      port: 502
+      timeout: 10s
+      failOnError: false
+      type: macaddresswide
+      # This is the problem here. This is an untyped nil interface.
+      width:
+    context:
+      rack: r1
+      model: AC CPM
+    tags:
+      - 'vapor/rack:r1'
+    instances:
+      - info: LAN Mac Address
+        output: macAddressWide
+        data:
+          address: 5
