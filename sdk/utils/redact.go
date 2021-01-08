@@ -17,6 +17,7 @@
 package utils
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -33,23 +34,27 @@ import (
 // This function is likely very inefficient due to the interface casting and
 // the need to copy the lists/maps provided so that it does not overwrite the
 // original list/map.
-func RedactPasswords(obj interface{}) interface{} {
+func RedactPasswords(obj interface{}) (redacted interface{}, err error) {
 	// Wrap the original obj in a reflect.Value
 	original := reflect.ValueOf(obj)
 
 	if !original.IsValid() {
-		return obj
+		return obj, nil
 	}
 
 	// Create a new copy of the object type
 	copied := reflect.New(original.Type()).Elem()
-	redactRecursive(copied, original)
+	var lastMapKey string // The last map key name we have checked.
+	err = redactRecursive(copied, original, lastMapKey)
+	if err != nil {
+		return
+	}
 
 	// Return the value of the copy
-	return copied.Interface()
+	return copied.Interface(), nil
 }
 
-func redactRecursive(copied, original reflect.Value) {
+func redactRecursive(copied, original reflect.Value, lastMapKey string) (err error) {
 	switch original.Kind() {
 
 	// If a pointer, unwrap and call again.
@@ -61,7 +66,10 @@ func redactRecursive(copied, original reflect.Value) {
 		}
 		// Create a new object and set the pointer to it, then recurse.
 		copied.Set(reflect.New(originalValue.Type()))
-		redactRecursive(copied.Elem(), originalValue)
+		err = redactRecursive(copied.Elem(), originalValue, lastMapKey)
+		if err != nil {
+			return
+		}
 
 	// If an interface, unwrap the interface and recurse.
 	case reflect.Interface:
@@ -70,24 +78,35 @@ func redactRecursive(copied, original reflect.Value) {
 		// Create a new object. New gives us a pointer which we don't want,
 		// so call Elem to dereference the pointer.
 		if !originalValue.IsValid() {
-			copied.Set(originalValue)
-		} else {
-			copyValue := reflect.New(originalValue.Type()).Elem()
-			redactRecursive(copyValue, originalValue)
-			copied.Set(copyValue)
+			// This is an untyped nil interface. We cannot set to the originalValue.
+			// See https://github.com/vapor-ware/synse-sdk/issues/480.
+			// Unfortunately we do not have line number and column here,
+			// but hopefully this message is useful.
+			return fmt.Errorf("Missing value after %v", lastMapKey)
 		}
+
+		copyValue := reflect.New(originalValue.Type()).Elem()
+		err = redactRecursive(copyValue, originalValue, lastMapKey)
+		if err != nil {
+			return
+		}
+		copied.Set(copyValue)
 
 	// If a slice, create a new slice and check each element in the slice.
 	case reflect.Slice:
 		copied.Set(reflect.MakeSlice(original.Type(), original.Len(), original.Cap()))
 		for i := 0; i < original.Len(); i++ {
-			redactRecursive(copied.Index(i), original.Index(i))
+			err = redactRecursive(copied.Index(i), original.Index(i), lastMapKey)
+			if err != nil {
+				return
+			}
 		}
 
 	// If a map, create a new map and check each element in the map.
 	case reflect.Map:
 		copied.Set(reflect.MakeMap(original.Type()))
 		for _, key := range original.MapKeys() {
+			lastMapKey = key.Interface().(string) // Save this for the message in case of error.
 			originalValue := original.MapIndex(key)
 
 			// First, check that the key is a string, and if so, that it contains the
@@ -124,13 +143,19 @@ func redactRecursive(copied, original reflect.Value) {
 						copied.SetMapIndex(key, originalValue)
 					} else {
 						copyValue := reflect.New(originalValue.Type()).Elem()
-						redactRecursive(copyValue, originalValue)
+						err = redactRecursive(copyValue, originalValue, lastMapKey)
+						if err != nil {
+							return
+						}
 						copied.SetMapIndex(key, copyValue)
 					}
 				}
 			} else {
 				copyValue := reflect.New(originalValue.Type()).Elem()
-				redactRecursive(copyValue, originalValue)
+				err = redactRecursive(copyValue, originalValue, lastMapKey)
+				if err != nil {
+					return
+				}
 				copied.SetMapIndex(key, copyValue)
 			}
 		}
@@ -139,4 +164,5 @@ func redactRecursive(copied, original reflect.Value) {
 	default:
 		copied.Set(original)
 	}
+	return
 }

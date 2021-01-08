@@ -189,7 +189,8 @@ func TestRedactPasswords(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			redacted := RedactPasswords(test.input)
+			redacted, err := RedactPasswords(test.input)
+			assert.NoError(t, err)
 			assert.Equal(t, test.expected, redacted)
 		})
 	}
@@ -208,7 +209,8 @@ func TestRedactPasswords_NoMutate_1(t *testing.T) {
 		"pass": "REDACTED",
 	}
 
-	redacted := RedactPasswords(input)
+	redacted, err := RedactPasswords(input)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, redacted)
 
 	// Verify that the input password was not mutated.
@@ -240,7 +242,8 @@ func TestRedactPasswords_NoMutate_2(t *testing.T) {
 		},
 	}
 
-	redacted := RedactPasswords(input)
+	redacted, err := RedactPasswords(input)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, redacted)
 
 	// Verify that the input password was not mutated.
@@ -273,7 +276,8 @@ func TestRedactPasswords_NoMutate_3(t *testing.T) {
 		},
 	}
 
-	redacted := RedactPasswords(input)
+	redacted, err := RedactPasswords(input)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, redacted)
 
 	// Verify that the input password was not mutated.
