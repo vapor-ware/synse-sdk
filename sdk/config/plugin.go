@@ -411,13 +411,22 @@ type DynamicRegistrationSettings struct {
 }
 
 // Log logs out the config at INFO level.
-func (conf *DynamicRegistrationSettings) Log() {
+func (conf *DynamicRegistrationSettings) Log() (err error) {
 	if conf == nil {
 		log.Infof("  DynamicRegistration: nil")
 	} else {
+
+		var redacted interface{}
+		redacted, err = utils.RedactPasswords(conf.Config)
+		if err != nil {
+			return err
+		}
+
 		log.Infof("  DynamicRegistration:")
-		log.Infof("    Config: %v", utils.RedactPasswords(conf.Config))
+		//log.Infof("    Config: %v", utils.RedactPasswords(conf.Config))
+		log.Infof("    Config: %v", redacted)
 	}
+	return
 }
 
 // HealthSettings are the settings for plugin health.

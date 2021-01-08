@@ -39,7 +39,7 @@ devices:
       timeout: 10s
       failOnError: false
       type: macaddresswide
-      # This is the problem here. This is an untyped nil interface.
+      # This is the problem here. This width has an untyped nil interface value.
       width:
     context:
       rack: r1
