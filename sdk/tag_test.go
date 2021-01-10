@@ -1070,6 +1070,8 @@ func TestConcurrentMapWrites(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.tag, func(t *testing.T) {
+			// Run tests in parallel so we hit the case where template.Parse/template.Execute
+			// would be called concurrently.
 			t.Parallel()
 
 			tag, err := NewTag(tc.tag)
