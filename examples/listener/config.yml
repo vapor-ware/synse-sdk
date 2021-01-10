@@ -1,8 +1,8 @@
 version: 3
 debug: true
 network:
-  type: unix
-  address: example-plugin.sock
+  type: tcp
+  address: ":5005"
 health:
   # disable health file for examples
   healthFile: ""

@@ -18,14 +18,14 @@ LDFLAGS := -w \
 	-X ${PKG_CTX}.PluginVersion=${PLUGIN_VERSION}
 
 
-all: build pusher
+all: build server
 
 build:
 	@go build -ldflags "${LDFLAGS}" -o plugin
 
-pusher:
-	@go build -o device ./pusher/...
+server:
+	@go build -o data-server ./server/...
 
 
-.PHONY: all build pusher
+.PHONY: all build server
 .DEFAULT_GOAL := all
