@@ -1030,6 +1030,60 @@ func TestNewTypeTag(t *testing.T) {
 	assert.Equal(t, "system/type:foo", tag.String())
 }
 
+func TestConcurrentMapWrites(t *testing.T) {
+	testCases := []struct {
+		tag      string
+		expected *Tag
+	}{
+		{
+			"a",
+			&Tag{
+				Namespace: "default",
+				Label:     "a",
+			},
+		},
+		{
+			"a/b",
+			&Tag{
+				Namespace: "a",
+				Label:     "b",
+			},
+		},
+		{
+			"a/b:c",
+			&Tag{
+				Namespace:  "a",
+				Annotation: "b",
+				Label:      "c",
+			},
+		},
+		{
+			`a/b:{{ identity "foobar" }}`,
+			&Tag{
+				Namespace:  "a",
+				Annotation: "b",
+				Label:      "foobar",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.tag, func(t *testing.T) {
+			// Run tests in parallel so we hit the case where template.Parse/template.Execute
+			// would be called concurrently.
+			t.Parallel()
+
+			tag, err := NewTag(tc.tag)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected.Namespace, tag.Namespace)
+			assert.Equal(t, tc.expected.Annotation, tag.Annotation)
+			assert.Equal(t, tc.expected.Label, tag.Label)
+
+		})
+	}
+}
+
 //
 // Benchmarks
 //

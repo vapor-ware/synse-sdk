@@ -22,6 +22,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
@@ -44,8 +45,11 @@ const (
 
 var (
 	tagsTmpl = template.New("tags").Funcs(template.FuncMap{
-		"env": os.Getenv,
+		"env":      os.Getenv,
+		"identity": identity,
 	})
+
+	mutex = new(sync.Mutex)
 )
 
 // Tag represents a group identifier which a Synse device can belong to.
@@ -57,6 +61,16 @@ type Tag struct {
 	string string
 }
 
+// An identity function.
+//
+// This is used in the tag template func map under the "identity" function name.
+// It is provided as a convenience for tests which want to exercise the paths which
+// parse and execute templates, without having to worry about managing environment
+// variable lifecycles in the test suite.
+func identity(val string) string {
+	return val
+}
+
 // NewTag creates a new Tag from a tag string.
 func NewTag(tag string) (*Tag, error) {
 	if tag == "" {
@@ -65,6 +79,7 @@ func NewTag(tag string) (*Tag, error) {
 
 	// First, attempt to parse the tag string as if it were a template - this could be
 	// the case if part of the tag is templated out in config, e.g. "foo/bar:{{ env BAZ }}".
+	mutex.Lock()
 	tmpl, err := tagsTmpl.Parse(tag)
 	if err != nil {
 		return nil, err
@@ -73,6 +88,7 @@ func NewTag(tag string) (*Tag, error) {
 	if err := tmpl.Execute(&buf, tag); err != nil {
 		return nil, err
 	}
+	mutex.Unlock()
 	tag = buf.String()
 
 	tag = strings.TrimSpace(tag)
