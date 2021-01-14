@@ -137,7 +137,7 @@ func (loader *Loader) AddSearchPaths(paths ...string) {
 // configuration file is required or not. In cases where it is required and not
 // found, Load will return an error. If the config is optional and not found, no
 // error will be returned.
-func (loader *Loader) Load(pol policy.Policy) error {
+func (loader *Loader) Load(pol policy.Policy) (err error) {
 	log.WithFields(log.Fields{
 		"loader": loader.Name,
 		"paths":  loader.SearchPaths,
@@ -148,23 +148,29 @@ func (loader *Loader) Load(pol policy.Policy) error {
 
 	loader.policy = pol
 
-	if err := loader.checkOverrides(); err != nil {
+	if err = loader.checkOverrides(); err != nil {
 		return err
 	}
 
-	if err := loader.search(pol); err != nil {
+	if err = loader.search(pol); err != nil {
 		return err
 	}
 
-	if err := loader.read(pol); err != nil {
+	if err = loader.read(pol); err != nil {
 		return err
 	}
 
-	if err := loader.loadEnv(); err != nil {
+	if err = loader.loadEnv(); err != nil {
 		return err
 	}
 
-	if err := loader.merge(); err != nil {
+	if err = loader.merge(); err != nil {
+		return err
+	}
+
+	var redacted interface{}
+	redacted, err = utils.RedactPasswords(loader.merged)
+	if err != nil {
 		return err
 	}
 
@@ -174,7 +180,7 @@ func (loader *Loader) Load(pol policy.Policy) error {
 		"name":   loader.FileName,
 		"ext":    loader.Ext,
 		"policy": loader.policy,
-		"data":   utils.RedactPasswords(loader.merged),
+		"data": redacted,
 	}).Info("[config] successfully loaded configuration data")
 	return nil
 }
@@ -421,9 +427,16 @@ func (loader *Loader) read(pol policy.Policy) error {
 				log.WithField("error", err).Error("[config] failed to unmarshal config data")
 				return err
 			}
+
+			var redacted interface{}
+			redacted, err = utils.RedactPasswords(loader.merged)
+			if err != nil {
+				return err
+			}
+
 			log.WithFields(log.Fields{
 				"file": path,
-				"data": utils.RedactPasswords(res),
+				"data": redacted,
 			}).Debug("[config] loaded configuration from file")
 			loader.data = append(loader.data, res)
 		default:
