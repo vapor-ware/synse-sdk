@@ -442,6 +442,7 @@ func (server *server) Read(request *synse.V3ReadRequest, stream synse.V3Plugin_R
 			r := reading.Encode()
 			r.Id = device.id
 			r.DeviceType = device.Type
+			r.DeviceInfo = device.Info
 
 			if err := stream.Send(r); err != nil {
 				return err
@@ -475,6 +476,7 @@ func (server *server) ReadCache(request *synse.V3Bounds, stream synse.V3Plugin_R
 			if device != nil {
 				reading.Id = device.id
 				reading.DeviceType = device.Type
+				reading.DeviceInfo = device.Info
 			}
 			if err := stream.Send(reading); err != nil {
 				return err
@@ -537,6 +539,7 @@ func (server *server) ReadStream(request *synse.V3StreamRequest, stream synse.V3
 			if device != nil {
 				reading.Id = device.id
 				reading.DeviceType = device.Type
+				reading.DeviceInfo = device.Info
 			}
 			if err := stream.Send(reading); err != nil {
 				return err

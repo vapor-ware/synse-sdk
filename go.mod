@@ -13,7 +13,7 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.4.0
-	github.com/vapor-ware/synse-server-grpc v0.0.2-0.20200327135045-e8fab4d340ea
+	github.com/vapor-ware/synse-server-grpc v0.0.2-0.20210119190824-c4d4f681c30c
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	golang.org/x/sys v0.0.0-20200722175500-76b94024e4b6 // indirect
 	golang.org/x/text v0.3.3 // indirect
