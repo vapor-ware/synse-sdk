@@ -16,22 +16,11 @@ cover: test  ## Run tests and open the coverage report
 
 .PHONY: check-examples
 check-examples:  ## Check that the example plugins run without failing
-	@for d in examples/*/ ; do \
-		echo "\n\033[32m$$d\033[0m" ; \
-		cd $$d ; \
-		if [ ! -f "plugin" ]; then echo "\033[31mplugin binary not found\033[0m"; fi; \
-		if ! ./plugin --dry-run; then exit 1; fi; \
-		cd ../.. ; \
-	done
+	@./scripts/run_examples.sh
 
 .PHONY: examples
 examples:  ## Build the example plugins
-	@for d in examples/*/ ; do \
-		echo "\n\033[32m$$d\033[0m" ; \
-		cd $$d ; \
-		go build -v -o plugin ; \
-		cd ../.. ; \
-	done
+	@./scripts/build_examples.sh
 
 .PHONY: fmt
 fmt:  ## Run goimports on all go files
@@ -65,3 +54,12 @@ help:  ## Print usage information
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
 
 .DEFAULT_GOAL := help
+
+
+# Targets for Jenkins CI
+
+.PHONY: unit-test integration-test
+
+unit-test: test
+
+integration-test: examples check-examples
