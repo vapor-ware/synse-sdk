@@ -719,6 +719,87 @@ func TestScheduler_scheduleWrites(t *testing.T) {
 	assert.Equal(t, synse.WriteStatus_DONE, txn.status, txn.message)
 }
 
+func TestScheduler_scheduleWrites_serial_withDelay(t *testing.T) {
+	handler := &DeviceHandler{
+		Name: "test",
+		Write: func(device *Device, data *WriteData) error {
+			return nil
+		},
+	}
+
+	s := scheduler{
+		config: &config.PluginSettings{
+			Mode: modeSerial,
+			Write: &config.WriteSettings{
+				Disable:   false,
+				Interval:  10 * time.Millisecond,
+				Delay:     100 * time.Millisecond,
+				BatchSize: 10,
+			},
+		},
+		deviceManager: &deviceManager{
+			handlers: map[string]*DeviceHandler{
+				"test": handler,
+			},
+			devices: map[string]*Device{
+				"123": {
+					id:           "123",
+					handler:      handler,
+					WriteTimeout: 1 * time.Second,
+				},
+			},
+		},
+		stateManager: &stateManager{
+			readChan:     make(chan *ReadContext),
+			transactions: cache.New(1*time.Minute, 2*time.Minute),
+		},
+		writeChan: make(chan *WriteContext),
+		stop:      make(chan struct{}),
+		serialLock: &sync.Mutex{},
+	}
+
+	go s.scheduleWrites()
+	defer close(s.stop)
+
+	txn1, err := s.stateManager.newTransaction(10*time.Minute, "")
+	assert.NoError(t, err)
+
+	txn2, err := s.stateManager.newTransaction(10*time.Minute, "")
+	assert.NoError(t, err)
+
+	wctx1 := &WriteContext{
+		txn1,
+		s.deviceManager.GetDevice("123"),
+		&synse.V3WriteData{Action: "test"},
+	}
+
+	wctx2 := &WriteContext{
+		txn2,
+		s.deviceManager.GetDevice("123"),
+		&synse.V3WriteData{Action: "test"},
+	}
+
+	start := time.Now()
+	s.writeChan <- wctx1
+	s.writeChan <- wctx2
+
+	txn1.wait()
+	txn2.wait()
+
+	end := time.Now()
+
+	// The delay when writing occurs after the transaction status is set to DONE, so we
+	// should only detect the delay between txn1 and tnx2, but not the delay after txn2.
+	// This means that this test only sees a single delay interval.
+	//
+	// Add a threshold of +/- 10ms to account for leeway in different testing environments.
+	assert.WithinDuration(t, start.Add(100 * time.Millisecond), end, 10 * time.Millisecond)
+
+
+	assert.Equal(t, synse.WriteStatus_DONE, txn1.status, txn1.message)
+	assert.Equal(t, synse.WriteStatus_DONE, txn2.status, txn2.message)
+}
+
 func TestScheduler_scheduleListen_listenDisabled(t *testing.T) {
 	s := scheduler{
 		config: &config.PluginSettings{
