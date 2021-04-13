@@ -792,8 +792,9 @@ func TestScheduler_scheduleWrites_serial_withDelay(t *testing.T) {
 	// should only detect the delay between txn1 and tnx2, but not the delay after txn2.
 	// This means that this test only sees a single delay interval.
 	//
-	// Add a threshold of +/- 10ms to account for leeway in different testing environments.
-	assert.WithinDuration(t, start.Add(100 * time.Millisecond), end, 10 * time.Millisecond)
+	// Add a threshold of +/- 18ms to account for leeway in different testing environments.
+	// In CI, tests run a bit slower.
+	assert.WithinDuration(t, start.Add(100 * time.Millisecond), end, 18 * time.Millisecond)
 
 
 	assert.Equal(t, synse.WriteStatus_DONE, txn1.status, txn1.message)
