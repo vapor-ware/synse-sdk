@@ -750,6 +750,12 @@ func (scheduler *scheduler) write(writeCtx *WriteContext) {
 	}
 	wlog.Debug("[scheduler] successfully wrote to device")
 	writeCtx.transaction.setStatusDone()
+
+	// If a write delay is configured, wait for that period of time before continuing
+	// (and relinquishing the lock, if in serial mode).
+	if delay != 0 {
+		time.Sleep(delay)
+	}
 }
 
 // listen listens to devices to collect readings using a device's Listen function.
