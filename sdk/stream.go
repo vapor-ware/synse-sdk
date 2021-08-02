@@ -17,6 +17,8 @@
 package sdk
 
 import (
+	"sync"
+
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,7 +29,8 @@ type ReadStream struct {
 	readings chan *ReadContext
 	id       uuid.UUID
 	filter   []string
-	closing  bool
+	closed   bool
+	stopLock sync.Mutex
 }
 
 // listen collects all new readings and filters them based on the supplied filter.
@@ -36,30 +39,42 @@ func (s *ReadStream) listen() {
 		"filter": s.filter,
 		"id":     s.id,
 	}).Info("starting stream listen")
+
+	defer func() {
+		log.WithFields(log.Fields{
+			"filter": s.filter,
+			"id":     s.id,
+		}).Info("terminating stream listen")
+	}()
+
 	for {
-		if s.closing {
+		if s.closed {
 			return
 		}
 		r, open := <-s.stream
 		if !open {
-			break
+			return
 		}
 
 		if len(s.filter) == 0 {
 			log.WithField("device", r.Device).Debug("collecting reading")
-			if s.closing {
+			s.stopLock.Lock()
+			if s.closed {
 				return
 			}
 			s.readings <- r
+			s.stopLock.Unlock()
 		}
 
 		for _, id := range s.filter {
 			if r.Device.id == id {
 				log.WithField("device", r.Device.id).Debug("collecting reading")
-				if s.closing {
+				s.stopLock.Lock()
+				if s.closed {
 					return
 				}
 				s.readings <- r
+				s.stopLock.Unlock()
 				break
 			}
 		}
@@ -69,11 +84,25 @@ func (s *ReadStream) listen() {
 // close the ReadStream.
 func (s *ReadStream) close() {
 	log.WithField("id", s.id).Info("closing read stream")
-	s.closing = true
+
+	s.stopLock.Lock()
+	defer s.stopLock.Unlock()
+
+	s.closed = true
 	if s.stream != nil {
+		// Drain the channel.
+		for len(s.stream) > 0 {
+			<-s.stream
+		}
+		// Close the channel.
 		close(s.stream)
 	}
 	if s.readings != nil {
+		// Drain the channel.
+		for len(s.readings) > 0 {
+			<-s.readings
+		}
+		// Close the channel.
 		close(s.readings)
 	}
 }
@@ -85,5 +114,6 @@ func newReadStream(filter []string) ReadStream {
 		readings: make(chan *ReadContext, 128),
 		id:       uuid.New(),
 		filter:   filter,
+		stopLock: sync.Mutex{},
 	}
 }
