@@ -32,7 +32,7 @@ func TestNewReadStream(t *testing.T) {
 	assert.NotNil(t, s.readings)
 	assert.NotNil(t, s.id)
 	assert.Equal(t, []string{"foo", "bar"}, s.filter)
-	assert.False(t, s.closing)
+	assert.False(t, s.closed)
 }
 
 func TestReadStream_close_openChannels(t *testing.T) {
@@ -51,11 +51,11 @@ func TestReadStream_close_openChannels(t *testing.T) {
 	assert.True(t, open)
 	_, open = <-readingsChan
 	assert.True(t, open)
-	assert.False(t, s.closing)
+	assert.False(t, s.closed)
 
 	s.close()
 
-	assert.True(t, s.closing)
+	assert.True(t, s.closed)
 	_, open = <-streamChan
 	assert.False(t, open)
 	_, open = <-readingsChan
@@ -66,12 +66,12 @@ func TestReadStream_close_nilChannels(t *testing.T) {
 	s := ReadStream{}
 	assert.Nil(t, s.stream)
 	assert.Nil(t, s.readings)
-	assert.False(t, s.closing)
+	assert.False(t, s.closed)
 
 	assert.NotPanics(t, func() {
 		s.close()
 	})
-	assert.True(t, s.closing)
+	assert.True(t, s.closed)
 }
 
 func TestReadStream_listen_withFilter(t *testing.T) {
@@ -81,7 +81,7 @@ func TestReadStream_listen_withFilter(t *testing.T) {
 		id:       uuid.New(),
 		filter:   []string{"12345", "11111"},
 	}
-	assert.False(t, s.closing)
+	assert.False(t, s.closed)
 
 	// Create read contexts to send to the stream.
 	ctxs := []*ReadContext{
@@ -133,7 +133,7 @@ func TestReadStream_listen_withFilter(t *testing.T) {
 	assert.Equal(t, "12345", readings[1].Device.id)
 
 	// We did not call close(), so the stream should not be in the closing state
-	assert.False(t, s.closing)
+	assert.False(t, s.closed)
 }
 
 func TestReadStream_listen_noFilter(t *testing.T) {
@@ -143,7 +143,7 @@ func TestReadStream_listen_noFilter(t *testing.T) {
 		id:       uuid.New(),
 		filter:   []string{},
 	}
-	assert.False(t, s.closing)
+	assert.False(t, s.closed)
 
 	// Create read contexts to send to the stream.
 	ctxs := []*ReadContext{
@@ -197,7 +197,7 @@ func TestReadStream_listen_noFilter(t *testing.T) {
 	assert.Equal(t, "54321", readings[3].Device.id)
 
 	// We did not call close(), so the stream should not be in the closing state
-	assert.False(t, s.closing)
+	assert.False(t, s.closed)
 }
 
 func TestReadStream_listen_close(t *testing.T) {
@@ -207,7 +207,7 @@ func TestReadStream_listen_close(t *testing.T) {
 		id:       uuid.New(),
 		filter:   []string{},
 	}
-	assert.False(t, s.closing)
+	assert.False(t, s.closed)
 
 	// Create read contexts to send to the stream.
 	ctxs := []*ReadContext{
@@ -238,5 +238,47 @@ func TestReadStream_listen_close(t *testing.T) {
 	_, open := <-s.readings
 	assert.False(t, open)
 
-	assert.True(t, s.closing)
+	assert.True(t, s.closed)
+}
+
+// Close the stream when the readings channel is not fully drained.
+func TestReadStream_undrainedReadingsChannel(t *testing.T) {
+	streamChan := make(chan *ReadContext, 3)
+	readingsChan := make(chan *ReadContext, 3)
+
+	s := ReadStream{
+		stream:   streamChan,
+		readings: readingsChan,
+	}
+
+	readingsChan <- &ReadContext{}
+
+	s.close()
+
+	assert.True(t, s.closed)
+	_, open := <-streamChan
+	assert.False(t, open)
+	_, open = <-readingsChan
+	assert.False(t, open)
+}
+
+// Close the stream when the stream channel is not fully drained.
+func TestReadStream_undrainedStreamChannel(t *testing.T) {
+	streamChan := make(chan *ReadContext, 3)
+	readingsChan := make(chan *ReadContext, 3)
+
+	s := ReadStream{
+		stream:   streamChan,
+		readings: readingsChan,
+	}
+
+	streamChan <- &ReadContext{}
+
+	s.close()
+
+	assert.True(t, s.closed)
+	_, open := <-streamChan
+	assert.False(t, open)
+	_, open = <-readingsChan
+	assert.False(t, open)
 }
