@@ -180,7 +180,7 @@ func (loader *Loader) Load(pol policy.Policy) (err error) {
 		"name":   loader.FileName,
 		"ext":    loader.Ext,
 		"policy": loader.policy,
-		"data": redacted,
+		"data":   redacted,
 	}).Info("[config] successfully loaded configuration data")
 	return nil
 }

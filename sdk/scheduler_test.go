@@ -753,8 +753,8 @@ func TestScheduler_scheduleWrites_serial_withDelay(t *testing.T) {
 			readChan:     make(chan *ReadContext),
 			transactions: cache.New(1*time.Minute, 2*time.Minute),
 		},
-		writeChan: make(chan *WriteContext),
-		stop:      make(chan struct{}),
+		writeChan:  make(chan *WriteContext),
+		stop:       make(chan struct{}),
 		serialLock: &sync.Mutex{},
 	}
 
@@ -794,8 +794,7 @@ func TestScheduler_scheduleWrites_serial_withDelay(t *testing.T) {
 	//
 	// Add a threshold of +/- 18ms to account for leeway in different testing environments.
 	// In CI, tests run a bit slower.
-	assert.WithinDuration(t, start.Add(100 * time.Millisecond), end, 18 * time.Millisecond)
-
+	assert.WithinDuration(t, start.Add(100*time.Millisecond), end, 18*time.Millisecond)
 
 	assert.Equal(t, synse.WriteStatus_DONE, txn1.status, txn1.message)
 	assert.Equal(t, synse.WriteStatus_DONE, txn2.status, txn2.message)

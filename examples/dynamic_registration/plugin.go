@@ -23,7 +23,10 @@ var temperatureHandler = sdk.DeviceHandler{
 	Name: "temperature",
 	Read: func(device *sdk.Device) ([]*output.Reading, error) {
 		value := strconv.Itoa(rand.Intn(100)) // nolint: gas, gosec
-		reading := output.Temperature.MakeReading(value)
+		reading, err := output.Temperature.MakeReading(value)
+		if err != nil {
+			return nil, err
+		}
 		return []*output.Reading{reading}, nil
 	},
 }

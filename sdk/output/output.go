@@ -74,14 +74,24 @@ type Output struct {
 
 // MakeReading makes a new Reading for the provided value, applying the pertinent
 // output data to the reading.
-func (output *Output) MakeReading(value interface{}) *Reading {
+func (output *Output) MakeReading(value interface{}) (reading *Reading, err error) {
+	// Check value type.
+	// Bytes and byte arrays may not serialize well, so force
+	// the caller to define a type that will by erroring out.
+	switch value.(type) {
+	case byte:
+		return nil, fmt.Errorf("MakeReading byte value is not directly serializable")
+	case []byte:
+		return nil, fmt.Errorf("MakeReading []byte value is not directly serialzable")
+	}
+
 	return &Reading{
 		Timestamp: utils.GetCurrentTime(),
 		Type:      output.Type,
 		Unit:      output.Unit,
 		Value:     value,
 		output:    output,
-	}
+	}, nil
 }
 
 // Encode translates the Output to its corresponding gRPC message.

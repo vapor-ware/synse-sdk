@@ -372,12 +372,15 @@ func TestServer_Devices2(t *testing.T) {
 		aliasCache: NewAliasCache(),
 	}
 
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
+
 	s := server{
 		deviceManager: deviceManager,
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
 			readings: map[string][]*output.Reading{
-				"67890": {o.MakeReading(1)},
+				"67890": {reading1},
 			},
 			readingsLock: &sync.RWMutex{},
 		},
@@ -389,7 +392,7 @@ func TestServer_Devices2(t *testing.T) {
 		{Namespace: "other", Label: "bar"},
 	}}
 	mock := test.NewMockDevicesStream()
-	err := s.Devices(req, mock)
+	err = s.Devices(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 1)
@@ -491,12 +494,14 @@ func TestServer_Devices4(t *testing.T) {
 		},
 		aliasCache: NewAliasCache(),
 	}
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
 	s := server{
 		deviceManager: deviceManager,
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
 			readings: map[string][]*output.Reading{
-				"67890": {o.MakeReading(1)},
+				"67890": {reading1},
 			},
 			readingsLock: &sync.RWMutex{},
 		},
@@ -507,7 +512,7 @@ func TestServer_Devices4(t *testing.T) {
 
 	req := &synse.V3DeviceSelector{}
 	mock := test.NewMockDevicesStream()
-	err := s.Devices(req, mock)
+	err = s.Devices(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 2)
@@ -554,12 +559,14 @@ func TestServer_Devices5(t *testing.T) {
 		},
 		aliasCache: NewAliasCache(),
 	}
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
 	s := server{
 		deviceManager: deviceManager,
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
+				"12345": {reading1},
 			},
 			readingsLock: &sync.RWMutex{},
 		},
@@ -572,7 +579,7 @@ func TestServer_Devices5(t *testing.T) {
 		{Namespace: "default", Label: "foo"},
 	}}
 	mock := test.NewMockDevicesStream()
-	err := s.Devices(req, mock)
+	err = s.Devices(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 1)
@@ -610,12 +617,14 @@ func TestServer_Devices6(t *testing.T) {
 		},
 		aliasCache: NewAliasCache(),
 	}
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
 	s := server{
 		deviceManager: deviceManager,
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
+				"12345": {reading1},
 			},
 			readingsLock: &sync.RWMutex{},
 		},
@@ -628,7 +637,7 @@ func TestServer_Devices6(t *testing.T) {
 		{Namespace: "default", Label: "foo"},
 	}}
 	mock := test.NewMockDevicesStream()
-	err := s.Devices(req, mock)
+	err = s.Devices(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 1)
@@ -668,12 +677,14 @@ func TestServer_Devices7(t *testing.T) {
 		},
 		aliasCache: NewAliasCache(),
 	}
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
 	s := server{
 		deviceManager: deviceManager,
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
+				"12345": {reading1},
 			},
 			readingsLock: &sync.RWMutex{},
 		},
@@ -686,7 +697,7 @@ func TestServer_Devices7(t *testing.T) {
 		{Namespace: "default", Label: "foo"},
 	}}
 	mock := test.NewMockDevicesStream()
-	err := s.Devices(req, mock)
+	err = s.Devices(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 1)
@@ -770,6 +781,12 @@ func TestServer_Read(t *testing.T) {
 		},
 		aliasCache: NewAliasCache(),
 	}
+
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
+	reading2, err := o.MakeReading(2)
+	assert.NoError(t, err)
+
 	s := server{
 		meta:          &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: deviceManager,
@@ -777,8 +794,8 @@ func TestServer_Read(t *testing.T) {
 			deviceManager: deviceManager,
 			readingsLock:  &sync.RWMutex{},
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
-				"67890": {o.MakeReading(2)},
+				"12345": {reading1},
+				"67890": {reading2},
 			},
 		},
 	}
@@ -786,7 +803,7 @@ func TestServer_Read(t *testing.T) {
 		Selector: &synse.V3DeviceSelector{},
 	}
 	mock := test.NewMockReadStream()
-	err := s.Read(req, mock)
+	err = s.Read(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 1)
@@ -809,6 +826,11 @@ func TestServer_Read2(t *testing.T) {
 		aliasCache: NewAliasCache(),
 	}
 
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
+	reading2, err := o.MakeReading(2)
+	assert.NoError(t, err)
+
 	s := server{
 		meta:          &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: deviceManager,
@@ -816,8 +838,8 @@ func TestServer_Read2(t *testing.T) {
 			deviceManager: deviceManager,
 			readingsLock:  &sync.RWMutex{},
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
-				"67890": {o.MakeReading(2)},
+				"12345": {reading1},
+				"67890": {reading2},
 			},
 		},
 	}
@@ -829,7 +851,7 @@ func TestServer_Read2(t *testing.T) {
 		},
 	}
 	mock := test.NewMockReadStream()
-	err := s.Read(req, mock)
+	err = s.Read(req, mock)
 
 	assert.NoError(t, err)
 	assert.Len(t, mock.Results, 1)
@@ -852,6 +874,11 @@ func TestServer_Read_error(t *testing.T) {
 		aliasCache: NewAliasCache(),
 	}
 
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
+	reading2, err := o.MakeReading(2)
+	assert.NoError(t, err)
+
 	s := server{
 		meta:          &PluginMetadata{Name: "test", Maintainer: "vaporio"},
 		deviceManager: deviceManager,
@@ -859,8 +886,8 @@ func TestServer_Read_error(t *testing.T) {
 			deviceManager: deviceManager,
 			readingsLock:  &sync.RWMutex{},
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
-				"67890": {o.MakeReading(2)},
+				"12345": {reading1},
+				"67890": {reading2},
 			},
 		},
 	}
@@ -873,7 +900,7 @@ func TestServer_Read_error(t *testing.T) {
 	}
 
 	mock := test.MockReadCachedStreamErr{}
-	err := s.Read(req, &mock)
+	err = s.Read(req, &mock)
 
 	assert.Error(t, err)
 }
@@ -893,6 +920,13 @@ func TestServer_ReadCache(t *testing.T) {
 		},
 	}
 
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
+	reading2, err := o.MakeReading(2)
+	assert.NoError(t, err)
+	reading3, err := o.MakeReading(3)
+	assert.NoError(t, err)
+
 	s := server{
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
@@ -903,16 +937,16 @@ func TestServer_ReadCache(t *testing.T) {
 				},
 			},
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
-				"67890": {o.MakeReading(2)},
-				"abcde": {o.MakeReading(3)},
+				"12345": {reading1},
+				"67890": {reading2},
+				"abcde": {reading3},
 			},
 		},
 		deviceManager: deviceManager,
 	}
 	bounds := &synse.V3Bounds{}
 	mock := test.NewMockReadCachedStream()
-	err := s.ReadCache(bounds, mock)
+	err = s.ReadCache(bounds, mock)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(mock.Results))
@@ -933,6 +967,13 @@ func TestServer_ReadCache_error(t *testing.T) {
 		},
 	}
 
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
+	reading2, err := o.MakeReading(2)
+	assert.NoError(t, err)
+	reading3, err := o.MakeReading(3)
+	assert.NoError(t, err)
+
 	s := server{
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
@@ -943,16 +984,16 @@ func TestServer_ReadCache_error(t *testing.T) {
 				},
 			},
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
-				"67890": {o.MakeReading(2)},
-				"abcde": {o.MakeReading(3)},
+				"12345": {reading1},
+				"67890": {reading2},
+				"abcde": {reading3},
 			},
 		},
 		deviceManager: deviceManager,
 	}
 	bounds := &synse.V3Bounds{}
 	mock := &test.MockReadCachedStreamErr{}
-	err := s.ReadCache(bounds, mock)
+	err = s.ReadCache(bounds, mock)
 
 	assert.Error(t, err)
 }
@@ -967,6 +1008,13 @@ func TestServer_ReadStream_noDeviceMatchID(t *testing.T) {
 		aliasCache: NewAliasCache(),
 	}
 
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
+	reading2, err := o.MakeReading(2)
+	assert.NoError(t, err)
+	reading3, err := o.MakeReading(3)
+	assert.NoError(t, err)
+
 	s := server{
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
@@ -977,9 +1025,9 @@ func TestServer_ReadStream_noDeviceMatchID(t *testing.T) {
 				},
 			},
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
-				"67890": {o.MakeReading(2)},
-				"abcde": {o.MakeReading(3)},
+				"12345": {reading1},
+				"67890": {reading2},
+				"abcde": {reading3},
 			},
 		},
 		deviceManager: deviceManager,
@@ -991,7 +1039,7 @@ func TestServer_ReadStream_noDeviceMatchID(t *testing.T) {
 		},
 	}
 	mock := test.NewMockReadStreamStream()
-	err := s.ReadStream(req, mock)
+	err = s.ReadStream(req, mock)
 
 	assert.Error(t, err)
 	assert.Equal(t, 0, len(mock.Results))
@@ -1008,6 +1056,13 @@ func TestServer_ReadStream_noDeviceMatchTag(t *testing.T) {
 		tagCache:   NewTagCache(),
 	}
 
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
+	reading2, err := o.MakeReading(2)
+	assert.NoError(t, err)
+	reading3, err := o.MakeReading(3)
+	assert.NoError(t, err)
+
 	s := server{
 		stateManager: &stateManager{
 			deviceManager: deviceManager,
@@ -1018,9 +1073,9 @@ func TestServer_ReadStream_noDeviceMatchTag(t *testing.T) {
 				},
 			},
 			readings: map[string][]*output.Reading{
-				"12345": {o.MakeReading(1)},
-				"67890": {o.MakeReading(2)},
-				"abcde": {o.MakeReading(3)},
+				"12345": {reading1},
+				"67890": {reading2},
+				"abcde": {reading3},
 			},
 		},
 		deviceManager: deviceManager,
@@ -1035,7 +1090,7 @@ func TestServer_ReadStream_noDeviceMatchTag(t *testing.T) {
 		},
 	}
 	mock := test.NewMockReadStreamStream()
-	err := s.ReadStream(req, mock)
+	err = s.ReadStream(req, mock)
 
 	assert.Error(t, err)
 	assert.Equal(t, 0, len(mock.Results))
