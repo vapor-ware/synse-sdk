@@ -10,7 +10,10 @@ var Temp2010 = sdk.DeviceHandler{
 	Name: "temperature",
 
 	Read: func(device *sdk.Device) ([]*output.Reading, error) {
-		reading := output.Temperature.MakeReading("10")
+		reading, err := output.Temperature.MakeReading("10")
+		if err != nil {
+			return nil, err
+		}
 		return []*output.Reading{reading}, nil
 	},
 }

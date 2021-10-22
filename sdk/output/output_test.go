@@ -103,7 +103,8 @@ func TestOutput_MakeReading(t *testing.T) {
 		},
 	}
 
-	r := o.MakeReading(3)
+	r, err := o.MakeReading(3)
+	assert.NoError(t, err)
 
 	assert.Equal(t, &o, r.output)
 	assert.Equal(t, 3, r.Value)
@@ -121,7 +122,8 @@ func TestOutput_MakeReading_noUnit(t *testing.T) {
 		Type:      "test",
 	}
 
-	r := o.MakeReading(3)
+	r, err := o.MakeReading(3)
+	assert.NoError(t, err)
 
 	assert.Equal(t, &o, r.output)
 	assert.Equal(t, 3, r.Value)

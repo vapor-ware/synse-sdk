@@ -263,10 +263,12 @@ func TestStateManager_GetOutputsForDevice_oneReading(t *testing.T) {
 		Name: "test-output-1",
 		Type: "test",
 	}
+	reading1, err := o.MakeReading(1)
+	assert.NoError(t, err)
 	sm := stateManager{
 		readingsLock: &sync.RWMutex{},
 		readings: map[string][]*output.Reading{
-			"foo": {o.MakeReading(1)},
+			"foo": {reading1},
 		},
 	}
 
@@ -284,12 +286,16 @@ func TestStateManager_GetOutputsForDevice_multipleReadings(t *testing.T) {
 		Name: "test-output-2",
 		Type: "test",
 	}
+	reading1, err := o1.MakeReading(1)
+	assert.NoError(t, err)
+	reading2, err := o2.MakeReading(2)
+	assert.NoError(t, err)
 	sm := stateManager{
 		readingsLock: &sync.RWMutex{},
 		readings: map[string][]*output.Reading{
 			"foo": {
-				o1.MakeReading(1),
-				o2.MakeReading(2),
+				reading1,
+				reading2,
 			},
 		},
 	}
