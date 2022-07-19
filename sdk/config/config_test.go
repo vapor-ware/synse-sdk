@@ -865,5 +865,5 @@ func TestNilInterfaceValue(t *testing.T) {
 	loader.AddSearchPaths("./testdata/nil")
 	err := loader.Load(policy.Required)
 	assert.Error(t, err)
-	assert.Equal(t, "Missing value after width", err.Error())
+	assert.Equal(t, "missing value after width", err.Error())
 }

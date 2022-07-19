@@ -108,8 +108,8 @@ func (s *ReadStream) close() {
 }
 
 // newReadStream creates a new ReadStream.
-func newReadStream(filter []string) ReadStream {
-	return ReadStream{
+func newReadStream(filter []string) *ReadStream {
+	return &ReadStream{
 		stream:   make(chan *ReadContext, 128),
 		readings: make(chan *ReadContext, 128),
 		id:       uuid.New(),
