@@ -26,7 +26,7 @@ import (
 )
 
 // Version specifies the version of the Synse Plugin SDK.
-const Version = "2.1.2"
+const Version = "v2.1.2"
 
 // version is a global reference to the pluginVersion which specifies the
 // version information for a Plugin. This is initialized on init and
