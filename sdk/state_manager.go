@@ -40,7 +40,7 @@ type stateManager struct {
 	readingsLock  *sync.RWMutex
 	transactions  *cache.Cache
 
-	streams    map[uuid.UUID]ReadStream
+	streams    map[uuid.UUID]*ReadStream
 	streamLock *sync.Mutex
 }
 
@@ -70,7 +70,7 @@ func newStateManager(conf *config.PluginSettings, deviceManager *deviceManager) 
 		),
 		readingsCache: readingsCache,
 		readingsLock:  &sync.RWMutex{},
-		streams:       make(map[uuid.UUID]ReadStream),
+		streams:       make(map[uuid.UUID]*ReadStream),
 		streamLock:    &sync.Mutex{},
 	}
 }
@@ -82,7 +82,7 @@ func (manager *stateManager) Start() {
 }
 
 // addStream adds a new stream for the stateManager to send reading data to.
-func (manager *stateManager) addStream(stream ReadStream) {
+func (manager *stateManager) addStream(stream *ReadStream) {
 	log.WithField("id", stream.id).Debug("[state manager] adding stream")
 	manager.streamLock.Lock()
 	defer manager.streamLock.Unlock()
@@ -228,7 +228,7 @@ func (manager *stateManager) GetCachedReadings(start, end string, readings chan 
 		return
 	}
 
-	// If read caching is disable, dump the current state; otherwise, dump the
+	// If read caching is disabled, dump the current state; otherwise, dump the
 	// reading cache contents.
 	if manager.config.Cache.Enabled {
 		manager.dumpCachedReadings(startTime, endTime, readings)

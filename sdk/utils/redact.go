@@ -82,7 +82,7 @@ func redactRecursive(copied, original reflect.Value, lastMapKey string) (err err
 			// See https://github.com/vapor-ware/synse-sdk/issues/480.
 			// Unfortunately we do not have line number and column here,
 			// but hopefully this message is useful.
-			return fmt.Errorf("Missing value after %v", lastMapKey)
+			return fmt.Errorf("missing value after %v", lastMapKey)
 		}
 
 		copyValue := reflect.New(originalValue.Type()).Elem()

@@ -120,7 +120,6 @@ func TestReadStream_listen_withFilter(t *testing.T) {
 			readings = append(readings, r)
 		case <-time.After(600 * time.Millisecond):
 			done = true
-			break
 		}
 		if done {
 			break
@@ -182,7 +181,6 @@ func TestReadStream_listen_noFilter(t *testing.T) {
 			readings = append(readings, r)
 		case <-time.After(600 * time.Millisecond):
 			done = true
-			break
 		}
 		if done {
 			break
