@@ -1,5 +1,5 @@
 // Synse SDK
-// Copyright (c) 2017-2020 Vapor IO
+// Copyright (c) 2017-2022 Vapor IO
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ var (
 	// GitTag is the git tag at which the plugin was built.
 	GitTag string
 
-	// GoVersion is is the version of Go used to build the plugin.
+	// GoVersion is the version of Go used to build the plugin.
 	GoVersion string
 
 	// PluginVersion is the canonical version string for the plugin.
@@ -88,7 +88,7 @@ func (version *pluginVersion) encode() *synse.V3Version {
 	}
 }
 
-// format returns a formatted string with all of the version info.
+// format returns a formatted string with all the version info.
 func (version *pluginVersion) format() string {
 	var info bytes.Buffer
 

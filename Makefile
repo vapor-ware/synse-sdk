@@ -57,7 +57,7 @@ help:  ## Print usage information
 .DEFAULT_GOAL := help
 
 
-# Targets for Jenkins CI
+# Targets for CI
 
 .PHONY: unit-test integration-test
 
