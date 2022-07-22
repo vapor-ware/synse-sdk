@@ -1,9 +1,9 @@
 package devices
 
 import (
-	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/outputs"
-	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/examples/multi_device_plugin/outputs"
+	"github.com/vapor-ware/synse-sdk/v2/sdk"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 // Air8884 is the handler for the example airflow device with model "air8884".

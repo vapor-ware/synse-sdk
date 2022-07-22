@@ -22,7 +22,7 @@ import (
 	"sort"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
 )
 
 // DeviceIdentifier is a handler function that produces a string that can be used to

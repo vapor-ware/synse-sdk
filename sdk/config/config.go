@@ -29,9 +29,9 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
-	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/policy"
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
+	sdkError "github.com/vapor-ware/synse-sdk/v2/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/policy"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/utils"
 	"gopkg.in/yaml.v2"
 )
 

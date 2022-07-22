@@ -24,10 +24,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/health"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/utils"
 )
 
 // stateManager manages the read and write (transaction) state for plugin devices.

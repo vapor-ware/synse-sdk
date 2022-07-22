@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 

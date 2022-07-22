@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/devices"
-	"github.com/vapor-ware/synse-sdk/examples/multi_device_plugin/outputs"
-	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/v2/examples/multi_device_plugin/devices"
+	"github.com/vapor-ware/synse-sdk/v2/examples/multi_device_plugin/outputs"
+	"github.com/vapor-ware/synse-sdk/v2/sdk"
 )
 
 var (

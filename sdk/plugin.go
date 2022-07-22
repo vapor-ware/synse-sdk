@@ -27,11 +27,11 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
-	"github.com/vapor-ware/synse-sdk/sdk/policy"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/health"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/policy"
 )
 
 const (

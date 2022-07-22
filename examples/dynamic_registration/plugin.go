@@ -6,9 +6,9 @@ import (
 	"math/rand"
 	"strconv"
 
-	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 var (

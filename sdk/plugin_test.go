@@ -25,10 +25,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/internal/test"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/policy"
+	"github.com/vapor-ware/synse-sdk/v2/internal/test"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/health"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/policy"
 )
 
 func TestNewPlugin(t *testing.T) {

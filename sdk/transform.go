@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/funcs"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/funcs"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 // Errors relating to Transformer creation and application.

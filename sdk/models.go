@@ -17,7 +17,7 @@
 package sdk
 
 import (
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 

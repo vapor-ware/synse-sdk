@@ -24,10 +24,10 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/funcs"
-	"github.com/vapor-ware/synse-sdk/sdk/health"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/funcs"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/health"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 

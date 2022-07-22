@@ -19,7 +19,7 @@ package funcs
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/errors"
 )
 
 var registeredFuncs map[string]*Func

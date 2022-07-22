@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 // The Plugin metadata. At a minimum, all plugins need a name. This information

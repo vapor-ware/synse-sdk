@@ -16,7 +16,7 @@
 
 package sdk
 
-import "github.com/vapor-ware/synse-sdk/sdk/output"
+import "github.com/vapor-ware/synse-sdk/v2/sdk/output"
 
 // DeviceHandler specifies the read and write handlers for a Device
 // based on its type and model.
