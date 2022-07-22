@@ -1,5 +1,5 @@
 // Synse SDK
-// Copyright (c) 2017-2020 Vapor IO
+// Copyright (c) 2017-2022 Vapor IO
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -285,12 +285,10 @@ func addTLSOptions(options *[]grpc.ServerOption, settings *config.TLSNetworkSett
 	}
 
 	creds := credentials.NewTLS(&tls.Config{
-		ClientAuth:               clientAuth,
-		ClientCAs:                certPool,
-		Certificates:             []tls.Certificate{cert},
-		MinVersion:               tls.VersionTLS12,
-		PreferServerCipherSuites: true,
-		// https://www.acunetix.com/blog/articles/tls-ssl-cipher-hardening/
+		ClientAuth:   clientAuth,
+		ClientCAs:    certPool,
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
@@ -336,7 +334,7 @@ func loadCACerts(certs []string) (*x509.CertPool, error) {
 // Test checks whether the plugin is reachable and ready.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Test` RPC method.
-func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3TestStatus, error) {
+func (server *server) Test(_ context.Context, _ *synse.Empty) (*synse.V3TestStatus, error) {
 	log.WithFields(log.Fields{
 		"route": "TEST",
 	}).Info("[grpc] processing request")
@@ -347,7 +345,7 @@ func (server *server) Test(ctx context.Context, request *synse.Empty) (*synse.V3
 // Version gets the version information for the plugin.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Version` RPC method.
-func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse.V3Version, error) {
+func (server *server) Version(_ context.Context, _ *synse.Empty) (*synse.V3Version, error) {
 	log.WithFields(log.Fields{
 		"route": "VERSION",
 	}).Info("[grpc] processing request")
@@ -358,7 +356,7 @@ func (server *server) Version(ctx context.Context, request *synse.Empty) (*synse
 // Health gets the overall health status of the plugin.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Health` RPC method.
-func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.V3Health, error) {
+func (server *server) Health(_ context.Context, _ *synse.Empty) (*synse.V3Health, error) {
 	log.WithFields(log.Fields{
 		"route": "HEALTH",
 	}).Info("[grpc] processing request")
@@ -367,7 +365,7 @@ func (server *server) Health(ctx context.Context, request *synse.Empty) (*synse.
 	return status.Encode(), nil
 }
 
-// Devices gets all of the devices which a plugin manages.
+// Devices gets all the devices which a plugin manages.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Devices` RPC method.
 func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Plugin_DevicesServer) error {
@@ -409,7 +407,7 @@ func (server *server) Devices(request *synse.V3DeviceSelector, stream synse.V3Pl
 // Metadata gets the meta-information for a plugin.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Metadata` RPC method.
-func (server *server) Metadata(ctx context.Context, request *synse.Empty) (*synse.V3Metadata, error) {
+func (server *server) Metadata(_ context.Context, _ *synse.Empty) (*synse.V3Metadata, error) {
 	log.WithFields(log.Fields{
 		"route": "METADATA",
 	}).Info("[grpc] processing request")
@@ -626,7 +624,7 @@ func (server *server) WriteSync(request *synse.V3WritePayload, stream synse.V3Pl
 // associated with that action on write.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Transaction` RPC method.
-func (server *server) Transaction(ctx context.Context, request *synse.V3TransactionSelector) (*synse.V3TransactionStatus, error) {
+func (server *server) Transaction(_ context.Context, request *synse.V3TransactionSelector) (*synse.V3TransactionStatus, error) {
 	rlog := log.WithFields(log.Fields{
 		"id":    request.Id,
 		"route": "TRANSACTION",
@@ -645,7 +643,7 @@ func (server *server) Transaction(ctx context.Context, request *synse.V3Transact
 // plugin's transaction cache.
 //
 // It is the handler for the Synse gRPC V3Plugin service's `Transactions` RPC method.
-func (server *server) Transactions(request *synse.Empty, stream synse.V3Plugin_TransactionsServer) error {
+func (server *server) Transactions(_ *synse.Empty, stream synse.V3Plugin_TransactionsServer) error {
 	log.WithFields(log.Fields{
 		"route": "TRANSACTIONS",
 	}).Info("[grpc] processing request")

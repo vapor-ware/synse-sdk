@@ -1,5 +1,5 @@
 // Synse SDK
-// Copyright (c) 2017-2020 Vapor IO
+// Copyright (c) 2017-2022 Vapor IO
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@ package funcs
 
 import "github.com/vapor-ware/synse-sdk/v2/sdk/utils"
 
-// GetBuiltins returns all of the built-in Funcs supplied by the SDK.
+// GetBuiltins returns all the built-in Funcs supplied by the SDK.
 func GetBuiltins() []*Func {
 	return []*Func{
 		&FtoC,
