@@ -18,7 +18,7 @@ package sdk
 
 import (
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/policy"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/policy"
 )
 
 // A PluginOption sets optional configurations or functional capabilities for

@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/utils"
 )
 
 const (

@@ -1,8 +1,8 @@
 package devices
 
 import (
-	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 // Volt1103 is the handler for the example voltage device with model "volt1103".

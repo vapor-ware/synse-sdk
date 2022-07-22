@@ -24,7 +24,7 @@ import (
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
 )
 
 // pluginID is used to generate and store the plugin ID namespace. After

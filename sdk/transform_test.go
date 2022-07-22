@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/funcs"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/funcs"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 func TestNewApplyTransformer(t *testing.T) {

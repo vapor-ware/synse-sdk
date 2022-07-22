@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 // A map of DeviceHandlers for the test data. The handlers do nothing.

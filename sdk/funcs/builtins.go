@@ -16,7 +16,7 @@
 
 package funcs
 
-import "github.com/vapor-ware/synse-sdk/sdk/utils"
+import "github.com/vapor-ware/synse-sdk/v2/sdk/utils"
 
 // GetBuiltins returns all of the built-in Funcs supplied by the SDK.
 func GetBuiltins() []*Func {

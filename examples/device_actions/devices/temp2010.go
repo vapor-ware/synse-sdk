@@ -1,8 +1,8 @@
 package devices
 
 import (
-	"github.com/vapor-ware/synse-sdk/sdk"
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 // Temp2010 is the handler for the example temperature device with model "temp2010".

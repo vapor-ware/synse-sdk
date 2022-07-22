@@ -5,8 +5,8 @@ import (
 	"log"
 
 	logger "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/examples/device_actions/devices"
-	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/v2/examples/device_actions/devices"
+	"github.com/vapor-ware/synse-sdk/v2/sdk"
 )
 
 var (

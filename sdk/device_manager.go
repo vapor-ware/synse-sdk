@@ -23,9 +23,9 @@ import (
 	"github.com/gobwas/glob"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
-	sdkError "github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/policy"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
+	sdkError "github.com/vapor-ware/synse-sdk/v2/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/policy"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 

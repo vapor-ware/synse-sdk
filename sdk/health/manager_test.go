@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vapor-ware/synse-sdk/internal/test"
-	"github.com/vapor-ware/synse-sdk/sdk/config"
+	"github.com/vapor-ware/synse-sdk/v2/internal/test"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/config"
 )
 
 //

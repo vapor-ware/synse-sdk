@@ -1,7 +1,7 @@
 package outputs
 
 import (
-	"github.com/vapor-ware/synse-sdk/sdk/output"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/output"
 )
 
 var (

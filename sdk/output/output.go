@@ -19,8 +19,8 @@ package output
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-sdk/sdk/errors"
-	"github.com/vapor-ware/synse-sdk/sdk/utils"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/errors"
+	"github.com/vapor-ware/synse-sdk/v2/sdk/utils"
 	synse "github.com/vapor-ware/synse-server-grpc/go"
 )
 

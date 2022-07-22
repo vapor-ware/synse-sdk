@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/vapor-ware/synse-sdk/sdk"
+	"github.com/vapor-ware/synse-sdk/v2/sdk"
 )
 
 // In order for GoReleaser to work properly, it needs something to build and
