@@ -92,6 +92,24 @@ func TestRegister_conflict(t *testing.T) {
 	assert.Len(t, registeredOutputs, initLen)
 }
 
+func TestRegister_nil(t *testing.T) {
+	// Copy the map and reset it once we're done so we don't
+	// pollute it for other tests.
+	var registeredCopy = map[string]*Output{}
+	for k, v := range registeredOutputs {
+		registeredCopy[k] = v
+	}
+	defer func() {
+		registeredOutputs = registeredCopy
+	}()
+
+	initLen := len(registeredOutputs)
+
+	err := Register(nil)
+	assert.NoError(t, err)
+	assert.Len(t, registeredOutputs, initLen)
+}
+
 func TestOutput_MakeReading(t *testing.T) {
 	o := Output{
 		Name:      "test-output",

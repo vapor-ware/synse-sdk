@@ -42,6 +42,9 @@ func Register(funcs ...*Func) error {
 	multiErr := errors.NewMultiError("func registration")
 
 	for _, f := range funcs {
+		if f == nil {
+			continue
+		}
 		if _, exists := registeredFuncs[f.Name]; exists {
 			multiErr.Add(fmt.Errorf("conflict: Func with name '%s' already exists", f.Name))
 			continue

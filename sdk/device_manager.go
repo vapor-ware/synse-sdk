@@ -403,6 +403,9 @@ func (manager *deviceManager) AddDevice(device *Device) error {
 // AddHandlers adds DeviceHandlers to the DeviceManager.
 func (manager *deviceManager) AddHandlers(handlers ...*DeviceHandler) error {
 	for _, handler := range handlers {
+		if handler == nil {
+			continue
+		}
 		if _, exists := manager.handlers[handler.Name]; exists {
 			return fmt.Errorf(
 				"unable to register multiple handlers with duplicate names: %s",

@@ -44,6 +44,9 @@ func Register(output ...*Output) error {
 	multiErr := errors.NewMultiError("output registration")
 
 	for _, o := range output {
+		if o == nil {
+			continue
+		}
 		if _, exists := registeredOutputs[o.Name]; exists {
 			multiErr.Add(fmt.Errorf("conflict: output with name '%s' already exists", o.Name))
 			continue
