@@ -894,6 +894,19 @@ func TestDeviceManager_AddHandlers_err(t *testing.T) {
 	assert.Len(t, m.handlers, 1)
 }
 
+func TestDeviceManager_AddHandlers_nil(t *testing.T) {
+	m := deviceManager{
+		handlers: map[string]*DeviceHandler{},
+	}
+
+	err := m.AddHandlers(
+		&DeviceHandler{Name: "foo"},
+		nil,
+	)
+	assert.NoError(t, err)
+	assert.Len(t, m.handlers, 1)
+}
+
 func TestDeviceManager_GetDevicesForHandler(t *testing.T) {
 	m := deviceManager{
 		handlers: map[string]*DeviceHandler{

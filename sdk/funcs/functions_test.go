@@ -93,6 +93,24 @@ func TestRegister_conflict(t *testing.T) {
 	assert.Len(t, registeredFuncs, initLen)
 }
 
+func TestRegister_nil(t *testing.T) {
+	// Copy the map and reset it once we're done so we don't
+	// pollute it for other tests.
+	var registeredCopy = map[string]*Func{}
+	for k, v := range registeredFuncs {
+		registeredCopy[k] = v
+	}
+	defer func() {
+		registeredFuncs = registeredCopy
+	}()
+
+	initLen := len(registeredFuncs)
+
+	err := Register(nil)
+	assert.NoError(t, err)
+	assert.Len(t, registeredFuncs, initLen)
+}
+
 func TestFunc_Call_ok(t *testing.T) {
 	fn := Func{
 		Name: "test",

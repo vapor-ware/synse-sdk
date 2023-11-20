@@ -185,6 +185,11 @@ func NewPlugin(options ...PluginOption) (*Plugin, error) {
 // everything is ready, it will run each of its components. The gRPC server is
 // run in the foreground; all other components are run as goroutines.
 func (plugin *Plugin) Run() error {
+	if plugin == nil {
+		log.Error("[plugin] plugin instance not found")
+		return fmt.Errorf("plugin is nil")
+	}
+
 	// Initialize the plugin and its components.
 	if err := plugin.initialize(); err != nil {
 		log.Error("[plugin] failed to initialize plugin")
